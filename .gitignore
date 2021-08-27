@@ -9,3 +9,5 @@ build/cartographer
 cmd/random
 coverage.*
 kubeconfig
+
+dist/

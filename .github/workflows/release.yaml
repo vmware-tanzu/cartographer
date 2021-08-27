@@ -1,0 +1,47 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: goreleaser
+
+on:
+  push:
+    tags:
+      - 'v*'
+# - uses: vmware-tanzu/carvel-setup-action@v1
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    # Set permissions of github token. See https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#permissions
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.0
+
+      - name: Run GoReleaser
+        # GoReleaser v2.5.0
+        uses: goreleaser/goreleaser-action@5e15885530fb01d81d1f24e8a6f54ebbd0fed7eb
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          version: 0.162.0
+          args: release --rm-dist --debug
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
