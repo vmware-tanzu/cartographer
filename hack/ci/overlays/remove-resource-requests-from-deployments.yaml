@@ -27,4 +27,6 @@ spec:
             #@overlay/match missing_ok=True
             #@overlay/replace
             requests: {}
+            #@overlay/match missing_ok=True
+            #@overlay/replace
             limits: {}
