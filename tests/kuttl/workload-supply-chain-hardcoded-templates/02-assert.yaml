@@ -1,0 +1,153 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-source
+  labels:
+    carto.run/workload-name: petclinic
+    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/component-name: source-provider
+    carto.run/cluster-template-name: git-template---workload-supply-chain-hardcoded-templates
+  ownerReferences:
+    - apiVersion: carto.run/v1alpha1
+      kind: Workload
+      name: petclinic
+data:
+  best_school: "Brown"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-image
+  labels:
+    carto.run/workload-name: petclinic
+    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/component-name: image-provider
+    carto.run/cluster-template-name: kpack-template---workload-supply-chain-hardcoded-templates
+  ownerReferences:
+    - apiVersion: carto.run/v1alpha1
+      kind: Workload
+      name: petclinic
+data:
+  average_color_of_the_universe: "Cosmic latte"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-config
+  labels:
+    carto.run/workload-name: petclinic
+    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/component-name: config-provider
+    carto.run/cluster-template-name: config-template---workload-supply-chain-hardcoded-templates
+  ownerReferences:
+    - apiVersion: carto.run/v1alpha1
+      kind: Workload
+      name: petclinic
+data:
+  best_litigant_against_board: "Brown"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap
+  labels:
+    carto.run/workload-name: petclinic
+    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/component-name: cluster-sink
+    carto.run/cluster-template-name: sink-template---workload-supply-chain-hardcoded-templates
+  ownerReferences:
+    - apiVersion: carto.run/v1alpha1
+      kind: Workload
+      name: petclinic
+data:
+  color_humans_see_best: "Green"
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ComponentsSubmitted
+      status: "True"
+      reason: ComponentSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  supplyChainRef:
+    name: responsible-ops---workload-supply-chain-hardcoded-templates
+    kind: ClusterSupplyChain
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: kpack-template---workload-supply-chain-hardcoded-templates
+spec:
+  imagePath: .data.average_color_of_the_universe
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-configmap-image
+    data:
+      average_color_of_the_universe: "Cosmic latte"
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: git-template---workload-supply-chain-hardcoded-templates
+spec:
+  urlPath: .data.best_school
+  revisionPath: .data.best_school
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-configmap-source
+    data:
+      best_school: "Brown"
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterConfigTemplate
+metadata:
+  name: config-template---workload-supply-chain-hardcoded-templates
+spec:
+  configPath: .data.best_litigant_against_board
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-configmap-config
+    data:
+      best_litigant_against_board: "Brown"

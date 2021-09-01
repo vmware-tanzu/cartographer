@@ -1,0 +1,89 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: commands-via-configmaps
+spec:
+  params:
+    - name: source-url
+    - name: source-revision
+  workspaces:
+    - name: source
+    - name: commands
+  tasks:
+    - name: git-clone
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: source-url
+          value: $(params.source-url)
+        - name: source-revision
+          value: $(params.source-revision)
+    - name: run-command
+      runAfter: [git-clone]
+      taskRef:
+        name: run-commands-in-workspace
+      workspaces:
+        - name: source
+          workspace: source
+        - name: commands
+          workspace: commands
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: git-clone
+spec:
+  params:
+    - name: source-url
+    - name: source-revision
+  workspaces:
+    - name: source
+  steps:
+    - name: main
+      image: golang
+      workingDir: $(workspaces.source.path)
+      script: |-
+        #!/bin/bash
+        set -o errexit
+        
+        export GIT_DISCOVERY_ACROSS_FILESYSTEM=true
+        git clone $(params.source-url) .
+        git checkout $(params.source-revision)
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-commands-in-workspace
+spec:
+  workspaces:
+    - name: source
+    - name: commands
+  steps:
+    - name: main
+      image: golang
+      workingDir: $(workspaces.source.path)
+      script: |-
+        #!/bin/bash
+        set -o errexit
+        set -o pipefail
+
+        find $(workspaces.commands.path) -name "*.sh" -maxdepth 1 | xargs -n1 bash

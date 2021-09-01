@@ -1,0 +1,95 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: commands-via-configmaps
+spec:
+  params:
+    - name: source-url
+      description: url of tarball with source-code.
+    - name: source-revision
+      description: revision of the code checked in
+  workspaces:
+    - name: source
+      description: where source code will be checked in
+    - name: commands
+      description: where commands get mounted to
+  tasks:
+    - name: fetch-blob
+      taskRef:
+        name: fetch-blob
+      workspaces:
+        - name: source
+          workspace: source
+      params:
+        - name: source-url
+          value: $(params.source-url)
+    - name: run-command
+      runAfter: [fetch-blob]
+      taskRef:
+        name: run-commands-in-workspace
+      workspaces:
+        - name: source
+          workspace: source
+        - name: commands
+          workspace: commands
+      params:
+        - name: base-image
+          value: golang
+---
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: fetch-blob
+spec:
+  description: fetches a blob from a URL extracting its contents to the source workspace
+  params:
+    - name: source-url
+    - name: base-image
+      default: golang
+  workspaces:
+    - name: source
+  steps:
+    - name: main
+      image: $(params.base-image)
+      workingDir: $(workspaces.source.path)
+      script: |-
+        #!/bin/bash
+        set -o errexit
+        set -o pipefail
+        wget -qO- $(params.source-url) | tar xvz
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-commands-in-workspace
+spec:
+  description: runs commands from a configmap in a workspace with source code
+  params:
+    - name: base-image
+      default: golang
+      description: container image used when running commands against source code
+  workspaces:
+    - name: source
+    - name: commands
+  steps:
+    - name: main
+      image: $(params.base-image)
+      workingDir: $(workspaces.source.path)
+      script: |-
+        find $(workspaces.commands.path) -name "*.sh" | xargs -n1 bash

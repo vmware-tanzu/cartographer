@@ -1,0 +1,11 @@
+*.DS_Store
+*.generated
+.idea
+
+/site/public/
+/site/resources/
+
+build/cartographer
+cmd/random
+coverage.*
+kubeconfig

@@ -1,0 +1,39 @@
+baseurl = "http://cartographer.sh"
+languageCode = "en-us"
+title = "Project Cartographer"
+theme = "hugo-whisper-theme"
+
+pygmentsCodeFences = true
+pygmentsCodefencesGuessSyntax = true
+pygmentsUseClasses = true
+
+summaryLength = 30
+
+
+[[menu.main]]
+    name = "Home"
+    url = "/"
+    weight = 1
+
+[[menu.main]]
+    name = "Docs"
+    url = "/docs/"
+    weight = 2
+
+[params]
+  enable_anchor_link = true
+  homepage_button_link = '/docs'
+  homepage_button_text = 'Read The Docs'
+  homepage_intro = 'Cartographer documentation.'
+
+  [params.homepage_meta_tags]
+    meta_description = "Cartographer documentation"
+    meta_og_title = "Cartographer documentation"
+    meta_og_type = "website"
+    meta_og_url = "http://carto.run"
+    meta_og_image = "http://carto.run/images/og_image.png"
+    meta_og_description = "Cartographer documentation."
+
+  [params.logo]
+      mobile = "/images/logo-mobile.svg"
+      standard  = "/images/logo.svg"
