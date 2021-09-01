@@ -28,7 +28,7 @@ main() {
                 test_example
                 ;;
         teardown)
-                teardown
+                delete_containers
                 ;;
         *)
                 echo "error: unknown command '$COMMAND'."
@@ -37,11 +37,6 @@ main() {
                 ;;
         esac
 
-}
-
-teardown() {
-        docker rm -f $REGISTRY_CONTAINER_NAME || true
-        docker rm -f $KUBERNETES_CONTAINER_NAME || true
 }
 
 display_vars() {
@@ -189,9 +184,16 @@ install_kapp_controller() {
 }
 
 install_knative_serving() {
-        kapp deploy --yes -a knative-serving \
+        ytt --ignore-unknown-comments \
+                -f https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml \
                 -f https://github.com/knative/serving/releases/download/v0.25.0/serving-crds.yaml \
-                -f https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml |
+                kapp deploy --yes -a knative-serving -f-
+}
+
+delete_containers() {
+        docker rm -f $REGISTRY_CONTAINER_NAME || true
+        docker rm -f $KUBERNETES_CONTAINER_NAME || true
 }
 
 log() {
