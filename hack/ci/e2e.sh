@@ -17,7 +17,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -o xtrace
 
 readonly DIR=$(cd $(dirname $0) && pwd)
 readonly HOST_ADDR=${HOST_ADDR:-$($DIR/ip.py)}
