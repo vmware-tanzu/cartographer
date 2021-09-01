@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/valyala/fasttemplate"
+	. "github.com/vmware-tanzu/cartographer/pkg/utils/matchers"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,36 +32,15 @@ import (
 )
 
 var _ = Describe("Interpolator", func() {
-	var (
-		err error
-	)
-	ItDoesNotReturnAnError := func() {
-		It("does not return an error", func() {
-			Expect(err).ShouldNot(HaveOccurred())
-		})
-	}
-
-	ItReturnsAHelpfulError := func(expectedErrorSubstring string) {
-		It("returns a helpful error", func() {
-			Expect(err).Should(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(expectedErrorSubstring))
-		})
-	}
-
 	Describe("InterpolateLeafNode Stubbing executor", func() {
 		var (
 			template        []byte
-			result          interface{}
 			tagInterpolator templatesfakes.FakeTagInterpolator
 			executor        templates.TemplateExecutor
 		)
 
 		BeforeEach(func() {
 			template = []byte("some-template")
-		})
-
-		JustBeforeEach(func() {
-			result, err = templates.InterpolateLeafNode(executor, template, &tagInterpolator)
 		})
 
 		Context("when executor returns an error", func() {
@@ -70,7 +50,10 @@ var _ = Describe("Interpolator", func() {
 				}
 			})
 
-			ItReturnsAHelpfulError("interpolate tag:")
+			It("returns an error", func() {
+				_, err := templates.InterpolateLeafNode(executor, template, &tagInterpolator)
+				Expect(err).To(BeMeaningful("interpolate tag:"))
+			})
 		})
 
 		Context("when executor returns a stable result", func() {
@@ -81,6 +64,8 @@ var _ = Describe("Interpolator", func() {
 			})
 
 			It("returns the result as a byte array", func() {
+				result, err := templates.InterpolateLeafNode(executor, template, &tagInterpolator)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal("some result"))
 			})
 		})
@@ -97,49 +82,78 @@ var _ = Describe("Interpolator", func() {
 			template = []byte("some-template-with-$(some-tag)$")
 		})
 
-		JustBeforeEach(func() {
-			_, err = templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, &tagInterpolator)
-		})
+		// Todo: Missing happy path?
 
 		Context("When the tag interpolator returns an error", func() {
 			BeforeEach(func() {
 				tagInterpolator.InterpolateTagReturns(0, fmt.Errorf("some error"))
 			})
-			ItReturnsAHelpfulError("interpolate tag: ")
+			It("returns an error", func() {
+				_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, &tagInterpolator)
+				Expect(err).To(BeMeaningful("interpolate tag: "))
+			})
 		})
 	})
 
 	Describe("InterpolateLeafNode with fasttemplate and StandardTagInterpolator and eval.Evaluator", func() {
 		var (
-			workload                     *v1alpha1.Workload
-			template                     []byte
-			expectedString               string
-			returnedInterpolatedTemplate interface{}
-			stampContext                 templates.StampContext
-			params                       []templates.Param
-			sources                      []templates.SourceInput
-			images                       []templates.ImageInput
-			configs                      []templates.ConfigInput
-			tagInterpolator              templates.StandardTagInterpolator
+			workload        *v1alpha1.Workload
+			template        []byte
+			params          []templates.Param
+			sources         []templates.SourceInput
+			images          []templates.ImageInput
+			configs         []templates.ConfigInput
+			tagInterpolator templates.StandardTagInterpolator
 		)
 
 		BeforeEach(func() {
 			workload = &v1alpha1.Workload{}
-			params = []templates.Param{}
-			sources = []templates.SourceInput{}
-			images = []templates.ImageInput{}
-			configs = []templates.ConfigInput{}
+			params = []templates.Param{
+				{
+					Name:  "an amazing param",
+					Value: apiextensionsv1.JSON{Raw: []byte(`"exactly what you want"`)},
+				},
+				{
+					Name:  "another_param",
+					Value: apiextensionsv1.JSON{Raw: []byte(`"everything you need"`)},
+				},
+			}
+			sources = []templates.SourceInput{
+				{
+					Name:     "first_source",
+					URL:      "https://example.com/first",
+					Revision: "c001cafe",
+				},
+				{
+					Name:     "second_source",
+					URL:      "https://example.com/second",
+					Revision: "c0c0a",
+				},
+			}
+			images = []templates.ImageInput{
+				{
+					Name:  "first_image",
+					Image: "some://image/place",
+				},
+				{
+					Name:  "second_image",
+					Image: "some://other/image/place",
+				},
+			}
+			configs = []templates.ConfigInput{
+				{
+					Name:   "first_config",
+					Config: "kittens are furry",
+				},
+				{
+					Name:   "second_config",
+					Config: "branston pickles are great",
+				},
+			}
 			tagInterpolator = templates.StandardTagInterpolator{
 				Evaluator: eval.EvaluatorBuilder(),
 			}
-		})
-
-		JustBeforeEach(func() {
-			stampContext = templates.StampContext{Workload: workload, Params: params, Sources: sources, Images: images, Configs: configs}
-
-			tagInterpolator.Context = stampContext
-
-			returnedInterpolatedTemplate, err = templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+			tagInterpolator.Context = templates.StampContext{Workload: workload, Params: params, Sources: sources, Images: images, Configs: configs}
 		})
 
 		Context("given a template with no tags to interpolate", func() {
@@ -147,9 +161,9 @@ var _ = Describe("Interpolator", func() {
 				template = []byte("hello, this is dog")
 			})
 
-			ItDoesNotReturnAnError()
-
 			It("returns the same byte array", func() {
+				returnedInterpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(returnedInterpolatedTemplate).To(Equal(string(template)))
 			})
 		})
@@ -159,8 +173,11 @@ var _ = Describe("Interpolator", func() {
 				template = []byte("Look at this empty tag ---> $()$")
 			})
 
-			ItReturnsAHelpfulError("interpolate tag: ")
-			ItReturnsAHelpfulError("empty jsonpath not allowed")
+			It("Returns an error explaining that empty jsonpath is not allowed", func() {
+				_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+				Expect(err).To(BeMeaningful("interpolate tag: "))
+				Expect(err).To(BeMeaningful("empty jsonpath not allowed"))
+			})
 		})
 
 		Context("given a template with a tag for an unknown field in the stamp context", func() {
@@ -168,8 +185,11 @@ var _ = Describe("Interpolator", func() {
 				template = []byte("I've never heard of a $(snarfblatt.name)$")
 			})
 
-			ItReturnsAHelpfulError("interpolate tag: ")
-			ItReturnsAHelpfulError("evaluate jsonpath: ")
+			It("Returns an error that something went wrong in evaluating jsonpath", func() {
+				_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+				Expect(err).To(BeMeaningful("interpolate tag: "))
+				Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+			})
 		})
 
 		Context("given a template with a tag for an unknown subfield in the stamp context", func() {
@@ -177,8 +197,11 @@ var _ = Describe("Interpolator", func() {
 				template = []byte("Workloads don't have $(workload.vacationLoad)$")
 			})
 
-			ItReturnsAHelpfulError("evaluate jsonpath: ")
-			ItReturnsAHelpfulError("interpolate tag: ")
+			It("Returns an error that something went wrong in evaluating jsonpath", func() {
+				_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+				Expect(err).To(BeMeaningful("interpolate tag: "))
+				Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+			})
 		})
 
 		Context("given a stampContext with some values defined", func() {
@@ -195,35 +218,36 @@ var _ = Describe("Interpolator", func() {
 					template = []byte("this workload does not have an env: $(workload.spec.source)$ <-- so this shouldn't work")
 				})
 
-				ItReturnsAHelpfulError("interpolate tag: ")
-				ItReturnsAHelpfulError("tag must not point to nil value: workload.spec.source")
+				It("Returns an error that a tag points to a nil value", func() {
+					_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+					Expect(err).To(BeMeaningful("interpolate tag: "))
+					Expect(err).To(BeMeaningful("tag must not point to nil value: workload.spec.source"))
+				})
 			})
 
 			Context("and a tag pointing to a string field that can be interpolated", func() {
 				BeforeEach(func() {
 					template = []byte("this is the place to put the name: $(workload.metadata.name)$ <-- see it there?")
-
-					expectedString = "this is the place to put the name: work-name <-- see it there?"
 				})
 
-				ItDoesNotReturnAnError()
-
 				It("returns the proper string", func() {
-					Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+					interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(interpolatedTemplate).To(Equal("this is the place to put the name: work-name <-- see it there?"))
 				})
 			})
 
 			Context("where there are multiple tags", func() {
 				BeforeEach(func() {
 					template = []byte("this is the place to put the name: $(workload.metadata.name)$ and the namespace: $(workload.metadata.namespace)$")
-
-					expectedString = "this is the place to put the name: work-name and the namespace: work-namespace"
 				})
 
-				ItDoesNotReturnAnError()
-
 				It("returns the proper string", func() {
-					Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+					interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(interpolatedTemplate).To(Equal("this is the place to put the name: work-name and the namespace: work-namespace"))
 				})
 			})
 
@@ -236,20 +260,20 @@ var _ = Describe("Interpolator", func() {
 						},
 					}
 					template = []byte("this is the place to put the env: $(workload.spec.env)$ <-- see it there?")
-
-					expectedString = "this is the place to put the env: [{\"name\":\"George\",\"value\":\"Carver\"}] <-- see it there?"
 				})
 
-				ItDoesNotReturnAnError()
-
 				It("returns the proper string", func() {
-					Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+					interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(interpolatedTemplate).To(Equal(
+						`this is the place to put the env: [{"name":"George","value":"Carver"}] <-- see it there?`,
+					))
 				})
 			})
 
 			Context("and a tag that refers to an object", func() {
 				BeforeEach(func() {
-
 					url := "some.great-repo.com"
 					branch := "main"
 
@@ -264,14 +288,18 @@ var _ = Describe("Interpolator", func() {
 
 					template = []byte("this is the place to put the source: $(workload.spec.source.git)$")
 
-					expectedString = "this is the place to put the source: {\"ref\":{\"branch\":\"main\"},\"url\":\"some.great-repo.com\"}"
 				})
-
-				ItDoesNotReturnAnError()
 
 				It("returns the proper string", func() {
-					Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+					interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(interpolatedTemplate).To(Equal(
+						`this is the place to put the source: {"ref":{"branch":"main"},"url":"some.great-repo.com"}`,
+					))
+
 				})
+
 			})
 
 			Context("and a tag that refers to an item in a list", func() {
@@ -294,11 +322,13 @@ var _ = Describe("Interpolator", func() {
 					})
 
 					It("returns the proper string", func() {
-						expectedString = "this is the item: some-kind"
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
-					})
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
 
-					ItDoesNotReturnAnError()
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"this is the item: some-kind",
+						))
+					})
 				})
 
 				Context("by an expression", func() {
@@ -307,12 +337,14 @@ var _ = Describe("Interpolator", func() {
 							template = []byte(`here is a kind: $(workload.spec.serviceClaims[?(@.name=="a-service")].ref.kind)$`)
 						})
 
-						It("returns the appropriate value from the workload", func() {
-							expectedString = "here is a kind: some-kind"
-							Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
-						})
+						It("returns the proper string", func() {
+							interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
 
-						ItDoesNotReturnAnError()
+							Expect(err).NotTo(HaveOccurred())
+							Expect(interpolatedTemplate).To(Equal(
+								"here is a kind: some-kind",
+							))
+						})
 					})
 
 					Context("which matches multiple objects", func() {
@@ -329,7 +361,10 @@ var _ = Describe("Interpolator", func() {
 							})
 						})
 
-						ItReturnsAHelpfulError("too many results for the query: ")
+						It("returns an error that there are too many results", func() {
+							_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+							Expect(err).To(BeMeaningful("too many results for the query: "))
+						})
 					})
 				})
 			})
@@ -357,11 +392,13 @@ var _ = Describe("Interpolator", func() {
 					}
 				})
 
-				ItDoesNotReturnAnError()
-
 				It("returns the proper string", func() {
-					expectedString = "this will be a lot: [{\"name\":\"a-service\",\"ref\":{\"apiVersion\":\"someApi\",\"kind\":\"some-kind\",\"name\":\"my-service\"}},{\"name\":\"another-service\",\"ref\":{\"apiVersion\":\"another-api\",\"kind\":\"another-kind\",\"name\":\"another-service\"}}]"
-					Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+					interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(interpolatedTemplate).To(Equal(
+						`this will be a lot: [{"name":"a-service","ref":{"apiVersion":"someApi","kind":"some-kind","name":"my-service"}},{"name":"another-service","ref":{"apiVersion":"another-api","kind":"another-kind","name":"another-service"}}]`,
+					))
 				})
 			})
 
@@ -377,11 +414,13 @@ var _ = Describe("Interpolator", func() {
 				})
 
 				It("returns the proper string", func() {
-					expectedString = "quantities are weird: 10Gi"
-					Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
-				})
+					interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
 
-				ItDoesNotReturnAnError()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(interpolatedTemplate).To(Equal(
+						"quantities are weird: 10Gi",
+					))
+				})
 			})
 		})
 
@@ -391,49 +430,42 @@ var _ = Describe("Interpolator", func() {
 					template = []byte("in an empty input, you won't find $(params[0].value)$")
 				})
 
-				ItReturnsAHelpfulError("evaluate jsonpath: ")
-				ItReturnsAHelpfulError("interpolate tag: ")
+				It("Returns an error that it cannot evaluate the path", func() {
+					_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+					Expect(err).To(BeMeaningful("interpolate tag: "))
+					Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+				})
 			})
 
 			Context("that is in the stampcontext", func() {
-				BeforeEach(func() {
-					params = []templates.Param{
-						{
-							Name:  "an amazing param",
-							Value: apiextensionsv1.JSON{Raw: []byte("\"exactly what you want\"")},
-						},
-						{
-							Name:  "another_param",
-							Value: apiextensionsv1.JSON{Raw: []byte("\"everything you need\"")},
-						},
-					}
-				})
-
 				Context("where tag uses array indexing", func() {
 					BeforeEach(func() {
 						template = []byte("with the populated input, you can find $(params[1].value)$")
-
-						expectedString = "with the populated input, you can find everything you need"
 					})
 
-					ItDoesNotReturnAnError()
-
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated input, you can find everything you need",
+						))
 					})
 				})
 
 				Context("where tag uses expression matching", func() {
 					BeforeEach(func() {
-						template = []byte("with the populated input, you can find $(params[?(@.name==\"an amazing param\")].value)$")
-
-						expectedString = "with the populated input, you can find exactly what you want"
+						template = []byte(`with the populated input, you can find $(params[?(@.name=="an amazing param")].value)$`)
 					})
 
-					ItDoesNotReturnAnError()
 
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated input, you can find exactly what you want",
+						))
 					})
 				})
 			})
@@ -445,51 +477,41 @@ var _ = Describe("Interpolator", func() {
 					template = []byte("in an empty input, you won't find $(sources[0].url)$")
 				})
 
-				ItReturnsAHelpfulError("evaluate jsonpath: ")
-				ItReturnsAHelpfulError("interpolate tag: ")
+				It("Returns an error that it cannot evaluate the path", func() {
+					_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+					Expect(err).To(BeMeaningful("interpolate tag: "))
+					Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+				})
 			})
 
 			Context("that is in the input", func() {
-				BeforeEach(func() {
-					sources = []templates.SourceInput{
-						{
-							Name:     "first_source",
-							URL:      "https://example.com/first",
-							Revision: "c001cafe",
-						},
-						{
-							Name:     "second_source",
-							URL:      "https://example.com/second",
-							Revision: "c0c0a",
-						},
-					}
-				})
-
 				Context("where tag uses array indexing", func() {
 					BeforeEach(func() {
 						template = []byte("with the populated source, you can find $(sources[1].url)$ and $(sources[1].revision)$")
-
-						expectedString = "with the populated source, you can find https://example.com/second and c0c0a"
 					})
 
-					ItDoesNotReturnAnError()
-
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated source, you can find https://example.com/second and c0c0a",
+						))
 					})
 				})
 
 				Context("where tag uses expression matching", func() {
 					BeforeEach(func() {
-						template = []byte("with the populated source, you can find $(sources[?(@.name==\"first_source\")].url)$ and $(sources[?(@.name==\"second_source\")].revision)$")
-
-						expectedString = "with the populated source, you can find https://example.com/first and c0c0a"
+						template = []byte(`with the populated source, you can find $(sources[?(@.name=="first_source")].url)$ and $(sources[?(@.name=="second_source")].revision)$`)
 					})
 
-					ItDoesNotReturnAnError()
-
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated source, you can find https://example.com/first and c0c0a",
+						))
 					})
 				})
 
@@ -498,8 +520,11 @@ var _ = Describe("Interpolator", func() {
 						template = []byte("with the populated source, you can't find $(sources[1].qwijibo)$ because it does not exist")
 					})
 
-					ItReturnsAHelpfulError("evaluate jsonpath: evaluate: find results: qwijibo is not found")
-					ItReturnsAHelpfulError("interpolate tag: ")
+					It("Returns an error that it cannot find the value qwijibo", func() {
+						_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+						Expect(err).To(BeMeaningful("interpolate tag: "))
+						Expect(err).To(BeMeaningful("evaluate jsonpath: evaluate: find results: qwijibo is not found"))
+					})
 				})
 			})
 		})
@@ -510,49 +535,42 @@ var _ = Describe("Interpolator", func() {
 					template = []byte("in an empty input, you won't find $(images[0].image)$")
 				})
 
-				ItReturnsAHelpfulError("evaluate jsonpath: ")
-				ItReturnsAHelpfulError("interpolate tag: ")
+				It("Returns an error that it cannot evaluate the path", func() {
+					_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+					Expect(err).To(BeMeaningful("interpolate tag: "))
+					Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+				})
 			})
 
 			Context("that is in the input", func() {
-				BeforeEach(func() {
-					images = []templates.ImageInput{
-						{
-							Name:  "first_image",
-							Image: "some://image/place",
-						},
-						{
-							Name:  "second_image",
-							Image: "some://other/image/place",
-						},
-					}
-				})
-
 				Context("where tag uses array indexing", func() {
 					BeforeEach(func() {
 						template = []byte("with the populated image, you can find $(images[1].image)$")
-
-						expectedString = "with the populated image, you can find some://other/image/place"
 					})
 
-					ItDoesNotReturnAnError()
-
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated image, you can find some://other/image/place",
+						))
 					})
 				})
 
 				Context("where tag uses expression matching", func() {
 					BeforeEach(func() {
-						template = []byte("with the populated image, you can find $(images[?(@.name==\"first_image\")].image)$")
-
-						expectedString = "with the populated image, you can find some://image/place"
+						template = []byte(`with the populated image, you can find $(images[?(@.name=="first_image")].image)$`)
 					})
 
-					ItDoesNotReturnAnError()
 
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated image, you can find some://image/place",
+						))
 					})
 				})
 
@@ -561,8 +579,11 @@ var _ = Describe("Interpolator", func() {
 						template = []byte("with the populated image, you can't find $(images[1].qwijibo)$ because it does not exist")
 					})
 
-					ItReturnsAHelpfulError("evaluate jsonpath: evaluate: find results: qwijibo is not found")
-					ItReturnsAHelpfulError("interpolate tag: ")
+					It("Returns an error that it cannot evaluate the value qwijibo", func() {
+						_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+						Expect(err).To(BeMeaningful("interpolate tag: "))
+						Expect(err).To(BeMeaningful("evaluate jsonpath: evaluate: find results: qwijibo is not found"))
+					})
 				})
 			})
 		})
@@ -573,49 +594,41 @@ var _ = Describe("Interpolator", func() {
 					template = []byte("in an empty input, you won't find $(configs[0].config)$")
 				})
 
-				ItReturnsAHelpfulError("evaluate jsonpath: ")
-				ItReturnsAHelpfulError("interpolate tag: ")
+				It("Returns an error that it cannot evaluate the path", func() {
+					_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+					Expect(err).To(BeMeaningful("interpolate tag: "))
+					Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+				})
 			})
 
 			Context("that is in the input", func() {
-				BeforeEach(func() {
-					configs = []templates.ConfigInput{
-						{
-							Name:   "first_config",
-							Config: "kittens are furry",
-						},
-						{
-							Name:   "second_config",
-							Config: "branston pickles are great",
-						},
-					}
-				})
-
 				Context("where tag uses array indexing", func() {
 					BeforeEach(func() {
 						template = []byte("with the populated config, you can find $(configs[1].config)$")
-
-						expectedString = "with the populated config, you can find branston pickles are great"
 					})
 
-					ItDoesNotReturnAnError()
-
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated config, you can find branston pickles are great",
+						))
 					})
 				})
 
 				Context("where tag uses expression matching", func() {
 					BeforeEach(func() {
-						template = []byte("with the populated config, you can find $(configs[?(@.name==\"first_config\")].config)$")
-
-						expectedString = "with the populated config, you can find kittens are furry"
+						template = []byte(`with the populated config, you can find $(configs[?(@.name=="first_config")].config)$`)
 					})
 
-					ItDoesNotReturnAnError()
-
 					It("returns the proper string", func() {
-						Expect(returnedInterpolatedTemplate).To(Equal(expectedString))
+						interpolatedTemplate, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(interpolatedTemplate).To(Equal(
+							"with the populated config, you can find kittens are furry",
+						))
 					})
 				})
 
@@ -624,8 +637,11 @@ var _ = Describe("Interpolator", func() {
 						template = []byte("with the populated config, you can't find $(configs[1].qwijibo)$ because it does not exist")
 					})
 
-					ItReturnsAHelpfulError("evaluate jsonpath: evaluate: find results: qwijibo is not found")
-					ItReturnsAHelpfulError("interpolate tag: ")
+					It("Returns an error that it cannot evaluate the path", func() {
+						_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
+						Expect(err).To(BeMeaningful("interpolate tag: "))
+						Expect(err).To(BeMeaningful("evaluate jsonpath: "))
+					})
 				})
 			})
 		})
