@@ -3,6 +3,7 @@
 set -o errexit
 set -o nounset
 set -o pipefail
+set -o xtrace
 
 readonly DIR=$(cd $(dirname $0) && pwd)
 readonly HOST_ADDR=${HOST_ADDR:-$($DIR/ip.py)}
@@ -17,11 +18,11 @@ readonly COMMAND=${1:-run}
 main() {
         case $COMMAND in
         run)
-                display_vars
-                start_registry
-                start_local_cluster
+                # display_vars
+                # start_registry
+                # start_local_cluster
 
-                generate_cartographer_release
+                # generate_cartographer_release
                 install_dependencies
 
                 setup_example
@@ -147,13 +148,19 @@ install_dependencies() {
 }
 
 install_cert_manager() {
-        kapp deploy --yes -a cert-manager \
-                -f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.yaml
+        ytt --ignore-unknown-comments \
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.yaml |
+                kapp deploy --yes -a cert-manager -f-
 }
 
 install_cartographer() {
         kubectl create namespace cartographer-system
-        kapp deploy --yes -a cartographer -f $DIR/../../releases/release.yaml
+
+        ytt --ignore-unknown-comments \
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f $DIR/../../releases/release.yaml |
+                kapp deploy --yes -a cartographer -f-
 }
 
 install_source_controller() {
@@ -163,15 +170,19 @@ install_source_controller() {
                 --clusterrole=cluster-admin \
                 --serviceaccount=gitops-toolkit:default
 
-        kapp deploy --yes -a gitops-toolkit \
-                --into-ns gitops-toolkit \
+        ytt --ignore-unknown-comments \
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
                 -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.crds.yaml \
-                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.deployment.yaml
+                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.deployment.yaml |
+                kapp deploy --yes -a gitops-toolkit --into-ns gitops-toolkit -f-
 }
 
 install_kpack() {
-        kapp deploy --yes -a kpack \
-                -f https://github.com/pivotal/kpack/releases/download/v0.3.1/release-0.3.1.yaml
+        ytt --ignore-unknown-comments \
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f https://github.com/pivotal/kpack/releases/download/v0.3.1/release-0.3.1.yaml |
+                kapp deploy --yes -a kpack -f-
+
 }
 
 install_kapp_controller() {
@@ -179,8 +190,10 @@ install_kapp_controller() {
                 --clusterrole=cluster-admin \
                 --serviceaccount=default:default
 
-        kapp deploy --yes -a kapp-controller \
-                -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.22.0/release.yml
+        ytt --ignore-unknown-comments \
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.22.0/release.yml |
+                kapp deploy --yes -a kapp-controller -f-
 }
 
 install_knative_serving() {

@@ -8,8 +8,8 @@ spec:
     spec:
       #@overlay/match
       containers:
-        #@overlay/match by=overlay.all,expects="1+"
+        #@overlay/match by=overlay.all,expects="0+"
         - resources:
-            #@overlay/match
-            #@overlay/remove
+            #@overlay/match missing_ok=True
+            #@overlay/replace
             requests: {}
