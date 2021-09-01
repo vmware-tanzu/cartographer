@@ -20,7 +20,7 @@ type beMeaningfulMatcher struct {
 
 func (matcher *beMeaningfulMatcher) Match(actual interface{}) (success bool, err error) {
 	if actual == nil {
-		return true,  nil
+		return true, nil
 	}
 
 	actualError, ok := actual.(error)

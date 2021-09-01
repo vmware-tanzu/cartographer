@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
@@ -33,25 +33,23 @@ type Inputs struct {
 	Configs []ConfigInput `json:"configs"`
 }
 
-type StampContext struct {
-	Params   Params             `json:"params"`
-	Workload *v1alpha1.Workload `json:"workload"`
-	Sources  []SourceInput      `json:"sources"`
-	Images   []ImageInput       `json:"images"`
-	Configs  []ConfigInput      `json:"configs"`
+type Labels map[string]string
 
-	Labels map[string]string
+// JsonPathContext is any structure that you intend for jsonpath to treat as it's context.
+// typically any struct with template-specific json structure tags
+type JsonPathContext interface{}
+
+type Stamper struct {
+	TemplatingContext JsonPathContext
+	Owner             client.Object
+	Labels            Labels
 }
 
-func StampContextBuilder(workload *v1alpha1.Workload, labels map[string]string, params Params, inputs *Inputs) StampContext {
-	return StampContext{
-		Params:   params,
-		Workload: workload,
-		Sources:  inputs.Sources,
-		Images:   inputs.Images,
-		Configs:  inputs.Configs,
-
-		Labels: labels,
+func StamperBuilder(owner client.Object, templatingContext JsonPathContext, labels Labels) Stamper {
+	return Stamper{
+		TemplatingContext: templatingContext,
+		Owner:             owner,
+		Labels:            labels,
 	}
 }
 
@@ -85,11 +83,11 @@ func formatExpressionLoop(expressionLoop []string) string {
 	return result
 }
 
-func (c *StampContext) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetector loopDetector) (interface{}, error) {
+func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetector loopDetector) (interface{}, error) {
 	switch typedJSONValue := jsonValue.(type) {
 	case string:
 		stamperTagInterpolator := StandardTagInterpolator{
-			Context:   *c,
+			Context:   s.TemplatingContext,
 			Evaluator: eval.EvaluatorBuilder(),
 		}
 		loopDetector, err := loopDetector.checkItem(typedJSONValue)
@@ -104,12 +102,12 @@ func (c *StampContext) recursivelyEvaluateTemplates(jsonValue interface{}, loopD
 		if jsonValue == stampedLeafNode {
 			return stampedLeafNode, nil
 		} else {
-			return c.recursivelyEvaluateTemplates(stampedLeafNode, loopDetector)
+			return s.recursivelyEvaluateTemplates(stampedLeafNode, loopDetector)
 		}
 	case map[string]interface{}:
 		stampedMap := make(map[string]interface{})
 		for key, value := range typedJSONValue {
-			stampedValue, err := c.recursivelyEvaluateTemplates(value, loopDetector)
+			stampedValue, err := s.recursivelyEvaluateTemplates(value, loopDetector)
 			if err != nil {
 				return nil, fmt.Errorf("interpolating map value %v: %w", value, err)
 			}
@@ -119,7 +117,7 @@ func (c *StampContext) recursivelyEvaluateTemplates(jsonValue interface{}, loopD
 	case []interface{}:
 		var stampedSlice []interface{}
 		for _, sliceElement := range typedJSONValue {
-			stampedElement, err := c.recursivelyEvaluateTemplates(sliceElement, loopDetector)
+			stampedElement, err := s.recursivelyEvaluateTemplates(sliceElement, loopDetector)
 			if err != nil {
 				return nil, fmt.Errorf("interpolating map value %v: %w", sliceElement, err)
 			}
@@ -131,14 +129,14 @@ func (c *StampContext) recursivelyEvaluateTemplates(jsonValue interface{}, loopD
 	}
 }
 
-func (c *StampContext) Stamp(resourceTemplate []byte) (*unstructured.Unstructured, error) {
+func (s *Stamper) Stamp(resourceTemplate []byte) (*unstructured.Unstructured, error) {
 	var resourceTemplateJSON interface{}
 	err := json.Unmarshal(resourceTemplate, &resourceTemplateJSON)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal to JSON: %w", err)
 	}
 
-	stampedObjectJSON, err := c.recursivelyEvaluateTemplates(resourceTemplateJSON, loopDetector{})
+	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplateJSON, loopDetector{})
 	if err != nil {
 		return nil, fmt.Errorf("recursively stamp json values: %w", err)
 	}
@@ -151,33 +149,33 @@ func (c *StampContext) Stamp(resourceTemplate []byte) (*unstructured.Unstructure
 	stampedObject.SetUnstructuredContent(unstructuredContent)
 
 	if stampedObject.GetNamespace() == "" {
-		stampedObject.SetNamespace(c.Workload.GetNamespace())
+		stampedObject.SetNamespace(s.Owner.GetNamespace())
 	}
 
-	apiVersion, kind := c.Workload.TypeMeta.GroupVersionKind().ToAPIVersionAndKind()
+	apiVersion, kind := s.Owner.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
 	stampedObject.SetOwnerReferences([]metav1.OwnerReference{
 		{
 			APIVersion:         apiVersion,
 			Kind:               kind,
-			Name:               c.Workload.Name,
-			UID:                c.Workload.UID,
+			UID:                s.Owner.GetUID(),
+			Name:               s.Owner.GetName(),
 			BlockOwnerDeletion: pointer.BoolPtr(true),
 			Controller:         pointer.BoolPtr(true),
 		},
 	})
 
-	c.mergeLabels(stampedObject)
+	s.mergeLabels(stampedObject)
 
 	return stampedObject, nil
 }
 
-func (c *StampContext) mergeLabels(obj *unstructured.Unstructured) {
+func (s *Stamper) mergeLabels(obj *unstructured.Unstructured) {
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
 
-	for key, value := range c.Labels {
+	for key, value := range s.Labels {
 		labels[key] = value
 	}
 

@@ -45,8 +45,6 @@ func isSingleTag(template string) bool {
 
 // InterpolateLeafNode merges the context variables anywhere a $(<<jsonPath>>)$ tag is found
 // It validates that the jsonPath refers to objects within the context
-// It also makes workloads easier to access by aliasing the content of 'metadata' and 'spec' keys
-//   onto 'workload.'
 func InterpolateLeafNode(executor TemplateExecutor, template []byte, tagInterpolator tagInterpolator) (interface{}, error) {
 	input := string(template)
 
@@ -69,7 +67,7 @@ func InterpolateLeafNode(executor TemplateExecutor, template []byte, tagInterpol
 }
 
 type StandardTagInterpolator struct {
-	Context   StampContext
+	Context   JsonPathContext
 	Evaluator evaluator
 }
 
