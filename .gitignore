@@ -8,4 +8,6 @@
 build/cartographer
 cmd/random
 coverage.*
+
 kubeconfig
+release.yaml
