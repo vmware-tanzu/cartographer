@@ -15,6 +15,6 @@
 ---
 apiVersion: imgpkg.carvel.dev/v1alpha1
 bundle:
-  image: index.docker.io/projectcartographer/cartographer-bundle@sha256:98dab6d65999b77198d2bb8e6e803987263d6dadbbb201b84f9d4ee77c924d90
+  image: index.docker.io/projectcartographer/cartographer-bundle@sha256:2bf6641a59738c11f4d434d3b2161c9276104fbf1df7582b77f962c439d20547
   tag: latest
 kind: BundleLock
