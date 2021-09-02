@@ -238,7 +238,7 @@ var _ = Describe("Component", func() {
 			})
 		})
 
-		When("unable to CreateOrPatchUnstructuredObject the stamped object", func() {
+		When("unable to AssureObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
 				component.Sources = []v1alpha1.ComponentReference{
 					{

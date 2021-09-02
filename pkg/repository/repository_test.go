@@ -81,7 +81,7 @@ var _ = Describe("Repository", func() {
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("CreateOrPatchUnstructuredObject", func() {
+		Context("AssureObjectExistsOnCluster", func() {
 			var stampedObj *unstructured.Unstructured
 
 			BeforeEach(func() {
@@ -107,7 +107,7 @@ spec:
 			})
 
 			It("attempts to get the object from the apiServer", func() {
-				Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+				Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 
 				Expect(cl.GetCallCount()).To(Equal(1))
 
@@ -127,18 +127,18 @@ spec:
 				})
 
 				It("returns a helpful error", func() {
-					err := repo.CreateOrPatchUnstructuredObject(stampedObj)
+					err := repo.AssureObjectExistsOnCluster(stampedObj)
 					Expect(err).To(MatchError(ContainSubstring("get: some-error")))
 				})
 
 				It("does not create or patch any objects", func() {
-					_ = repo.CreateOrPatchUnstructuredObject(stampedObj)
+					_ = repo.AssureObjectExistsOnCluster(stampedObj)
 					Expect(cl.CreateCallCount()).To(Equal(0))
 					Expect(cl.PatchCallCount()).To(Equal(0))
 				})
 
 				It("does not write to the submitted or persisted cache", func() {
-					_ = repo.CreateOrPatchUnstructuredObject(stampedObj)
+					_ = repo.AssureObjectExistsOnCluster(stampedObj)
 					Expect(cache.SetCallCount()).To(Equal(0))
 				})
 			})
@@ -153,7 +153,7 @@ spec:
 				})
 
 				It("attempts to create the object", func() {
-					Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+					Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 
 					Expect(cl.CreateCallCount()).To(Equal(1))
 					_, createCallObj, _ := cl.CreateArgsForCall(0)
@@ -166,12 +166,12 @@ spec:
 					})
 
 					It("returns a helpful error", func() {
-						err := repo.CreateOrPatchUnstructuredObject(stampedObj)
+						err := repo.AssureObjectExistsOnCluster(stampedObj)
 						Expect(err).To(MatchError(ContainSubstring("create: some-error")))
 					})
 
 					It("does not write to the submitted or persisted cache", func() {
-						_ = repo.CreateOrPatchUnstructuredObject(stampedObj)
+						_ = repo.AssureObjectExistsOnCluster(stampedObj)
 						Expect(cache.SetCallCount()).To(Equal(0))
 					})
 				})
@@ -191,13 +191,13 @@ spec:
 					})
 
 					It("does not return an error", func() {
-						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 					})
 
 					It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(1))
 						submitted, persisted := cache.SetArgsForCall(0)
 						Expect(*submitted).To(Equal(*originalStampedObj))
@@ -222,7 +222,7 @@ spec:
 				})
 
 				It("the cache is consulted to see if there was a change since the last time the cache was updated", func() {
-					Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+					Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 					Expect(cache.UnchangedSinceCachedCallCount()).To(Equal(1))
 
 					submitted, persisted := cache.UnchangedSinceCachedArgsForCall(0)
@@ -236,20 +236,20 @@ spec:
 					})
 
 					It("does not create or patch any objects", func() {
-						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 						Expect(cl.CreateCallCount()).To(Equal(0))
 						Expect(cl.PatchCallCount()).To(Equal(0))
 					})
 
 					It("does not write to the submitted or persisted cache", func() {
-						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(0))
 					})
 
 					It("refreshes the cache entry", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 						Expect(cache.RefreshCallCount()).To(Equal(1))
 						Expect(cache.RefreshArgsForCall(0)).To(Equal(originalStampedObj))
 					})
@@ -257,7 +257,7 @@ spec:
 					It("populates the object passed into the function with the object in apiServer", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						_ = repo.CreateOrPatchUnstructuredObject(stampedObj)
+						_ = repo.AssureObjectExistsOnCluster(stampedObj)
 
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
@@ -270,7 +270,7 @@ spec:
 					})
 
 					It("patches the object", func() {
-						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 						Expect(cl.PatchCallCount()).To(Equal(1))
 					})
 
@@ -290,13 +290,13 @@ spec:
 						})
 
 						It("does not return an error", func() {
-							Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+							Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 						})
 
 						It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
 							originalStampedObj := stampedObj.DeepCopy()
 
-							Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
+							Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
 							Expect(cache.SetCallCount()).To(Equal(1))
 							submitted, persisted := cache.SetArgsForCall(0)
 							Expect(*submitted).To(Equal(*originalStampedObj))
@@ -309,12 +309,12 @@ spec:
 							cl.PatchReturns(errors.New("some-error"))
 						})
 						It("returns a helpful error", func() {
-							err := repo.CreateOrPatchUnstructuredObject(stampedObj)
+							err := repo.AssureObjectExistsOnCluster(stampedObj)
 							Expect(err).To(MatchError(ContainSubstring("patch: some-error")))
 						})
 
 						It("does not write to the submitted or persisted cache", func() {
-							_ = repo.CreateOrPatchUnstructuredObject(stampedObj)
+							_ = repo.AssureObjectExistsOnCluster(stampedObj)
 							Expect(cache.SetCallCount()).To(Equal(0))
 						})
 					})

@@ -34,7 +34,7 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	CreateOrPatchUnstructuredObject(obj *unstructured.Unstructured) error
+	AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error
 	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
@@ -55,7 +55,7 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	}
 }
 
-func (r *repository) CreateOrPatchUnstructuredObject(obj *unstructured.Unstructured) error {
+func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error {
 	submitted := obj.DeepCopy()
 	existingUnstructured, err := r.getExistingUnstructured(obj)
 
@@ -67,9 +67,7 @@ func (r *repository) CreateOrPatchUnstructuredObject(obj *unstructured.Unstructu
 	} else if r.rc.UnchangedSinceCached(submitted, existingUnstructured) {
 		r.rc.Refresh(submitted)
 
-		objVal := reflect.ValueOf(obj)
-		existingVal := reflect.ValueOf(existingUnstructured)
-		reflect.Indirect(objVal).Set(reflect.Indirect(existingVal))
+		updateObjWithValuesFromAPIServer(obj, existingUnstructured)
 
 		return nil
 	} else {
@@ -83,6 +81,12 @@ func (r *repository) CreateOrPatchUnstructuredObject(obj *unstructured.Unstructu
 	r.rc.Set(submitted, obj.DeepCopy())
 
 	return nil
+}
+
+func updateObjWithValuesFromAPIServer(obj *unstructured.Unstructured, existingUnstructured *unstructured.Unstructured) {
+	objVal := reflect.ValueOf(obj)
+	existingVal := reflect.ValueOf(existingUnstructured)
+	reflect.Indirect(objVal).Set(reflect.Indirect(existingVal))
 }
 
 func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {

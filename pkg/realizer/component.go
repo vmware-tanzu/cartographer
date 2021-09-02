@@ -71,7 +71,7 @@ func (r *componentRealizer) Do(component *v1alpha1.SupplyChainComponent, supplyC
 		}
 	}
 
-	err = r.repo.CreateOrPatchUnstructuredObject(stampedObject)
+	err = r.repo.AssureObjectExistsOnCluster(stampedObject)
 	if err != nil {
 		return nil, ApplyStampedObjectError{
 			Err:           err,
