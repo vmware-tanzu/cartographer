@@ -247,9 +247,20 @@ spec:
 					})
 
 					It("refreshes the cache entry", func() {
+						originalStampedObj := stampedObj.DeepCopy()
+
 						Expect(repo.CreateOrPatchUnstructuredObject(stampedObj)).To(Succeed())
 						Expect(cache.RefreshCallCount()).To(Equal(1))
-						Expect(cache.RefreshArgsForCall(0)).To(Equal(stampedObj))
+						Expect(cache.RefreshArgsForCall(0)).To(Equal(originalStampedObj))
+					})
+
+					It("populates the object passed into the function with the object in apiServer", func() {
+						originalStampedObj := stampedObj.DeepCopy()
+
+						_ = repo.CreateOrPatchUnstructuredObject(stampedObj)
+
+						Expect(stampedObj).To(Equal(existingObj))
+						Expect(stampedObj).NotTo(Equal(originalStampedObj))
 					})
 				})
 

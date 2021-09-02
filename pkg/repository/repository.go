@@ -17,6 +17,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -65,6 +66,11 @@ func (r *repository) CreateOrPatchUnstructuredObject(obj *unstructured.Unstructu
 		return err
 	} else if r.rc.UnchangedSinceCached(submitted, existingUnstructured) {
 		r.rc.Refresh(submitted)
+
+		objVal := reflect.ValueOf(obj)
+		existingVal := reflect.ValueOf(existingUnstructured)
+		reflect.Indirect(objVal).Set(reflect.Indirect(existingVal))
+
 		return nil
 	} else {
 		createOrPatchErr = r.patchUnstructured(existingUnstructured, obj)
