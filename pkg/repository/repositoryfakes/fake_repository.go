@@ -102,7 +102,7 @@ type FakeRepository struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRepository) CreateOrPatchUnstructuredObject(arg1 *unstructured.Unstructured) error {
+func (fake *FakeRepository) AssureObjectExistsOnCluster(arg1 *unstructured.Unstructured) error {
 	fake.createOrPatchUnstructuredObjectMutex.Lock()
 	ret, specificReturn := fake.createOrPatchUnstructuredObjectReturnsOnCall[len(fake.createOrPatchUnstructuredObjectArgsForCall)]
 	fake.createOrPatchUnstructuredObjectArgsForCall = append(fake.createOrPatchUnstructuredObjectArgsForCall, struct {
@@ -110,7 +110,7 @@ func (fake *FakeRepository) CreateOrPatchUnstructuredObject(arg1 *unstructured.U
 	}{arg1})
 	stub := fake.CreateOrPatchUnstructuredObjectStub
 	fakeReturns := fake.createOrPatchUnstructuredObjectReturns
-	fake.recordInvocation("CreateOrPatchUnstructuredObject", []interface{}{arg1})
+	fake.recordInvocation("AssureObjectExistsOnCluster", []interface{}{arg1})
 	fake.createOrPatchUnstructuredObjectMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
