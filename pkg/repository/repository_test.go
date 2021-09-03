@@ -383,6 +383,33 @@ spec:
 			})
 		})
 
+		Context("GetPipeline", func() {
+			BeforeEach(func() {
+				pipeline := &v1alpha1.Pipeline{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pipeline-name",
+						Namespace: "pipeline-namespace",
+					},
+				}
+				clientObjects = []client.Object{pipeline}
+			})
+
+			It("gets the pipeline successfully", func() {
+				pipeline, err := repo.GetPipeline("pipeline-name", "pipeline-namespace")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pipeline.GetName()).To(Equal("pipeline-name"))
+			})
+
+			Context("pipeline doesnt exist", func() {
+				It("returns an error", func() {
+					_, err := repo.GetPipeline("pipeline-that-does-not-exist-name", "pipeline-namespace")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get-pipeline:"))
+				})
+			})
+		})
+
+
 		Context("GetSupplyChainsForWorkload", func() {
 			Context("One supply chain", func() {
 				BeforeEach(func() {

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/cache"
@@ -58,6 +59,10 @@ func RegisterControllers(mgr manager.Manager) error {
 
 	if err := registerSupplyChainController(mgr); err != nil {
 		return fmt.Errorf("register supply-chain controller: %w", err)
+	}
+
+	if err := registerPipelineServiceController(mgr); err != nil {
+		return fmt.Errorf("register pipeline-service controller: %w", err)
 	}
 
 	return nil
@@ -114,6 +119,29 @@ func registerSupplyChainController(mgr manager.Manager) error {
 
 	return nil
 }
+
+func registerPipelineServiceController(mgr manager.Manager) error {
+	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
+
+	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
+		Reconciler: &pipeline.Reconciler{Repository: repo},
+	})
+	if err != nil {
+		return fmt.Errorf("controller new [pipeline-service]: %w", err)
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.Pipeline{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return fmt.Errorf("watch [pipeline-service]: %w", err)
+	}
+
+	// TODO: need a watcher for RunTemplates, and an accomponying funcMap
+
+	return nil
+}
+
 
 func IndexResources(mgr manager.Manager, ctx context.Context) error {
 	fieldIndexer := mgr.GetFieldIndexer()

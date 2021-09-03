@@ -41,6 +41,7 @@ type Repository interface {
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
+	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline,	error)
 }
 
 type repository struct {
@@ -171,6 +172,25 @@ func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workl
 	}
 
 	return &workload, nil
+}
+
+
+func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error) {
+	pipeline := &v1alpha1.Pipeline{}
+
+	err := r.cl.Get(context.TODO(),
+		client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		},
+		pipeline,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("get-pipeline: %w", err)
+	}
+
+	return pipeline, nil
 }
 
 func supplyChainSelectorMatchesWorkloadLabels(selector map[string]string, labels map[string]string) bool {

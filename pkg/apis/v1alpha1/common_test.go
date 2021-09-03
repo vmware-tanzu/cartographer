@@ -33,6 +33,7 @@ var _ = Describe("common", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(reflect.TypeOf(actualTemplate)).To(Equal(reflect.TypeOf(expectedTemplate)))
 			},
+			Entry("RunTemplate", "RunTemplate", &RunTemplate{}),
 			Entry("ClusterSourceTemplate", "ClusterSourceTemplate", &ClusterSourceTemplate{}),
 			Entry("ClusterImageTemplate", "ClusterImageTemplate", &ClusterImageTemplate{}),
 			Entry("ClusterConfigTemplate", "ClusterConfigTemplate", &ClusterConfigTemplate{}),

@@ -13,16 +13,30 @@ import (
 )
 
 type FakeRepository struct {
-	CreateOrPatchUnstructuredObjectStub        func(*unstructured.Unstructured) error
-	createOrPatchUnstructuredObjectMutex       sync.RWMutex
-	createOrPatchUnstructuredObjectArgsForCall []struct {
+	AssureObjectExistsOnClusterStub        func(*unstructured.Unstructured) error
+	assureObjectExistsOnClusterMutex       sync.RWMutex
+	assureObjectExistsOnClusterArgsForCall []struct {
 		arg1 *unstructured.Unstructured
 	}
-	createOrPatchUnstructuredObjectReturns struct {
+	assureObjectExistsOnClusterReturns struct {
 		result1 error
 	}
-	createOrPatchUnstructuredObjectReturnsOnCall map[int]struct {
+	assureObjectExistsOnClusterReturnsOnCall map[int]struct {
 		result1 error
+	}
+	GetPipelineStub        func(string, string) (*v1alpha1.Pipeline, error)
+	getPipelineMutex       sync.RWMutex
+	getPipelineArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getPipelineReturns struct {
+		result1 *v1alpha1.Pipeline
+		result2 error
+	}
+	getPipelineReturnsOnCall map[int]struct {
+		result1 *v1alpha1.Pipeline
+		result2 error
 	}
 	GetSchemeStub        func() *runtime.Scheme
 	getSchemeMutex       sync.RWMutex
@@ -103,15 +117,15 @@ type FakeRepository struct {
 }
 
 func (fake *FakeRepository) AssureObjectExistsOnCluster(arg1 *unstructured.Unstructured) error {
-	fake.createOrPatchUnstructuredObjectMutex.Lock()
-	ret, specificReturn := fake.createOrPatchUnstructuredObjectReturnsOnCall[len(fake.createOrPatchUnstructuredObjectArgsForCall)]
-	fake.createOrPatchUnstructuredObjectArgsForCall = append(fake.createOrPatchUnstructuredObjectArgsForCall, struct {
+	fake.assureObjectExistsOnClusterMutex.Lock()
+	ret, specificReturn := fake.assureObjectExistsOnClusterReturnsOnCall[len(fake.assureObjectExistsOnClusterArgsForCall)]
+	fake.assureObjectExistsOnClusterArgsForCall = append(fake.assureObjectExistsOnClusterArgsForCall, struct {
 		arg1 *unstructured.Unstructured
 	}{arg1})
-	stub := fake.CreateOrPatchUnstructuredObjectStub
-	fakeReturns := fake.createOrPatchUnstructuredObjectReturns
+	stub := fake.AssureObjectExistsOnClusterStub
+	fakeReturns := fake.assureObjectExistsOnClusterReturns
 	fake.recordInvocation("AssureObjectExistsOnCluster", []interface{}{arg1})
-	fake.createOrPatchUnstructuredObjectMutex.Unlock()
+	fake.assureObjectExistsOnClusterMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -121,46 +135,111 @@ func (fake *FakeRepository) AssureObjectExistsOnCluster(arg1 *unstructured.Unstr
 	return fakeReturns.result1
 }
 
-func (fake *FakeRepository) CreateOrPatchUnstructuredObjectCallCount() int {
-	fake.createOrPatchUnstructuredObjectMutex.RLock()
-	defer fake.createOrPatchUnstructuredObjectMutex.RUnlock()
-	return len(fake.createOrPatchUnstructuredObjectArgsForCall)
+func (fake *FakeRepository) AssureObjectExistsOnClusterCallCount() int {
+	fake.assureObjectExistsOnClusterMutex.RLock()
+	defer fake.assureObjectExistsOnClusterMutex.RUnlock()
+	return len(fake.assureObjectExistsOnClusterArgsForCall)
 }
 
-func (fake *FakeRepository) CreateOrPatchUnstructuredObjectCalls(stub func(*unstructured.Unstructured) error) {
-	fake.createOrPatchUnstructuredObjectMutex.Lock()
-	defer fake.createOrPatchUnstructuredObjectMutex.Unlock()
-	fake.CreateOrPatchUnstructuredObjectStub = stub
+func (fake *FakeRepository) AssureObjectExistsOnClusterCalls(stub func(*unstructured.Unstructured) error) {
+	fake.assureObjectExistsOnClusterMutex.Lock()
+	defer fake.assureObjectExistsOnClusterMutex.Unlock()
+	fake.AssureObjectExistsOnClusterStub = stub
 }
 
-func (fake *FakeRepository) CreateOrPatchUnstructuredObjectArgsForCall(i int) *unstructured.Unstructured {
-	fake.createOrPatchUnstructuredObjectMutex.RLock()
-	defer fake.createOrPatchUnstructuredObjectMutex.RUnlock()
-	argsForCall := fake.createOrPatchUnstructuredObjectArgsForCall[i]
+func (fake *FakeRepository) AssureObjectExistsOnClusterArgsForCall(i int) *unstructured.Unstructured {
+	fake.assureObjectExistsOnClusterMutex.RLock()
+	defer fake.assureObjectExistsOnClusterMutex.RUnlock()
+	argsForCall := fake.assureObjectExistsOnClusterArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeRepository) CreateOrPatchUnstructuredObjectReturns(result1 error) {
-	fake.createOrPatchUnstructuredObjectMutex.Lock()
-	defer fake.createOrPatchUnstructuredObjectMutex.Unlock()
-	fake.CreateOrPatchUnstructuredObjectStub = nil
-	fake.createOrPatchUnstructuredObjectReturns = struct {
+func (fake *FakeRepository) AssureObjectExistsOnClusterReturns(result1 error) {
+	fake.assureObjectExistsOnClusterMutex.Lock()
+	defer fake.assureObjectExistsOnClusterMutex.Unlock()
+	fake.AssureObjectExistsOnClusterStub = nil
+	fake.assureObjectExistsOnClusterReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeRepository) CreateOrPatchUnstructuredObjectReturnsOnCall(i int, result1 error) {
-	fake.createOrPatchUnstructuredObjectMutex.Lock()
-	defer fake.createOrPatchUnstructuredObjectMutex.Unlock()
-	fake.CreateOrPatchUnstructuredObjectStub = nil
-	if fake.createOrPatchUnstructuredObjectReturnsOnCall == nil {
-		fake.createOrPatchUnstructuredObjectReturnsOnCall = make(map[int]struct {
+func (fake *FakeRepository) AssureObjectExistsOnClusterReturnsOnCall(i int, result1 error) {
+	fake.assureObjectExistsOnClusterMutex.Lock()
+	defer fake.assureObjectExistsOnClusterMutex.Unlock()
+	fake.AssureObjectExistsOnClusterStub = nil
+	if fake.assureObjectExistsOnClusterReturnsOnCall == nil {
+		fake.assureObjectExistsOnClusterReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.createOrPatchUnstructuredObjectReturnsOnCall[i] = struct {
+	fake.assureObjectExistsOnClusterReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeRepository) GetPipeline(arg1 string, arg2 string) (*v1alpha1.Pipeline, error) {
+	fake.getPipelineMutex.Lock()
+	ret, specificReturn := fake.getPipelineReturnsOnCall[len(fake.getPipelineArgsForCall)]
+	fake.getPipelineArgsForCall = append(fake.getPipelineArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPipelineStub
+	fakeReturns := fake.getPipelineReturns
+	fake.recordInvocation("GetPipeline", []interface{}{arg1, arg2})
+	fake.getPipelineMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetPipelineCallCount() int {
+	fake.getPipelineMutex.RLock()
+	defer fake.getPipelineMutex.RUnlock()
+	return len(fake.getPipelineArgsForCall)
+}
+
+func (fake *FakeRepository) GetPipelineCalls(stub func(string, string) (*v1alpha1.Pipeline, error)) {
+	fake.getPipelineMutex.Lock()
+	defer fake.getPipelineMutex.Unlock()
+	fake.GetPipelineStub = stub
+}
+
+func (fake *FakeRepository) GetPipelineArgsForCall(i int) (string, string) {
+	fake.getPipelineMutex.RLock()
+	defer fake.getPipelineMutex.RUnlock()
+	argsForCall := fake.getPipelineArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeRepository) GetPipelineReturns(result1 *v1alpha1.Pipeline, result2 error) {
+	fake.getPipelineMutex.Lock()
+	defer fake.getPipelineMutex.Unlock()
+	fake.GetPipelineStub = nil
+	fake.getPipelineReturns = struct {
+		result1 *v1alpha1.Pipeline
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetPipelineReturnsOnCall(i int, result1 *v1alpha1.Pipeline, result2 error) {
+	fake.getPipelineMutex.Lock()
+	defer fake.getPipelineMutex.Unlock()
+	fake.GetPipelineStub = nil
+	if fake.getPipelineReturnsOnCall == nil {
+		fake.getPipelineReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.Pipeline
+			result2 error
+		})
+	}
+	fake.getPipelineReturnsOnCall[i] = struct {
+		result1 *v1alpha1.Pipeline
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeRepository) GetScheme() *runtime.Scheme {
@@ -537,8 +616,10 @@ func (fake *FakeRepository) StatusUpdateReturnsOnCall(i int, result1 error) {
 func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createOrPatchUnstructuredObjectMutex.RLock()
-	defer fake.createOrPatchUnstructuredObjectMutex.RUnlock()
+	fake.assureObjectExistsOnClusterMutex.RLock()
+	defer fake.assureObjectExistsOnClusterMutex.RUnlock()
+	fake.getPipelineMutex.RLock()
+	defer fake.getPipelineMutex.RUnlock()
 	fake.getSchemeMutex.RLock()
 	defer fake.getSchemeMutex.RUnlock()
 	fake.getSupplyChainMutex.RLock()
