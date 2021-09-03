@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -35,7 +34,6 @@ main() {
                 start_registry
                 start_local_cluster
 
-                generate_cartographer_release
                 install_dependencies
 
                 setup_example
@@ -142,13 +140,6 @@ data:
 EOF
 }
 
-generate_cartographer_release() {
-        log "generating release"
-
-        KO_DOCKER_REPO=${REGISTRY}/controller \
-                make release
-}
-
 install_dependencies() {
         log "installing example dependencies"
 
@@ -172,7 +163,8 @@ install_cartographer() {
 
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f $DIR/../../releases/release.yaml |
+                -f $DIR/../../config |
+                KO_DOCKER_REPO=$REGISTRY ko resolve -f- |
                 kapp deploy --yes -a cartographer -f-
 }
 
