@@ -18,14 +18,92 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-var _ = Describe("StampContext", func() {
+var _ = Describe("Stamper", func() {
 	Describe("Stamp", func() {
+
+		Describe("references to owner fields", func() {
+			var stamper templates.Stamper
+
+			BeforeEach(func() {
+				owner := &v1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						UID:       "1234567890abcdef",
+						Name:      "my-config-map",
+						Namespace: "owner-ns",
+					},
+				}
+
+				templatingContext := struct{}{}
+
+				stamper = templates.StamperBuilder(owner, templatingContext, templates.Labels{})
+
+			})
+			It("sets the owner reference in the stamped output", func() {
+				template := `{ "kind": "Silly", "apiVersion": "silly.io/v1"}`
+				stamped, err := stamper.Stamp([]byte(template))
+
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stamped.GetOwnerReferences()).To(HaveLen(1))
+				owner := stamped.GetOwnerReferences()[0]
+
+				Expect(owner).To(MatchFields(IgnoreExtras, Fields{
+					"Name":               Equal("my-config-map"),
+					"Kind":               Equal("ConfigMap"),
+					"APIVersion":         Equal("v1"),
+					"UID":                Equal(types.UID("1234567890abcdef")),
+					"BlockOwnerDeletion": Equal(pointer.BoolPtr(true)),
+					"Controller":         Equal(pointer.BoolPtr(true)),
+				}))
+			})
+
+			Context("template does not specify a namespace", func() {
+				var template string
+				BeforeEach(func() {
+					template = `{ "kind": "Silly", "apiVersion": "silly.io/v1"}`
+				})
+
+				It("sets the namespace to match the owner", func() {
+					stamped, err := stamper.Stamp([]byte(template))
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stamped.GetNamespace()).To(Equal("owner-ns"))
+				})
+			})
+			Context("template does specify a namespace", func() {
+				var template string
+				BeforeEach(func() {
+					template = `{
+						"kind": "Silly",
+						"apiVersion": "silly.io/v1",
+						"metadata": { "namespace": "template-ns" }
+					}`
+				})
+
+				It("does not change the namespace", func() {
+					stamped, err := stamper.Stamp([]byte(template))
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stamped.GetNamespace()).To(Equal("template-ns"))
+
+				})
+			})
+		})
+
 		DescribeTable("tag evaluation of template",
 			func(template, subJSON string, expected interface{}, expectedErr string) {
 				template = `{ "kind": "Silly", "key": "` + template + `"}`
@@ -56,8 +134,16 @@ var _ = Describe("StampContext", func() {
 					},
 				}
 
-				stampContext := templates.StampContextBuilder(&v1alpha1.Workload{}, map[string]string{}, params, &templates.Inputs{})
-				stampedUnstructured, err := stampContext.Stamp([]byte(template))
+				owner := &v1.ConfigMap{}
+
+				templatingContext := struct {
+					Params templates.Params `json:"params"`
+				}{
+					Params: params,
+				}
+
+				stamper := templates.StamperBuilder(owner, templatingContext, templates.Labels{})
+				stampedUnstructured, err := stamper.Stamp([]byte(template))
 				if expectedErr != "" {
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring(expectedErr)))
@@ -67,7 +153,7 @@ var _ = Describe("StampContext", func() {
 				}
 			},
 
-			Entry(`Single empty tag yields and empty string`,
+			Entry(`Single empty tag yields an empty string`,
 				`$()$`, `"some-value"`, "", "empty jsonpath not allowed"),
 
 			Entry(`Not parsable tag, jsonpath contract test`,

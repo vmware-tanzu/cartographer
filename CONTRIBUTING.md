@@ -6,7 +6,7 @@ The Cartographer project team welcomes contributions from the community. If you 
 
 ## Development Dependencies
 
-- [`go`]: for compiling the controllers as well as other dependencies - 1.16+
+- [`go`]: for compiling the controllers as well as other dependencies - 1.17+
 - [`kind`]: to run a local cluster
 - [`kapp`]: for managing groups of kubernetes objects in a cluster (like our CRDs etc)
 - [`kuttl`]: for integration testing
