@@ -23,8 +23,7 @@ status:
       reason: SupplyChainNotReady
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
-      message: "not all conditions are met"
+      reason: SupplyChainNotReady
   supplyChainRef:
     name: responsible-ops.workload-supply-chain-no-templates
     kind: ClusterSupplyChain

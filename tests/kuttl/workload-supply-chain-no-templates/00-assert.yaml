@@ -24,4 +24,5 @@ status:
       message: Did not find the template of the component(s) 'source-provider', 'image-provider', 'config-provider', 'cluster-sink'
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
+      reason: TemplatesNotFound
+      message: Did not find the template of the component(s) 'source-provider', 'image-provider', 'config-provider', 'cluster-sink'

@@ -29,7 +29,8 @@ status:
       message: "Component 'image-provider' is waiting to read value '.data.best_school'"
     - type: Ready
       status: "Unknown"
-      reason: ConditionInUnknownState
+      reason: MissingValueAtPath
+      message: "Component 'image-provider' is waiting to read value '.data.best_school'"
   supplyChainRef:
     name: responsible-ops-unknown
     kind: ClusterSupplyChain

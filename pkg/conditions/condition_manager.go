@@ -69,6 +69,7 @@ type conditionManager struct {
 	topLevelType       string
 	status             metav1.ConditionStatus
 	changed            bool
+	reason, message    string
 }
 
 type ConditionManagerBuilder func(topLevelType string, previousConditions []metav1.Condition) ConditionManager
@@ -90,9 +91,13 @@ func (c *conditionManager) Add(condition metav1.Condition, polarity Polarity) {
 	if (condition.Status == metav1.ConditionFalse && polarity == Positive) ||
 		(condition.Status == metav1.ConditionTrue && polarity == Negative) {
 		c.status = metav1.ConditionFalse
+		c.reason = condition.Reason
+		c.message = condition.Message
 	} else if condition.Status == metav1.ConditionUnknown {
 		if c.status == metav1.ConditionTrue {
 			c.status = metav1.ConditionUnknown
+			c.reason = condition.Reason
+			c.message = condition.Message
 		}
 	}
 
@@ -140,30 +145,17 @@ func (c *conditionManager) Finalize() ([]metav1.Condition, bool) {
 		}}, true
 	}
 
-	var status metav1.ConditionStatus
-	var message, reason string
-
-	switch c.status {
-	case metav1.ConditionTrue:
-		status = metav1.ConditionTrue
-		message = ""
-		reason = "Ready"
-	case metav1.ConditionFalse:
-		status = metav1.ConditionFalse
-		message = "not all conditions are met"
-		reason = "ConditionsUnmet"
-	case metav1.ConditionUnknown:
-		status = metav1.ConditionUnknown
-		reason = "ConditionInUnknownState"
+	if c.status == metav1.ConditionTrue {
+		c.reason = "Ready"
 	}
 
 	c.AddPositive(
 		metav1.Condition{
 			Type:               c.topLevelType,
-			Status:             status,
+			Status:             c.status,
 			LastTransitionTime: metav1.Now(),
-			Reason:             reason,
-			Message:            message,
+			Reason:             c.reason,
+			Message:            c.message,
 		},
 	)
 

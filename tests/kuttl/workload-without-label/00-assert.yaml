@@ -24,5 +24,5 @@ status:
       message: workload has no labels to match to supply chain
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
-      message: not all conditions are met
+      reason: WorkloadLabelsMissing
+      message: workload has no labels to match to supply chain

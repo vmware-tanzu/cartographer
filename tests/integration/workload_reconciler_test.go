@@ -197,7 +197,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("Ready"),
-						"Reason": Equal("ConditionInUnknownState"),
+						"Reason": Equal("MissingValueAtPath"),
 						"Status": Equal(v1.ConditionStatus("Unknown")),
 					}),
 				))

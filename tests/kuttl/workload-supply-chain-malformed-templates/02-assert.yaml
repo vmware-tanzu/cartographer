@@ -39,7 +39,7 @@ status:
       reason: "TemplateStampFailure"
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
+      reason: "TemplateStampFailure"
   supplyChainRef:
     name: responsible-ops.workload-supply-chain-malformed-templates
     kind: ClusterSupplyChain
