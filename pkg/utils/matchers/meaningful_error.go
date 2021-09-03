@@ -1,11 +1,10 @@
 package matchers
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/onsi/gomega/types"
-
-	"fmt"
 )
 
 func BeMeaningful(expected string) types.GomegaMatcher {
