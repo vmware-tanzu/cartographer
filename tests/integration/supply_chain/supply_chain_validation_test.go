@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package integration_test
+package supply_chain_test
 
 import (
 	"context"
+
+	. "github.com/MakeNowJust/heredoc/dot"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -313,18 +315,20 @@ var _ = Describe("SupplyChainValidation", func() {
 
 		Context("with a missing name field", func() {
 			var supplyChainUnstructured *unstructured.Unstructured
-			var supplyChainJson = `---
-apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
-metadata:
-  name: my-supply-chain
-spec:
-  selector:
-    integration-test: must-have-selector
-components:
-- name: source-provider
-  templateRef:
-    kind: ClusterSourceTemplate`
+			var supplyChainJson = D(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+				    integration-test: must-have-selector
+				components:
+				- name: source-provider
+				  templateRef:
+				    kind: ClusterSourceTemplate
+			`)
 			BeforeEach(func() {
 				supplyChainUnstructured = &unstructured.Unstructured{}
 				err := yaml.Unmarshal([]byte(supplyChainJson), supplyChainUnstructured)
