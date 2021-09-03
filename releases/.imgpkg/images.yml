@@ -16,6 +16,6 @@
 apiVersion: imgpkg.carvel.dev/v1alpha1
 images:
 - annotations:
-    kbld.carvel.dev/id: index.docker.io/projectcartographer/cartographer-controller@sha256:2d248d88f6647f04d432023480406559bbfdb97907c59de1c5f4342785159f42
-  image: index.docker.io/projectcartographer/cartographer-controller@sha256:2d248d88f6647f04d432023480406559bbfdb97907c59de1c5f4342785159f42
+    kbld.carvel.dev/id: index.docker.io/projectcartographer/cartographer-controller@sha256:05ffe0d236b3cb74ea97e46b37835f694f916280687d592a1ee1cb34adec5216
+  image: index.docker.io/projectcartographer/cartographer-controller@sha256:05ffe0d236b3cb74ea97e46b37835f694f916280687d592a1ee1cb34adec5216
 kind: ImagesLock
