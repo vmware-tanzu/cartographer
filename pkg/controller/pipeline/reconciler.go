@@ -53,7 +53,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if condition != nil {
 			conditionManager.AddPositive(*condition)
 			pipeline.Status.Conditions, _ = conditionManager.Finalize()
-			// Fixme deal with setstatus!
 			getPipelineError = r.repository.StatusUpdate(pipeline) // FIXME: deal with errors!
 			if getPipelineError != nil {
 				panic("badbad")

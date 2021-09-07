@@ -2,6 +2,7 @@ package pipeline_test
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -182,6 +183,14 @@ var _ = Describe("Reconcile", func() {
 	})
 
 	Context("the pipeline fetch is in error", func() {
+		BeforeEach(func() {
+			repository.GetPipelineReturns(nil, errors.New("very bad pipeline"))
+		})
 
+		It("returns a helpful error", func() {
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("very bad pipeline"))
+		})
 	})
 })

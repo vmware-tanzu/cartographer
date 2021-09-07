@@ -93,6 +93,17 @@ var _ = Describe("Reconcile", func() {
 			)
 		})
 
+		It("returns a happy condition", func() {
+			condition := realizer.Realize(pipeline, logger, repository)
+			Expect(*condition).To(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("RunTemplateReady"),
+					"Status": Equal(metav1.ConditionTrue),
+					"Reason": Equal("Ready"),
+				}),
+			)
+		})
+
 		Context("error on Create", func() {
 			BeforeEach(func() {
 				repository.CreateReturns(errors.New("some bad error"))

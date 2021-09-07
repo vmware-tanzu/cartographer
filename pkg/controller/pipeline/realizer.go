@@ -58,5 +58,5 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err))
 	}
 
-	return nil
+	return RunTemplateReadyCondition()
 }

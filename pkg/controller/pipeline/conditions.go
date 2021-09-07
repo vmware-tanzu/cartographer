@@ -22,8 +22,8 @@ import (
 
 // -- RunTemplate conditions
 
-func RunTemplateReadyCondition() metav1.Condition {
-	return metav1.Condition{
+func RunTemplateReadyCondition() *metav1.Condition {
+	return &metav1.Condition{
 		Type:   v1alpha1.RunTemplateReady,
 		Status: metav1.ConditionTrue,
 		Reason: v1alpha1.ReadyRunTemplateReason,
