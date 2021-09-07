@@ -22,10 +22,8 @@ type PipelineTemplatingContext struct {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx)
-	// FIXME: seems to already have name and namespace, this causes a duplicate
-	//logger := logr.FromContext(ctx).
-	//	WithValues("name", request.Name, "namespace", request.Namespace)
+	logger := logr.FromContext(ctx).
+		WithValues("name", request.Name, "namespace", request.Namespace)
 	logger.Info("started")
 
 	r.realize(request, logger)
@@ -72,9 +70,6 @@ func (r *Reconciler) realize(request ctrl.Request, logger logr.Logger) {
 	if err != nil {
 		logger.Error(err, "could not stamp template")
 	}
-
-	// TODO: remove
-	logger.Info(fmt.Sprintf("EMJ TEST WE STAMPED?? %+v", stampedObject))
 
 	// FIXME untested err
 	// FIXME must use create only.

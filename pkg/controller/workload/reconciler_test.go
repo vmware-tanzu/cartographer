@@ -248,10 +248,10 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("but the realizer returns an error", func() {
-				Context("of type GetTemplateError", func() {
+				Context("of type GetClusterTemplateError", func() {
 					var templateError error
 					BeforeEach(func() {
-						templateError = realizer.GetTemplateError{
+						templateError = realizer.GetClusterTemplateError{
 							Err: errors.New("some error"),
 						}
 						rlzr.RealizeReturns(templateError)

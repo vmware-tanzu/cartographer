@@ -110,15 +110,15 @@ var _ = Describe("Component", func() {
 				}
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetTemplateReturns(template, nil)
-				fakeRepo.CreateOrPatchUnstructuredObjectReturns(nil)
+				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.AssureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object and returns the outputs", func() {
 				out, err := r.Do(&component, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				stampedObject := fakeRepo.CreateOrPatchUnstructuredObjectArgsForCall(0)
+				stampedObject := fakeRepo.AssureObjectExistsOnClusterArgsForCall(0)
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
 				Expect(ok).To(BeTrue())
@@ -149,16 +149,16 @@ var _ = Describe("Component", func() {
 
 		When("unable to get the template ref from repo", func() {
 			BeforeEach(func() {
-				fakeRepo.GetTemplateReturns(nil, errors.New("bad template"))
+				fakeRepo.GetClusterTemplateReturns(nil, errors.New("bad template"))
 			})
 
-			It("returns GetTemplateError", func() {
+			It("returns GetClusterTemplateError", func() {
 				_, err := r.Do(&component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("realizer.GetTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("realizer.GetClusterTemplateError"))
 			})
 		})
 
@@ -179,7 +179,7 @@ var _ = Describe("Component", func() {
 				}
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetTemplateReturns(template, nil)
+				fakeRepo.GetClusterTemplateReturns(template, nil)
 			})
 
 			It("returns StampError", func() {
@@ -226,8 +226,8 @@ var _ = Describe("Component", func() {
 				}
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetTemplateReturns(template, nil)
-				fakeRepo.CreateOrPatchUnstructuredObjectReturns(nil)
+				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.AssureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -286,8 +286,8 @@ var _ = Describe("Component", func() {
 				}
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetTemplateReturns(template, nil)
-				fakeRepo.CreateOrPatchUnstructuredObjectReturns(errors.New("bad object"))
+				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.AssureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
 				_, err := r.Do(&component, supplyChainName, outputs)

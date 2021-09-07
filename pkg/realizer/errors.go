@@ -22,12 +22,12 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-type GetTemplateError struct {
+type GetClusterTemplateError struct {
 	Err         error
 	TemplateRef v1alpha1.ClusterTemplateReference
 }
 
-func (e GetTemplateError) Error() string {
+func (e GetClusterTemplateError) Error() string {
 	return fmt.Errorf("unable to get template '%s': %w", e.TemplateRef.Name, e.Err).Error()
 }
 

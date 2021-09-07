@@ -96,7 +96,42 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 		})
 
 		Context("a Pipeline that does not match the RunTemplate", func() {
-			XIt("Does not stamp a new Job", func() {})
+			BeforeEach(func() {
+				pipelineYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Pipeline
+					metadata:
+					  namespace: %s
+					  name: my-pipeline
+					spec:
+					  runTemplate: 
+					    name: my-run-template-does-not-match
+					    namespace: %s
+					    kind: RunTemplate
+					`,
+					testNS, testNS)
+
+				pipelineDefinition = &unstructured.Unstructured{}
+				err := yaml.Unmarshal([]byte(pipelineYaml), pipelineDefinition)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = c.Create(ctx, pipelineDefinition, &client.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				err := c.Delete(ctx, pipelineDefinition)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("Does not stamp a new Resource", func() {
+				resourceList := &v1.ConfigMapList{}
+
+				Eventually(func() ([]v1.ConfigMap, error) {
+					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+					return resourceList.Items, err
+				}).Should(HaveLen(0))
+			})
 		})
 	})
 })

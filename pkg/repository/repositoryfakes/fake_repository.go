@@ -13,6 +13,17 @@ import (
 )
 
 type FakeRepository struct {
+	AlwaysCreateOnClusterStub        func(*unstructured.Unstructured) error
+	alwaysCreateOnClusterMutex       sync.RWMutex
+	alwaysCreateOnClusterArgsForCall []struct {
+		arg1 *unstructured.Unstructured
+	}
+	alwaysCreateOnClusterReturns struct {
+		result1 error
+	}
+	alwaysCreateOnClusterReturnsOnCall map[int]struct {
+		result1 error
+	}
 	AssureObjectExistsOnClusterStub        func(*unstructured.Unstructured) error
 	assureObjectExistsOnClusterMutex       sync.RWMutex
 	assureObjectExistsOnClusterArgsForCall []struct {
@@ -127,6 +138,67 @@ type FakeRepository struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeRepository) AlwaysCreateOnCluster(arg1 *unstructured.Unstructured) error {
+	fake.alwaysCreateOnClusterMutex.Lock()
+	ret, specificReturn := fake.alwaysCreateOnClusterReturnsOnCall[len(fake.alwaysCreateOnClusterArgsForCall)]
+	fake.alwaysCreateOnClusterArgsForCall = append(fake.alwaysCreateOnClusterArgsForCall, struct {
+		arg1 *unstructured.Unstructured
+	}{arg1})
+	stub := fake.AlwaysCreateOnClusterStub
+	fakeReturns := fake.alwaysCreateOnClusterReturns
+	fake.recordInvocation("AlwaysCreateOnCluster", []interface{}{arg1})
+	fake.alwaysCreateOnClusterMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeRepository) AlwaysCreateOnClusterCallCount() int {
+	fake.alwaysCreateOnClusterMutex.RLock()
+	defer fake.alwaysCreateOnClusterMutex.RUnlock()
+	return len(fake.alwaysCreateOnClusterArgsForCall)
+}
+
+func (fake *FakeRepository) AlwaysCreateOnClusterCalls(stub func(*unstructured.Unstructured) error) {
+	fake.alwaysCreateOnClusterMutex.Lock()
+	defer fake.alwaysCreateOnClusterMutex.Unlock()
+	fake.AlwaysCreateOnClusterStub = stub
+}
+
+func (fake *FakeRepository) AlwaysCreateOnClusterArgsForCall(i int) *unstructured.Unstructured {
+	fake.alwaysCreateOnClusterMutex.RLock()
+	defer fake.alwaysCreateOnClusterMutex.RUnlock()
+	argsForCall := fake.alwaysCreateOnClusterArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRepository) AlwaysCreateOnClusterReturns(result1 error) {
+	fake.alwaysCreateOnClusterMutex.Lock()
+	defer fake.alwaysCreateOnClusterMutex.Unlock()
+	fake.AlwaysCreateOnClusterStub = nil
+	fake.alwaysCreateOnClusterReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeRepository) AlwaysCreateOnClusterReturnsOnCall(i int, result1 error) {
+	fake.alwaysCreateOnClusterMutex.Lock()
+	defer fake.alwaysCreateOnClusterMutex.Unlock()
+	fake.AlwaysCreateOnClusterStub = nil
+	if fake.alwaysCreateOnClusterReturnsOnCall == nil {
+		fake.alwaysCreateOnClusterReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.alwaysCreateOnClusterReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeRepository) AssureObjectExistsOnCluster(arg1 *unstructured.Unstructured) error {
@@ -693,6 +765,8 @@ func (fake *FakeRepository) StatusUpdateReturnsOnCall(i int, result1 error) {
 func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.alwaysCreateOnClusterMutex.RLock()
+	defer fake.alwaysCreateOnClusterMutex.RUnlock()
 	fake.assureObjectExistsOnClusterMutex.RLock()
 	defer fake.assureObjectExistsOnClusterMutex.RUnlock()
 	fake.getClusterTemplateMutex.RLock()

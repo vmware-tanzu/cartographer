@@ -107,9 +107,9 @@ var _ = Describe("Reconcile", func() {
 					},
 				))
 
-				Expect(repository.AssureObjectExistsOnClusterCallCount()).To(Equal(1))
-				Expect(repository.AssureObjectExistsOnClusterCallCount()).To(Equal(1))
-				stamped := repository.AssureObjectExistsOnClusterArgsForCall(0).Object
+				Expect(repository.AlwaysCreateOnClusterCallCount()).To(Equal(1))
+				Expect(repository.AlwaysCreateOnClusterCallCount()).To(Equal(1))
+				stamped := repository.AlwaysCreateOnClusterArgsForCall(0).Object
 				Expect(stamped).To(
 					MatchKeys(IgnoreExtras, Keys{
 						"metadata": MatchKeys(IgnoreExtras, Keys{
