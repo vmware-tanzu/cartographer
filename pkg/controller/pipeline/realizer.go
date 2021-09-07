@@ -6,12 +6,12 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
@@ -22,7 +22,7 @@ func NewRealizer() Realizer {
 	return &pipelineRealizer{}
 }
 
-type pipelineRealizer struct {}
+type pipelineRealizer struct{}
 
 func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) *v1.Condition {
 	template, err := repository.GetTemplate(pipeline.Spec.RunTemplate)

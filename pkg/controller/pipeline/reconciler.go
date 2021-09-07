@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type Reconciler interface {
@@ -18,13 +19,13 @@ type Reconciler interface {
 func NewReconciler(repository repository.Repository, realizer Realizer) Reconciler {
 	return &reconciler{
 		repository: repository,
-		realizer:  realizer,
+		realizer:   realizer,
 	}
 }
 
 type reconciler struct {
 	repository repository.Repository
-	realizer Realizer
+	realizer   Realizer
 }
 
 type PipelineTemplatingContext struct {
@@ -46,7 +47,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 
 		// realize
-		condition := r.realizer.Realize(pipeline, logger,r.repository)
+		condition := r.realizer.Realize(pipeline, logger, r.repository)
 
 		// conditions
 		if condition != nil {

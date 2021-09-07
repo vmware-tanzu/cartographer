@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/cache"
@@ -32,6 +31,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
@@ -141,7 +141,6 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 
 	return nil
 }
-
 
 func IndexResources(mgr manager.Manager, ctx context.Context) error {
 	fieldIndexer := mgr.GetFieldIndexer()

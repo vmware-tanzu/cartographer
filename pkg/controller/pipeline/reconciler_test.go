@@ -3,22 +3,22 @@ package pipeline_test
 import (
 	"context"
 
-	. "github.com/MakeNowJust/heredoc/dot"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	. "github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
-	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	. "github.com/onsi/gomega/gstruct"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	. "github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
+	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline/pipelinefakes"
+	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 )
 
 var _ = Describe("Reconcile", func() {
@@ -28,7 +28,7 @@ var _ = Describe("Reconcile", func() {
 		reconciler Reconciler
 		request    ctrl.Request
 		repository *repositoryfakes.FakeRepository
-		realizer FakeRea
+		realizer   *pipelinefakes.FakeRealizer
 	)
 
 	BeforeEach(func() {
@@ -36,7 +36,9 @@ var _ = Describe("Reconcile", func() {
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
 		repository = &repositoryfakes.FakeRepository{}
-		reconciler = NewReconciler(repository)
+		realizer = &pipelinefakes.FakeRealizer{}
+
+		reconciler = NewReconciler(repository, realizer)
 
 		request = ctrl.Request{
 			NamespacedName: types.NamespacedName{
@@ -72,21 +74,7 @@ var _ = Describe("Reconcile", func() {
 
 		Context("with a valid RunTemplate", func() {
 			BeforeEach(func() {
-				repository.GetTemplateStub = func(reference v1alpha1.TemplateReference) (templates.Template, error) {
-					template := templates.NewRunTemplateModel(&v1alpha1.RunTemplate{
-						Spec: v1alpha1.RunTemplateSpec{
-							Template: runtime.RawExtension{
-								Raw: []byte(D(`{
-								"apiVersion": "v1",
-								"kind": "ConfigMap",
-								"metadata": { "generateName": "my-stamped-resource-" },
-								"data": { "has": "data" }
-							}`)),
-							},
-						},
-					})
-					return template, nil
-				}
+				realizer.RealizeReturns(nil)
 			})
 
 			It("fetches the pipeline", func() {
@@ -107,52 +95,55 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		//Context("the realizer returns a condition", func() {
-		//	BeforeEach(func() {
-		//		repository.StatusUpdateStub = func(object client.Object) error {
-		//			return nil
-		//		}
-		//	})
-		//
-		//	It("sets the status to something clear", func() {
-		//		_, err := reconciler.Reconcile(ctx, request)
-		//		Expect(err).NotTo(HaveOccurred())
-		//
-		//		Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-		//		statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
-		//
-		//		Expect(ok).To(BeTrue())
-		//
-		//		Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
-		//			"Kind":    Equal("Pipeline"),
-		//			"Version": Equal("v1alpha1"),
-		//			"Group":   Equal("carto.run"),
-		//		}))
-		//
-		//		Expect(statusObject.Name).To(Equal("my-pipeline"))
-		//
-		//		Expect(statusObject.Status.Conditions).To(ContainElements(
-		//			MatchFields(IgnoreExtras, Fields{
-		//				"Type":    Equal("RunTemplateReady"),
-		//				"Status":  Equal(metav1.ConditionFalse),
-		//				"Reason":  Equal("RunTemplateNotFound"),
-		//				"Message": Equal("could not get RunTemplate 'my-run-template': Errol mcErrorFace"),
-		//			}),
-		//		))
-		//	})
-		//
-		//	It("Starts and Finishes cleanly", func() {
-		//		_, err := reconciler.Reconcile(ctx, request)
-		//		Expect(err).NotTo(HaveOccurred())
-		//
-		//		Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
-		//		Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
-		//	})
-		//
-		//	Context("updating the status fails", func() {
-		//
-		//	})
-		//})
+		Context("the realizer returns a condition", func() {
+			BeforeEach(func() {
+				realizer.RealizeReturns(&metav1.Condition{
+					Type:    "RunTemplateReady",
+					Status:  metav1.ConditionFalse,
+					Reason:  "RunTemplateNotFound",
+					Message: "could not get RunTemplate 'my-run-template': Errol mcErrorFace",
+				})
+			})
+
+			It("sets the status to something clear", func() {
+				_, err := reconciler.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
+				statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
+
+				Expect(ok).To(BeTrue())
+
+				Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
+					"Kind":    Equal("Pipeline"),
+					"Version": Equal("v1alpha1"),
+					"Group":   Equal("carto.run"),
+				}))
+
+				Expect(statusObject.Name).To(Equal("my-pipeline"))
+
+				Expect(statusObject.Status.Conditions).To(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal("RunTemplateReady"),
+						"Status":  Equal(metav1.ConditionFalse),
+						"Reason":  Equal("RunTemplateNotFound"),
+						"Message": Equal("could not get RunTemplate 'my-run-template': Errol mcErrorFace"),
+					}),
+				))
+			})
+
+			It("Starts and Finishes cleanly", func() {
+				_, err := reconciler.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
+				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
+			})
+
+			Context("updating the status fails", func() {
+
+			})
+		})
 	})
 
 	Context("the pipeline goes away", func() {

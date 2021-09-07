@@ -48,4 +48,3 @@ func HereYamlF(y string, args ...interface{}) string {
 	y = strings.ReplaceAll(y, "\t", "    ")
 	return heredoc.Docf(y, args...)
 }
-

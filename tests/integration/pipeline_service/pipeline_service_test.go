@@ -5,11 +5,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/vmware-tanzu/cartographer/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	. "github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 var _ = Describe("Stamping a resource on Pipeline Creation", func() {
