@@ -17,7 +17,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -67,7 +66,7 @@ func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured)
 	} else if r.rc.UnchangedSinceCached(submitted, existingUnstructured) {
 		r.rc.Refresh(submitted)
 
-		updateObjWithValuesFromAPIServer(obj, existingUnstructured)
+		*obj = *existingUnstructured
 
 		return nil
 	} else {
@@ -81,12 +80,6 @@ func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured)
 	r.rc.Set(submitted, obj.DeepCopy())
 
 	return nil
-}
-
-func updateObjWithValuesFromAPIServer(obj *unstructured.Unstructured, existingUnstructured *unstructured.Unstructured) {
-	objVal := reflect.ValueOf(obj)
-	existingVal := reflect.ValueOf(existingUnstructured)
-	reflect.Indirect(objVal).Set(reflect.Indirect(existingVal))
 }
 
 func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
