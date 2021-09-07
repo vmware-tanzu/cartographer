@@ -1,5 +1,5 @@
 build: gen-objects gen-manifests
-	go build -o build/cartographer ./cmd/main.go
+	go build -o build/cartographer ./cmd/cartographer
 run: build
 	build/cartographer
 
@@ -55,7 +55,6 @@ lint:
 
 release: gen-manifests
 	ytt --ignore-unknown-comments -f ./config | ko resolve -f- > ./releases/release.yaml
-release-bundle: release
 	kbld -f releases/release.yaml --imgpkg-lock-output releases/.imgpkg/images.yml
 	imgpkg push -b projectcartographer/cartographer-bundle -f releases --file-exclusion releases/kbld.lock.yml --lock-output releases/kbld.lock.yml
 	go run github.com/google/addlicense \

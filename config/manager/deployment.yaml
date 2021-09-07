@@ -35,7 +35,7 @@ spec:
             secretName: cartographer-webhook
       containers:
         - name: cartographer-controller
-          image: ko://github.com/vmware-tanzu/cartographer/cmd
+          image: ko://github.com/vmware-tanzu/cartographer/cmd/cartographer
           args:
             - -cert-dir=/cert
           securityContext:
