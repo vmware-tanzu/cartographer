@@ -271,7 +271,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(out).To(Say(`"msg":"pipeline no longer exists","name":"my-pipeline","namespace":"my-namespace"`))
 		})
 
-		FIt("Starts and Finishes cleanly", func() {
+		It("Starts and Finishes cleanly", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 

@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
@@ -27,36 +28,53 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		WithValues("name", request.Name, "namespace", request.Namespace)
 	logger.Info("started")
 
-	// get pipeline
-	pipeline, err := r.Repository.GetPipeline(request.Name, request.Namespace)
-
-	if kerrors.IsNotFound(err) {
-		logger.Info("pipeline no longer exists")
-		// FIXME: duplicated finished messages
-		logger.Info("finished")
-		return ctrl.Result{}, nil
+	reconciler := &pipelineReconciler{
+		Repository: r.Repository,
 	}
 
-	// realize
-	conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
-	condition := r.realize(pipeline, logger)
+	pipeline, getPipelineError := r.Repository.GetPipeline(request.Name, request.Namespace)
 
-	// conditions
-	if condition != nil {
-		conditionManager.AddPositive(*condition)
-		pipeline.Status.Conditions, _ = conditionManager.Finalize()
-		err = r.Repository.StatusUpdate(pipeline) // FIXME: deal with errors!
-		if err != nil {
-			panic("badbad")
+	if kerrors.IsNotFound(getPipelineError) {
+		logger.Info("pipeline no longer exists")
+		logger.Info("finished")
+		return ctrl.Result{}, nil
+	} else if getPipelineError == nil {
+		conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
+
+		// realize
+		condition := reconciler.Realize(pipeline, logger)
+
+		// conditions
+		if condition != nil {
+			conditionManager.AddPositive(*condition)
+			pipeline.Status.Conditions, _ = conditionManager.Finalize()
+			getPipelineError = r.Repository.StatusUpdate(pipeline) // FIXME: deal with errors!
+			if getPipelineError != nil {
+				panic("badbad")
+			}
 		}
 	}
 
 	logger.Info("finished")
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, getPipelineError
 }
 
-func (r *Reconciler) realize(pipeline *v1alpha1.Pipeline, logger logr.Logger) *metav1.Condition {
-	template, err := r.Repository.GetTemplate(pipeline.Spec.RunTemplate)
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+
+
+type Realizer interface {
+	Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger) *metav1.Condition
+}
+
+type pipelineReconciler struct {
+	Repository repository.Repository
+}
+
+func (p *pipelineReconciler) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger) *metav1.Condition {
+	template, err := p.Repository.GetTemplate(pipeline.Spec.RunTemplate)
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("could not get RunTemplate '%s'", pipeline.Spec.RunTemplate.Name)
@@ -81,7 +99,7 @@ func (r *Reconciler) realize(pipeline *v1alpha1.Pipeline, logger logr.Logger) *m
 		logger.Error(err, "could not stamp template")
 	}
 
-	err = r.Repository.Create(stampedObject)
+	err = p.Repository.Create(stampedObject)
 	if err != nil {
 		errorMessage := "could not create object"
 		logger.Error(err, errorMessage)
@@ -91,3 +109,4 @@ func (r *Reconciler) realize(pipeline *v1alpha1.Pipeline, logger logr.Logger) *m
 
 	return nil
 }
+
