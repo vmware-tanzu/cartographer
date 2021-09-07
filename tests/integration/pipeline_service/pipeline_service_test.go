@@ -63,9 +63,12 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  namespace: %s
 					  name: my-pipeline
 					spec:
-					  runTemplateName: my-run-template
+					  runTemplate: 
+					    name: my-run-template
+					    namespace: %s
+					    kind: RunTemplate
 					`,
-					testNS)
+					testNS, testNS)
 
 				pipelineDefinition = &unstructured.Unstructured{}
 				err := yaml.Unmarshal([]byte(pipelineYaml), pipelineDefinition)
@@ -84,7 +87,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				resourceList := &v1.ConfigMapList{}
 
 				// FIXME: Eventually
-				Eventually(func() ([]v1.ConfigMap,error) {
+				Eventually(func() ([]v1.ConfigMap, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return resourceList.Items, err
 				}).Should(HaveLen(1))

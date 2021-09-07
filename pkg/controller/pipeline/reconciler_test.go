@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-var _ = FDescribe("Reconcile", func() {
+var _ = Describe("Reconcile", func() {
 	var (
 		out        *Buffer
 		ctx        context.Context
@@ -61,7 +61,11 @@ var _ = FDescribe("Reconcile", func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.PipelineSpec{
-						RunTemplateName: "my-run-template",
+						RunTemplate: v1alpha1.TemplateReference{
+							Kind:      "RunTemplate",
+							Name:      "my-run-template",
+							Namespace: "ns1",
+						},
 					},
 				}
 				return pipeline, nil
@@ -70,7 +74,7 @@ var _ = FDescribe("Reconcile", func() {
 
 		Context("with a valid RunTemplate", func() {
 			BeforeEach(func() {
-				repository.GetTemplateStub = func(reference v1alpha1.ClusterTemplateReference) (templates.Template, error) {
+				repository.GetTemplateStub = func(reference v1alpha1.TemplateReference) (templates.Template, error) {
 					template := templates.NewRunTemplateModel(&v1alpha1.RunTemplate{
 						Spec: v1alpha1.RunTemplateSpec{
 							Template: runtime.RawExtension{
@@ -113,8 +117,7 @@ var _ = FDescribe("Reconcile", func() {
 						}),
 						"apiVersion": Equal("v1"),
 						"kind":       Equal("ConfigMap"),
-						"data":
-						MatchKeys(IgnoreExtras, Keys{
+						"data": MatchKeys(IgnoreExtras, Keys{
 							"has": Equal("data"),
 						}),
 					}),
@@ -132,7 +135,7 @@ var _ = FDescribe("Reconcile", func() {
 
 		Context("the RunTemplate cannot be fetched", func() {
 			BeforeEach(func() {
-				repository.GetTemplateStub = func(reference v1alpha1.ClusterTemplateReference) (templates.Template, error) {
+				repository.GetTemplateStub = func(reference v1alpha1.TemplateReference) (templates.Template, error) {
 					return nil, errors.New("Errol mcErrorFace")
 				}
 
