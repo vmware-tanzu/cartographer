@@ -159,7 +159,7 @@ docker login
 # the YAML necessary for bringing `cartographer` up in a Kubernetes cluster via
 # `kubectl apply -f ./releases/release.yaml`.
 #
-KO_DOCKER_REPO=projectcartographer/cartographer-controller \
+KO_DOCKER_REPO=projectcartographer \
 	make release
 ```
 
