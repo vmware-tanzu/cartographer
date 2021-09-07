@@ -107,9 +107,9 @@ var _ = Describe("Reconcile", func() {
 					},
 				))
 
-				Expect(repository.AlwaysCreateOnClusterCallCount()).To(Equal(1))
-				Expect(repository.AlwaysCreateOnClusterCallCount()).To(Equal(1))
-				stamped := repository.AlwaysCreateOnClusterArgsForCall(0).Object
+				Expect(repository.CreateCallCount()).To(Equal(1))
+				Expect(repository.CreateCallCount()).To(Equal(1))
+				stamped := repository.CreateArgsForCall(0).Object
 				Expect(stamped).To(
 					MatchKeys(IgnoreExtras, Keys{
 						"metadata": MatchKeys(IgnoreExtras, Keys{
@@ -131,6 +131,57 @@ var _ = Describe("Reconcile", func() {
 				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
 				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
 			})
+
+			Context("error on Create", func() {
+				BeforeEach(func() {
+					repository.CreateReturns(errors.New("some bad error"))
+				})
+
+				It("logs the error", func() {
+					result, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(Equal(ctrl.Result{}))
+
+					Expect(out).To(Say(`"msg":"could not create object"`))
+					Expect(out).To(Say(`"error":"some bad error"`))
+				})
+
+				It("sets the status to something clear", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repository.StatusUpdateCallCount()).To(Equal(1))
+					statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
+
+					Expect(ok).To(BeTrue())
+
+					Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
+						"Kind":    Equal("Pipeline"),
+						"Version": Equal("v1alpha1"),
+						"Group":   Equal("carto.run"),
+					}))
+
+					Expect(statusObject.Name).To(Equal("my-pipeline"))
+
+					Expect(statusObject.Status.Conditions).To(ContainElements(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":    Equal("RunTemplateReady"),
+							"Status":  Equal(metav1.ConditionFalse),
+							"Reason":  Equal("StampedObjectRejectedByAPIServer"),
+							"Message": Equal("could not create object: some bad error"),
+						}),
+					))
+				})
+
+				It("Starts and Finishes cleanly", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
+					Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
+				})
+			})
+
 		})
 
 		Context("the RunTemplate cannot be fetched", func() {
@@ -171,12 +222,6 @@ var _ = Describe("Reconcile", func() {
 				Expect(statusObject.Name).To(Equal("my-pipeline"))
 
 				Expect(statusObject.Status.Conditions).To(ContainElements(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("Ready"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("ConditionsUnmet"),
-						"Message": Equal("not all conditions are met"),
-					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":    Equal("RunTemplateReady"),
 						"Status":  Equal(metav1.ConditionFalse),

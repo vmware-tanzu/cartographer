@@ -28,8 +28,9 @@ const (
 )
 
 const (
-	ReadyRunTemplateReason    = "Ready"
-	NotFoundRunTemplateReason = "RunTemplateNotFound"
+	ReadyRunTemplateReason                            = "Ready"
+	NotFoundRunTemplateReason                         = "RunTemplateNotFound"
+	StampedObjectRejectedByAPIServerRunTemplateReason = "StampedObjectRejectedByAPIServer"
 )
 
 // +kubebuilder:object:root=true
@@ -60,7 +61,6 @@ type TemplateReference struct {
 	// +kubebuilder:validation:MinLength=1
 	Namespace string `json:"namespace"`
 }
-
 
 // +kubebuilder:object:root=true
 

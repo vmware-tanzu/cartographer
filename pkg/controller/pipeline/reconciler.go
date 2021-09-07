@@ -71,11 +71,14 @@ func (r *Reconciler) realize(request ctrl.Request, logger logr.Logger) {
 		logger.Error(err, "could not stamp template")
 	}
 
-	// FIXME untested err
-	// FIXME must use create only.
-	err = r.Repository.AlwaysCreateOnCluster(stampedObject)
+	err = r.Repository.Create(stampedObject)
 	if err != nil {
-		logger.Error(err, "could not create object")
+		errorMessage := "could not create object"
+		logger.Error(err, errorMessage)
+
+		conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err)))
+		pipeline.Status.Conditions, _ = conditionManager.Finalize()
+		_ = r.Repository.StatusUpdate(pipeline) // FIXME: deal with errors!
 	}
 
 }
