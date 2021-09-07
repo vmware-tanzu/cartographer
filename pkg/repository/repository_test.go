@@ -384,8 +384,8 @@ spec:
 
 			It("gets the template successfully", func() {
 				templateRef := v1alpha1.TemplateReference{
-					Kind: "RunTemplate",
-					Name: "second-template",
+					Kind:      "RunTemplate",
+					Name:      "second-template",
 					Namespace: "ns2",
 				}
 				template, err := repo.GetTemplate(templateRef)
@@ -393,8 +393,15 @@ spec:
 				Expect(template.GetName()).To(Equal("second-template"))
 			})
 
-			XIt("finds nothing with a mismatched namespace", func() {
-
+			It("finds nothing with a mismatched namespace", func() {
+				templateRef := v1alpha1.TemplateReference{
+					Kind:      "RunTemplate",
+					Name:      "second-template",
+					Namespace: "ns1",
+				}
+				_, err := repo.GetTemplate(templateRef)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("not found"))
 			})
 		})
 

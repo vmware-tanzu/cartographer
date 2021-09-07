@@ -42,7 +42,7 @@ type Repository interface {
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
-	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline,	error)
+	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error)
 }
 
 type repository struct {
@@ -107,7 +107,6 @@ func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*u
 }
 
 func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
-
 	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
@@ -128,15 +127,16 @@ func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (
 	return template, nil
 }
 
-func (r *repository) GetTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
-
+// FIXME: Probably should not return a templates.Template, not sure it adheres to interface
+func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
 	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
 	}
 
 	err = r.cl.Get(context.TODO(), client.ObjectKey{
-		Name: ref.Name,
+		Name:      ref.Name,
+		Namespace: ref.Namespace,
 	}, apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
@@ -149,7 +149,6 @@ func (r *repository) GetTemplate(ref v1alpha1.ClusterTemplateReference) (templat
 
 	return template, nil
 }
-
 
 func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
 	if err := r.cl.Create(context.TODO(), obj); err != nil {
@@ -198,7 +197,6 @@ func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workl
 
 	return &workload, nil
 }
-
 
 func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error) {
 	pipeline := &v1alpha1.Pipeline{}

@@ -24,6 +24,19 @@ type FakeRepository struct {
 	assureObjectExistsOnClusterReturnsOnCall map[int]struct {
 		result1 error
 	}
+	GetClusterTemplateStub        func(v1alpha1.ClusterTemplateReference) (templates.Template, error)
+	getClusterTemplateMutex       sync.RWMutex
+	getClusterTemplateArgsForCall []struct {
+		arg1 v1alpha1.ClusterTemplateReference
+	}
+	getClusterTemplateReturns struct {
+		result1 templates.Template
+		result2 error
+	}
+	getClusterTemplateReturnsOnCall map[int]struct {
+		result1 templates.Template
+		result2 error
+	}
 	GetPipelineStub        func(string, string) (*v1alpha1.Pipeline, error)
 	getPipelineMutex       sync.RWMutex
 	getPipelineArgsForCall []struct {
@@ -74,10 +87,10 @@ type FakeRepository struct {
 		result1 []v1alpha1.ClusterSupplyChain
 		result2 error
 	}
-	GetTemplateStub        func(v1alpha1.ClusterTemplateReference) (templates.Template, error)
+	GetTemplateStub        func(v1alpha1.TemplateReference) (templates.Template, error)
 	getTemplateMutex       sync.RWMutex
 	getTemplateArgsForCall []struct {
-		arg1 v1alpha1.ClusterTemplateReference
+		arg1 v1alpha1.TemplateReference
 	}
 	getTemplateReturns struct {
 		result1 templates.Template
@@ -175,6 +188,70 @@ func (fake *FakeRepository) AssureObjectExistsOnClusterReturnsOnCall(i int, resu
 	fake.assureObjectExistsOnClusterReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeRepository) GetClusterTemplate(arg1 v1alpha1.ClusterTemplateReference) (templates.Template, error) {
+	fake.getClusterTemplateMutex.Lock()
+	ret, specificReturn := fake.getClusterTemplateReturnsOnCall[len(fake.getClusterTemplateArgsForCall)]
+	fake.getClusterTemplateArgsForCall = append(fake.getClusterTemplateArgsForCall, struct {
+		arg1 v1alpha1.ClusterTemplateReference
+	}{arg1})
+	stub := fake.GetClusterTemplateStub
+	fakeReturns := fake.getClusterTemplateReturns
+	fake.recordInvocation("GetClusterTemplate", []interface{}{arg1})
+	fake.getClusterTemplateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetClusterTemplateCallCount() int {
+	fake.getClusterTemplateMutex.RLock()
+	defer fake.getClusterTemplateMutex.RUnlock()
+	return len(fake.getClusterTemplateArgsForCall)
+}
+
+func (fake *FakeRepository) GetClusterTemplateCalls(stub func(v1alpha1.ClusterTemplateReference) (templates.Template, error)) {
+	fake.getClusterTemplateMutex.Lock()
+	defer fake.getClusterTemplateMutex.Unlock()
+	fake.GetClusterTemplateStub = stub
+}
+
+func (fake *FakeRepository) GetClusterTemplateArgsForCall(i int) v1alpha1.ClusterTemplateReference {
+	fake.getClusterTemplateMutex.RLock()
+	defer fake.getClusterTemplateMutex.RUnlock()
+	argsForCall := fake.getClusterTemplateArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRepository) GetClusterTemplateReturns(result1 templates.Template, result2 error) {
+	fake.getClusterTemplateMutex.Lock()
+	defer fake.getClusterTemplateMutex.Unlock()
+	fake.GetClusterTemplateStub = nil
+	fake.getClusterTemplateReturns = struct {
+		result1 templates.Template
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetClusterTemplateReturnsOnCall(i int, result1 templates.Template, result2 error) {
+	fake.getClusterTemplateMutex.Lock()
+	defer fake.getClusterTemplateMutex.Unlock()
+	fake.GetClusterTemplateStub = nil
+	if fake.getClusterTemplateReturnsOnCall == nil {
+		fake.getClusterTemplateReturnsOnCall = make(map[int]struct {
+			result1 templates.Template
+			result2 error
+		})
+	}
+	fake.getClusterTemplateReturnsOnCall[i] = struct {
+		result1 templates.Template
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeRepository) GetPipeline(arg1 string, arg2 string) (*v1alpha1.Pipeline, error) {
@@ -423,15 +500,15 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetClusterTemplate(arg1 v1alpha1.ClusterTemplateReference) (templates.Template, error) {
+func (fake *FakeRepository) GetTemplate(arg1 v1alpha1.TemplateReference) (templates.Template, error) {
 	fake.getTemplateMutex.Lock()
 	ret, specificReturn := fake.getTemplateReturnsOnCall[len(fake.getTemplateArgsForCall)]
 	fake.getTemplateArgsForCall = append(fake.getTemplateArgsForCall, struct {
-		arg1 v1alpha1.ClusterTemplateReference
+		arg1 v1alpha1.TemplateReference
 	}{arg1})
 	stub := fake.GetTemplateStub
 	fakeReturns := fake.getTemplateReturns
-	fake.recordInvocation("GetClusterTemplate", []interface{}{arg1})
+	fake.recordInvocation("GetTemplate", []interface{}{arg1})
 	fake.getTemplateMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
@@ -448,13 +525,13 @@ func (fake *FakeRepository) GetTemplateCallCount() int {
 	return len(fake.getTemplateArgsForCall)
 }
 
-func (fake *FakeRepository) GetTemplateCalls(stub func(v1alpha1.ClusterTemplateReference) (templates.Template, error)) {
+func (fake *FakeRepository) GetTemplateCalls(stub func(v1alpha1.TemplateReference) (templates.Template, error)) {
 	fake.getTemplateMutex.Lock()
 	defer fake.getTemplateMutex.Unlock()
 	fake.GetTemplateStub = stub
 }
 
-func (fake *FakeRepository) GetTemplateArgsForCall(i int) v1alpha1.ClusterTemplateReference {
+func (fake *FakeRepository) GetTemplateArgsForCall(i int) v1alpha1.TemplateReference {
 	fake.getTemplateMutex.RLock()
 	defer fake.getTemplateMutex.RUnlock()
 	argsForCall := fake.getTemplateArgsForCall[i]
@@ -618,6 +695,8 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.assureObjectExistsOnClusterMutex.RLock()
 	defer fake.assureObjectExistsOnClusterMutex.RUnlock()
+	fake.getClusterTemplateMutex.RLock()
+	defer fake.getClusterTemplateMutex.RUnlock()
 	fake.getPipelineMutex.RLock()
 	defer fake.getPipelineMutex.RUnlock()
 	fake.getSchemeMutex.RLock()
