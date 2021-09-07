@@ -182,3 +182,21 @@ place. For that, we make use of `ko`, which given a YAML file where it can find
 an `image: ko://<package>`, it then replaces that with the reference to the
 image it built and pushed to a registry configured via `KO_DOCKER_REPO` (see
 [deployment.yaml](./config/manager/deployment.yaml)). 
+
+## Running the e2e tests
+
+Cartographer has a  script that allows users to:
+   - create a local cluster with a local repository
+   - push the image of the controller to that cluster
+   - run the controller
+   - create the supply chain(s) and workload(s) the example directory
+   - assure that the expected objects are created by the Cartographer controller
+
+To run the tests:
+```bash
+./hack/ci/e2e.sh run
+```
+To teardown (necessary if users wish to rerun the tests):
+```bash
+./hack/ci/e2e.sh teardown
+```
