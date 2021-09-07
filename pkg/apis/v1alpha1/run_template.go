@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // +versionName=v1alpha1
-// +groupName=kontinue.io
+// +groupName=carto.run
 // +kubebuilder:object:generate=true
 
 package v1alpha1
@@ -41,7 +41,7 @@ type RunTemplateSpec struct {
 type RunTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Pipeline `json:"items"`
+	Items           []RunTemplate `json:"items"`
 }
 
 func init() {

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // +versionName=v1alpha1
-// +groupName=kontinue.io
+// +groupName=carto.run
 // +kubebuilder:object:generate=true
 
 package v1alpha1
@@ -22,9 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-
 const (
-	PipelineReady = "Ready"
+	PipelineReady    = "Ready"
 	RunTemplateReady = "RunTemplateReady"
 )
 
@@ -33,19 +32,19 @@ const (
 	NotFoundRunTemplateReason = "RunTemplateNotFound"
 )
 
-
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 type Pipeline struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              PipelineSpec   `json:"spec"`
-	Status            PipelineStatus `json:"status"`
+	Status            PipelineStatus `json:"status,omitempty"`
 }
 
 type PipelineStatus struct {
-	//ObservedGeneration int64                        `json:"observedGeneration,omitempty"`
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type PipelineSpec struct {
