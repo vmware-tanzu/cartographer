@@ -1,0 +1,5 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: RunTemplate
+metadata:
+  name: my-run-template

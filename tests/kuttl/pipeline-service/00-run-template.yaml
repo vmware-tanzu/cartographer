@@ -1,0 +1,13 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: RunTemplate
+metadata:
+  name: my-run-template
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      generateName: my-stamped-resource-
+    data:
+      has: data

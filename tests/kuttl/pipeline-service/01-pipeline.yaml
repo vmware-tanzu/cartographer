@@ -1,0 +1,7 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Pipeline
+metadata:
+  name: my-pipeline
+spec:
+  runTemplateName: my-run-template
