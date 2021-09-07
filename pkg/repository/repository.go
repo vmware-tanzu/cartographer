@@ -35,6 +35,7 @@ import (
 //counterfeiter:generate . Repository
 type Repository interface {
 	AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error
+	AlwaysCreateOnCluster(obj *unstructured.Unstructured) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
 	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
@@ -83,6 +84,11 @@ func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured)
 	r.rc.Set(submitted, obj.DeepCopy())
 
 	return nil
+}
+
+// TODO: tests
+func (r *repository) AlwaysCreateOnCluster(obj *unstructured.Unstructured) error {
+	return r.createUnstructured(obj)
 }
 
 func updateObjWithValuesFromAPIServer(obj *unstructured.Unstructured, existingUnstructured *unstructured.Unstructured) {

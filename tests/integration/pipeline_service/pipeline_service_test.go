@@ -86,11 +86,12 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			It("Stamps a new Resource", func() {
 				resourceList := &v1.ConfigMapList{}
 
-				// FIXME: Eventually
 				Eventually(func() ([]v1.ConfigMap, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return resourceList.Items, err
 				}).Should(HaveLen(1))
+
+				Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
 			})
 		})
 

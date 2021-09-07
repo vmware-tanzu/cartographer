@@ -78,7 +78,7 @@ func (r *Reconciler) realize(request ctrl.Request, logger logr.Logger) {
 
 	// FIXME untested err
 	// FIXME must use create only.
-	err = r.Repository.AssureObjectExistsOnCluster(stampedObject)
+	err = r.Repository.AlwaysCreateOnCluster(stampedObject)
 	if err != nil {
 		logger.Error(err, "could not create object")
 	}
