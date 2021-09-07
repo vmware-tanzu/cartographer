@@ -48,7 +48,7 @@ var _ = FDescribe("Reconcile", func() {
 		}
 	})
 
-	Context("reconcile a valid Pipeline", func() {
+	Context("reconcile a new valid Pipeline", func() {
 		BeforeEach(func() {
 			repository.GetPipelineStub = func(name, namespace string) (*v1alpha1.Pipeline, error) {
 				pipeline := &v1alpha1.Pipeline{
@@ -144,7 +144,6 @@ var _ = FDescribe("Reconcile", func() {
 			It("logs the error", func() {
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
-
 				Expect(result).To(Equal(ctrl.Result{}))
 
 				Expect(out).To(Say(`"msg":"could not get RunTemplate 'my-run-template'"`))
@@ -191,10 +190,14 @@ var _ = FDescribe("Reconcile", func() {
 				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
 				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
 			})
+
+			Context("updating the status fails", func() {
+
+			})
 		})
 	})
 
-	Context("the pipeline is nil (goes away)", func() {
+	Context("the pipeline goes away", func() {
 		BeforeEach(func() {
 			repository.GetPipelineStub = func(name, namespace string) (*v1alpha1.Pipeline, error) {
 				return nil, kerrors.NewNotFound(

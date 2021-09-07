@@ -106,13 +106,16 @@ func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*u
 }
 
 func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
+
 	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
 	}
 
+	// FIXME can't use a fixed namespace
 	err = r.cl.Get(context.TODO(), client.ObjectKey{
 		Name: ref.Name,
+		Namespace: "default",
 	}, apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)

@@ -33,8 +33,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 
-// FIXME: I feel like i want a public RunTemplate#Realize
-// this could also be entirely the wrong abstraction.
 func (r *Reconciler) realize(request ctrl.Request, logger logr.Logger)  {
 	pipeline, err := r.Repository.GetPipeline(request.Name, request.Namespace)
 
@@ -76,7 +74,11 @@ func (r *Reconciler) realize(request ctrl.Request, logger logr.Logger)  {
 	if err != nil {
 		logger.Error(err, "could not stamp template")
 	}
-	// TODO: handle update error
-	_ = r.Repository.AssureObjectExistsOnCluster(stampedObject)
+	// FIXME untested err
+	// FIXME must use create only.
+	err = r.Repository.AssureObjectExistsOnCluster(stampedObject)
+	if err != nil {
+		logger.Error(err, "could not create object")
+	}
 
 }
