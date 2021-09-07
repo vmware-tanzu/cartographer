@@ -35,6 +35,7 @@ import (
 //counterfeiter:generate . Repository
 type Repository interface {
 	AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error
+	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
 	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
@@ -105,17 +106,15 @@ func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*u
 	return &existingUnstructured, err
 }
 
-func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
+func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
 
 	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
 	}
 
-	// FIXME can't use a fixed namespace
 	err = r.cl.Get(context.TODO(), client.ObjectKey{
 		Name: ref.Name,
-		Namespace: "default",
 	}, apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
@@ -128,6 +127,29 @@ func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Temp
 
 	return template, nil
 }
+
+func (r *repository) GetTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
+
+	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("get api template: %w", err)
+	}
+
+	err = r.cl.Get(context.TODO(), client.ObjectKey{
+		Name: ref.Name,
+	}, apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("NewModelFromAPI: %w", err)
+	}
+
+	return template, nil
+}
+
 
 func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
 	if err := r.cl.Create(context.TODO(), obj); err != nil {

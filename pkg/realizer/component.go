@@ -48,7 +48,7 @@ func NewComponentRealizer(workload *v1alpha1.Workload, repo repository.Repositor
 }
 
 func (r *componentRealizer) Do(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error) {
-	template, err := r.repo.GetTemplate(component.TemplateRef)
+	template, err := r.repo.GetClusterTemplate(component.TemplateRef)
 	if err != nil {
 		return nil, GetTemplateError{
 			Err:         err,

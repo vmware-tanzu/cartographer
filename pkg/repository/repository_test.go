@@ -344,7 +344,7 @@ spec:
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("GetTemplate", func() {
+		Context("GetClusterTemplate", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -355,13 +355,46 @@ spec:
 			})
 
 			It("gets the template successfully", func() {
-				templateRef := v1alpha1.TemplateReference{
+				templateRef := v1alpha1.ClusterTemplateReference{
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetTemplate(templateRef)
+				template, err := repo.GetClusterTemplate(templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
+			})
+		})
+
+		Context("GetTemplate", func() {
+			BeforeEach(func() {
+				clientObjects = []client.Object{
+					&v1alpha1.RunTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "first-template",
+							Namespace: "ns1",
+						},
+					},
+					&v1alpha1.RunTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "second-template",
+							Namespace: "ns2",
+						},
+					}}
+			})
+
+			It("gets the template successfully", func() {
+				templateRef := v1alpha1.TemplateReference{
+					Kind: "RunTemplate",
+					Name: "second-template",
+					Namespace: "ns2",
+				}
+				template, err := repo.GetTemplate(templateRef)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(template.GetName()).To(Equal("second-template"))
+			})
+
+			XIt("finds nothing with a mismatched namespace", func() {
+
 			})
 		})
 
@@ -408,7 +441,6 @@ spec:
 				})
 			})
 		})
-
 
 		Context("GetSupplyChainsForWorkload", func() {
 			Context("One supply chain", func() {

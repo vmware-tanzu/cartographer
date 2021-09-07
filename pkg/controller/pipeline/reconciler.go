@@ -43,7 +43,7 @@ func (r *Reconciler) realize(request ctrl.Request, logger logr.Logger)  {
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 
-	template, err := r.Repository.GetTemplate(v1alpha1.TemplateReference{
+	template, err := r.Repository.GetClusterTemplate(v1alpha1.ClusterTemplateReference{
 		Kind: "RunTemplate",
 		Name: pipeline.Spec.RunTemplateName,
 	})

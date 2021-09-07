@@ -49,8 +49,18 @@ type PipelineStatus struct {
 
 type PipelineSpec struct {
 	// +kubebuilder:validation:Required
-	RunTemplateName string `json:"runTemplateName"`
+	RunTemplate TemplateReference `json:"runTemplate"`
 }
+
+type TemplateReference struct {
+	// +kubebuilder:validation:Enum=RunTemplate
+	Kind string `json:"kind"`
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+}
+
 
 // +kubebuilder:object:root=true
 

@@ -86,14 +86,14 @@ var _ = Describe("Reconciler", func() {
 					Components: []v1alpha1.SupplyChainComponent{
 						{
 							Name: "first name",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "some-kind",
 								Name: "some-name",
 							},
 						},
 						{
 							Name: "second name",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "another-kind",
 								Name: "another-name",
 							},

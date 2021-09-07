@@ -24,7 +24,7 @@ import (
 
 type GetTemplateError struct {
 	Err         error
-	TemplateRef v1alpha1.TemplateReference
+	TemplateRef v1alpha1.ClusterTemplateReference
 }
 
 func (e GetTemplateError) Error() string {

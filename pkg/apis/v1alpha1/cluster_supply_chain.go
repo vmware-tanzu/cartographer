@@ -133,15 +133,15 @@ type SupplyChainParam struct {
 }
 
 type SupplyChainComponent struct {
-	Name        string               `json:"name"`
-	TemplateRef TemplateReference    `json:"templateRef"`
-	Params      []SupplyChainParam   `json:"params,omitempty"`
-	Sources     []ComponentReference `json:"sources,omitempty"`
-	Images      []ComponentReference `json:"images,omitempty"`
-	Configs     []ComponentReference `json:"configs,omitempty"`
+	Name        string                   `json:"name"`
+	TemplateRef ClusterTemplateReference `json:"templateRef"`
+	Params      []SupplyChainParam       `json:"params,omitempty"`
+	Sources     []ComponentReference     `json:"sources,omitempty"`
+	Images      []ComponentReference     `json:"images,omitempty"`
+	Configs     []ComponentReference     `json:"configs,omitempty"`
 }
 
-type TemplateReference struct {
+type ClusterTemplateReference struct {
 	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1

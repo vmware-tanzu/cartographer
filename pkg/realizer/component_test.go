@@ -46,7 +46,7 @@ var _ = Describe("Component", func() {
 	BeforeEach(func() {
 		component = v1alpha1.SupplyChainComponent{
 			Name: "component-1",
-			TemplateRef: v1alpha1.TemplateReference{
+			TemplateRef: v1alpha1.ClusterTemplateReference{
 				Kind: "ClusterImageTemplate",
 				Name: "image-template-1",
 			},
