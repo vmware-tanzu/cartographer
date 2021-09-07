@@ -2,14 +2,12 @@ package pipeline_test
 
 import (
 	"context"
-	"errors"
 
 	. "github.com/MakeNowJust/heredoc/dot"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	. "github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -20,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -28,9 +25,10 @@ var _ = Describe("Reconcile", func() {
 	var (
 		out        *Buffer
 		ctx        context.Context
-		reconciler *Reconciler
+		reconciler Reconciler
 		request    ctrl.Request
 		repository *repositoryfakes.FakeRepository
+		realizer FakeRea
 	)
 
 	BeforeEach(func() {
@@ -38,7 +36,7 @@ var _ = Describe("Reconcile", func() {
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
 		repository = &repositoryfakes.FakeRepository{}
-		reconciler = &Reconciler{Repository: repository}
+		reconciler = NewReconciler(repository)
 
 		request = ctrl.Request{
 			NamespacedName: types.NamespacedName{
@@ -91,37 +89,13 @@ var _ = Describe("Reconcile", func() {
 				}
 			})
 
-			It("stamps out the resource from the template", func() {
+			It("fetches the pipeline", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(repository.GetPipelineCallCount()).To(Equal(1))
 				actualName, actualNamespace := repository.GetPipelineArgsForCall(0)
 				Expect(actualName).To(Equal("my-pipeline"))
 				Expect(actualNamespace).To(Equal("my-namespace"))
-
-				Expect(repository.GetTemplateCallCount()).To(Equal(1))
-				Expect(repository.GetTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
-					Fields{
-						"Kind": Equal("RunTemplate"),
-						"Name": Equal("my-run-template"),
-					},
-				))
-
-				Expect(repository.CreateCallCount()).To(Equal(1))
-				Expect(repository.CreateCallCount()).To(Equal(1))
-				stamped := repository.CreateArgsForCall(0).Object
-				Expect(stamped).To(
-					MatchKeys(IgnoreExtras, Keys{
-						"metadata": MatchKeys(IgnoreExtras, Keys{
-							"generateName": Equal("my-stamped-resource-"),
-						}),
-						"apiVersion": Equal("v1"),
-						"kind":       Equal("ConfigMap"),
-						"data": MatchKeys(IgnoreExtras, Keys{
-							"has": Equal("data"),
-						}),
-					}),
-				)
 			})
 
 			It("Starts and Finishes cleanly", func() {
@@ -131,118 +105,54 @@ var _ = Describe("Reconcile", func() {
 				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
 				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
 			})
-
-			Context("error on Create", func() {
-				BeforeEach(func() {
-					repository.CreateReturns(errors.New("some bad error"))
-				})
-
-				It("logs the error", func() {
-					result, err := reconciler.Reconcile(ctx, request)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(result).To(Equal(ctrl.Result{}))
-
-					Expect(out).To(Say(`"msg":"could not create object"`))
-					Expect(out).To(Say(`"error":"some bad error"`))
-				})
-
-				It("sets the status to something clear", func() {
-					_, err := reconciler.Reconcile(ctx, request)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-					statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
-
-					Expect(ok).To(BeTrue())
-
-					Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
-						"Kind":    Equal("Pipeline"),
-						"Version": Equal("v1alpha1"),
-						"Group":   Equal("carto.run"),
-					}))
-
-					Expect(statusObject.Name).To(Equal("my-pipeline"))
-
-					Expect(statusObject.Status.Conditions).To(ContainElements(
-						MatchFields(IgnoreExtras, Fields{
-							"Type":    Equal("RunTemplateReady"),
-							"Status":  Equal(metav1.ConditionFalse),
-							"Reason":  Equal("StampedObjectRejectedByAPIServer"),
-							"Message": Equal("could not create object: some bad error"),
-						}),
-					))
-				})
-
-				It("Starts and Finishes cleanly", func() {
-					_, err := reconciler.Reconcile(ctx, request)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
-					Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
-				})
-			})
-
 		})
 
-		Context("the RunTemplate cannot be fetched", func() {
-			BeforeEach(func() {
-				repository.GetTemplateStub = func(reference v1alpha1.TemplateReference) (templates.Template, error) {
-					return nil, errors.New("Errol mcErrorFace")
-				}
-
-				repository.StatusUpdateStub = func(object client.Object) error {
-					return nil
-				}
-			})
-
-			It("logs the error", func() {
-				result, err := reconciler.Reconcile(ctx, request)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
-
-				Expect(out).To(Say(`"msg":"could not get RunTemplate 'my-run-template'"`))
-				Expect(out).To(Say(`"error":"Errol mcErrorFace"`))
-			})
-
-			It("sets the status to something clear", func() {
-				_, err := reconciler.Reconcile(ctx, request)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-				statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
-
-				Expect(ok).To(BeTrue())
-
-				Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
-					"Kind":    Equal("Pipeline"),
-					"Version": Equal("v1alpha1"),
-					"Group":   Equal("carto.run"),
-				}))
-
-				Expect(statusObject.Name).To(Equal("my-pipeline"))
-
-				Expect(statusObject.Status.Conditions).To(ContainElements(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("RunTemplateNotFound"),
-						"Message": Equal("could not get RunTemplate 'my-run-template': Errol mcErrorFace"),
-					}),
-				))
-			})
-
-			It("Starts and Finishes cleanly", func() {
-				_, err := reconciler.Reconcile(ctx, request)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
-				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
-			})
-
-			Context("updating the status fails", func() {
-
-			})
-		})
+		//Context("the realizer returns a condition", func() {
+		//	BeforeEach(func() {
+		//		repository.StatusUpdateStub = func(object client.Object) error {
+		//			return nil
+		//		}
+		//	})
+		//
+		//	It("sets the status to something clear", func() {
+		//		_, err := reconciler.Reconcile(ctx, request)
+		//		Expect(err).NotTo(HaveOccurred())
+		//
+		//		Expect(repository.StatusUpdateCallCount()).To(Equal(1))
+		//		statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
+		//
+		//		Expect(ok).To(BeTrue())
+		//
+		//		Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
+		//			"Kind":    Equal("Pipeline"),
+		//			"Version": Equal("v1alpha1"),
+		//			"Group":   Equal("carto.run"),
+		//		}))
+		//
+		//		Expect(statusObject.Name).To(Equal("my-pipeline"))
+		//
+		//		Expect(statusObject.Status.Conditions).To(ContainElements(
+		//			MatchFields(IgnoreExtras, Fields{
+		//				"Type":    Equal("RunTemplateReady"),
+		//				"Status":  Equal(metav1.ConditionFalse),
+		//				"Reason":  Equal("RunTemplateNotFound"),
+		//				"Message": Equal("could not get RunTemplate 'my-run-template': Errol mcErrorFace"),
+		//			}),
+		//		))
+		//	})
+		//
+		//	It("Starts and Finishes cleanly", func() {
+		//		_, err := reconciler.Reconcile(ctx, request)
+		//		Expect(err).NotTo(HaveOccurred())
+		//
+		//		Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
+		//		Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
+		//	})
+		//
+		//	Context("updating the status fails", func() {
+		//
+		//	})
+		//})
 	})
 
 	Context("the pipeline goes away", func() {
@@ -278,5 +188,9 @@ var _ = Describe("Reconcile", func() {
 			Eventually(out).Should(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
 			Eventually(out).Should(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
 		})
+	})
+
+	Context("the pipeline fetch is in error", func() {
+
 	})
 })

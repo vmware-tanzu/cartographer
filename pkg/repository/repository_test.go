@@ -63,7 +63,7 @@ func alterFieldOfNestedStringMaps(obj interface{}, key string, value string) err
 	return nil
 }
 
-var _ = Describe("Repository", func() {
+var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache

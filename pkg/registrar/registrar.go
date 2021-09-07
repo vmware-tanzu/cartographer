@@ -124,7 +124,7 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
 
 	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
-		Reconciler: &pipeline.Reconciler{Repository: repo},
+		Reconciler: pipeline.NewReconciler(repo, pipeline.NewRealizer()),
 	})
 	if err != nil {
 		return fmt.Errorf("controller new [pipeline-service]: %w", err)
