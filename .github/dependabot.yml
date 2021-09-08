@@ -20,6 +20,12 @@ updates:
     schedule:
       interval: daily
       time: "00:00"
+  - package-ecosystem: gomod
+    directory: /tools
+    labels: ["dependencies"]
+    schedule:
+      interval: daily
+      time: "00:00"
   - package-ecosystem: github-actions
     directory: /
     labels: ["dependencies"]
