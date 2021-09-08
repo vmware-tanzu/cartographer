@@ -45,16 +45,16 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 	)
 
 	stampedObject, err := stampContext.Stamp(template.GetResourceTemplate().Raw)
-	// FIXME untested
 	if err != nil {
-		logger.Error(err, "could not stamp template")
+		errorMessage := "could not stamp template"
+		logger.Error(err, errorMessage)
+		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err))
 	}
 
 	err = repository.Create(stampedObject)
 	if err != nil {
 		errorMessage := "could not create object"
 		logger.Error(err, errorMessage)
-
 		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err))
 	}
 

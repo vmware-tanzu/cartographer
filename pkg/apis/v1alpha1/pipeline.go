@@ -31,6 +31,7 @@ const (
 	ReadyRunTemplateReason                            = "Ready"
 	NotFoundRunTemplateReason                         = "RunTemplateNotFound"
 	StampedObjectRejectedByAPIServerRunTemplateReason = "StampedObjectRejectedByAPIServer"
+	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
 )
 
 // +kubebuilder:object:root=true

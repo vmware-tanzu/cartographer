@@ -47,3 +47,12 @@ func StampedObjectRejectedByAPIServerCondition(err error) *metav1.Condition {
 		Message: err.Error(),
 	}
 }
+
+func TemplateStampFailureCondition(err error) *metav1.Condition {
+	return &metav1.Condition{
+		Type:    v1alpha1.RunTemplateReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.TemplateStampFailureRunTemplateReason,
+		Message: err.Error(),
+	}
+}

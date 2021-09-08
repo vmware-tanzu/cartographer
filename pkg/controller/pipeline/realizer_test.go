@@ -33,6 +33,16 @@ var _ = Describe("Reconcile", func() {
 		logger = zap.New(zap.WriteTo(out))
 		repository = &repositoryfakes.FakeRepository{}
 		realizer = NewRealizer()
+
+		pipeline = &v1alpha1.Pipeline{
+			Spec: v1alpha1.PipelineSpec{
+				RunTemplateRef: v1alpha1.TemplateReference{
+					Kind:      "RunTemplate",
+					Name:      "my-template",
+					Namespace: "some-ns",
+				},
+			},
+		}
 	})
 
 	Context("with a valid RunTemplate", func() {
@@ -51,17 +61,6 @@ var _ = Describe("Reconcile", func() {
 			}
 			template := templates.NewRunTemplateModel(templateAPI)
 			repository.GetTemplateReturns(template, nil)
-
-			pipeline = &v1alpha1.Pipeline{
-				Spec: v1alpha1.PipelineSpec{
-					RunTemplateRef: v1alpha1.TemplateReference{
-						Kind:      "RunTemplate",
-						Name:      "my-template",
-						Namespace: "some-ns",
-					},
-				},
-			}
-
 		})
 
 		It("stamps out the resource from the template", func() {
@@ -128,6 +127,38 @@ var _ = Describe("Reconcile", func() {
 				)
 			})
 
+		})
+	})
+
+	Context("with an invalid RunTemplate", func() {
+		BeforeEach(func() {
+			templateAPI := &v1alpha1.RunTemplate{
+				Spec: v1alpha1.RunTemplateSpec{
+					Template: runtime.RawExtension{},
+				},
+			}
+			template := templates.NewRunTemplateModel(templateAPI)
+			repository.GetTemplateReturns(template, nil)
+		})
+
+		It("logs the error", func() {
+			_ = realizer.Realize(pipeline, logger, repository)
+
+			Expect(out).To(Say(`"msg":"could not stamp template"`))
+			Expect(out).To(Say(`"error":"unmarshal to JSON: unexpected end of JSON input"`))
+		})
+
+		It("returns a condition stating that it failed to stamp", func() {
+			condition := realizer.Realize(pipeline, logger, repository)
+
+			Expect(*condition).To(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":    Equal("RunTemplateReady"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Reason":  Equal("TemplateStampFailure"),
+					"Message": Equal("could not stamp template: unmarshal to JSON: unexpected end of JSON input"),
+				}),
+			)
 		})
 
 	})
