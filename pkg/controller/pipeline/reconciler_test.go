@@ -3,7 +3,6 @@ package pipeline_test
 import (
 	"context"
 	"errors"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -13,6 +12,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
