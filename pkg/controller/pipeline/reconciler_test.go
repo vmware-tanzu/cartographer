@@ -143,6 +143,18 @@ var _ = Describe("Reconcile", func() {
 					repository.StatusUpdateReturns(errors.New("bad status update error"))
 				})
 
+				It("Starts and Finishes cleanly", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
+					Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
+				})
+
+				It("returns a status error", func() {
+					result, err := reconciler.Reconcile(ctx, request)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("update workload status"))
+					Expect(result).To(Equal(ctrl.Result{}))
+				})
 			})
 		})
 	})

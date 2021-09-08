@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,16 +50,16 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	} else if getPipelineError == nil {
 		conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 
-		// realize
 		condition := r.realizer.Realize(pipeline, logger, r.repository)
 
-		// conditions
 		if condition != nil {
 			conditionManager.AddPositive(*condition)
+			//TODO: deal with changed
 			pipeline.Status.Conditions, _ = conditionManager.Finalize()
-			statusUpdateError := r.repository.StatusUpdate(pipeline) // FIXME: deal with errors!
+			statusUpdateError := r.repository.StatusUpdate(pipeline)
 			if statusUpdateError != nil {
-				panic("badbad")
+				logger.Info("finished")
+				return ctrl.Result{}, fmt.Errorf("update workload status: %w", statusUpdateError)
 			}
 		}
 	}
