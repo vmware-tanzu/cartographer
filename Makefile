@@ -1,18 +1,21 @@
+ADDLICENSE ?= go run -modfile tools/go.mod github.com/google/addlicense
+CONTROLLER_GEN ?= go run -modfile tools/go.mod sigs.k8s.io/controller-tools/cmd/controller-gen
+GINKGO ?= go run -modfile tools/go.mod github.com/onsi/ginkgo/ginkgo
+GOLANGCI_LINT ?= go run -modfile tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
+
+
 build: gen-objects gen-manifests
 	go build -o build/cartographer ./cmd/cartographer
 run: build
 	build/cartographer
 
 gen-objects:
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
-                object \
-                paths=./pkg/apis/v1alpha1
+	$(CONTROLLER_GEN) object paths=./pkg/apis/v1alpha1
 gen-manifests:
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
-		crd \
+	$(CONTROLLER_GEN) crd \
 		paths=./pkg/apis/v1alpha1 \
 		output:crd:artifacts:config=config/crd/bases
-	go run github.com/google/addlicense \
+	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
@@ -23,10 +26,10 @@ generate: clean-fakes
 	go generate ./...
 
 test-unit:
-	go run github.com/onsi/ginkgo/ginkgo -r pkg
+	$(GINKGO) -r pkg
 
 test-integration:
-	go run github.com/onsi/ginkgo/ginkgo -r tests/integration
+	$(GINKGO) -r tests/integration
 
 test-kuttl: build
 	if [ -n "$$focus" ]; then kubectl kuttl test --test $$(basename $(focus)); else kubectl kuttl test; fi
@@ -51,13 +54,13 @@ coverage:
 	open coverage.html
 
 lint:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
+	$(GOLANGCI_LINT) --config lint-config.yaml run
 
 release: gen-manifests
 	ytt --ignore-unknown-comments -f ./config | ko resolve -f- > ./releases/release.yaml
 	kbld -f releases/release.yaml --imgpkg-lock-output releases/.imgpkg/images.yml
 	imgpkg push -b projectcartographer/cartographer-bundle -f releases --file-exclusion releases/kbld.lock.yml --lock-output releases/kbld.lock.yml
-	go run github.com/google/addlicense \
+	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		releases
 
@@ -81,7 +84,7 @@ deploy-local: create-local prep-deploy gen-manifests
 	ytt -f ./config -f local-dev/local-registry.yaml --ignore-unknown-comments | kbld --images-annotation -f - | kapp deploy --yes -a cartographer -f -
 
 copyright:
-	go run github.com/google/addlicense \
+	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		-ignore site/static/\*\* \
 		-ignore site/themes/\*\* \
