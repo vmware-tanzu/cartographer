@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2021 VMware
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#@ load("@ytt:data", "data")
----
 
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: service-account
-#@ if data.values.registry.password != "":
-secrets:
-  - name: registry-credentials
-imagePullSecrets:
-  - name: registry-credentials
-#@ end
+from __future__ import print_function
+import socket
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
+
+print(get_ip_address())
