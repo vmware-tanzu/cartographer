@@ -25,4 +25,5 @@ spec:
     metadata:
       generateName: my-stamped-resource-
     data:
-      has: data
+      has: something-meaningful
+      something-else: $(pipeline.metadata.labels.my-label)$

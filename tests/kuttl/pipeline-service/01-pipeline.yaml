@@ -17,6 +17,8 @@ apiVersion: carto.run/v1alpha1
 kind: Pipeline
 metadata:
   name: my-pipeline
+  labels:
+    my-label: this-is-it
 spec:
   runTemplateRef:
     name: my-run-template
