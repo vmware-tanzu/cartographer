@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#@ load("@ytt:data", "data")
----
+#@ load("@ytt:overlay", "overlay")
 
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: service-account
-#@ if data.values.registry.password != "":
-secrets:
-  - name: registry-credentials
-imagePullSecrets:
-  - name: registry-credentials
-#@ end
+#@overlay/match by=overlay.subset({"kind":"Deployment"}), expects="1+"
+---
+spec:
+  #@overlay/match
+  template:
+    spec:
+      #@overlay/match
+      containers:
+        #@overlay/match by=overlay.all,expects="0+"
+        - resources:
+            #@overlay/match missing_ok=True
+            #@overlay/replace
+            requests: {}
+            #@overlay/match missing_ok=True
+            #@overlay/replace
+            limits: {}

@@ -6,22 +6,24 @@ The Cartographer project team welcomes contributions from the community. If you 
 
 ## Development Dependencies
 
+- [`ctlptl`]: for deploying local changes to a local registry
 - [`go`]: for compiling the controllers as well as other dependencies - 1.17+
-- [`kind`]: to run a local cluster
 - [`kapp`]: for managing groups of kubernetes objects in a cluster (like our CRDs etc)
+- [`kbld`]: for resolving image references to absolute ones
+- [`kind`]: to run a local cluster
+- [`ko`]: for building and pushing the controller's container image
 - [`kuttl`]: for integration testing
 - [`pack`]: for building the controller's container image using buildpacks.
-- [`kbld`]: for using kpack to build images referenced in the middle of YAML objects
-- [`ctlptl`]: for deploying local changes to a local registry
 
+[`ctlptl`]: https://github.com/tilt-dev/ctlptl
 [`go`]: https://golang.org/dl/
 [`kapp`]: https://github.com/vmware-tanzu/carvel-kapp
 [`kbld`]: https://github.com/vmware-tanzu/carvel-kbld
-[`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 [`kind`]: https://kind.sigs.k8s.io/docs/user/quick-start/
+[`ko`]: https://github.com/google/ko
 [`kuttl`]: https://github.com/kudobuilder/kuttl
 [`pack`]: https://github.com/buildpacks/pack
-[`ctlptl`]: https://github.com/tilt-dev/ctlptl
+[`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 
 ## Running a local cluster
 A local kind cluster with Cartographer installed can be stood up with the command:
@@ -157,7 +159,8 @@ docker login
 # the YAML necessary for bringing `cartographer` up in a Kubernetes cluster via
 # `kubectl apply -f ./releases/release.yaml`.
 #
-make release
+KO_DOCKER_REPO=projectcartographer \
+	make release
 ```
 
 That final file (`releases/release.yaml`) consists of:
@@ -175,11 +178,25 @@ That final file (`releases/release.yaml`) consists of:
 
 As the `Deployment` needs a container image for the pods to use to run our
 controller, we must have a way of building that container image in the first
-place. For that, we make use of `pack`, which allows us to not have to create a
-Dockerfile, but instead, based purely on the code, it's able to determine how
-to best build a container image for it. With the image built, we need to then
-put that image reference (like,
-`projectcartographer/foo/bar@sha256:<image-digest>`) in the Deployment
-object. To make that process streamlined, here we make use of `kbld` which
-allows us declaratively tell it to build the Deployment's image with `pack` and
-then replace the reference where our image needs to be placed.
+place. For that, we make use of `ko`, which given a YAML file where it can find
+an `image: ko://<package>`, it then replaces that with the reference to the
+image it built and pushed to a registry configured via `KO_DOCKER_REPO` (see
+[deployment.yaml](./config/manager/deployment.yaml)). 
+
+## Running the e2e tests
+
+Cartographer has a  script that allows users to:
+   - create a local cluster with a local repository
+   - push the image of the controller to that cluster
+   - run the controller
+   - create the supply chain(s) and workload(s) the example directory
+   - assure that the expected objects are created by the Cartographer controller
+
+To run the tests:
+```bash
+./hack/ci/e2e.sh run
+```
+To teardown (necessary if users wish to rerun the tests):
+```bash
+./hack/ci/e2e.sh teardown
+```
