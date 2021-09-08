@@ -19,8 +19,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,10 +37,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
+	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -54,7 +53,7 @@ var _ = Describe("Reconciler", func() {
 			req              ctrl.Request
 			repo             *repositoryfakes.FakeRepository
 			conditionManager *conditionsfakes.FakeConditionManager
-			rlzr             *realizerfakes.FakeRealizer
+			rlzr             *workloadfakes.FakeRealizer
 			wl               *v1alpha1.Workload
 			workloadLabels   map[string]string
 		)
@@ -72,7 +71,7 @@ var _ = Describe("Reconciler", func() {
 
 			conditionManager.IsSuccessfulReturns(true)
 
-			rlzr = &realizerfakes.FakeRealizer{}
+			rlzr = &workloadfakes.FakeRealizer{}
 			rlzr.RealizeReturns(nil)
 
 			repo = &repositoryfakes.FakeRepository{}
@@ -251,7 +250,7 @@ var _ = Describe("Reconciler", func() {
 				Context("of type GetClusterTemplateError", func() {
 					var templateError error
 					BeforeEach(func() {
-						templateError = realizer.GetClusterTemplateError{
+						templateError = realizerworkload.GetClusterTemplateError{
 							Err: errors.New("some error"),
 						}
 						rlzr.RealizeReturns(templateError)
@@ -269,9 +268,9 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				Context("of type StampError", func() {
-					var stampError realizer.StampError
+					var stampError realizerworkload.StampError
 					BeforeEach(func() {
-						stampError = realizer.StampError{
+						stampError = realizerworkload.StampError{
 							Err:       errors.New("some error"),
 							Component: &v1alpha1.SupplyChainComponent{Name: "some-name"},
 						}
@@ -290,9 +289,9 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				Context("of type ApplyStampedObjectError", func() {
-					var stampedObjectError realizer.ApplyStampedObjectError
+					var stampedObjectError realizerworkload.ApplyStampedObjectError
 					BeforeEach(func() {
-						stampedObjectError = realizer.ApplyStampedObjectError{
+						stampedObjectError = realizerworkload.ApplyStampedObjectError{
 							Err:           errors.New("some error"),
 							StampedObject: &unstructured.Unstructured{},
 						}
@@ -311,10 +310,10 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				Context("of type RetrieveOutputError", func() {
-					var retrieveError realizer.RetrieveOutputError
+					var retrieveError realizerworkload.RetrieveOutputError
 					BeforeEach(func() {
 						jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-						retrieveError = realizer.NewRetrieveOutputError(
+						retrieveError = realizerworkload.NewRetrieveOutputError(
 							&v1alpha1.SupplyChainComponent{Name: "some-component"},
 							&jsonPathError)
 						rlzr.RealizeReturns(retrieveError)

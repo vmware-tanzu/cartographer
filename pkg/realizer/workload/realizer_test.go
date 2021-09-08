@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package realizer_test
+package workload_test
 
 import (
 	"errors"
@@ -22,23 +22,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
+	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Realize", func() {
 	var (
-		componentRealizer *realizerfakes.FakeComponentRealizer
+		componentRealizer *workloadfakes.FakeComponentRealizer
 		supplyChain       *v1alpha1.ClusterSupplyChain
 		component1        v1alpha1.SupplyChainComponent
 		component2        v1alpha1.SupplyChainComponent
-		rlzr              realizer.Realizer
+		rlzr              realizerworkload.Realizer
 	)
 	BeforeEach(func() {
-		rlzr = realizer.NewRealizer()
+		rlzr = realizerworkload.NewRealizer()
 
-		componentRealizer = &realizerfakes.FakeComponentRealizer{}
+		componentRealizer = &workloadfakes.FakeComponentRealizer{}
 		component1 = v1alpha1.SupplyChainComponent{
 			Name: "component1",
 		}
@@ -58,16 +58,16 @@ var _ = Describe("Realize", func() {
 
 		var executedComponentOrder []string
 
-		componentRealizer.DoCalls(func(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
+		componentRealizer.DoCalls(func(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizerworkload.Outputs) (*templates.Output, error) {
 			executedComponentOrder = append(executedComponentOrder, component.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
 			if component.Name == "component1" {
-				Expect(outputs).To(Equal(realizer.NewOutputs()))
+				Expect(outputs).To(Equal(realizerworkload.NewOutputs()))
 				return outputFromFirstComponent, nil
 			}
 
 			if component.Name == "component2" {
-				expectedSecondComponentOutputs := realizer.NewOutputs()
+				expectedSecondComponentOutputs := realizerworkload.NewOutputs()
 				expectedSecondComponentOutputs.AddOutput("component1", outputFromFirstComponent)
 				Expect(outputs).To(Equal(expectedSecondComponentOutputs))
 			}

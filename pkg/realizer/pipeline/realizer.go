@@ -24,6 +24,10 @@ func NewRealizer() Realizer {
 
 type pipelineRealizer struct{}
 
+type TemplatingContext struct {
+	Pipeline *v1alpha1.Pipeline `json:"pipeline"`
+}
+
 func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) *v1.Condition {
 	template, err := repository.GetTemplate(pipeline.Spec.RunTemplateRef)
 
@@ -38,7 +42,7 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 
 	stampContext := templates.StamperBuilder(
 		pipeline,
-		PipelineTemplatingContext{
+		TemplatingContext{
 			Pipeline: pipeline,
 		},
 		labels,

@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	. "github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
+	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -24,7 +24,7 @@ var _ = Describe("Reconcile", func() {
 		out        *Buffer
 		repository *repositoryfakes.FakeRepository
 		logger     logr.Logger
-		realizer   Realizer
+		realizer   realizerpipeline.Realizer
 		pipeline   *v1alpha1.Pipeline
 	)
 
@@ -32,7 +32,7 @@ var _ = Describe("Reconcile", func() {
 		out = NewBuffer()
 		logger = zap.New(zap.WriteTo(out))
 		repository = &repositoryfakes.FakeRepository{}
-		realizer = NewRealizer()
+		realizer = realizerpipeline.NewRealizer()
 
 		pipeline = &v1alpha1.Pipeline{
 			Spec: v1alpha1.PipelineSpec{

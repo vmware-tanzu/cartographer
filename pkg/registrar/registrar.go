@@ -34,7 +34,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
+	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -72,7 +73,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
 
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
-		Reconciler: workload.NewReconciler(repo, conditions.NewConditionManager, realizer.NewRealizer()),
+		Reconciler: workload.NewReconciler(repo, conditions.NewConditionManager, realizerworkload.NewRealizer()),
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
@@ -124,7 +125,7 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
 
 	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
-		Reconciler: pipeline.NewReconciler(repo, pipeline.NewRealizer()),
+		Reconciler: pipeline.NewReconciler(repo, realizerpipeline.NewRealizer()),
 	})
 	if err != nil {
 		return fmt.Errorf("controller new [pipeline-service]: %w", err)

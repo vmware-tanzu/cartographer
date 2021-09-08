@@ -18,7 +18,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	. "github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline/pipelinefakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline/pipelinefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 )
 

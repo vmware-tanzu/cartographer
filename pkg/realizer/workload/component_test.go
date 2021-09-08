@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package realizer_test
+package workload_test
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -37,10 +37,10 @@ var _ = Describe("Component", func() {
 	var (
 		component       v1alpha1.SupplyChainComponent
 		workload        v1alpha1.Workload
-		outputs         realizer.Outputs
+		outputs         realizerworkload.Outputs
 		supplyChainName string
 		fakeRepo        repositoryfakes.FakeRepository
-		r               realizer.ComponentRealizer
+		r               realizerworkload.ComponentRealizer
 	)
 
 	BeforeEach(func() {
@@ -54,11 +54,11 @@ var _ = Describe("Component", func() {
 
 		supplyChainName = "supply-chain-name"
 
-		outputs = realizer.NewOutputs()
+		outputs = realizerworkload.NewOutputs()
 
 		fakeRepo = repositoryfakes.FakeRepository{}
 		workload = v1alpha1.Workload{}
-		r = realizer.NewComponentRealizer(&workload, &fakeRepo)
+		r = realizerworkload.NewComponentRealizer(&workload, &fakeRepo)
 	})
 
 	Describe("Do", func() {
@@ -158,7 +158,7 @@ var _ = Describe("Component", func() {
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("realizer.GetClusterTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetClusterTemplateError"))
 			})
 		})
 
@@ -186,7 +186,7 @@ var _ = Describe("Component", func() {
 				_, err := r.Do(&component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for component 'component-1'"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("realizer.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
 			})
 		})
 
@@ -234,7 +234,7 @@ var _ = Describe("Component", func() {
 				_, err := r.Do(&component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("realizer.RetrieveOutputError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
 			})
 		})
 
@@ -294,7 +294,7 @@ var _ = Describe("Component", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("realizer.ApplyStampedObjectError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("workload.ApplyStampedObjectError"))
 			})
 		})
 	})

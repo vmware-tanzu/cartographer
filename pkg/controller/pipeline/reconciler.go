@@ -10,6 +10,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -17,7 +18,7 @@ type Reconciler interface {
 	Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error)
 }
 
-func NewReconciler(repository repository.Repository, realizer Realizer) Reconciler {
+func NewReconciler(repository repository.Repository, realizer realizerpipeline.Realizer) Reconciler {
 	return &reconciler{
 		repository: repository,
 		realizer:   realizer,
@@ -26,11 +27,7 @@ func NewReconciler(repository repository.Repository, realizer Realizer) Reconcil
 
 type reconciler struct {
 	repository repository.Repository
-	realizer   Realizer
-}
-
-type PipelineTemplatingContext struct {
-	Pipeline *v1alpha1.Pipeline `json:"pipeline"`
+	realizer   realizerpipeline.Realizer
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {

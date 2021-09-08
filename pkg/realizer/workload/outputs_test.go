@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package realizer_test
+package workload_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Outputs", func() {
 	Describe("GenerateInputs", func() {
 		Context("When component contains sources", func() {
-			var outs realizer.Outputs
+			var outs realizerworkload.Outputs
 			BeforeEach(func() {
-				outs = realizer.NewOutputs()
+				outs = realizerworkload.NewOutputs()
 				sourceOutput := &templates.Output{
 					Source: &templates.Source{
 						URL:      "source-url",
@@ -73,9 +73,9 @@ var _ = Describe("Outputs", func() {
 		})
 
 		Context("When component contains images", func() {
-			var outs realizer.Outputs
+			var outs realizerworkload.Outputs
 			BeforeEach(func() {
-				outs = realizer.NewOutputs()
+				outs = realizerworkload.NewOutputs()
 				imageOutput := &templates.Output{
 					Image: "image12345",
 				}
@@ -117,9 +117,9 @@ var _ = Describe("Outputs", func() {
 		})
 
 		Context("When component contains configs", func() {
-			var outs realizer.Outputs
+			var outs realizerworkload.Outputs
 			BeforeEach(func() {
-				outs = realizer.NewOutputs()
+				outs = realizerworkload.NewOutputs()
 				configOutput := &templates.Output{
 					Config: "config12345",
 				}
