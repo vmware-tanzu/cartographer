@@ -24,6 +24,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -120,6 +121,20 @@ func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
 
 func (c *ClusterSupplyChain) ValidateDelete() error {
 	return nil
+}
+
+func GetSelectorsFromObject(o client.Object) []string {
+	var res []string
+	res = []string{}
+
+	sc, ok := o.(*ClusterSupplyChain)
+	if ok {
+		for key, value := range sc.Spec.Selector {
+			res = append(res, fmt.Sprintf("%s: %s", key, value))
+		}
+	}
+
+	return res
 }
 
 type SupplyChainSpec struct {
