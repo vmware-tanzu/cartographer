@@ -3,6 +3,7 @@ package pipeline_test
 import (
 	"context"
 	"errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -12,7 +13,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -51,29 +51,26 @@ var _ = Describe("Reconcile", func() {
 
 	Context("reconcile a new valid Pipeline", func() {
 		BeforeEach(func() {
-			repository.GetPipelineStub = func(name, namespace string) (*v1alpha1.Pipeline, error) {
-				pipeline := &v1alpha1.Pipeline{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Pipeline",
-						APIVersion: "carto.run/v1alpha1",
+			repository.GetPipelineReturns(&v1alpha1.Pipeline{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Pipeline",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-pipeline",
+					Namespace: "my-namespace",
+				},
+				Spec: v1alpha1.PipelineSpec{
+					RunTemplateRef: v1alpha1.TemplateReference{
+						Kind:      "RunTemplateRef",
+						Name:      "my-run-template",
+						Namespace: "ns1",
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-					},
-					Spec: v1alpha1.PipelineSpec{
-						RunTemplate: v1alpha1.TemplateReference{
-							Kind:      "RunTemplate",
-							Name:      "my-run-template",
-							Namespace: "ns1",
-						},
-					},
-				}
-				return pipeline, nil
-			}
+				},
+			}, nil)
 		})
 
-		Context("with a valid RunTemplate", func() {
+		Context("with a valid RunTemplateRef", func() {
 			BeforeEach(func() {
 				realizer.RealizeReturns(nil)
 			})
@@ -102,7 +99,7 @@ var _ = Describe("Reconcile", func() {
 					Type:    "RunTemplateReady",
 					Status:  metav1.ConditionFalse,
 					Reason:  "RunTemplateNotFound",
-					Message: "could not get RunTemplate 'my-run-template': Errol mcErrorFace",
+					Message: "could not get RunTemplateRef 'my-run-template': Errol mcErrorFace",
 				})
 			})
 
@@ -128,7 +125,7 @@ var _ = Describe("Reconcile", func() {
 						"Type":    Equal("RunTemplateReady"),
 						"Status":  Equal(metav1.ConditionFalse),
 						"Reason":  Equal("RunTemplateNotFound"),
-						"Message": Equal("could not get RunTemplate 'my-run-template': Errol mcErrorFace"),
+						"Message": Equal("could not get RunTemplateRef 'my-run-template': Errol mcErrorFace"),
 					}),
 				))
 			})
@@ -142,6 +139,9 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			Context("updating the status fails", func() {
+				BeforeEach(func() {
+					repository.StatusUpdateReturns(errors.New("bad status update error"))
+				})
 
 			})
 		})
@@ -149,15 +149,13 @@ var _ = Describe("Reconcile", func() {
 
 	Context("the pipeline goes away", func() {
 		BeforeEach(func() {
-			repository.GetPipelineStub = func(name, namespace string) (*v1alpha1.Pipeline, error) {
-				return nil, kerrors.NewNotFound(
-					schema.GroupResource{
-						Group:    "carto.run",
-						Resource: "Pipeline",
-					},
-					"my-pipeline",
-				)
-			}
+			repository.GetPipelineReturns(nil, kerrors.NewNotFound(
+				schema.GroupResource{
+					Group:    "carto.run",
+					Resource: "Pipeline",
+				},
+				"my-pipeline",
+			))
 		})
 
 		It("considers the reconcile complete", func() {

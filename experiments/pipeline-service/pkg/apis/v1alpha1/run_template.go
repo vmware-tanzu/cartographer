@@ -51,7 +51,7 @@ type RunTemplateSpec struct {
 	//
 	// To this template are made available:
 	//
-	// 	- the pipeline object that is referencing this RunTemplate
+	// 	- the pipeline object that is referencing this RunTemplateRef
 	// 	- (optional) the object that matched the Pipeline's selection rules.
 	//
 	// For instance:
@@ -74,7 +74,7 @@ type RunTemplateOutput struct {
 	Name string `json:"name"`
 
 	// Path denotes the query that should be performed to retrieve a value
-	// from the object stamped out according to this RunTemplate template.
+	// from the object stamped out according to this RunTemplateRef template.
 	//
 	Path string `json:"path"`
 }

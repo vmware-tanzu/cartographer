@@ -43,6 +43,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Info("pipeline no longer exists")
 		logger.Info("finished")
 		return ctrl.Result{}, nil
+	} else if getPipelineError != nil {
+		logger.Info("finished")
+		return ctrl.Result{}, getPipelineError
 	} else if getPipelineError == nil {
 		conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 
@@ -53,13 +56,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if condition != nil {
 			conditionManager.AddPositive(*condition)
 			pipeline.Status.Conditions, _ = conditionManager.Finalize()
-			getPipelineError = r.repository.StatusUpdate(pipeline) // FIXME: deal with errors!
-			if getPipelineError != nil {
+			statusUpdateError := r.repository.StatusUpdate(pipeline) // FIXME: deal with errors!
+			if statusUpdateError != nil {
 				panic("badbad")
 			}
 		}
 	}
-
 	logger.Info("finished")
-	return ctrl.Result{}, getPipelineError
+	return ctrl.Result{}, nil
 }

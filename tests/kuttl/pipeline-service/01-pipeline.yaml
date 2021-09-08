@@ -4,7 +4,7 @@ kind: Pipeline
 metadata:
   name: my-pipeline
 spec:
-  runTemplate:
+  runTemplateRef:
     name: my-run-template
     namespace: test-ns
     kind: RunTemplate

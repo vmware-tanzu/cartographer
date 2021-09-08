@@ -2,7 +2,6 @@ package pipeline_test
 
 import (
 	"errors"
-
 	. "github.com/MakeNowJust/heredoc/dot"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -37,25 +36,24 @@ var _ = Describe("Reconcile", func() {
 
 	Context("with a valid RunTemplate", func() {
 		BeforeEach(func() {
-			repository.GetTemplateStub = func(reference v1alpha1.TemplateReference) (templates.Template, error) {
-				template := templates.NewRunTemplateModel(&v1alpha1.RunTemplate{
-					Spec: v1alpha1.RunTemplateSpec{
-						Template: runtime.RawExtension{
-							Raw: []byte(D(`{
+			templateAPI := &v1alpha1.RunTemplate{
+				Spec: v1alpha1.RunTemplateSpec{
+					Template: runtime.RawExtension{
+						Raw: []byte(D(`{
 								"apiVersion": "v1",
 								"kind": "ConfigMap",
 								"metadata": { "generateName": "my-stamped-resource-" },
 								"data": { "has": "data" }
 							}`)),
-						},
 					},
-				})
-				return template, nil
+				},
 			}
+			template := templates.NewRunTemplateModel(templateAPI)
+			repository.GetTemplateReturns(template, nil)
 
 			pipeline = &v1alpha1.Pipeline{
 				Spec: v1alpha1.PipelineSpec{
-					RunTemplate: v1alpha1.TemplateReference{
+					RunTemplateRef: v1alpha1.TemplateReference{
 						Kind:      "RunTemplate",
 						Name:      "my-template",
 						Namespace: "some-ns",
@@ -135,14 +133,11 @@ var _ = Describe("Reconcile", func() {
 
 	Context("the RunTemplate cannot be fetched", func() {
 		BeforeEach(func() {
-			repository.GetTemplateStub = func(reference v1alpha1.TemplateReference) (templates.Template, error) {
-				return nil, errors.New("Errol mcErrorFace")
-			}
+			repository.GetTemplateReturns(nil, errors.New("Errol mcErrorFace"))
 
 			pipeline = &v1alpha1.Pipeline{
 				Spec: v1alpha1.PipelineSpec{
-					// FIXME should this be `RunTemplateRef`
-					RunTemplate: v1alpha1.TemplateReference{
+					RunTemplateRef: v1alpha1.TemplateReference{
 						Kind:      "RunTemplate",
 						Name:      "my-template",
 						Namespace: "some-ns",

@@ -48,7 +48,7 @@ spec:
             type: object
           spec:
             properties:
-              runTemplate:
+              runTemplateRef:
                 properties:
                   kind:
                     enum:
@@ -66,7 +66,7 @@ spec:
                 - namespace
                 type: object
             required:
-            - runTemplate
+            - runTemplateRef
             type: object
           status:
             properties:

@@ -25,10 +25,10 @@ func NewRealizer() Realizer {
 type pipelineRealizer struct{}
 
 func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) *v1.Condition {
-	template, err := repository.GetTemplate(pipeline.Spec.RunTemplate)
+	template, err := repository.GetTemplate(pipeline.Spec.RunTemplateRef)
 
 	if err != nil {
-		errorMessage := fmt.Sprintf("could not get RunTemplate '%s'", pipeline.Spec.RunTemplate.Name)
+		errorMessage := fmt.Sprintf("could not get RunTemplate '%s'", pipeline.Spec.RunTemplateRef.Name)
 		logger.Error(err, errorMessage)
 
 		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err))

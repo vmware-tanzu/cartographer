@@ -55,7 +55,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("a Pipeline that matches the RunTemplate", func() {
+		Context("a Pipeline that matches the RunTemplateRef", func() {
 			BeforeEach(func() {
 				pipelineYaml := HereYamlF(`---
 					apiVersion: carto.run/v1alpha1
@@ -64,7 +64,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  namespace: %s
 					  name: my-pipeline
 					spec:
-					  runTemplate: 
+					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
 					    kind: RunTemplate
@@ -96,7 +96,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			})
 		})
 
-		Context("a Pipeline that does not match the RunTemplate", func() {
+		Context("a Pipeline that does not match the RunTemplateRef", func() {
 			BeforeEach(func() {
 				pipelineYaml := HereYamlF(`---
 					apiVersion: carto.run/v1alpha1
@@ -105,7 +105,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  namespace: %s
 					  name: my-pipeline
 					spec:
-					  runTemplate: 
+					  runTemplateRef: 
 					    name: my-run-template-does-not-match
 					    namespace: %s
 					    kind: RunTemplate

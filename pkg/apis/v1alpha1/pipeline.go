@@ -50,7 +50,7 @@ type PipelineStatus struct {
 
 type PipelineSpec struct {
 	// +kubebuilder:validation:Required
-	RunTemplate TemplateReference `json:"runTemplate"`
+	RunTemplateRef TemplateReference `json:"runTemplateRef"`
 }
 
 type TemplateReference struct {
