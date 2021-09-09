@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,33 +32,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
-
-func alterFieldOfNestedStringMaps(obj interface{}, key string, value string) error {
-	aMap, ok := obj.(map[string]interface{})
-	if !ok {
-		return errors.New("field not found")
-	}
-
-	i := strings.Index(key, ".")
-	if i < 0 {
-		_, ok = aMap[key]
-		if !ok {
-			return errors.New("field not found")
-		}
-		aMap[key] = value
-	} else {
-		keyPrefix := key[:i]
-		keySuffix := key[i+1:]
-		subMap, ok := aMap[keyPrefix]
-		if !ok {
-			return errors.New("field not found")
-		}
-		return alterFieldOfNestedStringMaps(subMap, keySuffix, value)
-	}
-
-	return nil
-}
 
 var _ = Describe("repository", func() {
 	var (
@@ -173,7 +147,7 @@ spec:
 					var returnedCreatedObj *unstructured.Unstructured
 					BeforeEach(func() {
 						returnedCreatedObj = stampedObj.DeepCopy()
-						Expect(alterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
+						Expect(utils.AlterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
 						cl.CreateStub = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 							objVal := reflect.ValueOf(obj)
 							returnVal := reflect.ValueOf(returnedCreatedObj)
@@ -276,7 +250,7 @@ spec:
 
 						BeforeEach(func() {
 							returnedPatchedObj = stampedObj.DeepCopy()
-							Expect(alterFieldOfNestedStringMaps(returnedPatchedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
+							Expect(utils.AlterFieldOfNestedStringMaps(returnedPatchedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
 							cl.PatchStub = func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								objVal := reflect.ValueOf(obj)
 								returnVal := reflect.ValueOf(returnedPatchedObj)

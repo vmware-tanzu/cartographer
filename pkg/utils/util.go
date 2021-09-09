@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -47,4 +48,30 @@ func HereYaml(y string) string {
 func HereYamlF(y string, args ...interface{}) string {
 	y = strings.ReplaceAll(y, "\t", "    ")
 	return heredoc.Docf(y, args...)
+}
+
+func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) error {
+	aMap, ok := obj.(map[string]interface{})
+	if !ok {
+		return errors.New("field not found")
+	}
+
+	i := strings.Index(key, ".")
+	if i < 0 {
+		_, ok = aMap[key]
+		if !ok {
+			return errors.New("field not found")
+		}
+		aMap[key] = value
+	} else {
+		keyPrefix := key[:i]
+		keySuffix := key[i+1:]
+		subMap, ok := aMap[keyPrefix]
+		if !ok {
+			return errors.New("field not found")
+		}
+		return AlterFieldOfNestedStringMaps(subMap, keySuffix, value)
+	}
+
+	return nil
 }
