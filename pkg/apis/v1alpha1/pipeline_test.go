@@ -66,7 +66,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(found).To(BeTrue())
 			jsonValue := kindField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("kind"))
-			Expect(jsonValue).NotTo(ContainSubstring("omitempty"))
+			Expect(jsonValue).To(ContainSubstring("omitempty"))
 		})
 
 		It("requires a namespace", func() {
@@ -74,7 +74,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(found).To(BeTrue())
 			jsonValue := namespaceField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("namespace"))
-			Expect(jsonValue).NotTo(ContainSubstring("omitempty"))
+			Expect(jsonValue).To(ContainSubstring("omitempty"))
 		})
 	})
 })

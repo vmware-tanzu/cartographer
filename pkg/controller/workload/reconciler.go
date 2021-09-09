@@ -25,7 +25,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
@@ -36,10 +36,10 @@ type Reconciler struct {
 	repo                    repository.Repository
 	conditionManager        conditions.ConditionManager
 	conditionManagerBuilder conditions.ConditionManagerBuilder
-	realizer                realizerworkload.Realizer
+	realizer                realizer.Realizer
 }
 
-func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizerworkload.Realizer) *Reconciler {
+func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizer.Realizer) *Reconciler {
 	return &Reconciler{
 		repo:                    repo,
 		conditionManagerBuilder: conditionManagerBuilder,
@@ -85,16 +85,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	err = r.realizer.Realize(realizerworkload.NewComponentRealizer(workload, r.repo), supplyChain)
+	err = r.realizer.Realize(realizer.NewComponentRealizer(workload, r.repo), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
-		case realizerworkload.GetClusterTemplateError:
+		case realizer.GetClusterTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
-		case realizerworkload.StampError:
+		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case realizerworkload.ApplyStampedObjectError:
+		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-		case realizerworkload.RetrieveOutputError:
+		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ComponentName(), typedErr.JsonPathExpression()))
 			err = nil
 		default:

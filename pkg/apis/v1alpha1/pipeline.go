@@ -55,12 +55,10 @@ type PipelineSpec struct {
 }
 
 type TemplateReference struct {
-	// +kubebuilder:validation:Enum=RunTemplate
-	Kind string `json:"kind"`
+	Kind string `json:"kind,omitempty"`
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-	// +kubebuilder:validation:MinLength=1
-	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // +kubebuilder:object:root=true

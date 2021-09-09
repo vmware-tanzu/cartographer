@@ -120,7 +120,7 @@ func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("NewModelFromAPI: %w", err)
+		return nil, fmt.Errorf("new model from api: %w", err)
 	}
 
 	return template, nil
@@ -143,7 +143,7 @@ func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Temp
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("NewModelFromAPI: %w", err)
+		return nil, fmt.Errorf("new model from api: %w", err)
 	}
 
 	return template, nil

@@ -51,7 +51,7 @@ type RunTemplateSpec struct {
 	//
 	// To this template are made available:
 	//
-	// 	- the pipeline object that is referencing this RunTemplateRef
+	// 	- the pipeline object that is referencing this RunTemplate
 	// 	- (optional) the object that matched the Pipeline's selection rules.
 	//
 	// For instance:

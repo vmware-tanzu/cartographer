@@ -27,7 +27,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
-	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -37,10 +37,10 @@ var _ = Describe("Component", func() {
 	var (
 		component       v1alpha1.SupplyChainComponent
 		workload        v1alpha1.Workload
-		outputs         realizerworkload.Outputs
+		outputs         realizer.Outputs
 		supplyChainName string
 		fakeRepo        repositoryfakes.FakeRepository
-		r               realizerworkload.ComponentRealizer
+		r               realizer.ComponentRealizer
 	)
 
 	BeforeEach(func() {
@@ -54,11 +54,11 @@ var _ = Describe("Component", func() {
 
 		supplyChainName = "supply-chain-name"
 
-		outputs = realizerworkload.NewOutputs()
+		outputs = realizer.NewOutputs()
 
 		fakeRepo = repositoryfakes.FakeRepository{}
 		workload = v1alpha1.Workload{}
-		r = realizerworkload.NewComponentRealizer(&workload, &fakeRepo)
+		r = realizer.NewComponentRealizer(&workload, &fakeRepo)
 	})
 
 	Describe("Do", func() {

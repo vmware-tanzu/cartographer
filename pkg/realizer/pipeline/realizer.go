@@ -43,6 +43,10 @@ type TemplatingContext struct {
 }
 
 func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) *v1.Condition {
+	pipeline.Spec.RunTemplateRef.Kind = "RunTemplate"
+	if pipeline.Spec.RunTemplateRef.Namespace == "" {
+		pipeline.Spec.RunTemplateRef.Namespace = pipeline.Namespace
+	}
 	template, err := repository.GetTemplate(pipeline.Spec.RunTemplateRef)
 
 	if err != nil {

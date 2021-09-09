@@ -22,5 +22,3 @@ metadata:
 spec:
   runTemplateRef:
     name: my-run-template
-    namespace: test-ns
-    kind: RunTemplate

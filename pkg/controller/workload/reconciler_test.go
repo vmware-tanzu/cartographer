@@ -37,7 +37,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
-	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -250,7 +250,7 @@ var _ = Describe("Reconciler", func() {
 				Context("of type GetClusterTemplateError", func() {
 					var templateError error
 					BeforeEach(func() {
-						templateError = realizerworkload.GetClusterTemplateError{
+						templateError = realizer.GetClusterTemplateError{
 							Err: errors.New("some error"),
 						}
 						rlzr.RealizeReturns(templateError)
@@ -268,9 +268,9 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				Context("of type StampError", func() {
-					var stampError realizerworkload.StampError
+					var stampError realizer.StampError
 					BeforeEach(func() {
-						stampError = realizerworkload.StampError{
+						stampError = realizer.StampError{
 							Err:       errors.New("some error"),
 							Component: &v1alpha1.SupplyChainComponent{Name: "some-name"},
 						}
@@ -289,9 +289,9 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				Context("of type ApplyStampedObjectError", func() {
-					var stampedObjectError realizerworkload.ApplyStampedObjectError
+					var stampedObjectError realizer.ApplyStampedObjectError
 					BeforeEach(func() {
-						stampedObjectError = realizerworkload.ApplyStampedObjectError{
+						stampedObjectError = realizer.ApplyStampedObjectError{
 							Err:           errors.New("some error"),
 							StampedObject: &unstructured.Unstructured{},
 						}
@@ -310,10 +310,10 @@ var _ = Describe("Reconciler", func() {
 				})
 
 				Context("of type RetrieveOutputError", func() {
-					var retrieveError realizerworkload.RetrieveOutputError
+					var retrieveError realizer.RetrieveOutputError
 					BeforeEach(func() {
 						jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-						retrieveError = realizerworkload.NewRetrieveOutputError(
+						retrieveError = realizer.NewRetrieveOutputError(
 							&v1alpha1.SupplyChainComponent{Name: "some-component"},
 							&jsonPathError)
 						rlzr.RealizeReturns(retrieveError)

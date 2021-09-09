@@ -51,19 +51,14 @@ spec:
               runTemplateRef:
                 properties:
                   kind:
-                    enum:
-                    - RunTemplate
                     type: string
                   name:
                     minLength: 1
                     type: string
                   namespace:
-                    minLength: 1
                     type: string
                 required:
-                - kind
                 - name
-                - namespace
                 type: object
             required:
             - runTemplateRef

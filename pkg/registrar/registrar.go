@@ -128,7 +128,7 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 		Reconciler: pipeline.NewReconciler(repo, realizerpipeline.NewRealizer()),
 	})
 	if err != nil {
-		return fmt.Errorf("controller new [pipeline-service]: %w", err)
+		return fmt.Errorf("controller new pipeline-service: %w", err)
 	}
 
 	if err := ctrl.Watch(

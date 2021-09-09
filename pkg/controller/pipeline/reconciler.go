@@ -24,7 +24,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -32,7 +32,7 @@ type Reconciler interface {
 	Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error)
 }
 
-func NewReconciler(repository repository.Repository, realizer realizerpipeline.Realizer) Reconciler {
+func NewReconciler(repository repository.Repository, realizer realizer.Realizer) Reconciler {
 	return &reconciler{
 		repository: repository,
 		realizer:   realizer,
@@ -41,24 +41,23 @@ func NewReconciler(repository repository.Repository, realizer realizerpipeline.R
 
 type reconciler struct {
 	repository repository.Repository
-	realizer   realizerpipeline.Realizer
+	realizer   realizer.Realizer
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := logr.FromContext(ctx).
 		WithValues("name", request.Name, "namespace", request.Namespace)
 	logger.Info("started")
+	defer logger.Info("finished")
 
-	pipeline, getPipelineError := r.repository.GetPipeline(request.Name, request.Namespace)
+	pipeline, err := r.repository.GetPipeline(request.Name, request.Namespace)
 
-	if kerrors.IsNotFound(getPipelineError) {
+	if kerrors.IsNotFound(err) {
 		logger.Info("pipeline no longer exists")
-		logger.Info("finished")
 		return ctrl.Result{}, nil
-	} else if getPipelineError != nil {
-		logger.Info("finished")
-		return ctrl.Result{}, getPipelineError
-	} else if getPipelineError == nil {
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else if err == nil {
 		conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 
 		condition := r.realizer.Realize(pipeline, logger, r.repository)
@@ -74,6 +73,5 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 		}
 	}
-	logger.Info("finished")
 	return ctrl.Result{}, nil
 }

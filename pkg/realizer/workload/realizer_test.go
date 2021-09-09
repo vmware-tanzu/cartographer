@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -33,10 +33,10 @@ var _ = Describe("Realize", func() {
 		supplyChain       *v1alpha1.ClusterSupplyChain
 		component1        v1alpha1.SupplyChainComponent
 		component2        v1alpha1.SupplyChainComponent
-		rlzr              realizerworkload.Realizer
+		rlzr              realizer.Realizer
 	)
 	BeforeEach(func() {
-		rlzr = realizerworkload.NewRealizer()
+		rlzr = realizer.NewRealizer()
 
 		componentRealizer = &workloadfakes.FakeComponentRealizer{}
 		component1 = v1alpha1.SupplyChainComponent{
@@ -58,16 +58,16 @@ var _ = Describe("Realize", func() {
 
 		var executedComponentOrder []string
 
-		componentRealizer.DoCalls(func(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizerworkload.Outputs) (*templates.Output, error) {
+		componentRealizer.DoCalls(func(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
 			executedComponentOrder = append(executedComponentOrder, component.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
 			if component.Name == "component1" {
-				Expect(outputs).To(Equal(realizerworkload.NewOutputs()))
+				Expect(outputs).To(Equal(realizer.NewOutputs()))
 				return outputFromFirstComponent, nil
 			}
 
 			if component.Name == "component2" {
-				expectedSecondComponentOutputs := realizerworkload.NewOutputs()
+				expectedSecondComponentOutputs := realizer.NewOutputs()
 				expectedSecondComponentOutputs.AddOutput("component1", outputFromFirstComponent)
 				Expect(outputs).To(Equal(expectedSecondComponentOutputs))
 			}

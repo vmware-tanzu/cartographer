@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -38,7 +38,7 @@ var _ = Describe("Reconcile", func() {
 		out        *Buffer
 		repository *repositoryfakes.FakeRepository
 		logger     logr.Logger
-		realizer   realizerpipeline.Realizer
+		rlzr       realizer.Realizer
 		pipeline   *v1alpha1.Pipeline
 	)
 
@@ -46,7 +46,7 @@ var _ = Describe("Reconcile", func() {
 		out = NewBuffer()
 		logger = zap.New(zap.WriteTo(out))
 		repository = &repositoryfakes.FakeRepository{}
-		realizer = realizerpipeline.NewRealizer()
+		rlzr = realizer.NewRealizer()
 
 		pipeline = &v1alpha1.Pipeline{
 			Spec: v1alpha1.PipelineSpec{
@@ -69,7 +69,8 @@ var _ = Describe("Reconcile", func() {
 								"kind": "ConfigMap",
 								"metadata": { "generateName": "my-stamped-resource-" },
 								"data": { "has": "data" }
-							}`)),
+							}`,
+						)),
 					},
 				},
 			}
@@ -78,7 +79,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("stamps out the resource from the template", func() {
-			_ = realizer.Realize(pipeline, logger, repository)
+			_ = rlzr.Realize(pipeline, logger, repository)
 
 			Expect(repository.GetTemplateCallCount()).To(Equal(1))
 			Expect(repository.GetTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
@@ -106,7 +107,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("returns a happy condition", func() {
-			condition := realizer.Realize(pipeline, logger, repository)
+			condition := rlzr.Realize(pipeline, logger, repository)
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("RunTemplateReady"),
@@ -122,14 +123,14 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			It("logs the error", func() {
-				_ = realizer.Realize(pipeline, logger, repository)
+				_ = rlzr.Realize(pipeline, logger, repository)
 
 				Expect(out).To(Say(`"msg":"could not create object"`))
 				Expect(out).To(Say(`"error":"some bad error"`))
 			})
 
 			It("returns a condition stating that it failed to create", func() {
-				condition := realizer.Realize(pipeline, logger, repository)
+				condition := rlzr.Realize(pipeline, logger, repository)
 
 				Expect(*condition).To(
 					MatchFields(IgnoreExtras, Fields{
@@ -156,14 +157,14 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("logs the error", func() {
-			_ = realizer.Realize(pipeline, logger, repository)
+			_ = rlzr.Realize(pipeline, logger, repository)
 
 			Expect(out).To(Say(`"msg":"could not stamp template"`))
 			Expect(out).To(Say(`"error":"unmarshal to JSON: unexpected end of JSON input"`))
 		})
 
 		It("returns a condition stating that it failed to stamp", func() {
-			condition := realizer.Realize(pipeline, logger, repository)
+			condition := rlzr.Realize(pipeline, logger, repository)
 
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{
@@ -193,14 +194,14 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("logs the error", func() {
-			_ = realizer.Realize(pipeline, logger, repository)
+			_ = rlzr.Realize(pipeline, logger, repository)
 
 			Expect(out).To(Say(`"msg":"could not get RunTemplate 'my-template'"`))
 			Expect(out).To(Say(`"error":"Errol mcErrorFace"`))
 		})
 
 		It("return the condition for a missing RunTemplate", func() {
-			condition := realizer.Realize(pipeline, logger, repository)
+			condition := rlzr.Realize(pipeline, logger, repository)
 
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{

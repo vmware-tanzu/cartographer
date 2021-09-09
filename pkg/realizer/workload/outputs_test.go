@@ -19,16 +19,16 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Outputs", func() {
 	Describe("GenerateInputs", func() {
 		Context("When component contains sources", func() {
-			var outs realizerworkload.Outputs
+			var outs realizer.Outputs
 			BeforeEach(func() {
-				outs = realizerworkload.NewOutputs()
+				outs = realizer.NewOutputs()
 				sourceOutput := &templates.Output{
 					Source: &templates.Source{
 						URL:      "source-url",
@@ -73,9 +73,9 @@ var _ = Describe("Outputs", func() {
 		})
 
 		Context("When component contains images", func() {
-			var outs realizerworkload.Outputs
+			var outs realizer.Outputs
 			BeforeEach(func() {
-				outs = realizerworkload.NewOutputs()
+				outs = realizer.NewOutputs()
 				imageOutput := &templates.Output{
 					Image: "image12345",
 				}
@@ -117,9 +117,9 @@ var _ = Describe("Outputs", func() {
 		})
 
 		Context("When component contains configs", func() {
-			var outs realizerworkload.Outputs
+			var outs realizer.Outputs
 			BeforeEach(func() {
-				outs = realizerworkload.NewOutputs()
+				outs = realizer.NewOutputs()
 				configOutput := &templates.Output{
 					Config: "config12345",
 				}

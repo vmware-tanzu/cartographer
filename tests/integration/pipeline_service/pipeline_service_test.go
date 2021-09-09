@@ -45,13 +45,13 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				  namespace: %s
 				  name: my-run-template
 				spec:
-  				  template:
-  				    apiVersion: v1
-  				    kind: ConfigMap
-  				    metadata:
-  					  generateName: my-stamped-resource-
-  				    data:
-  					  has: data
+				  template:
+				    apiVersion: v1
+				    kind: ConfigMap
+				    metadata:
+					  generateName: my-stamped-resource-
+				    data:
+					  has: data
 				`,
 				testNS,
 			)

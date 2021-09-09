@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	. "github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
+	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline/pipelinefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 )
@@ -40,7 +40,7 @@ var _ = Describe("Reconcile", func() {
 	var (
 		out        *Buffer
 		ctx        context.Context
-		reconciler Reconciler
+		reconciler pipeline.Reconciler
 		request    ctrl.Request
 		repository *repositoryfakes.FakeRepository
 		realizer   *pipelinefakes.FakeRealizer
@@ -53,7 +53,7 @@ var _ = Describe("Reconcile", func() {
 		repository = &repositoryfakes.FakeRepository{}
 		realizer = &pipelinefakes.FakeRealizer{}
 
-		reconciler = NewReconciler(repository, realizer)
+		reconciler = pipeline.NewReconciler(repository, realizer)
 
 		request = ctrl.Request{
 			NamespacedName: types.NamespacedName{
