@@ -55,23 +55,26 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if kerrors.IsNotFound(err) {
 		logger.Info("pipeline no longer exists")
 		return ctrl.Result{}, nil
-	} else if err != nil {
+	}
+
+	if err != nil {
 		return ctrl.Result{}, err
-	} else if err == nil {
-		conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
+	}
 
-		condition := r.realizer.Realize(pipeline, logger, r.repository)
+	conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
+	logger.Info("CLEAR! stamping! kchunk!")
+	condition := r.realizer.Realize(pipeline, logger, r.repository)
 
-		if condition != nil {
-			conditionManager.AddPositive(*condition)
-			//TODO: deal with changed
-			pipeline.Status.Conditions, _ = conditionManager.Finalize()
-			statusUpdateError := r.repository.StatusUpdate(pipeline)
-			if statusUpdateError != nil {
-				logger.Info("finished")
-				return ctrl.Result{}, fmt.Errorf("update workload status: %w", statusUpdateError)
-			}
+	if condition != nil {
+		conditionManager.AddPositive(*condition)
+		//TODO: deal with changed
+		pipeline.Status.Conditions, _ = conditionManager.Finalize()
+		statusUpdateError := r.repository.StatusUpdate(pipeline)
+		if statusUpdateError != nil {
+			logger.Info("finished")
+			return ctrl.Result{}, fmt.Errorf("update workload status: %w", statusUpdateError)
 		}
 	}
+
 	return ctrl.Result{}, nil
 }
