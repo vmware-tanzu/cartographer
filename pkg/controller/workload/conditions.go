@@ -59,11 +59,12 @@ func TooManySupplyChainMatchesCondition() metav1.Condition {
 	}
 }
 
-func MissingReadyInSupplyChainCondition() metav1.Condition {
+func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Condition) metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.WorkloadSupplyChainReady,
-		Status: metav1.ConditionFalse,
-		Reason: v1alpha1.NotReadySupplyChainReason,
+		Type:    v1alpha1.WorkloadSupplyChainReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  supplyChainReadyCondition.Reason,
+		Message: supplyChainReadyCondition.Message,
 	}
 }
 

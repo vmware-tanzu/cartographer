@@ -26,5 +26,5 @@ status:
       message: "no supply chain found where full selector is satisfied by labels: map[integration-test:workload-no-supply-chain]"
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
-      message: "not all conditions are met"
+      reason: SupplyChainNotFound
+      message: "no supply chain found where full selector is satisfied by labels: map[integration-test:workload-no-supply-chain]"
