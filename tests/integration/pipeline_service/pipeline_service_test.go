@@ -106,6 +106,11 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					return resourceList.Items, err
 				}).Should(HaveLen(1))
 
+				Consistently(func() (int, error) {
+					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+					return len(resourceList.Items), err
+				}, "5s").Should(BeNumerically("<=",1))
+
 				Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
 			})
 		})
@@ -142,10 +147,10 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			It("Does not stamp a new Resource", func() {
 				resourceList := &v1.ConfigMapList{}
 
-				Eventually(func() ([]v1.ConfigMap, error) {
+				Consistently(func() ([]v1.ConfigMap, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return resourceList.Items, err
-				}).Should(HaveLen(0))
+				}, "5s").Should(HaveLen(0))
 			})
 		})
 	})
