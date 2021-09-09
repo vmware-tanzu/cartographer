@@ -72,13 +72,15 @@ deploy: prep-deploy
 	kapp deploy --yes -a cartographer -f ./releases/release.yaml
 
 tear-down-local:
-	./local-dev/delete-local-cluster-and-registry.sh
+	./hack/local-dev/delete-local-cluster-and-registry.sh
 
 create-local:
-	./local-dev/create-local-cluster-and-registry.sh
+	./hack/local-dev/create-local-cluster-and-registry.sh
 
 deploy-local: create-local prep-deploy gen-manifests
-	ytt -f ./config -f local-dev/local-registry.yaml --ignore-unknown-comments | kbld --images-annotation -f - | kapp deploy --yes -a cartographer -f -
+	ytt -f ./config --ignore-unknown-comments | \
+		KO_DOCKER_REPO=localhost:65432 ko resolve -f- | \
+		kapp deploy --yes -a cartographer -f -
 
 copyright:
 	go run github.com/google/addlicense \
