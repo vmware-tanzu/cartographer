@@ -104,7 +104,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				Eventually(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
-				}).Should(BeNumerically(">",0))
+				}).Should(BeNumerically(">", 0))
 
 				// TODO: comment this in and make it pass
 				//Consistently(func() (int, error) {
