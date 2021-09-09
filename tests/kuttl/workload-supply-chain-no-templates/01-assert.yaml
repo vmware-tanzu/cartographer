@@ -20,11 +20,12 @@ status:
   conditions:
     - type: SupplyChainReady
       status: "False"
-      reason: SupplyChainNotReady
+      reason: TemplatesNotFound
+      message: Did not find the template of the component(s) 'source-provider', 'image-provider', 'config-provider', 'cluster-sink'
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
-      message: "not all conditions are met"
+      reason: TemplatesNotFound
+      message: Did not find the template of the component(s) 'source-provider', 'image-provider', 'config-provider', 'cluster-sink'
   supplyChainRef:
     name: responsible-ops.workload-supply-chain-no-templates
     kind: ClusterSupplyChain

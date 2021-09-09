@@ -232,7 +232,14 @@ var _ = Describe("Reconciler", func() {
 
 			Context("but the supply chain is not in a ready state", func() {
 				BeforeEach(func() {
-					supplyChain.Status.Conditions = []metav1.Condition{}
+					supplyChain.Status.Conditions = []metav1.Condition{
+						{
+							Type:    "Ready",
+							Status:  "False",
+							Reason:  "SomeReason",
+							Message: "some informative message",
+						},
+					}
 					repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain}, nil)
 				})
 				It("returns a helpful error", func() {
@@ -243,7 +250,15 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report supply chain not ready", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.MissingReadyInSupplyChainCondition()))
+					expectedCondition := metav1.Condition{
+						Type:               v1alpha1.WorkloadSupplyChainReady,
+						Status:             metav1.ConditionFalse,
+						ObservedGeneration: 0,
+						LastTransitionTime: metav1.Time{},
+						Reason:             "SomeReason",
+						Message:            "some informative message",
+					}
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.MissingReadyInSupplyChainCondition(expectedCondition)))
 				})
 			})
 

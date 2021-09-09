@@ -26,7 +26,7 @@ status:
       reason: "TemplateRejectedByAPIServer"
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
+      reason: "TemplateRejectedByAPIServer"
   supplyChainRef:
     name: responsible-ops---workload-supply-chain-template-cannot-be-applied
     kind: ClusterSupplyChain

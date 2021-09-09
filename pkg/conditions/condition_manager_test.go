@@ -102,8 +102,10 @@ var _ = Describe("conditionManager", func() {
 				manager.AddPositive(goodnessCondition)
 
 				greatnessCondition := metav1.Condition{
-					Type:   "Greatness",
-					Status: metav1.ConditionFalse,
+					Type:    "Greatness",
+					Status:  metav1.ConditionFalse,
+					Reason:  "SomeReason",
+					Message: "some verbose message",
 				}
 
 				manager.AddPositive(greatnessCondition)
@@ -131,9 +133,10 @@ var _ = Describe("conditionManager", func() {
 					),
 					MatchFields(IgnoreExtras,
 						Fields{
-							"Type":   Equal("HappyParent"),
-							"Status": Equal(metav1.ConditionFalse),
-							"Reason": Equal("ConditionsUnmet"),
+							"Type":    Equal("HappyParent"),
+							"Status":  Equal(metav1.ConditionFalse),
+							"Reason":  Equal("SomeReason"),
+							"Message": Equal("some verbose message"),
 						},
 					),
 				))
@@ -198,8 +201,10 @@ var _ = Describe("conditionManager", func() {
 				manager.AddPositive(goodnessCondition)
 
 				badnessCondition := metav1.Condition{
-					Type:   "Badness",
-					Status: metav1.ConditionTrue,
+					Type:    "Badness",
+					Status:  metav1.ConditionTrue,
+					Reason:  "SomeReason",
+					Message: "some verbose message",
 				}
 
 				manager.AddNegative(badnessCondition)
@@ -226,9 +231,10 @@ var _ = Describe("conditionManager", func() {
 					),
 					MatchFields(IgnoreExtras,
 						Fields{
-							"Type":   Equal("HappyParent"),
-							"Status": Equal(metav1.ConditionFalse),
-							"Reason": Equal("ConditionsUnmet"),
+							"Type":    Equal("HappyParent"),
+							"Status":  Equal(metav1.ConditionFalse),
+							"Reason":  Equal("SomeReason"),
+							"Message": Equal("some verbose message"),
 						},
 					),
 				))
@@ -247,11 +253,22 @@ var _ = Describe("conditionManager", func() {
 				manager.AddPositive(goodCondition)
 
 				badCondition := metav1.Condition{
-					Type:   "another type",
-					Status: metav1.ConditionFalse,
+					Type:    "another type",
+					Status:  metav1.ConditionFalse,
+					Reason:  "FirstReason",
+					Message: "first verbose message",
 				}
 
 				manager.AddPositive(badCondition)
+
+				secondBadCondition := metav1.Condition{
+					Type:    "yet another type",
+					Status:  metav1.ConditionFalse,
+					Reason:  "SecondReason",
+					Message: "second verbose message",
+				}
+
+				manager.AddPositive(secondBadCondition)
 
 				unknownCondition := metav1.Condition{
 					Type:   "additional type",
@@ -270,7 +287,20 @@ var _ = Describe("conditionManager", func() {
 						Fields{
 							"Type":   Equal("HappyParent"),
 							"Status": Equal(metav1.ConditionFalse),
-							"Reason": Equal("ConditionsUnmet"),
+						},
+					),
+				))
+			})
+
+			It("sets the parent reason and message to the last added bad condition", func() {
+				result, _ := manager.Finalize()
+
+				Expect(result).To(ContainElement(
+					MatchFields(IgnoreExtras,
+						Fields{
+							"Type":    Equal("HappyParent"),
+							"Reason":  Equal("SecondReason"),
+							"Message": Equal("second verbose message"),
 						},
 					),
 				))
@@ -294,8 +324,10 @@ var _ = Describe("conditionManager", func() {
 				manager.AddPositive(gooderCondition)
 
 				unknownCondition := metav1.Condition{
-					Type:   "additional type",
-					Status: metav1.ConditionUnknown,
+					Type:    "additional type",
+					Status:  metav1.ConditionUnknown,
+					Reason:  "NotKnown",
+					Message: "some curious thing",
 				}
 
 				manager.AddPositive(unknownCondition)
@@ -308,9 +340,10 @@ var _ = Describe("conditionManager", func() {
 				Expect(result).To(ContainElement(
 					MatchFields(IgnoreExtras,
 						Fields{
-							"Type":   Equal("HappyParent"),
-							"Status": Equal(metav1.ConditionUnknown),
-							"Reason": Equal("ConditionInUnknownState"),
+							"Type":    Equal("HappyParent"),
+							"Status":  Equal(metav1.ConditionUnknown),
+							"Reason":  Equal("NotKnown"),
+							"Message": Equal("some curious thing"),
 						},
 					),
 				))
@@ -385,7 +418,6 @@ var _ = Describe("conditionManager", func() {
 					Fields{
 						"Type":   Equal("HappyParent"),
 						"Status": Equal(metav1.ConditionFalse),
-						"Reason": Equal("ConditionsUnmet"),
 					},
 				),
 			))

@@ -26,7 +26,7 @@ status:
       reason: MissingValueAtPath
     - type: Ready
       status: "Unknown"
-      reason: ConditionInUnknownState
+      reason: MissingValueAtPath
   supplyChainRef:
     name: supply-chain---template-broken-path
     kind: ClusterSupplyChain
@@ -46,7 +46,7 @@ status:
       reason: TemplateStampFailure
     - type: Ready
       status: "False"
-      reason: ConditionsUnmet
+      reason: TemplateStampFailure
   supplyChainRef:
     name: supply-chain---template-broken-tag
     kind: ClusterSupplyChain
