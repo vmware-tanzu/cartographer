@@ -61,6 +61,7 @@ func (r *componentRealizer) Do(component *v1alpha1.SupplyChainComponent, supplyC
 		"carto.run/workload-namespace":        r.workload.Namespace,
 		"carto.run/cluster-supply-chain-name": supplyChainName,
 		"carto.run/component-name":            component.Name,
+		"carto.run/template-kind":             template.GetKind(),
 		"carto.run/cluster-template-name":     template.GetName(),
 	}
 
@@ -85,7 +86,7 @@ func (r *componentRealizer) Do(component *v1alpha1.SupplyChainComponent, supplyC
 		}
 	}
 
-	err = r.repo.AssureObjectExistsOnCluster(stampedObject)
+	err = r.repo.AssureObjectExistsOnCluster(stampedObject, true)
 	if err != nil {
 		return nil, ApplyStampedObjectError{
 			Err:           err,

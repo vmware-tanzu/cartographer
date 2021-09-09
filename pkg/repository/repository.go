@@ -33,8 +33,7 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error
-	Create(obj *unstructured.Unstructured) error
+	AssureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
 	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
@@ -57,52 +56,47 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	}
 }
 
-func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error {
+func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
 	submitted := obj.DeepCopy()
-	existingUnstructured, err := r.getExistingUnstructured(obj)
-
-	var createOrPatchErr error
-	if api_errors.IsNotFound(err) {
-		createOrPatchErr = r.createUnstructured(obj)
-	} else if err != nil {
+	unstructuredList, err := r.listUnstructured(obj)
+	if err != nil {
 		return err
-	} else if r.rc.UnchangedSinceCached(submitted, existingUnstructured) {
+	}
+
+	cacheHit := r.rc.UnchangedSinceCached(submitted, unstructuredList)
+	if cacheHit != nil {
 		r.rc.Refresh(submitted)
-
-		*obj = *existingUnstructured
-
+		*obj = *cacheHit
 		return nil
+	}
+
+	if allowUpdate && len(unstructuredList) > 0 {
+		// todo: consider -
+		// if more than one, we should be able to match on name, namespace, kind
+		//   if that is the case, we could have just done a get above
+		if len(unstructuredList) != 1 {
+			panic("something really bad is happening")
+		}
+		return r.patchUnstructured(submitted, &unstructuredList[0], obj)
 	} else {
-		createOrPatchErr = r.patchUnstructured(existingUnstructured, obj)
+		return r.createUnstructured(submitted, obj)
 	}
-
-	if createOrPatchErr != nil {
-		return createOrPatchErr
-	}
-
-	r.rc.Set(submitted, obj.DeepCopy())
-
-	return nil
 }
 
-// TODO: tests
-func (r *repository) Create(obj *unstructured.Unstructured) error {
-	return r.createUnstructured(obj)
-}
+func (r *repository) listUnstructured(obj *unstructured.Unstructured) ([]unstructured.Unstructured, error) {
+	unstructuredList := &unstructured.UnstructuredList{}
+	unstructuredList.SetGroupVersionKind(obj.GroupVersionKind())
 
-func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	existingUnstructured := unstructured.Unstructured{}
-	existingUnstructured.SetGroupVersionKind(obj.GroupVersionKind())
-
-	err := r.cl.Get(context.TODO(), client.ObjectKey{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-	}, &existingUnstructured)
-	if err != nil && !api_errors.IsNotFound(err) {
-		return nil, fmt.Errorf("get: %w", err)
+	opts := []client.ListOption{
+		client.InNamespace(obj.GetNamespace()),
+		client.MatchingLabels(obj.GetLabels()),
+	}
+	err := r.cl.List(context.TODO(), unstructuredList, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("list: %w", err)
 	}
 
-	return &existingUnstructured, err
+	return unstructuredList.Items, nil
 }
 
 func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
@@ -149,18 +143,22 @@ func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Temp
 	return template, nil
 }
 
-func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
+func (r *repository) createUnstructured(submitted, obj *unstructured.Unstructured) error {
 	if err := r.cl.Create(context.TODO(), obj); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
+
+	r.rc.Set(submitted, obj.DeepCopy())
 	return nil
 }
 
-func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
+func (r *repository) patchUnstructured(submitted, existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.cl.Patch(context.TODO(), obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)
 	}
+
+	r.rc.Set(submitted, obj.DeepCopy())
 	return nil
 }
 

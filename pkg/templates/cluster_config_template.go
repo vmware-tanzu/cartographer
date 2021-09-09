@@ -28,6 +28,10 @@ type clusterConfigTemplate struct {
 	evaluator evaluator
 }
 
+func (t clusterConfigTemplate) GetKind() string {
+	return t.template.Kind
+}
+
 func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate, eval evaluator) *clusterConfigTemplate {
 	return &clusterConfigTemplate{template: template, evaluator: eval}
 }

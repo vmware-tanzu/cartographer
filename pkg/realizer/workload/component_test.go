@@ -118,7 +118,8 @@ var _ = Describe("Component", func() {
 				out, err := r.Do(&component, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				stampedObject := fakeRepo.AssureObjectExistsOnClusterArgsForCall(0)
+				stampedObject, allowUpdate := fakeRepo.AssureObjectExistsOnClusterArgsForCall(0)
+				Expect(allowUpdate).To(BeTrue())
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
 				Expect(ok).To(BeTrue())

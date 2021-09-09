@@ -30,6 +30,7 @@ type Template interface {
 	GetDefaultParams() v1alpha1.DefaultParams
 	GetOutput(stampedObject *unstructured.Unstructured) (*Output, error)
 	GetName() string
+	GetKind() string
 }
 
 func NewModelFromAPI(template client.Object) (Template, error) {

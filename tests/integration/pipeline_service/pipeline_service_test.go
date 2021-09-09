@@ -46,12 +46,20 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				  name: my-run-template
 				spec:
 				  template:
-				    apiVersion: v1
-				    kind: ConfigMap
-				    metadata:
+					apiVersion: v1
+					kind: ResourceQuota
+					metadata:
 					  generateName: my-stamped-resource-
-				    data:
-					  has: data
+					spec:
+					  hard:
+						cpu: "1000"
+						memory: 200Gi
+						pods: "10"
+					  scopeSelector:
+						matchExpressions:
+						- operator : In
+						  scopeName: PriorityClass
+						  values: ["high"]
 				`,
 				testNS,
 			)
@@ -99,18 +107,17 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			})
 
 			It("Stamps a new Resource", func() {
-				resourceList := &v1.ConfigMapList{}
+				resourceList := &v1.ResourceQuotaList{}
 
 				Eventually(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
 				}).Should(BeNumerically(">", 0))
 
-				// TODO: comment this in and make it pass
-				//Consistently(func() (int, error) {
-				//	err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
-				//	return len(resourceList.Items), err
-				//}, "5s").Should(BeNumerically("<=",1))
+				Consistently(func() (int, error) {
+					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+					return len(resourceList.Items), err
+				}, "5s").Should(BeNumerically("<=", 1))
 
 				Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
 			})
@@ -148,10 +155,10 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			It("Does not stamp a new Resource", func() {
 				resourceList := &v1.ConfigMapList{}
 
-				Consistently(func() ([]v1.ConfigMap, error) {
+				Consistently(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
-					return resourceList.Items, err
-				}, "5s").Should(HaveLen(0))
+					return len(resourceList.Items), err
+				}, "5s").Should(Equal(0))
 			})
 		})
 	})

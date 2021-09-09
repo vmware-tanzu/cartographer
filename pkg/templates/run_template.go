@@ -25,6 +25,10 @@ type runTemplate struct {
 	template *v1alpha1.RunTemplate
 }
 
+func (t runTemplate) GetKind() string {
+	return t.template.Kind
+}
+
 func NewRunTemplateModel(template *v1alpha1.RunTemplate) *runTemplate {
 	return &runTemplate{template: template}
 }

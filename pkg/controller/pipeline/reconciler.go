@@ -62,9 +62,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
-	logger.Info("CLEAR! stamping! kchunk!")
-	condition := r.realizer.Realize(pipeline, logger, r.repository)
 
+	condition := r.realizer.Realize(pipeline, logger, r.repository)
 	if condition != nil {
 		conditionManager.AddPositive(*condition)
 		//TODO: deal with changed
