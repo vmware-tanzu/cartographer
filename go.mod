@@ -3,6 +3,7 @@ module github.com/vmware-tanzu/cartographer
 go 1.17
 
 require (
+	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/golangci/golangci-lint v1.42.1
 	github.com/google/addlicense v1.0.0

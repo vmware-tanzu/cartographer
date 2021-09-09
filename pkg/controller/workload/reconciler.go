@@ -26,7 +26,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	err = r.realizer.Realize(realizer.NewComponentRealizer(workload, r.repo), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
-		case realizer.GetTemplateError:
+		case realizer.GetClusterTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))

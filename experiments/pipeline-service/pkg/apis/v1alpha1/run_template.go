@@ -74,7 +74,7 @@ type RunTemplateOutput struct {
 	Name string `json:"name"`
 
 	// Path denotes the query that should be performed to retrieve a value
-	// from the object stamped out according to this RunTemplate template.
+	// from the object stamped out according to this RunTemplateRef template.
 	//
 	Path string `json:"path"`
 }

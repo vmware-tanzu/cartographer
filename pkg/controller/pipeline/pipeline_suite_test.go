@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository_test
+package pipeline_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestTemplates(t *testing.T) {
+func TestPipeline(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "repository Suite")
+	RunSpecs(t, "Pipeline Suite")
 }

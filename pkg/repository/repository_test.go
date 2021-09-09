@@ -63,7 +63,7 @@ func alterFieldOfNestedStringMaps(obj interface{}, key string, value string) err
 	return nil
 }
 
-var _ = Describe("Repository", func() {
+var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
@@ -344,7 +344,7 @@ spec:
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("GetTemplate", func() {
+		Context("GetClusterTemplate", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -355,13 +355,53 @@ spec:
 			})
 
 			It("gets the template successfully", func() {
-				templateRef := v1alpha1.TemplateReference{
+				templateRef := v1alpha1.ClusterTemplateReference{
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetTemplate(templateRef)
+				template, err := repo.GetClusterTemplate(templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
+			})
+		})
+
+		Context("GetTemplate", func() {
+			BeforeEach(func() {
+				clientObjects = []client.Object{
+					&v1alpha1.RunTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "first-template",
+							Namespace: "ns1",
+						},
+					},
+					&v1alpha1.RunTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "second-template",
+							Namespace: "ns2",
+						},
+					}}
+			})
+
+			It("gets the template successfully", func() {
+				templateRef := v1alpha1.TemplateReference{
+					Kind:      "RunTemplate",
+					Name:      "second-template",
+					Namespace: "ns2",
+				}
+				template, err := repo.GetTemplate(templateRef)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(template.GetName()).To(Equal("second-template"))
+			})
+
+			It("finds nothing with a mismatched namespace", func() {
+				templateRef := v1alpha1.TemplateReference{
+					Kind:      "RunTemplate",
+					Name:      "second-template",
+					Namespace: "ns1",
+				}
+				_, err := repo.GetTemplate(templateRef)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("not found"))
 			})
 		})
 
@@ -380,6 +420,32 @@ spec:
 				workload, err := repo.GetWorkload("workload-name", "workload-namespace")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(workload.GetName()).To(Equal("workload-name"))
+			})
+		})
+
+		Context("GetPipeline", func() {
+			BeforeEach(func() {
+				pipeline := &v1alpha1.Pipeline{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pipeline-name",
+						Namespace: "pipeline-namespace",
+					},
+				}
+				clientObjects = []client.Object{pipeline}
+			})
+
+			It("gets the pipeline successfully", func() {
+				pipeline, err := repo.GetPipeline("pipeline-name", "pipeline-namespace")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pipeline.GetName()).To(Equal("pipeline-name"))
+			})
+
+			Context("pipeline doesnt exist", func() {
+				It("returns an error", func() {
+					_, err := repo.GetPipeline("pipeline-that-does-not-exist-name", "pipeline-namespace")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get-pipeline:"))
+				})
 			})
 		})
 

@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package integration_test
+package supply_chain_test
 
 import (
 	"context"
 
+	. "github.com/MakeNowJust/heredoc/dot"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -52,7 +53,7 @@ var _ = Describe("SupplyChainValidation", func() {
 		result.Spec.Components = []v1alpha1.SupplyChainComponent{
 			{
 				Name: "funky-component",
-				TemplateRef: v1alpha1.TemplateReference{
+				TemplateRef: v1alpha1.ClusterTemplateReference{
 					Kind: templateKind,
 					Name: templateName,
 				},
@@ -77,14 +78,14 @@ var _ = Describe("SupplyChainValidation", func() {
 				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
 					{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
 					},
 					{
 						Name: "other-source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
@@ -103,14 +104,14 @@ var _ = Describe("SupplyChainValidation", func() {
 				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
 					{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
 					},
 					{
 						Name: "other-source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
@@ -125,7 +126,7 @@ var _ = Describe("SupplyChainValidation", func() {
 					supplyChain.Spec.Components,
 					v1alpha1.SupplyChainComponent{
 						Name: "another-other-source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
@@ -139,21 +140,21 @@ var _ = Describe("SupplyChainValidation", func() {
 					components := []v1alpha1.SupplyChainComponent{
 						{
 							Name: "source-provider",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
 						},
 						{
 							Name: "other-source-provider",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
 						},
 						{
 							Name: "another-other-source-provider",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
@@ -177,14 +178,14 @@ var _ = Describe("SupplyChainValidation", func() {
 				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
 					{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
 					},
 					{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "some-other-template",
 						},
@@ -203,7 +204,7 @@ var _ = Describe("SupplyChainValidation", func() {
 				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
 					{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
@@ -220,7 +221,7 @@ var _ = Describe("SupplyChainValidation", func() {
 
 					component := v1alpha1.SupplyChainComponent{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
@@ -249,14 +250,14 @@ var _ = Describe("SupplyChainValidation", func() {
 				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
 					{
 						Name: "provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterImageTemplate",
 							Name: "dockerfile-build",
 						},
 					},
 					{
 						Name: "build-image-provider",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterImageTemplate",
 							Name: "kpack-battery",
 						},
@@ -313,18 +314,20 @@ var _ = Describe("SupplyChainValidation", func() {
 
 		Context("with a missing name field", func() {
 			var supplyChainUnstructured *unstructured.Unstructured
-			var supplyChainJson = `---
-apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
-metadata:
-  name: my-supply-chain
-spec:
-  selector:
-    integration-test: must-have-selector
-components:
-- name: source-provider
-  templateRef:
-    kind: ClusterSourceTemplate`
+			var supplyChainJson = D(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+				    integration-test: must-have-selector
+				components:
+				- name: source-provider
+				  templateRef:
+				    kind: ClusterSourceTemplate
+			`)
 			BeforeEach(func() {
 				supplyChainUnstructured = &unstructured.Unstructured{}
 				err := yaml.Unmarshal([]byte(supplyChainJson), supplyChainUnstructured)

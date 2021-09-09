@@ -34,12 +34,15 @@ import (
 //counterfeiter:generate . Repository
 type Repository interface {
 	AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error
+	Create(obj *unstructured.Unstructured) error
+	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
 	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
+	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error)
 }
 
 type repository struct {
@@ -82,6 +85,11 @@ func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured)
 	return nil
 }
 
+// TODO: tests
+func (r *repository) Create(obj *unstructured.Unstructured) error {
+	return r.createUnstructured(obj)
+}
+
 func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	existingUnstructured := unstructured.Unstructured{}
 	existingUnstructured.SetGroupVersionKind(obj.GroupVersionKind())
@@ -97,7 +105,7 @@ func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*u
 	return &existingUnstructured, err
 }
 
-func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
+func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
 	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
@@ -112,7 +120,30 @@ func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Temp
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("NewModelFromAPI: %w", err)
+		return nil, fmt.Errorf("new model from api: %w", err)
+	}
+
+	return template, nil
+}
+
+// FIXME: Probably should not return a templates.Template, not sure it adheres to interface
+func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
+	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("get api template: %w", err)
+	}
+
+	err = r.cl.Get(context.TODO(), client.ObjectKey{
+		Name:      ref.Name,
+		Namespace: ref.Namespace,
+	}, apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("new model from api: %w", err)
 	}
 
 	return template, nil
@@ -164,6 +195,24 @@ func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workl
 	}
 
 	return &workload, nil
+}
+
+func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error) {
+	pipeline := &v1alpha1.Pipeline{}
+
+	err := r.cl.Get(context.TODO(),
+		client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		},
+		pipeline,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("get-pipeline: %w", err)
+	}
+
+	return pipeline, nil
 }
 
 func supplyChainSelectorMatchesWorkloadLabels(selector map[string]string, labels map[string]string) bool {

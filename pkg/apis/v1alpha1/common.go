@@ -32,6 +32,8 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 	var template client.Object
 
 	switch templateKind {
+	case "RunTemplate":
+		template = &RunTemplate{}
 	case "ClusterSourceTemplate":
 		template = &ClusterSourceTemplate{}
 	case "ClusterImageTemplate":

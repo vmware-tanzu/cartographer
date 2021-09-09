@@ -127,14 +127,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
 								},
 								{
 									Name: "other-source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
@@ -161,7 +161,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
@@ -174,7 +174,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 								},
 								{
 									Name: "other-source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
@@ -201,14 +201,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
 								},
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
@@ -243,13 +243,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "input-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Name: "output-template",
 									},
 								},
 								{
 									Name: "input-consumer",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterTemplate",
 										Name: "consuming-template",
 									},
@@ -317,14 +317,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
 								},
 								{
 									Name: "other-source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
@@ -351,14 +351,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
 								},
 								{
 									Name: "source-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "git-template---default-params",
 									},
@@ -388,14 +388,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Components: []v1alpha1.SupplyChainComponent{
 								{
 									Name: "image-provider",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Name: "image-output-template",
 										Kind: "ClusterImageTemplate",
 									},
 								},
 								{
 									Name: "input-consumer",
-									TemplateRef: v1alpha1.TemplateReference{
+									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterTemplate",
 										Name: "consuming-template",
 									},

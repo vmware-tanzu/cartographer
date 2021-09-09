@@ -16,7 +16,9 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/MakeNowJust/heredoc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,4 +37,14 @@ func GetObjectGVK(obj metav1.Object, scheme *runtime.Scheme) (schema.GroupVersio
 	}
 
 	return gvk, nil
+}
+
+func HereYaml(y string) string {
+	y = strings.ReplaceAll(y, "\t", "    ")
+	return heredoc.Doc(y)
+}
+
+func HereYamlF(y string, args ...interface{}) string {
+	y = strings.ReplaceAll(y, "\t", "    ")
+	return heredoc.Docf(y, args...)
 }

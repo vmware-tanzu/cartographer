@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package integration_test
+package supply_chain_test
 
 import (
 	"bufio"
@@ -170,7 +170,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
 					{
 						Name: "fred-component",
-						TemplateRef: v1alpha1.TemplateReference{
+						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "proper-template-bob",
 						},

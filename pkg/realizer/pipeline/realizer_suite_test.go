@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package realizer_test
+package pipeline_test
 
 import (
 	"testing"
@@ -23,5 +23,5 @@ import (
 
 func TestRealizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Realizer Suite")
+	RunSpecs(t, "Pipeline Realizer Suite")
 }

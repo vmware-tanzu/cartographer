@@ -86,14 +86,14 @@ var _ = Describe("Reconciler", func() {
 					Components: []v1alpha1.SupplyChainComponent{
 						{
 							Name: "first name",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "some-kind",
 								Name: "some-name",
 							},
 						},
 						{
 							Name: "second name",
-							TemplateRef: v1alpha1.TemplateReference{
+							TemplateRef: v1alpha1.ClusterTemplateReference{
 								Kind: "another-kind",
 								Name: "another-name",
 							},
@@ -183,8 +183,8 @@ var _ = Describe("Reconciler", func() {
 
 		Context("when retrieving a component template fails", func() {
 			BeforeEach(func() {
-				repo.GetTemplateReturnsOnCall(0, nil, nil)
-				repo.GetTemplateReturnsOnCall(1, nil, errors.New("getting templates is hard"))
+				repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
+				repo.GetClusterTemplateReturnsOnCall(1, nil, errors.New("getting templates is hard"))
 			})
 
 			It("adds a positive templates NOT found condition listing the failed component", func() {
@@ -206,7 +206,7 @@ var _ = Describe("Reconciler", func() {
 
 			Context("when retrieving multiple component templates fails", func() {
 				BeforeEach(func() {
-					repo.GetTemplateReturnsOnCall(0, nil, errors.New("first error is all that matters"))
+					repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("first error is all that matters"))
 				})
 
 				It("adds a positive templates NOT found condition listing the failed componentS", func() {
@@ -255,7 +255,7 @@ var _ = Describe("Reconciler", func() {
 
 			Context("when there has been a reconciliation error", func() {
 				BeforeEach(func() {
-					repo.GetTemplateReturns(nil, errors.New("some error"))
+					repo.GetClusterTemplateReturns(nil, errors.New("some error"))
 				})
 
 				It("returns an error", func() {

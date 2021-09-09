@@ -20,14 +20,14 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 )
 
 var _ = Describe("conditionManager", func() {
-	var manager ConditionManager
+	var manager conditions.ConditionManager
 	Context("without any conditions added", func() {
 		BeforeEach(func() {
-			manager = NewConditionManager("HappyParent", []metav1.Condition{})
+			manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 		})
 
 		It("returns a top level unknown", func() {
@@ -48,7 +48,7 @@ var _ = Describe("conditionManager", func() {
 	Context("with positive polarity conditions", func() {
 		Context("with successful conditions", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodnessCondition := metav1.Condition{
 					Type:   "Goodness",
 					Status: metav1.ConditionTrue,
@@ -94,7 +94,7 @@ var _ = Describe("conditionManager", func() {
 
 		Context("with a failing condition", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodnessCondition := metav1.Condition{
 					Type:   "Goodness",
 					Status: metav1.ConditionTrue,
@@ -147,7 +147,7 @@ var _ = Describe("conditionManager", func() {
 	Context("with a negative polarity condition", func() {
 		Context("with successful conditions", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodnessCondition := metav1.Condition{
 					Type:   "Goodness",
 					Status: metav1.ConditionTrue,
@@ -193,7 +193,7 @@ var _ = Describe("conditionManager", func() {
 
 		Context("with a failing negative polarity condition", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodnessCondition := metav1.Condition{
 					Type:   "Goodness",
 					Status: metav1.ConditionTrue,
@@ -245,7 +245,7 @@ var _ = Describe("conditionManager", func() {
 	Context("when there are multiple conditions", func() {
 		Context("and any are in a bad state", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodCondition := metav1.Condition{
 					Type:   "some type",
 					Status: metav1.ConditionTrue,
@@ -309,7 +309,7 @@ var _ = Describe("conditionManager", func() {
 
 		Context("and some are in an unknown state, with none in a bad state", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodCondition := metav1.Condition{
 					Type:   "some type",
 					Status: metav1.ConditionTrue,
@@ -352,7 +352,7 @@ var _ = Describe("conditionManager", func() {
 
 		Context("and all are in a good state", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", []metav1.Condition{})
+				manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 				goodCondition := metav1.Condition{
 					Type:   "some type",
 					Status: metav1.ConditionTrue,
@@ -393,7 +393,7 @@ var _ = Describe("conditionManager", func() {
 
 	Context("with a plain string status", func() {
 		BeforeEach(func() {
-			manager = NewConditionManager("HappyParent", []metav1.Condition{})
+			manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 			goodnessCondition := metav1.Condition{
 				Type:   "Goodness",
 				Status: "False",
@@ -432,7 +432,7 @@ var _ = Describe("conditionManager", func() {
 		)
 
 		BeforeEach(func() {
-			manager = NewConditionManager("HappyParent", []metav1.Condition{})
+			manager = conditions.NewConditionManager("HappyParent", []metav1.Condition{})
 			goodnessCondition = metav1.Condition{
 				Type:   "Goodness",
 				Status: metav1.ConditionTrue,
@@ -446,7 +446,7 @@ var _ = Describe("conditionManager", func() {
 
 		Context("when one of our conditions has changed", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", firstConditions)
+				manager = conditions.NewConditionManager("HappyParent", firstConditions)
 				goodnessCondition.Reason = "Dog ate homework"
 				manager.AddPositive(goodnessCondition)
 			})
@@ -464,7 +464,7 @@ var _ = Describe("conditionManager", func() {
 
 		Context("when none of our conditions have changed", func() {
 			BeforeEach(func() {
-				manager = NewConditionManager("HappyParent", firstConditions)
+				manager = conditions.NewConditionManager("HappyParent", firstConditions)
 				manager.AddPositive(goodnessCondition)
 			})
 
