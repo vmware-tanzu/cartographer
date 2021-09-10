@@ -177,8 +177,8 @@ install_source_controller() {
 
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.crds.yaml \
-                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.deployment.yaml |
+                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.crds.yaml \
+                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.deployment.yaml |
                 kapp deploy --yes -a gitops-toolkit --into-ns gitops-toolkit -f-
 }
 
