@@ -154,16 +154,7 @@ func IndexResources(mgr manager.Manager, ctx context.Context) error {
 }
 
 func indexSupplyChains(ctx context.Context, fieldIndexer client.FieldIndexer) error {
-	err := fieldIndexer.IndexField(ctx, &v1alpha1.ClusterSupplyChain{}, "spec.selector",
-		func(o client.Object) []string {
-			sc := o.(*v1alpha1.ClusterSupplyChain)
-			var res []string
-			for key, value := range sc.Spec.Selector {
-				res = append(res, fmt.Sprintf("%s: %s", key, value))
-			}
-
-			return res
-		})
+	err := fieldIndexer.IndexField(ctx, &v1alpha1.ClusterSupplyChain{}, "spec.selector", v1alpha1.GetSelectorsFromObject)
 	if err != nil {
 		return fmt.Errorf("index field supply-chain.selector: %w", err)
 	}
