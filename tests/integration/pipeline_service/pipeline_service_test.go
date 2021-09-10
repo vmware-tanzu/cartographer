@@ -120,7 +120,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				Consistently(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
-				}, "5s").Should(BeNumerically("<=", 1))
+				}, "2s").Should(BeNumerically("<=", 1))
 
 				Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
 				Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("first"))
@@ -142,7 +142,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					Consistently(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 						return len(resourceList.Items), err
-					}, "5s").Should(BeNumerically("<=", 2))
+					}, "2s").Should(BeNumerically("<=", 2))
 
 					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
 					Expect(resourceList.Items[1].Name).To(ContainSubstring("my-stamped-resource-"))
@@ -193,7 +193,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				Consistently(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
-				}, "5s").Should(Equal(0))
+				}).Should(Equal(0))
 			})
 		})
 	})

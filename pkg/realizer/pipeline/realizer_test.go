@@ -89,9 +89,9 @@ var _ = Describe("Reconcile", func() {
 				},
 			))
 
-			Expect(repository.AssureObjectExistsOnClusterCallCount()).To(Equal(1))
-			Expect(repository.AssureObjectExistsOnClusterCallCount()).To(Equal(1))
-			stamped, allowUpdate := repository.AssureObjectExistsOnClusterArgsForCall(0)
+			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
+			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
+			stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
 			Expect(allowUpdate).To(BeFalse())
 			Expect(stamped.Object).To(
 				MatchKeys(IgnoreExtras, Keys{
@@ -120,7 +120,7 @@ var _ = Describe("Reconcile", func() {
 
 		Context("error on Create", func() {
 			BeforeEach(func() {
-				repository.AssureObjectExistsOnClusterReturns(errors.New("some bad error"))
+				repository.EnsureObjectExistsOnClusterReturns(errors.New("some bad error"))
 			})
 
 			It("logs the error", func() {

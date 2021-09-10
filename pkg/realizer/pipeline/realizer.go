@@ -78,7 +78,7 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err))
 	}
 
-	err = repository.AssureObjectExistsOnCluster(stampedObject, false)
+	err = repository.EnsureObjectExistsOnCluster(stampedObject, false)
 	if err != nil {
 		errorMessage := "could not create object"
 		logger.Error(err, errorMessage)

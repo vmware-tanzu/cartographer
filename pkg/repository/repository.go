@@ -33,7 +33,7 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	AssureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
+	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
 	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
@@ -56,31 +56,38 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	}
 }
 
-func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
-	submitted := obj.DeepCopy()
+func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
 	unstructuredList, err := r.listUnstructured(obj)
 	if err != nil {
 		return err
 	}
 
-	cacheHit := r.rc.UnchangedSinceCached(submitted, unstructuredList)
+	cacheHit := r.rc.UnchangedSinceCached(obj, unstructuredList)
 	if cacheHit != nil {
-		r.rc.Refresh(submitted)
+		r.rc.Refresh(obj.DeepCopy())
 		*obj = *cacheHit
 		return nil
 	}
 
-	if allowUpdate && len(unstructuredList) > 0 {
-		// todo: consider -
-		// if more than one, we should be able to match on name, namespace, kind
-		//   if that is the case, we could have just done a get above
-		if len(unstructuredList) != 1 {
-			panic("something really bad is happening")
-		}
-		return r.patchUnstructured(submitted, &unstructuredList[0], obj)
-	} else {
-		return r.createUnstructured(submitted, obj)
+	var outdatedObject *unstructured.Unstructured
+	if allowUpdate {
+		outdatedObject = getOutdatedUnstructuredByName(obj, unstructuredList)
 	}
+
+	if outdatedObject != nil {
+		return r.patchUnstructured(outdatedObject, obj)
+	} else {
+		return r.createUnstructured(obj)
+	}
+}
+
+func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates []unstructured.Unstructured) *unstructured.Unstructured {
+	for _, candidate := range candidates {
+		if candidate.GetName() == target.GetName() && candidate.GetNamespace() == target.GetNamespace() {
+			return &candidate
+		}
+	}
+	return nil
 }
 
 func (r *repository) listUnstructured(obj *unstructured.Unstructured) ([]unstructured.Unstructured, error) {
@@ -143,7 +150,8 @@ func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Temp
 	return template, nil
 }
 
-func (r *repository) createUnstructured(submitted, obj *unstructured.Unstructured) error {
+func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
+	submitted := obj.DeepCopy()
 	if err := r.cl.Create(context.TODO(), obj); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
@@ -152,7 +160,8 @@ func (r *repository) createUnstructured(submitted, obj *unstructured.Unstructure
 	return nil
 }
 
-func (r *repository) patchUnstructured(submitted, existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
+func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
+	submitted := obj.DeepCopy()
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.cl.Patch(context.TODO(), obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)
