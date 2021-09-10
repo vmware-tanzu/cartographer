@@ -64,6 +64,24 @@ var _ = Describe("Cache", func() {
 			Expect(persistedValue).To(Equal(*persisted))
 			Expect(persistedExpiryDuration).To(Equal(repository.CacheExpiryDuration))
 		})
+
+		Context("constructs a key using generateName", func() {
+			BeforeEach(func() {
+				submitted.SetName("")
+				submitted.SetGenerateName("some-generated-")
+			})
+
+			It("stores the submitted and persisted values paired in the cache", func() {
+				cache.Set(submitted, persisted)
+
+				Expect(fakeExpiringCache.SetCallCount()).To(Equal(2))
+
+				submittedKey, _, _ := fakeExpiringCache.SetArgsForCall(0)
+				Expect(submittedKey).To(Equal("submitted:its-ns:the-kind:some-generated-"))
+				persistedKey, _, _ := fakeExpiringCache.SetArgsForCall(1)
+				Expect(persistedKey).To(Equal("persisted:its-ns:the-kind:some-generated-"))
+			})
+		})
 	})
 
 	Describe("functions that rely on the state of the cache", func() {

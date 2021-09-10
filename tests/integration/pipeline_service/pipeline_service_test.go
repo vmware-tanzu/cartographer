@@ -151,7 +151,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 						return element.(v1.ResourceQuota).Spec.ScopeSelector.MatchExpressions[0].Values[0]
 					}
 					Expect(resourceList.Items).To(MatchAllElements(id, Elements{
-						"first": Not(BeNil()),
+						"first":  Not(BeNil()),
 						"second": Not(BeNil()),
 					}))
 				})
