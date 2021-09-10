@@ -72,11 +72,30 @@ func (cmd *Command) Execute() error {
 	if cmd.CertDir == "" {
 		l.Info("Not registering the webhook server. Must pass a directory containing tls.crt and tls.key to --cert-dir")
 	} else {
-		err := controllerruntime.NewWebhookManagedBy(mgr).
+		if err := controllerruntime.NewWebhookManagedBy(mgr).
 			For(&v1alpha1.ClusterSupplyChain{}).
-			Complete()
-		if err != nil {
-			return fmt.Errorf("cluster supply chain webhook: %w", err)
+			Complete(); err != nil {
+			return fmt.Errorf("clustersupplychain webhook: %w", err)
+		}
+		if err := controllerruntime.NewWebhookManagedBy(mgr).
+			For(&v1alpha1.ClusterConfigTemplate{}).
+			Complete(); err != nil {
+			return fmt.Errorf("clusterconfigtemplate webhook: %w", err)
+		}
+		if err := controllerruntime.NewWebhookManagedBy(mgr).
+			For(&v1alpha1.ClusterImageTemplate{}).
+			Complete(); err != nil {
+			return fmt.Errorf("clusterimagetemplate webhook: %w", err)
+		}
+		if err := controllerruntime.NewWebhookManagedBy(mgr).
+			For(&v1alpha1.ClusterSourceTemplate{}).
+			Complete(); err != nil {
+			return fmt.Errorf("clustersourcetemplate webhook: %w", err)
+		}
+		if err := controllerruntime.NewWebhookManagedBy(mgr).
+			For(&v1alpha1.ClusterTemplate{}).
+			Complete(); err != nil {
+			return fmt.Errorf("clustertemplate webhook: %w", err)
 		}
 	}
 

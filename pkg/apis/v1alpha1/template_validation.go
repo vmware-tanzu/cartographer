@@ -12,29 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1_test
+package v1alpha1
 
 import (
-	"testing"
+	"errors"
+	"fmt"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
-func TestV1alpha1(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "V1alpha1 Suite")
-}
-
-// Test Helpers
-
-type ArbitraryObject struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
-	Spec              ArbitrarySpec
-}
-
-type ArbitrarySpec struct {
-	SomeKey string `json:"someKey"`
+func validateTemplate(tpl runtime.RawExtension) error {
+	obj := metav1.PartialObjectMetadata{}
+	if err := json.Unmarshal(tpl.Raw, &obj); err != nil {
+		return fmt.Errorf("failed to parse object metadata: %w", err)
+	}
+	if obj.Namespace != metav1.NamespaceNone {
+		return errors.New("template should not set metadata.namespace on the child object")
+	}
+	return nil
 }

@@ -19,8 +19,11 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -36,12 +39,33 @@ type ClusterConfigTemplate struct {
 
 type ConfigTemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Template   runtime.RawExtension `json:"template"`
-	ConfigPath string               `json:"configPath"`
-	Params     DefaultParams        `json:"params,omitempty"`
+	TemplateSpec `json:",inline"`
+	ConfigPath   string `json:"configPath"`
 }
 
 type ConfigTemplateStatus struct {
+}
+
+var _ webhook.Validator = &ClusterConfigTemplate{}
+
+func (c *ClusterConfigTemplate) ValidateCreate() error {
+	return c.validate()
+}
+
+func (c *ClusterConfigTemplate) ValidateUpdate(_ runtime.Object) error {
+	return c.validate()
+}
+
+func (c *ClusterConfigTemplate) validate() error {
+	err := validateTemplate(c.Spec.Template)
+	if err != nil {
+		return fmt.Errorf("invalid template: %w", err)
+	}
+	return nil
+}
+
+func (c *ClusterConfigTemplate) ValidateDelete() error {
+	return nil
 }
 
 // +kubebuilder:object:root=true

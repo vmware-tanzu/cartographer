@@ -21,6 +21,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -36,13 +37,26 @@ type ClusterSourceTemplate struct {
 
 type SourceTemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Template     runtime.RawExtension `json:"template"`
-	URLPath      string               `json:"urlPath"`
-	RevisionPath string               `json:"revisionPath"`
-	Params       DefaultParams        `json:"params,omitempty"`
+	TemplateSpec `json:",inline"`
+	URLPath      string `json:"urlPath"`
+	RevisionPath string `json:"revisionPath"`
 }
 
 type SourceTemplateStatus struct {
+}
+
+var _ webhook.Validator = &ClusterSourceTemplate{}
+
+func (c *ClusterSourceTemplate) ValidateCreate() error {
+	return c.Spec.TemplateSpec.validate()
+}
+
+func (c *ClusterSourceTemplate) ValidateUpdate(_ runtime.Object) error {
+	return c.Spec.TemplateSpec.validate()
+}
+
+func (c *ClusterSourceTemplate) ValidateDelete() error {
+	return nil
 }
 
 // +kubebuilder:object:root=true
