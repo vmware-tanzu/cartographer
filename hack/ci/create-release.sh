@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -eo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get -y update && apt-get install -y wget curl perl ca-certificates gnupg lsb-release && update-ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -23,3 +24,7 @@ ytt --ignore-unknown-comments -f ./config | ko resolve -f- > release.yaml
 
 echo "# Change Set" > CHANGELOG.md
 git tag --sort=-v:refname -l "v*" | grep -C1 "${GITHUB_REF##*/}" | tail -2 | xargs printf '%s..%s' | xargs -I{} git -c log.showSignature=false log --pretty=oneline --abbrev-commit --no-decorate --no-color {} >> CHANGELOG.md
+
+echo "## Checksums" >> CHANGELOG.md
+shasum=$(sha256sum release.yaml)
+echo "$shasum" >> CHANGELOG.md
