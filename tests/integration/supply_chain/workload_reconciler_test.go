@@ -50,7 +50,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example-config-map",
+				Name: "example-config-map",
 			},
 			Data: map[string]string{},
 		}
