@@ -486,7 +486,7 @@ spec:
 			})
 		})
 
-		Context("GetTemplate", func() {
+		Context("GetRunTemplate", func() {
 			BeforeEach(func() {
 				clientObjects = []client.Object{
 					&v1alpha1.RunTemplate{
@@ -509,7 +509,7 @@ spec:
 					Name:      "second-template",
 					Namespace: "ns2",
 				}
-				template, err := repo.GetTemplate(templateRef)
+				template, err := repo.GetRunTemplate(templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("second-template"))
 			})
@@ -520,7 +520,7 @@ spec:
 					Name:      "second-template",
 					Namespace: "ns1",
 				}
-				_, err := repo.GetTemplate(templateRef)
+				_, err := repo.GetRunTemplate(templateRef)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("not found"))
 			})

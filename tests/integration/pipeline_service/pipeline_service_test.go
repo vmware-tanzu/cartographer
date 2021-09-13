@@ -20,7 +20,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	v1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -244,6 +246,87 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
 				}).Should(Equal(0))
+			})
+		})
+	})
+
+	Context("A RunTemplate that selects for outputs that can be immediately read", func() {
+		BeforeEach(func() {
+			runTemplateYaml := HereYamlF(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: RunTemplate
+				metadata:
+				  namespace: %s
+				  name: my-run-template
+				spec:
+				  outputs:
+					my-first-output: spec.foo
+				  template:
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: test-crd
+					spec:
+					  foo: "bar"
+				`,
+				testNS,
+			)
+
+			runTemplateDefinition = &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			err := c.Delete(ctx, runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("a Pipeline is applied with outputs that match immediately", func() {
+			BeforeEach(func() {
+				pipelineYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Pipeline
+					metadata:
+					  namespace: %s
+					  name: my-pipeline
+					  labels:
+					    some-val: first
+					spec:
+					  runTemplateRef: 
+					    name: my-run-template
+					    namespace: %s
+					    kind: RunTemplate
+					`,
+					testNS, testNS)
+
+				pipelineDefinition = &unstructured.Unstructured{}
+				err := yaml.Unmarshal([]byte(pipelineYaml), pipelineDefinition)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = c.Create(ctx, pipelineDefinition, &client.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				err := c.Delete(ctx, pipelineDefinition)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("populates the pipeline.Status.outputs", func() {
+				pipeline := &v1alpha1.Pipeline{}
+
+				Eventually(func() (map[string]apiextensionsv1.JSON, error) {
+					err := c.Get(ctx, client.ObjectKey{Name: "my-pipeline", Namespace: testNS}, pipeline)
+					return pipeline.Status.Outputs, err
+				}).Should(MatchKeys(IgnoreExtras, Keys{
+					"my-first-output": Equal(apiextensionsv1.JSON{Raw: []byte("\"bar\"")}),
+				}))
+
 			})
 		})
 	})

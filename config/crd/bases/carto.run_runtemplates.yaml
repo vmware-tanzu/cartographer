@@ -48,6 +48,10 @@ spec:
             type: object
           spec:
             properties:
+              outputs:
+                additionalProperties:
+                  type: string
+                type: object
               template:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true

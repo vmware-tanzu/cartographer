@@ -94,18 +94,6 @@ var _ = Describe("Templates", func() {
 			})
 		})
 
-		Context("when passed a RunTemplate", func() {
-			BeforeEach(func() {
-				apiTemplate = &v1alpha1.RunTemplate{}
-			})
-
-			ItDoesNotReturnAnError()
-
-			It("returns a template", func() {
-				Expect(templateModel).NotTo(BeNil())
-			})
-		})
-
 		Context("when passed an unsupported object", func() {
 			BeforeEach(func() {
 				apiTemplate = &v1alpha1.Workload{}

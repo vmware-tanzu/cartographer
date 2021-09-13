@@ -19,6 +19,7 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,6 +32,7 @@ const (
 	ReadyRunTemplateReason                            = "Ready"
 	NotFoundRunTemplateReason                         = "RunTemplateNotFound"
 	StampedObjectRejectedByAPIServerRunTemplateReason = "StampedObjectRejectedByAPIServer"
+	OutputPathNotSatisfiedRunTemplateReason           = "OutputPathNotSatisfied"
 	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
 )
 
@@ -45,8 +47,9 @@ type Pipeline struct {
 }
 
 type PipelineStatus struct {
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	ObservedGeneration int64                           `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition              `json:"conditions,omitempty"`
+	Outputs            map[string]apiextensionsv1.JSON `json:"outputs,omitempty"`
 }
 
 type PipelineSpec struct {

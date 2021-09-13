@@ -13,41 +13,46 @@
 // limitations under the License.
 
 // +versionName=v1alpha1
-// +groupName=carto.run
+// +groupName=test.run
 // +kubebuilder:object:generate=true
 
-package v1alpha1
+package testapi
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
-type RunTemplate struct {
+type Test struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              RunTemplateSpec `json:"spec"`
+	Spec              TestSpec   `json:"spec"`
+	Status            TestStatus `json:"status,omitempty"`
 }
 
-type RunTemplateSpec struct {
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Template runtime.RawExtension `json:"template"`
-	Outputs map[string]string `json:"outputs,omitempty"`
+type TestStatus struct {
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+}
+
+type TestSpec struct {
+	// +kubebuilder:validation:Required
+	Foo string `json:"foo"`
 }
 
 // +kubebuilder:object:root=true
 
-type RunTemplateList struct {
+type TestList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []RunTemplate `json:"items"`
+	Items           []Test `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(
-		&RunTemplate{},
-		&RunTemplateList{},
+		&Test{},
+		&TestList{},
 	)
 }

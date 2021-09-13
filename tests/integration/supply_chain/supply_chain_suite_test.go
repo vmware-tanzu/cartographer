@@ -116,8 +116,6 @@ var _ = BeforeSuite(func() {
 	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("serving webhook server"))
 	time.Sleep(200 * time.Millisecond)
 
-	fmt.Printf("Server: %s", testEnv.WebhookInstallOptions.LocalServingHost)
-
 	// --- create client
 	scheme := runtime.NewScheme()
 	err = v1alpha1.AddToScheme(scheme)

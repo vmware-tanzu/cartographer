@@ -63,15 +63,17 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 
-	condition := r.realizer.Realize(pipeline, logger, r.repository)
+	condition, outputs := r.realizer.Realize(pipeline, logger, r.repository)
 	if condition != nil {
 		conditionManager.AddPositive(*condition)
 		//TODO: deal with changed
 		pipeline.Status.Conditions, _ = conditionManager.Finalize()
+		pipeline.Status.Outputs = outputs
+
 		statusUpdateError := r.repository.StatusUpdate(pipeline)
 		if statusUpdateError != nil {
 			logger.Info("finished")
-			return ctrl.Result{}, fmt.Errorf("update workload status: %w", statusUpdateError)
+			return ctrl.Result{}, fmt.Errorf("update pipeline status: %w", statusUpdateError)
 		}
 	}
 

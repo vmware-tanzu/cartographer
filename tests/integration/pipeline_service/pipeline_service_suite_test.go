@@ -39,6 +39,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
+	"github.com/vmware-tanzu/cartographer/tests/integration/pipeline_service/testapi"
 )
 
 func TestWebhookIntegration(t *testing.T) {
@@ -69,7 +70,10 @@ var _ = BeforeSuite(func() {
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
 		},
-		CRDDirectoryPaths:        []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{
+			filepath.Join("..", "..", "..", "config", "crd", "bases"),
+			filepath.Join("testapi", "crds"),
+		},
 		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
 	}
 
@@ -115,14 +119,15 @@ var _ = BeforeSuite(func() {
 	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("serving webhook server"))
 	time.Sleep(200 * time.Millisecond)
 
-	fmt.Printf("Server: %s", testEnv.WebhookInstallOptions.LocalServingHost)
-
 	// --- create client
 	scheme := runtime.NewScheme()
 	err = v1alpha1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = corev1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = testapi.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	c, err = client.New(apiConfig, client.Options{

@@ -29,7 +29,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) *v1.Condition
+	Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs)
 }
 
 func NewRealizer() Realizer {
@@ -42,18 +42,18 @@ type TemplatingContext struct {
 	Pipeline *v1alpha1.Pipeline `json:"pipeline"`
 }
 
-func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) *v1.Condition {
+func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs) {
 	pipeline.Spec.RunTemplateRef.Kind = "RunTemplate"
 	if pipeline.Spec.RunTemplateRef.Namespace == "" {
 		pipeline.Spec.RunTemplateRef.Namespace = pipeline.Namespace
 	}
-	template, err := repository.GetTemplate(pipeline.Spec.RunTemplateRef)
+	template, err := repository.GetRunTemplate(pipeline.Spec.RunTemplateRef)
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("could not get RunTemplate '%s'", pipeline.Spec.RunTemplateRef.Name)
 		logger.Error(err, errorMessage)
 
-		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err))
+		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil
 	}
 
 	labels := map[string]string{
@@ -75,15 +75,24 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 	if err != nil {
 		errorMessage := "could not stamp template"
 		logger.Error(err, errorMessage)
-		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err))
+		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil
 	}
 
 	err = repository.EnsureObjectExistsOnCluster(stampedObject, false)
 	if err != nil {
 		errorMessage := "could not create object"
 		logger.Error(err, errorMessage)
-		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err))
+		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil
 	}
 
-	return RunTemplateReadyCondition()
+	outputs, err := template.GetOutput(stampedObject)
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("could not get output: %s", err.Error())
+		logger.Info(errorMessage)
+		return OutputPathNotSatisfiedCondition(err), nil
+	}
+
+
+	return RunTemplateReadyCondition(), outputs
 }

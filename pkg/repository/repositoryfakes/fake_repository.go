@@ -52,6 +52,19 @@ type FakeRepository struct {
 		result1 *v1alpha1.Pipeline
 		result2 error
 	}
+	GetRunTemplateStub        func(v1alpha1.TemplateReference) (templates.RunTemplate, error)
+	getRunTemplateMutex       sync.RWMutex
+	getRunTemplateArgsForCall []struct {
+		arg1 v1alpha1.TemplateReference
+	}
+	getRunTemplateReturns struct {
+		result1 templates.RunTemplate
+		result2 error
+	}
+	getRunTemplateReturnsOnCall map[int]struct {
+		result1 templates.RunTemplate
+		result2 error
+	}
 	GetSchemeStub        func() *runtime.Scheme
 	getSchemeMutex       sync.RWMutex
 	getSchemeArgsForCall []struct {
@@ -86,19 +99,6 @@ type FakeRepository struct {
 	}
 	getSupplyChainsForWorkloadReturnsOnCall map[int]struct {
 		result1 []v1alpha1.ClusterSupplyChain
-		result2 error
-	}
-	GetTemplateStub        func(v1alpha1.TemplateReference) (templates.Template, error)
-	getTemplateMutex       sync.RWMutex
-	getTemplateArgsForCall []struct {
-		arg1 v1alpha1.TemplateReference
-	}
-	getTemplateReturns struct {
-		result1 templates.Template
-		result2 error
-	}
-	getTemplateReturnsOnCall map[int]struct {
-		result1 templates.Template
 		result2 error
 	}
 	GetWorkloadStub        func(string, string) (*v1alpha1.Workload, error)
@@ -321,6 +321,70 @@ func (fake *FakeRepository) GetPipelineReturnsOnCall(i int, result1 *v1alpha1.Pi
 	}{result1, result2}
 }
 
+func (fake *FakeRepository) GetRunTemplate(arg1 v1alpha1.TemplateReference) (templates.RunTemplate, error) {
+	fake.getRunTemplateMutex.Lock()
+	ret, specificReturn := fake.getRunTemplateReturnsOnCall[len(fake.getRunTemplateArgsForCall)]
+	fake.getRunTemplateArgsForCall = append(fake.getRunTemplateArgsForCall, struct {
+		arg1 v1alpha1.TemplateReference
+	}{arg1})
+	stub := fake.GetRunTemplateStub
+	fakeReturns := fake.getRunTemplateReturns
+	fake.recordInvocation("GetRunTemplate", []interface{}{arg1})
+	fake.getRunTemplateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetRunTemplateCallCount() int {
+	fake.getRunTemplateMutex.RLock()
+	defer fake.getRunTemplateMutex.RUnlock()
+	return len(fake.getRunTemplateArgsForCall)
+}
+
+func (fake *FakeRepository) GetRunTemplateCalls(stub func(v1alpha1.TemplateReference) (templates.RunTemplate, error)) {
+	fake.getRunTemplateMutex.Lock()
+	defer fake.getRunTemplateMutex.Unlock()
+	fake.GetRunTemplateStub = stub
+}
+
+func (fake *FakeRepository) GetRunTemplateArgsForCall(i int) v1alpha1.TemplateReference {
+	fake.getRunTemplateMutex.RLock()
+	defer fake.getRunTemplateMutex.RUnlock()
+	argsForCall := fake.getRunTemplateArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRepository) GetRunTemplateReturns(result1 templates.RunTemplate, result2 error) {
+	fake.getRunTemplateMutex.Lock()
+	defer fake.getRunTemplateMutex.Unlock()
+	fake.GetRunTemplateStub = nil
+	fake.getRunTemplateReturns = struct {
+		result1 templates.RunTemplate
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetRunTemplateReturnsOnCall(i int, result1 templates.RunTemplate, result2 error) {
+	fake.getRunTemplateMutex.Lock()
+	defer fake.getRunTemplateMutex.Unlock()
+	fake.GetRunTemplateStub = nil
+	if fake.getRunTemplateReturnsOnCall == nil {
+		fake.getRunTemplateReturnsOnCall = make(map[int]struct {
+			result1 templates.RunTemplate
+			result2 error
+		})
+	}
+	fake.getRunTemplateReturnsOnCall[i] = struct {
+		result1 templates.RunTemplate
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeRepository) GetScheme() *runtime.Scheme {
 	fake.getSchemeMutex.Lock()
 	ret, specificReturn := fake.getSchemeReturnsOnCall[len(fake.getSchemeArgsForCall)]
@@ -502,70 +566,6 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetTemplate(arg1 v1alpha1.TemplateReference) (templates.Template, error) {
-	fake.getTemplateMutex.Lock()
-	ret, specificReturn := fake.getTemplateReturnsOnCall[len(fake.getTemplateArgsForCall)]
-	fake.getTemplateArgsForCall = append(fake.getTemplateArgsForCall, struct {
-		arg1 v1alpha1.TemplateReference
-	}{arg1})
-	stub := fake.GetTemplateStub
-	fakeReturns := fake.getTemplateReturns
-	fake.recordInvocation("GetTemplate", []interface{}{arg1})
-	fake.getTemplateMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeRepository) GetTemplateCallCount() int {
-	fake.getTemplateMutex.RLock()
-	defer fake.getTemplateMutex.RUnlock()
-	return len(fake.getTemplateArgsForCall)
-}
-
-func (fake *FakeRepository) GetTemplateCalls(stub func(v1alpha1.TemplateReference) (templates.Template, error)) {
-	fake.getTemplateMutex.Lock()
-	defer fake.getTemplateMutex.Unlock()
-	fake.GetTemplateStub = stub
-}
-
-func (fake *FakeRepository) GetTemplateArgsForCall(i int) v1alpha1.TemplateReference {
-	fake.getTemplateMutex.RLock()
-	defer fake.getTemplateMutex.RUnlock()
-	argsForCall := fake.getTemplateArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeRepository) GetTemplateReturns(result1 templates.Template, result2 error) {
-	fake.getTemplateMutex.Lock()
-	defer fake.getTemplateMutex.Unlock()
-	fake.GetTemplateStub = nil
-	fake.getTemplateReturns = struct {
-		result1 templates.Template
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeRepository) GetTemplateReturnsOnCall(i int, result1 templates.Template, result2 error) {
-	fake.getTemplateMutex.Lock()
-	defer fake.getTemplateMutex.Unlock()
-	fake.GetTemplateStub = nil
-	if fake.getTemplateReturnsOnCall == nil {
-		fake.getTemplateReturnsOnCall = make(map[int]struct {
-			result1 templates.Template
-			result2 error
-		})
-	}
-	fake.getTemplateReturnsOnCall[i] = struct {
-		result1 templates.Template
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeRepository) GetWorkload(arg1 string, arg2 string) (*v1alpha1.Workload, error) {
 	fake.getWorkloadMutex.Lock()
 	ret, specificReturn := fake.getWorkloadReturnsOnCall[len(fake.getWorkloadArgsForCall)]
@@ -701,14 +701,14 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getClusterTemplateMutex.RUnlock()
 	fake.getPipelineMutex.RLock()
 	defer fake.getPipelineMutex.RUnlock()
+	fake.getRunTemplateMutex.RLock()
+	defer fake.getRunTemplateMutex.RUnlock()
 	fake.getSchemeMutex.RLock()
 	defer fake.getSchemeMutex.RUnlock()
 	fake.getSupplyChainMutex.RLock()
 	defer fake.getSupplyChainMutex.RUnlock()
 	fake.getSupplyChainsForWorkloadMutex.RLock()
 	defer fake.getSupplyChainsForWorkloadMutex.RUnlock()
-	fake.getTemplateMutex.RLock()
-	defer fake.getTemplateMutex.RUnlock()
 	fake.getWorkloadMutex.RLock()
 	defer fake.getWorkloadMutex.RUnlock()
 	fake.statusUpdateMutex.RLock()

@@ -36,8 +36,6 @@ type Template interface {
 func NewModelFromAPI(template client.Object) (Template, error) {
 	switch v := template.(type) {
 
-	case *v1alpha1.RunTemplate:
-		return NewRunTemplateModel(v), nil
 	case *v1alpha1.ClusterSourceTemplate:
 		return NewClusterSourceTemplateModel(v, eval.EvaluatorBuilder()), nil
 	case *v1alpha1.ClusterImageTemplate:

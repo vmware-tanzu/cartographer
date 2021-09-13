@@ -23,6 +23,9 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	pipeline2 "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -82,13 +85,13 @@ var _ = Describe("Reconcile", func() {
 					},
 				},
 			}, nil)
+
 		})
 
-		Context("with a valid RunTemplateRef", func() {
+		Context("no outputs were returned from the realizer", func() {
 			BeforeEach(func() {
-				realizer.RealizeReturns(nil)
+				realizer.RealizeReturns(pipeline2.RunTemplateReadyCondition(), nil)
 			})
-
 			It("fetches the pipeline", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
@@ -105,19 +108,8 @@ var _ = Describe("Reconcile", func() {
 				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
 				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
 			})
-		})
 
-		Context("the realizer returns a condition", func() {
-			BeforeEach(func() {
-				realizer.RealizeReturns(&metav1.Condition{
-					Type:    "RunTemplateReady",
-					Status:  metav1.ConditionFalse,
-					Reason:  "RunTemplateNotFound",
-					Message: "could not get RunTemplateRef 'my-run-template': Errol mcErrorFace",
-				})
-			})
-
-			It("sets the status to something clear", func() {
+			It("Updates the status with a Happy Condition", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -136,39 +128,55 @@ var _ = Describe("Reconcile", func() {
 
 				Expect(statusObject.Status.Conditions).To(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("RunTemplateNotFound"),
-						"Message": Equal("could not get RunTemplateRef 'my-run-template': Errol mcErrorFace"),
+						"Type":   Equal("RunTemplateReady"),
+						"Status": Equal(metav1.ConditionTrue),
+						"Reason": Equal("Ready"),
 					}),
 				))
+
+			})
+		})
+
+		Context("outputs are returned from the realizer", func() {
+			BeforeEach(func() {
+				realizer.RealizeReturns(
+					pipeline2.RunTemplateReadyCondition(),
+					templates.Outputs{
+						"an-output": apiextensionsv1.JSON{Raw: []byte(`"the value"`)},
+					})
 			})
 
-			It("Starts and Finishes cleanly", func() {
+			It("Updates the status with the outputs", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
+				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
+				statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Pipeline)
+				Expect(ok).To(BeTrue())
+
+				Expect(statusObject.Status.Outputs).To(HaveLen(1))
+				Expect(statusObject.Status.Outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"the value"`)}))
+
+			})
+		})
+
+		Context("updating the status fails", func() {
+			BeforeEach(func() {
+				realizer.RealizeReturns(pipeline2.RunTemplateReadyCondition(), nil)
+				repository.StatusUpdateReturns(errors.New("bad status update error"))
+			})
+
+			It("Starts and Finishes cleanly", func() {
+				_, _ = reconciler.Reconcile(ctx, request)
 				Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
 				Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
 			})
 
-			Context("updating the status fails", func() {
-				BeforeEach(func() {
-					repository.StatusUpdateReturns(errors.New("bad status update error"))
-				})
-
-				It("Starts and Finishes cleanly", func() {
-					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(out).To(Say(`"msg":"started","name":"my-pipeline","namespace":"my-namespace"`))
-					Expect(out).To(Say(`"msg":"finished","name":"my-pipeline","namespace":"my-namespace"`))
-				})
-
-				It("returns a status error", func() {
-					result, err := reconciler.Reconcile(ctx, request)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("update workload status"))
-					Expect(result).To(Equal(ctrl.Result{}))
-				})
+			It("returns a status error", func() {
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("update pipeline status"))
+				Expect(result).To(Equal(ctrl.Result{}))
 			})
 		})
 	})
