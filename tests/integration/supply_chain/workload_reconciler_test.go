@@ -51,7 +51,6 @@ var _ = Describe("WorkloadReconciler", func() {
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example-config-map",
-				Namespace: testNS,
 			},
 			Data: map[string]string{},
 		}
