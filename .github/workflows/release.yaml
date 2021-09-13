@@ -50,3 +50,4 @@ jobs:
           artifacts: "release.yaml"
           bodyFile: "CHANGELOG.md"
           token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
