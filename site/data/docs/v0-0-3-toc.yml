@@ -1,0 +1,32 @@
+toc:
+  - title: About Cartographer
+    subfolderitems:
+      - page: About
+        url: /
+  - title: Install/Uninstall
+    subfolderitems:
+      - page: Installing Cartographer
+        url: /installing
+      - page: Uninstalling Cartographer
+        url: /uninstalling
+  - title: Reference
+    subfolderitems:
+      - page: CRD Reference
+        url: /reference
+  - title: Examples
+    subfolderitems:
+      - page: Examples
+        url: /examples
+  - title: Documentation Style Guide
+    subfolderitems:
+      - page: Style Guide
+        url: /style-guide
+
+  #     - page: Scope 2
+  #       url: /scope
+  #     - page: Scope 3
+  #       url: /scope
+  # - title: Update Images
+  #   subfolderitems:
+  #     - page: Update Images
+  #       url: /contributing
