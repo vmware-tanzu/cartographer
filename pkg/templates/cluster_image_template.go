@@ -30,6 +30,10 @@ type clusterImageTemplate struct {
 	evaluator evaluator
 }
 
+func (t clusterImageTemplate) GetKind() string {
+	return t.template.Kind
+}
+
 func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate, eval evaluator) *clusterImageTemplate {
 	return &clusterImageTemplate{template: template, evaluator: eval}
 }

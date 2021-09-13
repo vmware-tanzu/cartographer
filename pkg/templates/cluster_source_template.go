@@ -28,6 +28,10 @@ type clusterSourceTemplate struct {
 	evaluator evaluator
 }
 
+func (t clusterSourceTemplate) GetKind() string {
+	return t.template.Kind
+}
+
 func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template, evaluator: eval}
 }

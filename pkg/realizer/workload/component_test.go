@@ -111,14 +111,15 @@ var _ = Describe("Component", func() {
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
 				fakeRepo.GetClusterTemplateReturns(template, nil)
-				fakeRepo.AssureObjectExistsOnClusterReturns(nil)
+				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object and returns the outputs", func() {
 				out, err := r.Do(&component, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				stampedObject := fakeRepo.AssureObjectExistsOnClusterArgsForCall(0)
+				stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				Expect(allowUpdate).To(BeTrue())
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
 				Expect(ok).To(BeTrue())
@@ -140,6 +141,7 @@ var _ = Describe("Component", func() {
 					"carto.run/cluster-template-name":     "image-template-1",
 					"carto.run/workload-name":             "",
 					"carto.run/workload-namespace":        "",
+					"carto.run/template-kind":             "ClusterImageTemplate",
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 
@@ -227,7 +229,7 @@ var _ = Describe("Component", func() {
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
 				fakeRepo.GetClusterTemplateReturns(template, nil)
-				fakeRepo.AssureObjectExistsOnClusterReturns(nil)
+				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -238,7 +240,7 @@ var _ = Describe("Component", func() {
 			})
 		})
 
-		When("unable to AssureObjectExistsOnCluster the stamped object", func() {
+		When("unable to EnsureObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
 				component.Sources = []v1alpha1.ComponentReference{
 					{
@@ -287,7 +289,7 @@ var _ = Describe("Component", func() {
 
 				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
 				fakeRepo.GetClusterTemplateReturns(template, nil)
-				fakeRepo.AssureObjectExistsOnClusterReturns(errors.New("bad object"))
+				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
 				_, err := r.Do(&component, supplyChainName, outputs)

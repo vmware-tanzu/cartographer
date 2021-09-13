@@ -56,7 +56,12 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err))
 	}
 
-	labels := map[string]string{}
+	labels := map[string]string{
+		"carto.run/pipeline-name":          pipeline.Name,
+		"carto.run/pipeline-namespace":     pipeline.Namespace,
+		"carto.run/run-template-name":      template.GetName(),
+		"carto.run/run-template-namespace": pipeline.Spec.RunTemplateRef.Namespace,
+	}
 
 	stampContext := templates.StamperBuilder(
 		pipeline,
@@ -73,7 +78,7 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err))
 	}
 
-	err = repository.Create(stampedObject)
+	err = repository.EnsureObjectExistsOnCluster(stampedObject, false)
 	if err != nil {
 		errorMessage := "could not create object"
 		logger.Error(err, errorMessage)

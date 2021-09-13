@@ -25,6 +25,10 @@ type clusterTemplate struct {
 	template *v1alpha1.ClusterTemplate
 }
 
+func (t clusterTemplate) GetKind() string {
+	return t.template.Kind
+}
+
 func NewClusterTemplateModel(template *v1alpha1.ClusterTemplate) *clusterTemplate {
 	return &clusterTemplate{template: template}
 }

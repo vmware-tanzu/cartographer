@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +36,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 	)
 
 	// TODO: ask team about inspecting template.metadata.name and warning/blocking for UX
-	Context("a RunTemplate that produces a Resource", func() {
+	Context("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
 				---
@@ -46,12 +47,20 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				  name: my-run-template
 				spec:
 				  template:
-				    apiVersion: v1
-				    kind: ConfigMap
-				    metadata:
+					apiVersion: v1
+					kind: ResourceQuota
+					metadata:
 					  generateName: my-stamped-resource-
-				    data:
-					  has: data
+					spec:
+					  hard:
+						cpu: "1000"
+						memory: 200Gi
+						pods: "10"
+					  scopeSelector:
+						matchExpressions:
+						- operator : In
+						  scopeName: PriorityClass
+						  values: [$(pipeline.metadata.labels.some-val)$]
 				`,
 				testNS,
 			)
@@ -69,7 +78,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("a Pipeline that matches the RunTemplateRef", func() {
+		Context("and a Pipeline matches the RunTemplateRef", func() {
 			BeforeEach(func() {
 				pipelineYaml := HereYamlF(`---
 					apiVersion: carto.run/v1alpha1
@@ -77,6 +86,8 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					metadata:
 					  namespace: %s
 					  name: my-pipeline
+					  labels:
+					    some-val: first
 					spec:
 					  runTemplateRef: 
 					    name: my-run-template
@@ -98,21 +109,52 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("Stamps a new Resource", func() {
-				resourceList := &v1.ConfigMapList{}
+			It("stamps the templated object once", func() {
+				resourceList := &v1.ResourceQuotaList{}
 
 				Eventually(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
-				}).Should(BeNumerically(">", 0))
+				}).Should(Equal(1))
 
-				// TODO: comment this in and make it pass
-				//Consistently(func() (int, error) {
-				//	err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
-				//	return len(resourceList.Items), err
-				//}, "5s").Should(BeNumerically("<=",1))
+				Consistently(func() (int, error) {
+					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+					return len(resourceList.Items), err
+				}, "2s").Should(BeNumerically("<=", 1))
 
 				Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+				Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("first"))
+			})
+
+			Context("and the Pipeline object is updated", func() {
+				BeforeEach(func() {
+					Expect(AlterFieldOfNestedStringMaps(pipelineDefinition.Object, "metadata.labels.some-val", "second")).To(Succeed())
+					Expect(c.Update(ctx, pipelineDefinition, &client.UpdateOptions{})).To(Succeed())
+				})
+				It("creates a second object alongside the first", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(2))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}, "2s").Should(BeNumerically("<=", 2))
+
+					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+					Expect(resourceList.Items[1].Name).To(ContainSubstring("my-stamped-resource-"))
+
+					id := func(element interface{}) string {
+						return element.(v1.ResourceQuota).Spec.ScopeSelector.MatchExpressions[0].Values[0]
+					}
+					Expect(resourceList.Items).To(MatchAllElements(id, Elements{
+						"first":  Not(BeNil()),
+						"second": Not(BeNil()),
+					}))
+				})
 			})
 		})
 
@@ -148,10 +190,10 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			It("Does not stamp a new Resource", func() {
 				resourceList := &v1.ConfigMapList{}
 
-				Consistently(func() ([]v1.ConfigMap, error) {
+				Consistently(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
-					return resourceList.Items, err
-				}, "5s").Should(HaveLen(0))
+					return len(resourceList.Items), err
+				}).Should(Equal(0))
 			})
 		})
 	})

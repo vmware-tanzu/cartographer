@@ -89,10 +89,11 @@ var _ = Describe("Reconcile", func() {
 				},
 			))
 
-			Expect(repository.CreateCallCount()).To(Equal(1))
-			Expect(repository.CreateCallCount()).To(Equal(1))
-			stamped := repository.CreateArgsForCall(0).Object
-			Expect(stamped).To(
+			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
+			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
+			stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
+			Expect(allowUpdate).To(BeFalse())
+			Expect(stamped.Object).To(
 				MatchKeys(IgnoreExtras, Keys{
 					"metadata": MatchKeys(IgnoreExtras, Keys{
 						"generateName": Equal("my-stamped-resource-"),
@@ -119,7 +120,7 @@ var _ = Describe("Reconcile", func() {
 
 		Context("error on Create", func() {
 			BeforeEach(func() {
-				repository.CreateReturns(errors.New("some bad error"))
+				repository.EnsureObjectExistsOnClusterReturns(errors.New("some bad error"))
 			})
 
 			It("logs the error", func() {
