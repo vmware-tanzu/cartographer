@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/cache"
+	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	pkgcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -124,12 +125,17 @@ func registerSupplyChainController(mgr manager.Manager) error {
 func registerPipelineServiceController(mgr manager.Manager) error {
 	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
 
+	reconciler := pipeline.NewReconciler(repo, realizerpipeline.NewRealizer())
 	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
-		Reconciler: pipeline.NewReconciler(repo, realizerpipeline.NewRealizer()),
+		Reconciler: reconciler,
 	})
 	if err != nil {
 		return fmt.Errorf("controller new pipeline-service: %w", err)
 	}
+
+	reconciler.AddTracking(&external.ObjectTracker{
+		Controller: ctrl,
+	})
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Pipeline{}},

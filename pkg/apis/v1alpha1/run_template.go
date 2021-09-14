@@ -34,7 +34,7 @@ type RunTemplate struct {
 type RunTemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
-	Outputs map[string]string `json:"outputs,omitempty"`
+	Outputs  map[string]string    `json:"outputs,omitempty"`
 }
 
 // +kubebuilder:object:root=true

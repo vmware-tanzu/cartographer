@@ -18,11 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
 type Outputs map[string]apiextensionsv1.JSON

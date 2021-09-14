@@ -10,10 +10,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type FakeRealizer struct {
-	RealizeStub        func(*v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs)
+	RealizeStub        func(*v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)
 	realizeMutex       sync.RWMutex
 	realizeArgsForCall []struct {
 		arg1 *v1alpha1.Pipeline
@@ -23,16 +24,18 @@ type FakeRealizer struct {
 	realizeReturns struct {
 		result1 *v1.Condition
 		result2 templates.Outputs
+		result3 *unstructured.Unstructured
 	}
 	realizeReturnsOnCall map[int]struct {
 		result1 *v1.Condition
 		result2 templates.Outputs
+		result3 *unstructured.Unstructured
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 *v1alpha1.Pipeline, arg2 logr.Logger, arg3 repository.Repository) (*v1.Condition, templates.Outputs) {
+func (fake *FakeRealizer) Realize(arg1 *v1alpha1.Pipeline, arg2 logr.Logger, arg3 repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
 	fake.realizeMutex.Lock()
 	ret, specificReturn := fake.realizeReturnsOnCall[len(fake.realizeArgsForCall)]
 	fake.realizeArgsForCall = append(fake.realizeArgsForCall, struct {
@@ -48,9 +51,9 @@ func (fake *FakeRealizer) Realize(arg1 *v1alpha1.Pipeline, arg2 logr.Logger, arg
 		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *FakeRealizer) RealizeCallCount() int {
@@ -59,7 +62,7 @@ func (fake *FakeRealizer) RealizeCallCount() int {
 	return len(fake.realizeArgsForCall)
 }
 
-func (fake *FakeRealizer) RealizeCalls(stub func(*v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs)) {
+func (fake *FakeRealizer) RealizeCalls(stub func(*v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = stub
@@ -72,17 +75,18 @@ func (fake *FakeRealizer) RealizeArgsForCall(i int) (*v1alpha1.Pipeline, logr.Lo
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeRealizer) RealizeReturns(result1 *v1.Condition, result2 templates.Outputs) {
+func (fake *FakeRealizer) RealizeReturns(result1 *v1.Condition, result2 templates.Outputs, result3 *unstructured.Unstructured) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = nil
 	fake.realizeReturns = struct {
 		result1 *v1.Condition
 		result2 templates.Outputs
-	}{result1, result2}
+		result3 *unstructured.Unstructured
+	}{result1, result2, result3}
 }
 
-func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 *v1.Condition, result2 templates.Outputs) {
+func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 *v1.Condition, result2 templates.Outputs, result3 *unstructured.Unstructured) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = nil
@@ -90,12 +94,14 @@ func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 *v1.Condition, res
 		fake.realizeReturnsOnCall = make(map[int]struct {
 			result1 *v1.Condition
 			result2 templates.Outputs
+			result3 *unstructured.Unstructured
 		})
 	}
 	fake.realizeReturnsOnCall[i] = struct {
 		result1 *v1.Condition
 		result2 templates.Outputs
-	}{result1, result2}
+		result3 *unstructured.Unstructured
+	}{result1, result2, result3}
 }
 
 func (fake *FakeRealizer) Invocations() map[string][][]interface{} {

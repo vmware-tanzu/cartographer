@@ -16,18 +16,21 @@ package pipeline_service_test
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	. "github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/integration/pipeline_service/testapi"
 )
 
 var _ = Describe("Stamping a resource on Pipeline Creation", func() {
@@ -42,7 +45,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 	})
 
 	// TODO: ask team about inspecting template.metadata.name and warning/blocking for UX
-	Context("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
+	Describe("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
 				---
@@ -250,7 +253,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 		})
 	})
 
-	Context("A RunTemplate that selects for outputs that can be immediately read", func() {
+	Describe("A RunTemplate that selects for outputs that can be immediately read", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
 				---
@@ -330,4 +333,112 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			})
 		})
 	})
+
+	Describe("A RunTemplate that selects for outputs that are eventually available", func() {
+		BeforeEach(func() {
+			runTemplateYaml := HereYamlF(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: RunTemplate
+				metadata:
+				  namespace: %s
+				  name: my-run-template
+				spec:
+				  outputs:
+					test-status: status.conditions[?(@.type=="Ready")]
+				  template:
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: test-crd
+					spec:
+					  foo: "bar"
+				`,
+				testNS,
+			)
+
+			runTemplateDefinition = &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			pipelineYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Pipeline
+					metadata:
+					  namespace: %s
+					  name: my-pipeline
+					  labels:
+					    some-val: first
+					spec:
+					  runTemplateRef: 
+					    name: my-run-template
+					    namespace: %s
+					    kind: RunTemplate
+					`,
+				testNS, testNS)
+
+			pipelineDefinition = &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(pipelineYaml), pipelineDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, pipelineDefinition, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			err := c.Delete(ctx, pipelineDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Delete(ctx, runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("populates the pipeline.Status.outputs", func() {
+			opts := []client.ListOption{
+				client.InNamespace(testNS),
+				client.MatchingLabels(map[string]string{"carto.run/pipeline-name": "my-pipeline"}),
+			}
+
+			testsList := &testapi.TestList{}
+
+			Eventually(func() ([]testapi.Test, error) {
+				err := c.List(ctx, testsList, opts...)
+				return testsList.Items, err
+			}).Should(HaveLen(1))
+
+			testToUpdate := &testsList.Items[0]
+			testToUpdate.Status.Conditions = []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "True",
+					Reason:             "LifeIsGood",
+					LastTransitionTime: metav1.Now(),
+				},
+			}
+			err := c.Status().Update(ctx, testToUpdate)
+			Expect(err).NotTo(HaveOccurred())
+
+			pipeline := &v1alpha1.Pipeline{}
+
+			Eventually(func() (map[string]apiextensionsv1.JSON, error) {
+				err := c.Get(ctx, client.ObjectKey{Name: "my-pipeline", Namespace: testNS}, pipeline)
+				return pipeline.Status.Outputs, err
+			}).Should(HaveKey(Equal("test-status")))
+
+			testStatusCondition := &metav1.Condition{}
+			testStatusConditionJson := pipeline.Status.Outputs["test-status"].Raw
+			err = json.Unmarshal(testStatusConditionJson, testStatusCondition)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(*testStatusCondition).To(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionStatus("True")),
+				"Reason": Equal("LifeIsGood"),
+			}))
+		})
+	})
+
 })

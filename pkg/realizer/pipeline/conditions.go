@@ -57,7 +57,6 @@ func OutputPathNotSatisfiedCondition(err error) *metav1.Condition {
 	}
 }
 
-
 func TemplateStampFailureCondition(err error) *metav1.Condition {
 	return &metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
