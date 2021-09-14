@@ -20,7 +20,6 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
@@ -30,7 +29,7 @@ type Outputs map[string]apiextensionsv1.JSON
 
 type RunTemplate interface {
 	GetName() string
-	GetResourceTemplate() runtime.RawExtension
+	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetOutput(stampedObject *unstructured.Unstructured) (Outputs, error)
 }
 
@@ -70,6 +69,8 @@ func (t runTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t runTemplate) GetResourceTemplate() runtime.RawExtension {
-	return t.template.Spec.Template
+func (t runTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+	return v1alpha1.TemplateSpec{
+		Template: &t.template.Spec.Template,
+	}
 }

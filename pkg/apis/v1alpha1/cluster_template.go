@@ -41,8 +41,9 @@ type ClusterTemplate struct {
 
 type TemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Template runtime.RawExtension `json:"template"`
-	Params   DefaultParams        `json:"params,omitempty"`
+	Template *runtime.RawExtension `json:"template,omitempty"`
+	Ytt      string                `json:"ytt,omitempty"`
+	Params   DefaultParams         `json:"params,omitempty"`
 }
 
 type TemplateStatus struct {
@@ -63,12 +64,20 @@ func (c *ClusterTemplate) ValidateDelete() error {
 }
 
 func (t *TemplateSpec) validate() error {
-	obj := metav1.PartialObjectMetadata{}
-	if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
-		return fmt.Errorf("invalid template: failed to parse object metadata: %w", err)
+	if t.Template == nil && t.Ytt == "" {
+		return fmt.Errorf("invalid template: must specify template or ytt, found neither")
 	}
-	if obj.Namespace != metav1.NamespaceNone {
-		return errors.New("invalid template: template should not set metadata.namespace on the child object")
+	if t.Template != nil && t.Ytt != "" {
+		return fmt.Errorf("invalid template: must specify template or ytt, found both")
+	}
+	if t.Template != nil {
+		obj := metav1.PartialObjectMetadata{}
+		if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
+			return fmt.Errorf("invalid template: failed to parse object metadata: %w", err)
+		}
+		if obj.Namespace != metav1.NamespaceNone {
+			return errors.New("invalid template: template should not set metadata.namespace on the child object")
+		}
 	}
 	return nil
 }

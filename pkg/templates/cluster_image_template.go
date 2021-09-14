@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -56,8 +55,8 @@ func (t clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured
 	}, nil
 }
 
-func (t clusterImageTemplate) GetResourceTemplate() runtime.RawExtension {
-	return t.template.Spec.Template
+func (t clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+	return t.template.Spec.TemplateSpec
 }
 
 func (t clusterImageTemplate) GetDefaultParams() v1alpha1.DefaultParams {

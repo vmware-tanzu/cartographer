@@ -17,12 +17,14 @@ package workload
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
+	"context"
+
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(componentRealizer ComponentRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error
+	Realize(ctx context.Context, componentRealizer ComponentRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error
 }
 
 type realizer struct{}
@@ -31,12 +33,12 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(componentRealizer ComponentRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error {
+func (r *realizer) Realize(ctx context.Context, componentRealizer ComponentRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error {
 	outs := NewOutputs()
 
 	for i := range supplyChain.Spec.Components {
 		component := supplyChain.Spec.Components[i]
-		out, err := componentRealizer.Do(&component, supplyChain.Name, outs)
+		out, err := componentRealizer.Do(ctx, &component, supplyChain.Name, outs)
 		if err != nil {
 			return err
 		}

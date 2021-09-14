@@ -15,6 +15,7 @@
 package pipeline_test
 
 import (
+	"context"
 	"errors"
 
 	. "github.com/MakeNowJust/heredoc/dot"
@@ -83,7 +84,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("stamps out the resource from the template", func() {
-			_, _, _ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(repository.GetRunTemplateCallCount()).To(Equal(1))
 			Expect(repository.GetRunTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
@@ -112,7 +113,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("returns a happy condition", func() {
-			condition, _, _ := rlzr.Realize(pipeline, logger, repository)
+			condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("RunTemplateReady"),
@@ -123,12 +124,12 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("returns the outputs", func() {
-			_, outputs, _ := rlzr.Realize(pipeline, logger, repository)
+			_, outputs, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 			Expect(outputs["myout"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
 		})
 
 		It("returns the stampedObject", func() {
-			_, _, stampedObject := rlzr.Realize(pipeline, logger, repository)
+			_, _, stampedObject := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 			Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{
 				"has": "is a string",
 			}))
@@ -142,14 +143,14 @@ var _ = Describe("Realizer", func() {
 			})
 
 			It("logs the error", func() {
-				_, _, _ = rlzr.Realize(pipeline, logger, repository)
+				_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 				Expect(out).To(Say(`"msg":"could not create object"`))
 				Expect(out).To(Say(`"error":"some bad error"`))
 			})
 
 			It("returns a condition stating that it failed to create", func() {
-				condition, _, _ := rlzr.Realize(pipeline, logger, repository)
+				condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 				Expect(*condition).To(
 					MatchFields(IgnoreExtras, Fields{
@@ -188,7 +189,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("logs info about the missing outputs", func() {
-			_, _, _ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			// FIXME need a `Log` matcher so we dont have multiline matches.
 			Expect(out).To(Say(`"level":"info"`))
@@ -196,7 +197,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("returns a condition stating that it failed to get outputs", func() {
-			condition, outputs, _ := rlzr.Realize(pipeline, logger, repository)
+			condition, outputs, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(outputs).To(BeNil())
 
@@ -224,14 +225,14 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("logs the error", func() {
-			_, _, _ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(out).To(Say(`"msg":"could not stamp template"`))
 			Expect(out).To(Say(`"error":"unmarshal to JSON: unexpected end of JSON input"`))
 		})
 
 		It("returns a condition stating that it failed to stamp", func() {
-			condition, _, _ := rlzr.Realize(pipeline, logger, repository)
+			condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{
@@ -261,14 +262,14 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("logs the error", func() {
-			_, _, _ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(out).To(Say(`"msg":"could not get RunTemplate 'my-template'"`))
 			Expect(out).To(Say(`"error":"Errol mcErrorFace"`))
 		})
 
 		It("return the condition for a missing RunTemplate", func() {
-			condition, _, _ := rlzr.Realize(pipeline, logger, repository)
+			condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{

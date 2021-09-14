@@ -67,7 +67,7 @@ coverage:
 lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
 
-release: gen-manifests
+release: gen-manifests kodata
 	mkdir -p releases
 	ytt --ignore-unknown-comments -f ./config | ko resolve -f- > ./releases/release.yaml
 	kbld -f releases/release.yaml --imgpkg-lock-output releases/.imgpkg/images.yml
@@ -92,7 +92,7 @@ tear-down-local:
 create-local:
 	./hack/local-dev/create-local-cluster-and-registry.sh
 
-deploy-local: create-local prep-deploy gen-manifests
+deploy-local: create-local prep-deploy gen-manifests kodata
 	ytt -f ./config --ignore-unknown-comments | \
 		KO_DOCKER_REPO=localhost:65432 ko resolve -f- | \
 		kapp deploy --yes -a cartographer -f -
@@ -103,3 +103,12 @@ copyright:
 		-ignore site/static/\*\* \
 		-ignore site/themes/\*\* \
 		.
+
+kodata: cmd/cartographer/kodata
+
+cmd/cartographer/kodata: cmd/cartographer/kodata/ytt-linux-amd64
+
+cmd/cartographer/kodata/ytt-linux-amd64: Makefile
+	@# TODO support other architectures
+	curl -sL https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.36.0/ytt-linux-amd64 -o cmd/cartographer/kodata/ytt-linux-amd64
+	chmod +x cmd/cartographer/kodata/ytt-linux-amd64

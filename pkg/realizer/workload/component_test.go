@@ -15,6 +15,7 @@
 package workload_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -105,7 +106,7 @@ var _ = Describe("Component", func() {
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: runtime.RawExtension{Raw: dbytes},
+							Template: &runtime.RawExtension{Raw: dbytes},
 						},
 						ImagePath: "data.some_other_info",
 					},
@@ -117,7 +118,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("creates a stamped object and returns the outputs", func() {
-				out, err := r.Do(&component, supplyChainName, outputs)
+				out, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
 				stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
@@ -157,7 +158,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("returns GetClusterTemplateError", func() {
-				_, err := r.Do(&component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
@@ -179,7 +180,7 @@ var _ = Describe("Component", func() {
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: runtime.RawExtension{},
+							Template: &runtime.RawExtension{},
 						},
 					},
 				}
@@ -189,7 +190,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("returns StampError", func() {
-				_, err := r.Do(&component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for component 'component-1'"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
@@ -227,7 +228,7 @@ var _ = Describe("Component", func() {
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: runtime.RawExtension{Raw: dbytes},
+							Template: &runtime.RawExtension{Raw: dbytes},
 						},
 						ImagePath: "data.does-not-exist",
 					},
@@ -239,7 +240,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, err := r.Do(&component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
@@ -289,7 +290,7 @@ var _ = Describe("Component", func() {
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: runtime.RawExtension{Raw: dbytes},
+							Template: &runtime.RawExtension{Raw: dbytes},
 						},
 						ImagePath: "data.some_other_info",
 					},
@@ -300,7 +301,7 @@ var _ = Describe("Component", func() {
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				_, err := r.Do(&component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))

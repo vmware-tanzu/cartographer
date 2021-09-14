@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	err = r.realizer.Realize(realizer.NewComponentRealizer(workload, r.repo), supplyChain)
+	err = r.realizer.Realize(ctx, realizer.NewComponentRealizer(workload, r.repo), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetClusterTemplateError:

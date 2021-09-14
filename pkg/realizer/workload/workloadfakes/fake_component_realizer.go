@@ -2,6 +2,7 @@
 package workloadfakes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -10,12 +11,13 @@ import (
 )
 
 type FakeComponentRealizer struct {
-	DoStub        func(*v1alpha1.SupplyChainComponent, string, workload.Outputs) (*templates.Output, error)
+	DoStub        func(context.Context, *v1alpha1.SupplyChainComponent, string, workload.Outputs) (*templates.Output, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
-		arg1 *v1alpha1.SupplyChainComponent
-		arg2 string
-		arg3 workload.Outputs
+		arg1 context.Context
+		arg2 *v1alpha1.SupplyChainComponent
+		arg3 string
+		arg4 workload.Outputs
 	}
 	doReturns struct {
 		result1 *templates.Output
@@ -29,20 +31,21 @@ type FakeComponentRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeComponentRealizer) Do(arg1 *v1alpha1.SupplyChainComponent, arg2 string, arg3 workload.Outputs) (*templates.Output, error) {
+func (fake *FakeComponentRealizer) Do(arg1 context.Context, arg2 *v1alpha1.SupplyChainComponent, arg3 string, arg4 workload.Outputs) (*templates.Output, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
-		arg1 *v1alpha1.SupplyChainComponent
-		arg2 string
-		arg3 workload.Outputs
-	}{arg1, arg2, arg3})
+		arg1 context.Context
+		arg2 *v1alpha1.SupplyChainComponent
+		arg3 string
+		arg4 workload.Outputs
+	}{arg1, arg2, arg3, arg4})
 	stub := fake.DoStub
 	fakeReturns := fake.doReturns
-	fake.recordInvocation("Do", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Do", []interface{}{arg1, arg2, arg3, arg4})
 	fake.doMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -56,17 +59,17 @@ func (fake *FakeComponentRealizer) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeComponentRealizer) DoCalls(stub func(*v1alpha1.SupplyChainComponent, string, workload.Outputs) (*templates.Output, error)) {
+func (fake *FakeComponentRealizer) DoCalls(stub func(context.Context, *v1alpha1.SupplyChainComponent, string, workload.Outputs) (*templates.Output, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
 }
 
-func (fake *FakeComponentRealizer) DoArgsForCall(i int) (*v1alpha1.SupplyChainComponent, string, workload.Outputs) {
+func (fake *FakeComponentRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.SupplyChainComponent, string, workload.Outputs) {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	argsForCall := fake.doArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeComponentRealizer) DoReturns(result1 *templates.Output, result2 error) {

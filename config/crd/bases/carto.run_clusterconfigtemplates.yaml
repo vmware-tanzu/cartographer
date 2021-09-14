@@ -65,9 +65,10 @@ spec:
               template:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              ytt:
+                type: string
             required:
             - configPath
-            - template
             type: object
           status:
             type: object
