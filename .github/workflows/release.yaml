@@ -37,6 +37,8 @@ jobs:
 
       - name: Set up Carvel
         uses: vmware-tanzu/carvel-setup-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         env:
