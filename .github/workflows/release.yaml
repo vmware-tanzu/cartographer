@@ -28,6 +28,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+          ref: 7-release
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -42,7 +43,7 @@ jobs:
           KO_DOCKER_REPO: projectcartographer
           DOCKER_USER: projectcartographer
           DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: ./hack/ci/create-release.sh
+        run: hack/ci/create-release.sh
 
       - name: Release
         uses: ncipollo/release-action@v1
