@@ -82,20 +82,7 @@ ps.: although we recommend using [kapp] as provided in the instructions you'll
 see here, its use can be replaced by `kubectl apply`.
 
 
-#### 2. Create the namespace for the installation
-
-This is where all of the controller's components that are not cluster-wide will
-be installed.
-
-```bash
-kubectl create namespace cartographer-system
-```
-```console
-namespace/cartographer-system created
-```
-
-
-#### 3. Submit Project Cartographer's Kubernetes objects to the cluster
+#### 2. Submit Project Cartographer's Kubernetes objects to the cluster
 
 With the prerequisites met, it's a matter of submitting to Kubernetes the
 objects that extend its API and provide the foundation for the controller to
