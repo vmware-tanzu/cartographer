@@ -11,3 +11,4 @@ coverage.*
 
 kubeconfig
 release.yaml
+releases
