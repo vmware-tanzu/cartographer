@@ -18,11 +18,11 @@ set -euo pipefail
 SCRIPT_PATH=$(dirname $0)
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get -y update
-apt-get install -y curl
+sudo apt-get -y update
+sudo apt-get install -y curl
 
-curl -L https://github.com/google/ko/releases/download/v0.8.3/ko_0.8.3_Linux_arm64.tar.gz | tar xzf - ko
-mv ko /usr/local/bin/ko
+curl -L https://github.com/google/ko/releases/download/v0.8.3/ko_0.8.3_Linux_x86_64.tar.gz | tar xzf - ko
+sudo mv ko /usr/local/bin/ko
 chmod +x /usr/local/bin/ko
 
 mkdir -p ~/.docker
