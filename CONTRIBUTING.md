@@ -131,7 +131,16 @@ ensure that the commits of Branch A are easily readable when reading Branch B's 
 
 ## Creating new releases
 
-At the moment, releasing Cartographer is manual.
+### Automated
+There is a github action to automatically create releases on Github. To trigger this action:
+- Create a tag with the prefix `v` and a semver suffix. e.g. `v1.0.3`
+- Push the tag
+- Watch the magic! There should be a new build happening here: https://github.com/vmware-tanzu/cartographer/actions/workflows/release.yaml
+- Observe the result. There should be a new release here: https://github.com/vmware-tanzu/cartographer/releases
+- Click `edit`, update the changelog with any relevant information. Update the release.
+
+### Manual
+It is possible to create a release manually:
 
 Before getting started, make sure you have a running `docker` daemon and all
 the dependencies mentioned above in the [Development Dependencies
