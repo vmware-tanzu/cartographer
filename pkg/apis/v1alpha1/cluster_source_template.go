@@ -36,7 +36,6 @@ type ClusterSourceTemplate struct {
 }
 
 type SourceTemplateSpec struct {
-	// +kubebuilder:pruning:PreserveUnknownFields
 	TemplateSpec `json:",inline"`
 	URLPath      string `json:"urlPath"`
 	RevisionPath string `json:"revisionPath"`

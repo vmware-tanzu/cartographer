@@ -36,7 +36,6 @@ type ClusterConfigTemplate struct {
 }
 
 type ConfigTemplateSpec struct {
-	// +kubebuilder:pruning:PreserveUnknownFields
 	TemplateSpec `json:",inline"`
 	ConfigPath   string `json:"configPath"`
 }

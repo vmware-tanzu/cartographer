@@ -35,7 +35,6 @@ type ClusterImageTemplate struct {
 	Status            ImageTemplateStatus `json:"status,omitempty"`
 }
 type ImageTemplateSpec struct {
-	// +kubebuilder:pruning:PreserveUnknownFields
 	TemplateSpec `json:",inline"`
 	ImagePath    string `json:"imagePath"`
 }
