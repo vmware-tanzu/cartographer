@@ -30,10 +30,14 @@ import (
 
 var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 	var (
-		ctx                   = context.Background()
+		ctx                   context.Context
 		pipelineDefinition    *unstructured.Unstructured
 		runTemplateDefinition *unstructured.Unstructured
 	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
 
 	// TODO: ask team about inspecting template.metadata.name and warning/blocking for UX
 	Context("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
@@ -51,6 +55,9 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					kind: ResourceQuota
 					metadata:
 					  generateName: my-stamped-resource-
+					  namespace: %s
+					  labels:
+					    focus: something-useful
 					spec:
 					  hard:
 						cpu: "1000"
@@ -62,7 +69,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 						  scopeName: PriorityClass
 						  values: [$(pipeline.metadata.labels.some-val)$]
 				`,
-				testNS,
+				testNS, testNS,
 			)
 
 			runTemplateDefinition = &unstructured.Unstructured{}
@@ -153,6 +160,49 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					Expect(resourceList.Items).To(MatchAllElements(id, Elements{
 						"first":  Not(BeNil()),
 						"second": Not(BeNil()),
+					}))
+				})
+			})
+
+			Context("and the RunTemplate object is updated", func() {
+				It("creates a second object alongside the first", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(1))
+
+					// Ensure that first object has been stamped, and status update reconcile of pipeline has occurred
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}, "2s").Should(BeNumerically("<=", 1))
+
+					Expect(AlterFieldOfNestedStringMaps(runTemplateDefinition.Object, "spec.template.metadata.labels.focus", "other-things")).To(Succeed())
+					Expect(c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})).To(Succeed())
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(2))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}, "2s").Should(BeNumerically("<=", 2))
+
+					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+					Expect(resourceList.Items[1].Name).To(ContainSubstring("my-stamped-resource-"))
+
+					Expect(resourceList.Items[0].UID).NotTo(Equal(resourceList.Items[1].UID))
+
+					id := func(element interface{}) string {
+						return element.(v1.ResourceQuota).ObjectMeta.Labels["focus"]
+					}
+					Expect(resourceList.Items).To(MatchAllElements(id, Elements{
+						"something-useful": Not(BeNil()),
+						"other-things":     Not(BeNil()),
 					}))
 				})
 			})

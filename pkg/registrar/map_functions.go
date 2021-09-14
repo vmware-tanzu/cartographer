@@ -67,3 +67,52 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 	return requests
 
 }
+
+func (mapper *Mapper) RunTemplateToPipelineRequests(object client.Object) []reconcile.Request {
+	var err error
+
+	runTemplate, ok := object.(*v1alpha1.RunTemplate)
+	if !ok {
+		mapper.Logger.Error(nil, "run template to pipeline requests: cast to run template failed")
+		return nil
+	}
+
+	list := &v1alpha1.PipelineList{}
+
+	err = mapper.Client.List(context.TODO(), list)
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "run template to pipeline requests: client list")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, pipeline := range list.Items {
+		if runTemplateRefMatch(pipeline.Spec.RunTemplateRef, pipeline.Namespace, runTemplate) {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      pipeline.Name,
+					Namespace: pipeline.Namespace,
+				},
+			})
+		}
+	}
+
+	return requests
+}
+
+func runTemplateRefMatch(ref v1alpha1.TemplateReference, pipelineNamespace string, runTemplate *v1alpha1.RunTemplate) bool {
+	if ref.Name != runTemplate.Name {
+		return false
+	}
+
+	if ref.Namespace != runTemplate.Namespace {
+		if ref.Namespace != "" {
+			return false
+		}
+		if pipelineNamespace != runTemplate.Namespace {
+			return false
+		}
+	}
+
+	return ref.Kind == "RunTemplate" || ref.Kind == ""
+}
