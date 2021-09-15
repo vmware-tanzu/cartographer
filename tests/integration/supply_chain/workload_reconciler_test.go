@@ -50,8 +50,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example-config-map",
-				Namespace: testNS,
+				Name: "example-config-map",
 			},
 			Data: map[string]string{},
 		}
@@ -157,8 +156,10 @@ var _ = Describe("WorkloadReconciler", func() {
 						Name: "proper-template-bob",
 					},
 					Spec: v1alpha1.SourceTemplateSpec{
-						Template: runtime.RawExtension{Raw: templateBytes()},
-						URLPath:  "nonexistant.path",
+						TemplateSpec: v1alpha1.TemplateSpec{
+							Template: runtime.RawExtension{Raw: templateBytes()},
+						},
+						URLPath: "nonexistant.path",
 					},
 				}
 

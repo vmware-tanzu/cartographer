@@ -21,6 +21,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -33,15 +34,26 @@ type ClusterImageTemplate struct {
 	Spec              ImageTemplateSpec   `json:"spec"`
 	Status            ImageTemplateStatus `json:"status,omitempty"`
 }
-
 type ImageTemplateSpec struct {
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Template  runtime.RawExtension `json:"template"`
-	ImagePath string               `json:"imagePath"`
-	Params    DefaultParams        `json:"params,omitempty"`
+	TemplateSpec `json:",inline"`
+	ImagePath    string `json:"imagePath"`
 }
 
 type ImageTemplateStatus struct {
+}
+
+var _ webhook.Validator = &ClusterImageTemplate{}
+
+func (c *ClusterImageTemplate) ValidateCreate() error {
+	return c.Spec.TemplateSpec.validate()
+}
+
+func (c *ClusterImageTemplate) ValidateUpdate(_ runtime.Object) error {
+	return c.Spec.TemplateSpec.validate()
+}
+
+func (c *ClusterImageTemplate) ValidateDelete() error {
+	return nil
 }
 
 // +kubebuilder:object:root=true

@@ -104,7 +104,9 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
-						Template:  runtime.RawExtension{Raw: dbytes},
+						TemplateSpec: v1alpha1.TemplateSpec{
+							Template: runtime.RawExtension{Raw: dbytes},
+						},
 						ImagePath: "data.some_other_info",
 					},
 				}
@@ -176,7 +178,9 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
-						Template: runtime.RawExtension{},
+						TemplateSpec: v1alpha1.TemplateSpec{
+							Template: runtime.RawExtension{},
+						},
 					},
 				}
 
@@ -222,7 +226,9 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
-						Template:  runtime.RawExtension{Raw: dbytes},
+						TemplateSpec: v1alpha1.TemplateSpec{
+							Template: runtime.RawExtension{Raw: dbytes},
+						},
 						ImagePath: "data.does-not-exist",
 					},
 				}
@@ -282,7 +288,9 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Spec: v1alpha1.ImageTemplateSpec{
-						Template:  runtime.RawExtension{Raw: dbytes},
+						TemplateSpec: v1alpha1.TemplateSpec{
+							Template: runtime.RawExtension{Raw: dbytes},
+						},
 						ImagePath: "data.some_other_info",
 					},
 				}
