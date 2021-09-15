@@ -17,6 +17,7 @@ package v1alpha1_test
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -149,10 +150,11 @@ var _ = Describe("ClusterSupplyChain", func() {
 				})
 			})
 
-			Context("Well formed supply chain with a component reference that does not exist", func() {
-				var wellFormedSupplyChain *v1alpha1.ClusterSupplyChain
+			Context("Supply chain with a component reference that does not exist", func() {
+				var supplyChain *v1alpha1.ClusterSupplyChain
+
 				BeforeEach(func() {
-					wellFormedSupplyChain = &v1alpha1.ClusterSupplyChain{
+					supplyChain = &v1alpha1.ClusterSupplyChain{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "responsible-ops---default-params",
 							Namespace: "default",
@@ -160,32 +162,34 @@ var _ = Describe("ClusterSupplyChain", func() {
 						Spec: v1alpha1.SupplyChainSpec{
 							Components: []v1alpha1.SupplyChainComponent{
 								{
-									Name: "source-provider",
+									Name: "some-component",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-									Sources: []v1alpha1.ComponentReference{
-										{
-											Name:      "bad",
-											Component: "badbad",
-										},
+										Name: "some-template",
 									},
 								},
 								{
-									Name: "other-source-provider",
+									Name: "other-component",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
+										Kind: "ClusterTemplate",
+										Name: "some-other-template",
+									},
+									Sources: []v1alpha1.ComponentReference{
+										{
+											Name:      "some-source",
+											Component: "some-nonexistent-component",
+										},
 									},
 								},
 							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
 						},
 					}
 				})
-				It("does not return an error", func() {
-					Expect(wellFormedSupplyChain.ValidateCreate()).NotTo(HaveOccurred())
+
+				It("returns an error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(
+						"invalid sources for component 'other-component': 'some-source' is provided by unknown component 'some-nonexistent-component'",
+					))
 				})
 			})
 
@@ -264,7 +268,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 						supplyChain.Spec.Components[0].TemplateRef.Kind = firstComponentKind
 
 						reference := v1alpha1.ComponentReference{
-							Name:      "component-referencing-an-output",
+							Name:      "input-name",
 							Component: "input-provider",
 						}
 
@@ -283,7 +287,11 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Expect(err).NotTo(HaveOccurred())
 						} else {
 							Expect(err).To(HaveOccurred())
-							Expect(err.Error()).To(Equal(fmt.Sprintf("%s 'input-provider' for 'input-consumer' component must reference a %s", inputReferenceType, consumerToProviderMapping[inputReferenceType])))
+							Expect(err).To(MatchError(fmt.Sprintf(
+								"invalid %ss for component 'input-consumer': component 'input-provider' providing 'input-name' must reference a %s",
+								strings.ToLower(inputReferenceType),
+								consumerToProviderMapping[inputReferenceType]),
+							))
 						}
 
 					},
@@ -401,7 +409,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 									},
 									Sources: []v1alpha1.ComponentReference{
 										{
-											Name:      "component-referencing-an-output",
+											Name:      "source-name",
 											Component: "image-provider",
 										},
 									},
@@ -414,7 +422,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 				It("validates on update as well", func() {
 					err := invalidSupplyChain.ValidateUpdate(&v1alpha1.ClusterSupplyChain{})
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("Source 'image-provider' for 'input-consumer' component must reference a ClusterSourceTemplate"))
+					Expect(err.Error()).To(Equal("invalid sources for component 'input-consumer': component 'image-provider' providing 'source-name' must reference a ClusterSourceTemplate"))
 				})
 			})
 		})

@@ -273,7 +273,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the supply chain", func() {
 				err = c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("Source 'provider' for 'build-image-provider' component must reference a ClusterSourceTemplate"))
+				Expect(err.Error()).To(ContainSubstring("component 'provider' providing 'solo-source-provider' must reference a ClusterSourceTemplate"))
 			})
 		})
 	})
