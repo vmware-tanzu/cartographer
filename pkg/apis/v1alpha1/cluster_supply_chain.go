@@ -63,37 +63,49 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	}
 
 	for _, component := range c.Spec.Components {
-		err := c.validateComponentRef(component.Sources, component, "ClusterSourceTemplate", "Source")
-		if err != nil {
-			return err
+		if err := c.validateComponentRefs(component.Sources, "ClusterSourceTemplate"); err != nil {
+			return fmt.Errorf(
+				"invalid sources for component '%s': %w",
+				component.Name,
+				err,
+			)
 		}
 
-		err = c.validateComponentRef(component.Images, component, "ClusterImageTemplate", "Image")
-		if err != nil {
-			return err
+		if err := c.validateComponentRefs(component.Images, "ClusterImageTemplate"); err != nil {
+			return fmt.Errorf(
+				"invalid images for component '%s': %w",
+				component.Name,
+				err,
+			)
 		}
 
-		err = c.validateComponentRef(component.Configs, component, "ClusterConfigTemplate", "Config")
-		if err != nil {
-			return err
+		if err := c.validateComponentRefs(component.Configs, "ClusterConfigTemplate"); err != nil {
+			return fmt.Errorf(
+				"invalid configs for component '%s': %w",
+				component.Name,
+				err,
+			)
 		}
 	}
 
 	return nil
 }
 
-func (c *ClusterSupplyChain) validateComponentRef(references []ComponentReference, component SupplyChainComponent, targetKind string, sourceField string) error {
+func (c *ClusterSupplyChain) validateComponentRefs(references []ComponentReference, targetKind string) error {
 	for _, ref := range references {
 		referencedComponent := c.getComponentByName(ref.Component)
 		if referencedComponent == nil {
-			continue
+			return fmt.Errorf(
+				"'%s' is provided by unknown component '%s'",
+				ref.Name,
+				ref.Component,
+			)
 		}
 		if referencedComponent.TemplateRef.Kind != targetKind {
 			return fmt.Errorf(
-				"%s '%s' for '%s' component must reference a %s",
-				sourceField,
+				"component '%s' providing '%s' must reference a %s",
 				referencedComponent.Name,
-				component.Name,
+				ref.Name,
 				targetKind,
 			)
 		}
