@@ -35,7 +35,7 @@ import (
 type Repository interface {
 	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
-	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
+	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.RunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
@@ -127,22 +127,19 @@ func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (
 	return template, nil
 }
 
-// FIXME: Probably should not return a templates.Template, not sure it adheres to interface
-func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
-	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
-	if err != nil {
-		return nil, fmt.Errorf("get api template: %w", err)
-	}
+func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.RunTemplate, error) {
 
-	err = r.cl.Get(context.TODO(), client.ObjectKey{
+	runTemplate := &v1alpha1.RunTemplate{}
+
+	err := r.cl.Get(context.TODO(), client.ObjectKey{
 		Name:      ref.Name,
 		Namespace: ref.Namespace,
-	}, apiTemplate)
+	}, runTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
 
-	template, err := templates.NewModelFromAPI(apiTemplate)
+	template := templates.NewRunTemplateModel(runTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("new model from api: %w", err)
 	}

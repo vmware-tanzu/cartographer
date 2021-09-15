@@ -16,6 +16,20 @@ gen-manifests:
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
+test-gen-objects:
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+                object \
+                paths=./tests/integration/pipeline_service/testapi
+
+test-gen-manifests:
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+		crd \
+		paths=./tests/integration/pipeline_service/testapi \
+		output:crd:artifacts:config=./tests/integration/pipeline_service/testapi/crds
+	go run github.com/google/addlicense \
+		-f ./hack/boilerplate.go.txt \
+		./tests/integration/pipeline_service/testapi/crds
+
 clean-fakes:
 	find . -type d -name  '*fakes' | xargs -n1 rm -r
 
@@ -50,7 +64,7 @@ coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	open coverage.html
 
-lint:
+lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
 
 release: gen-manifests

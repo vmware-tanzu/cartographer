@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -33,7 +34,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-var _ = Describe("Reconcile", func() {
+var _ = Describe("Realizer", func() {
 	var (
 		out        *Buffer
 		repository *repositoryfakes.FakeRepository
@@ -63,26 +64,29 @@ var _ = Describe("Reconcile", func() {
 		BeforeEach(func() {
 			templateAPI := &v1alpha1.RunTemplate{
 				Spec: v1alpha1.RunTemplateSpec{
+					Outputs: map[string]string{
+						"myout": "data.has",
+					},
 					Template: runtime.RawExtension{
 						Raw: []byte(D(`{
 								"apiVersion": "v1",
 								"kind": "ConfigMap",
 								"metadata": { "generateName": "my-stamped-resource-" },
-								"data": { "has": "data" }
+								"data": { "has": "is a string" }
 							}`,
 						)),
 					},
 				},
 			}
 			template := templates.NewRunTemplateModel(templateAPI)
-			repository.GetTemplateReturns(template, nil)
+			repository.GetRunTemplateReturns(template, nil)
 		})
 
 		It("stamps out the resource from the template", func() {
-			_ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(pipeline, logger, repository)
 
-			Expect(repository.GetTemplateCallCount()).To(Equal(1))
-			Expect(repository.GetTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
+			Expect(repository.GetRunTemplateCallCount()).To(Equal(1))
+			Expect(repository.GetRunTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Kind": Equal("RunTemplate"),
 					"Name": Equal("my-template"),
@@ -101,14 +105,14 @@ var _ = Describe("Reconcile", func() {
 					"apiVersion": Equal("v1"),
 					"kind":       Equal("ConfigMap"),
 					"data": MatchKeys(IgnoreExtras, Keys{
-						"has": Equal("data"),
+						"has": Equal("is a string"),
 					}),
 				}),
 			)
 		})
 
 		It("returns a happy condition", func() {
-			condition := rlzr.Realize(pipeline, logger, repository)
+			condition, _, _ := rlzr.Realize(pipeline, logger, repository)
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("RunTemplateReady"),
@@ -118,20 +122,34 @@ var _ = Describe("Reconcile", func() {
 			)
 		})
 
+		It("returns the outputs", func() {
+			_, outputs, _ := rlzr.Realize(pipeline, logger, repository)
+			Expect(outputs["myout"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
+		})
+
+		It("returns the stampedObject", func() {
+			_, _, stampedObject := rlzr.Realize(pipeline, logger, repository)
+			Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{
+				"has": "is a string",
+			}))
+			Expect(stampedObject.Object["apiVersion"]).To(Equal("v1"))
+			Expect(stampedObject.Object["kind"]).To(Equal("ConfigMap"))
+		})
+
 		Context("error on Create", func() {
 			BeforeEach(func() {
 				repository.EnsureObjectExistsOnClusterReturns(errors.New("some bad error"))
 			})
 
 			It("logs the error", func() {
-				_ = rlzr.Realize(pipeline, logger, repository)
+				_, _, _ = rlzr.Realize(pipeline, logger, repository)
 
 				Expect(out).To(Say(`"msg":"could not create object"`))
 				Expect(out).To(Say(`"error":"some bad error"`))
 			})
 
 			It("returns a condition stating that it failed to create", func() {
-				condition := rlzr.Realize(pipeline, logger, repository)
+				condition, _, _ := rlzr.Realize(pipeline, logger, repository)
 
 				Expect(*condition).To(
 					MatchFields(IgnoreExtras, Fields{
@@ -144,6 +162,54 @@ var _ = Describe("Reconcile", func() {
 			})
 
 		})
+
+	})
+
+	Context("with unsatisfied output paths", func() {
+		BeforeEach(func() {
+			templateAPI := &v1alpha1.RunTemplate{
+				Spec: v1alpha1.RunTemplateSpec{
+					Outputs: map[string]string{
+						"myout": "data.hasnot",
+					},
+					Template: runtime.RawExtension{
+						Raw: []byte(D(`{
+								"apiVersion": "v1",
+								"kind": "ConfigMap",
+								"metadata": { "generateName": "my-stamped-resource-" },
+								"data": { "has": "is a string" }
+							}`,
+						)),
+					},
+				},
+			}
+			template := templates.NewRunTemplateModel(templateAPI)
+			repository.GetRunTemplateReturns(template, nil)
+		})
+
+		It("logs info about the missing outputs", func() {
+			_, _, _ = rlzr.Realize(pipeline, logger, repository)
+
+			// FIXME need a `Log` matcher so we dont have multiline matches.
+			Expect(out).To(Say(`"level":"info"`))
+			Expect(out).To(Say(`"msg":"could not get output: get output: evaluate: find results: hasnot is not found"`))
+		})
+
+		It("returns a condition stating that it failed to get outputs", func() {
+			condition, outputs, _ := rlzr.Realize(pipeline, logger, repository)
+
+			Expect(outputs).To(BeNil())
+
+			Expect(*condition).To(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":    Equal("RunTemplateReady"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Reason":  Equal("OutputPathNotSatisfied"),
+					"Message": Equal("get output: evaluate: find results: hasnot is not found"),
+				}),
+			)
+		})
+
 	})
 
 	Context("with an invalid RunTemplate", func() {
@@ -154,18 +220,18 @@ var _ = Describe("Reconcile", func() {
 				},
 			}
 			template := templates.NewRunTemplateModel(templateAPI)
-			repository.GetTemplateReturns(template, nil)
+			repository.GetRunTemplateReturns(template, nil)
 		})
 
 		It("logs the error", func() {
-			_ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(pipeline, logger, repository)
 
 			Expect(out).To(Say(`"msg":"could not stamp template"`))
 			Expect(out).To(Say(`"error":"unmarshal to JSON: unexpected end of JSON input"`))
 		})
 
 		It("returns a condition stating that it failed to stamp", func() {
-			condition := rlzr.Realize(pipeline, logger, repository)
+			condition, _, _ := rlzr.Realize(pipeline, logger, repository)
 
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{
@@ -181,7 +247,7 @@ var _ = Describe("Reconcile", func() {
 
 	Context("the RunTemplate cannot be fetched", func() {
 		BeforeEach(func() {
-			repository.GetTemplateReturns(nil, errors.New("Errol mcErrorFace"))
+			repository.GetRunTemplateReturns(nil, errors.New("Errol mcErrorFace"))
 
 			pipeline = &v1alpha1.Pipeline{
 				Spec: v1alpha1.PipelineSpec{
@@ -195,14 +261,14 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("logs the error", func() {
-			_ = rlzr.Realize(pipeline, logger, repository)
+			_, _, _ = rlzr.Realize(pipeline, logger, repository)
 
 			Expect(out).To(Say(`"msg":"could not get RunTemplate 'my-template'"`))
 			Expect(out).To(Say(`"error":"Errol mcErrorFace"`))
 		})
 
 		It("return the condition for a missing RunTemplate", func() {
-			condition := rlzr.Realize(pipeline, logger, repository)
+			condition, _, _ := rlzr.Realize(pipeline, logger, repository)
 
 			Expect(*condition).To(
 				MatchFields(IgnoreExtras, Fields{

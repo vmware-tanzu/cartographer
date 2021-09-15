@@ -20,14 +20,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
-  name: pipelines.carto.run
+  name: tests.test.run
 spec:
-  group: carto.run
+  group: test.run
   names:
-    kind: Pipeline
-    listKind: PipelineList
-    plural: pipelines
-    singular: pipeline
+    kind: Test
+    listKind: TestList
+    plural: tests
+    singular: test
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -48,20 +48,10 @@ spec:
             type: object
           spec:
             properties:
-              runTemplateRef:
-                properties:
-                  kind:
-                    type: string
-                  name:
-                    minLength: 1
-                    type: string
-                  namespace:
-                    type: string
-                required:
-                - name
-                type: object
+              foo:
+                type: string
             required:
-            - runTemplateRef
+            - foo
             type: object
           status:
             properties:
@@ -137,10 +127,6 @@ spec:
               observedGeneration:
                 format: int64
                 type: integer
-              outputs:
-                additionalProperties:
-                  x-kubernetes-preserve-unknown-fields: true
-                type: object
             type: object
         required:
         - metadata
