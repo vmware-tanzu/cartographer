@@ -64,7 +64,7 @@ coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	open coverage.html
 
-lint:
+lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
 
 release: gen-manifests
