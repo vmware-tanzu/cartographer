@@ -138,7 +138,17 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 		return fmt.Errorf("watch [pipeline-service]: %w", err)
 	}
 
-	// TODO: need a watcher for RunTemplates, and an accomponying funcMap
+	mapper := Mapper{
+		Client: mgr.GetClient(),
+		Logger: mgr.GetLogger().WithName("pipeline"),
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.RunTemplate{}},
+		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToPipelineRequests),
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
 
 	return nil
 }
