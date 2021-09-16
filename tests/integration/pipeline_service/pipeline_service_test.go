@@ -44,7 +44,6 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 		ctx = context.Background()
 	})
 
-	// TODO: ask team about inspecting template.metadata.name and warning/blocking for UX
 	Describe("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
