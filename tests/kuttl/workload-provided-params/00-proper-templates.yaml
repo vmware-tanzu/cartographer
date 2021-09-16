@@ -32,6 +32,6 @@ spec:
     metadata:
       name: test-deliverable-source
     value:
-      cat-lives: $(params.number-of-cat-lives.value)$
+      cat-lives: $(params.number-of-cat-lives..value)$
       critters: $(params.broodx-cicadas-per-acre.value)$
       every-problem: $(params.every-problem.value)$

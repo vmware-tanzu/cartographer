@@ -196,7 +196,7 @@ var _ = Describe("Stamper", func() {
 				`$(params.sub.value)$`, `{"foo": "$(params.extra-for-nested.value)$"}`, map[string]interface{}{"foo": "nested"}, ""),
 
 			Entry(`Single tag, array value and type preserved, nested tags evaluated`,
-				`$(params.sub.value)$`, `["foo", "$(params.extra-for-nested.value)$"]`, []interface{}{"foo", "nested"}, ""),
+				`$(params.sub.value)$`, `["foo", "$(params['extra-for-nested'].value)$"]`, []interface{}{"foo", "nested"}, ""),
 
 			Entry(`Multiple tags, result becomes a string`,
 				`$(params.sub.value)$$(params.sub.value)$`, `5`, "55", ""),

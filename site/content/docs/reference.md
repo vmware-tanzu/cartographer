@@ -164,8 +164,8 @@ spec:
       # 
       # in a template, these can be consumed as: 
       #
-      #    $(sources[<idx>]url)$
-      #    $(sources[<idx>]revision)$
+      #    $(sources.<name>.url)$
+      #    $(sources.<name>.revision)$
       #
       # (optional)
       sources:
@@ -173,7 +173,7 @@ spec:
         #
         - component: source-provider
           # name to be referenced in the template via a query over the list of
-          # sources (for instance, `$(sources.$(name=="provider").url)`.
+          # sources (for instance, `$(sources.provider.url)`.
           #
           # (required, unique in this list)
           #
@@ -183,7 +183,7 @@ spec:
       #
       # in a template, these can be consumed as:
       #
-      #   $(images[<idx>].image)
+      #   $(images.<name>.image)
       #
       images: []
 
@@ -191,12 +191,15 @@ spec:
       # for instance, podTemplateSpecs.
       # in a template, these can be consumed as:
       #
-      #   $(configs[<idx>].config)
+      #   $(configs.<name>.config)
       #
       configs: []
 
       # parameters to override the defaults from the templates.
       # (optional)
+      # in a template, these can be consumed as:
+      #
+      #   $(params.<name>.value)
       #
       params:
         # name of the parameter. (required, unique in this list, and must match
@@ -268,7 +271,7 @@ spec:
       interval: 3m
       url: $(workload.spec.source.git.url)$
       ref: $(workload.spec.source.git.ref)$
-      gitImplementation: $(params[?(@.name=="git-implementation")].value)$
+      gitImplementation: $(params.git-implementation.value)$
       ignore: ""
 ```
 
@@ -312,7 +315,7 @@ spec:
         name: java-builder
       source:
         blob:
-          url: $(sources[0].url)$
+          url: $(sources.provider.url)$
 ```
 
 _ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_image_template.go)_
@@ -356,7 +359,7 @@ spec:
         spec:
           containers:
             - name: workload
-              image: $(images[?(@.name=="solo-image-provider")].image)$
+              image: $(images.solo-image-provider.image)$
               env: $(workload.spec.env)$
               resources: $(workload.spec.resources)$
               securityContext:
@@ -420,7 +423,7 @@ spec:
                   template:
                     spec:
                       containers:
-                        - image: $(images[0].image)$
+                        - image: $(images.<name-of-image-provider>.image)$
                           securityContext:
                             runAsUser: 1000
       template:
