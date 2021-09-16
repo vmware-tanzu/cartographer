@@ -129,28 +129,28 @@ var _ = Describe("Stamper", func() {
 					},
 				}
 				params := templates.Params{
-					{
+					"sub": {
 						Name: "sub",
 						Value: apiextensionsv1.JSON{
 							Raw: []byte(subJSON),
 						},
 					},
-					{
+					"extra-for-nested": {
 						Name: "extra-for-nested",
 						Value: apiextensionsv1.JSON{
 							Raw: []byte(`"nested"`),
 						},
 					},
-					{
+					"infinite-recurse": {
 						Name: "infinite-recurse",
 						Value: apiextensionsv1.JSON{
-							Raw: []byte(`"$(params[0].value)$"`),
+							Raw: []byte(`"$(params.sub.value)$"`),
 						},
 					},
-					{
+					"bigger-infinite-recurse": {
 						Name: "bigger-infinite-recurse",
 						Value: apiextensionsv1.JSON{
-							Raw: []byte(`"$(params[2].value)$"`),
+							Raw: []byte(`"$(params.infinite-recurse.value)$"`),
 						},
 					},
 				}
@@ -184,49 +184,49 @@ var _ = Describe("Stamper", func() {
 				`$($()$`, `"some-value"`, "", "unrecognized character in action"),
 
 			Entry(`Single tag, string value and type preserved`,
-				`$(params[0].value)$`, `"5"`, "5", ""),
+				`$(params.sub.value)$`, `"5"`, "5", ""),
 
 			Entry(`Single tag, string value with nested tag`,
-				`$(params[0].value)$`, `"$(params[1].value)$"`, "nested", ""),
+				`$(params.sub.value)$`, `"$(params.extra-for-nested.value)$"`, "nested", ""),
 
 			Entry(`Single tag, number value and type preserved`,
-				`$(params[0].value)$`, `5`, float64(5), ""),
+				`$(params.sub.value)$`, `5`, float64(5), ""),
 
 			Entry(`Single tag, map value and type preserved, nested tags evaluated`,
-				`$(params[0].value)$`, `{"foo": "$(params[1].value)$"}`, map[string]interface{}{"foo": "nested"}, ""),
+				`$(params.sub.value)$`, `{"foo": "$(params.extra-for-nested.value)$"}`, map[string]interface{}{"foo": "nested"}, ""),
 
 			Entry(`Single tag, array value and type preserved, nested tags evaluated`,
-				`$(params[0].value)$`, `["foo", "$(params[1].value)$"]`, []interface{}{"foo", "nested"}, ""),
+				`$(params.sub.value)$`, `["foo", "$(params.extra-for-nested.value)$"]`, []interface{}{"foo", "nested"}, ""),
 
 			Entry(`Multiple tags, result becomes a string`,
-				`$(params[0].value)$$(params[0].value)$`, `5`, "55", ""),
+				`$(params.sub.value)$$(params.sub.value)$`, `5`, "55", ""),
 
 			Entry(`Adjacent non-tag (letter), result becomes a string`,
-				`b$(params[0].value)$`, `5`, "b5", ""),
+				`b$(params.sub.value)$`, `5`, "b5", ""),
 
 			Entry(`Adjacent non-tag (number), result still becomes a string`,
-				`5$(params[0].value)$`, `5`, "55", ""),
+				`5$(params.sub.value)$`, `5`, "55", ""),
 
 			Entry(`Adjacent non-tag, string value with nested tag`,
-				`HI:$(params[0].value)$`, `"$(params[1].value)$"`, "HI:nested", ""),
+				`HI:$(params.sub.value)$`, `"$(params.extra-for-nested.value)$"`, "HI:nested", ""),
 
 			Entry(`Looks like an array, but result must be preserved as string`,
-				`[$(params[0].value)$]`, `5`, "[5]", ""),
+				`[$(params.sub.value)$]`, `5`, "[5]", ""),
 
 			Entry(`Looks like a map, but result must be preserved as string`,
-				`{\"foo\": $(params[0].value)$}`, `5`, `{"foo": 5}`, ""),
+				`{\"foo\": $(params.sub.value)$}`, `5`, `{"foo": 5}`, ""),
 
 			Entry(`Infinite recursion should error`,
-				`$(params[0].value)$`, `"$(params[2].value)$"`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub.value)$`, `"$(params.infinite-recurse.value)$"`, nil, "infinite tag loop detected: $(params.sub.value)$ -> $(params.infinite-recurse.value)$ -> $(params.sub.value)$"),
 
 			Entry(`Infinite recursion should error`,
-				`$(params[0].value)$`, `"$(params[3].value)$"`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[3].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub.value)$`, `"$(params.bigger-infinite-recurse.value)$"`, nil, "infinite tag loop detected: $(params.sub.value)$ -> $(params.bigger-infinite-recurse.value)$ -> $(params.infinite-recurse.value)$ -> $(params.sub.value)$"),
 
 			Entry(`Infinite recursion with a map should error`,
-				`$(params[0].value)$`, `{"foo": "$(params[2].value)$"}`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub.value)$`, `{"foo": "$(params.infinite-recurse.value)$"}`, nil, "infinite tag loop detected: $(params.sub.value)$ -> $(params.infinite-recurse.value)$ -> $(params.sub.value)$"),
 
 			Entry(`Infinite recursion with an array should error`,
-				`$(params[0].value)$`, `["foo", "$(params[2].value)$"]`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub.value)$`, `["foo", "$(params.infinite-recurse.value)$"]`, nil, "infinite tag loop detected: $(params.sub.value)$ -> $(params.infinite-recurse.value)$ -> $(params.sub.value)$"),
 		)
 
 		DescribeTable("tag evaluation of ytt template",

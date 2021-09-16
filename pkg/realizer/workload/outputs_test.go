@@ -50,9 +50,9 @@ var _ = Describe("Outputs", func() {
 					}
 					inputs := outs.GenerateInputs(component)
 					Expect(inputs.Sources).To(HaveLen(1))
-					Expect(inputs.Sources[0].Name).To(Equal("source-ref"))
-					Expect(inputs.Sources[0].URL).To(Equal("source-url"))
-					Expect(inputs.Sources[0].Revision).To(Equal("source-revision"))
+					Expect(inputs.Sources["source-ref"].Name).To(Equal("source-ref"))
+					Expect(inputs.Sources["source-ref"].URL).To(Equal("source-url"))
+					Expect(inputs.Sources["source-ref"].Revision).To(Equal("source-revision"))
 				})
 			})
 
@@ -94,8 +94,8 @@ var _ = Describe("Outputs", func() {
 					}
 					inputs := outs.GenerateInputs(component)
 					Expect(inputs.Images).To(HaveLen(1))
-					Expect(inputs.Images[0].Name).To(Equal("image-ref"))
-					Expect(inputs.Images[0].Image).To(Equal("image12345"))
+					Expect(inputs.Images["image-ref"].Name).To(Equal("image-ref"))
+					Expect(inputs.Images["image-ref"].Image).To(Equal("image12345"))
 				})
 			})
 
@@ -138,8 +138,8 @@ var _ = Describe("Outputs", func() {
 					}
 					inputs := outs.GenerateInputs(component)
 					Expect(inputs.Configs).To(HaveLen(1))
-					Expect(inputs.Configs[0].Name).To(Equal("config-ref"))
-					Expect(inputs.Configs[0].Config).To(Equal("config12345"))
+					Expect(inputs.Configs["config-ref"].Name).To(Equal("config-ref"))
+					Expect(inputs.Configs["config-ref"].Config).To(Equal("config12345"))
 				})
 			})
 

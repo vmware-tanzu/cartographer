@@ -58,8 +58,8 @@ spec:
     metadata:
       name: example-image-configmap
     data:
-      player_current_lives: $(sources[0].url)$
-      some_other_info: $(sources[?(@.name=="solo-source-provider")].revision)$
+      player_current_lives: $(sources.solo-source-provider.url)$
+      some_other_info: $(sources.solo-source-provider.revision)$
   imagePath: data.some_other_info
 
 ---
@@ -74,7 +74,7 @@ spec:
     metadata:
       name: example-config-configmap
     data:
-      favorite_color: $(images[0].image)$
+      favorite_color: $(images.solo-image-provider.image)$
   configPath: data.favorite_color
 
 ---
@@ -89,4 +89,4 @@ spec:
     metadata:
       name: example-config
     data:
-      best_name: $(configs[0].config)$
+      best_name: $(configs.solo-config-provider.config)$

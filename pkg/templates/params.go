@@ -25,21 +25,24 @@ type Param struct {
 	Value apiextensionsv1.JSON `json:"value"`
 }
 
-type Params []Param
+type Params map[string]Param
 
 func ParamsBuilder(defaultParams v1alpha1.DefaultParams, componentParams []v1alpha1.SupplyChainParam) Params {
 	newParams := Params{}
 	for _, param := range defaultParams {
-		newParams = append(newParams, Param{
+		newParams[param.Name] = Param{
 			Name:  param.Name,
 			Value: param.DefaultValue,
-		})
+		}
 	}
 
-	for i, param := range newParams {
+	for key := range newParams {
 		for _, override := range componentParams {
-			if param.Name == override.Name {
-				newParams[i].Value = override.Value
+			if key == override.Name {
+				newParams[key] = Param{
+					Name:  key,
+					Value: override.Value,
+				}
 			}
 		}
 	}

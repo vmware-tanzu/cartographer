@@ -25,11 +25,11 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 type WorkloadTemplatingContext struct {
-	Params   templates.Params        `json:"params"`
-	Workload *v1alpha1.Workload      `json:"workload"`
-	Sources  []templates.SourceInput `json:"sources"`
-	Images   []templates.ImageInput  `json:"images"`
-	Configs  []templates.ConfigInput `json:"configs"`
+	Params   templates.Params                 `json:"params"`
+	Workload *v1alpha1.Workload               `json:"workload"`
+	Sources  map[string]templates.SourceInput `json:"sources"`
+	Images   map[string]templates.ImageInput  `json:"images"`
+	Configs  map[string]templates.ConfigInput `json:"configs"`
 }
 
 //counterfeiter:generate . ComponentRealizer

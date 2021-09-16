@@ -38,9 +38,9 @@ import (
 )
 
 type Inputs struct {
-	Sources []SourceInput `json:"sources"`
-	Images  []ImageInput  `json:"images"`
-	Configs []ConfigInput `json:"configs"`
+	Sources map[string]SourceInput `json:"sources"`
+	Images  map[string]ImageInput  `json:"images"`
+	Configs map[string]ConfigInput `json:"configs"`
 }
 
 type Labels map[string]string
