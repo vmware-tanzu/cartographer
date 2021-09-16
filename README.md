@@ -129,7 +129,7 @@ Succeeded
 
 ps.: if you didn't use `kapp`, but instead just `kubectl apply`, make sure you
 wait for the deployment to finish before proceeding as `kubectl apply` doesn't
-wait by default: 
+wait by default:
 
 ```bash
 kubectl get deployment --namespace cartographer-system --watch
@@ -144,6 +144,126 @@ When "READY" reaches `1/1` (i.e., all the instances are up and running), hit
 
 Once finished, Project Cartographer has been installed in the cluster -
 navigate to the [examples directory](./examples) for a walkthrough.
+
+
+### extra: installation using Carvel Packaging
+
+Although Cartographer can be installed via plain `kubectl apply` or  `kapp
+deploy` like mentioned above, this repository also provides [carvel Packaging]
+objects.
+
+To make use of them, first, make sure those pre-requisites above are satified
+
+1. admin access to a Kubernetes Cluster and [cert-manager]
+
+2. [kapp-controller] is already installed in the cluster
+
+```bash
+kubectl get crd packageinstalls.packaging.carvel.dev
+```
+```console
+NAME                                   CREATED AT
+packageinstalls.packaging.carvel.dev   2021-09-13T14:32:00Z
+```
+
+In case you don't (i.e., you see _"packageinstalls.packaging.carvel.dev" not
+found_), proceed with installing it.
+
+```bash
+kapp deploy --yes -a kapp-controller \
+  -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.24.0/release.yml
+```
+```console
+Target cluster 'https://127.0.0.1:39993' (nodes: cartographer-control-plane)
+
+Changes
+
+Namespace        Name                                                    Kind
+(cluster)        apps.kappctrl.k14s.io                                   CustomResourceDefinition
+^                internalpackagemetadatas.internal.packaging.carvel.dev  CustomResourceDefinition
+^                internalpackages.internal.packaging.carvel.dev          CustomResourceDefinition
+^                kapp-controller                                         Namespace
+
+
+2:56:08PM: ---- waiting on 1 changes [14/15 done] ----
+2:56:13PM: ok: reconcile apiservice/v1alpha1.data.packaging.carvel.dev (apiregistration.k8s.io/v1) cluster
+2:56:13PM: ---- applying complete [15/15 done] ----
+2:56:13PM: ---- waiting complete [15/15 done] ----
+
+Succeeded
+```
+
+3. the `default` service account has the capabilities necessary for installing
+   submitting all those objects above to the cluster
+
+```bash
+kubectl create clusterrolebinding default-cluster-admin \
+	--clusterrole=cluster-admin \
+	--serviceaccount=default:default
+```
+```console
+clusterrolebinding.rbac.authorization.k8s.io/default-cluster-admin created
+```
+
+That done, submit the packaging objects to Kubernetes so that `kapp-controller`
+will materialize them into an installation of Cartographer:
+
+```bash
+kapp deploy --yes -a cartographer -f ./release/package
+```
+```console
+Target cluster 'https://127.0.0.1:42483' (nodes: cartographer-control-plane)
+
+Changes
+
+Namespace  Name                              Kind             Conds.  Age  Op      Op st.  Wait to    Rs  Ri
+default    cartographer.carto.run            PackageMetadata  -       -    create  -       reconcile  -   -
+^          cartographer.carto.run.0.0.0-dev  Package          -       -    create  -       reconcile  -   -
+^          cartographer.carto.run.0.0.0-dev  PackageInstall   -       -    create  -       reconcile  -   -
+
+...
+
+1:14:44PM: ---- applying 2 changes [0/3 done] ----
+1:14:44PM: create packagemetadata/cartographer.carto.run (data.packaging.carvel.dev/v1alpha1) namespace: default
+1:14:54PM: ok: reconcile packageinstall/cartographer.carto.run.0.0.0-dev (packaging.carvel.dev/v1alpha1) namespace: default
+1:14:54PM: ---- applying complete [3/3 done] ----
+1:14:54PM: ---- waiting complete [3/3 done] ----
+
+Succeeded
+```
+
+ps.: if you relocated the images here to a private registry that requires
+authentication, make sure you create a Secret with the credentials to the
+registry as well as a `SecretExport` object to make those credentials available
+to other namespaces.
+
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials
+type: kubernetes.io/dockerconfigjson # needs to be this type
+stringData:
+  .dockerconfigjson: |
+    {
+            "auths": {
+                    "<registry>": {
+                            "username": "<username>",
+                            "password": "<password>"
+                    }
+            }
+    }
+
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: registry-credentials
+spec:
+  toNamespaces:
+    - "*"
+```
 
 
 ## Uninstall
@@ -225,8 +345,9 @@ Refer to [CODE-OF-CONDUCT.md](CODE-OF-CONDUCT.md) for details on our code of con
 
 Refer to [LICENSE](LICENSE) for details.
 
-
 [admission webhook]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+[carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
 [cert-manager]: https://github.com/jetstack/cert-manager
+[kapp-controller]: https://carvel.dev/kapp-controller/
 [kapp]: https://carvel.dev/kapp/
 [kind]: https://github.com/kubernetes-sigs/kind
