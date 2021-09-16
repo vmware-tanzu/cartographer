@@ -65,10 +65,10 @@ func (c *ClusterTemplate) ValidateDelete() error {
 
 func (t *TemplateSpec) validate() error {
 	if t.Template == nil && t.Ytt == "" {
-		return fmt.Errorf("invalid template: must specify template or ytt, found neither")
+		return fmt.Errorf("invalid template: must specify one of template or ytt, found neither")
 	}
 	if t.Template != nil && t.Ytt != "" {
-		return fmt.Errorf("invalid template: must specify template or ytt, found both")
+		return fmt.Errorf("invalid template: must specify one of template or ytt, found both")
 	}
 	if t.Template != nil {
 		obj := metav1.PartialObjectMetadata{}

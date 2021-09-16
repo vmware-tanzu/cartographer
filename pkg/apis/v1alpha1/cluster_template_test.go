@@ -92,7 +92,7 @@ var _ = Describe("ClusterTemplate", func() {
 			Context("template missing", func() {
 				It("succeeds", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid template: must specify template or ytt, found neither"))
+						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
 				})
 			})
 
@@ -117,7 +117,7 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("succeeds", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid template: must specify template or ytt, found both"))
+						To(MatchError("invalid template: must specify one of template or ytt, found both"))
 				})
 			})
 		})
@@ -174,7 +174,7 @@ var _ = Describe("ClusterTemplate", func() {
 			Context("template missing", func() {
 				It("succeeds", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid template: must specify template or ytt, found neither"))
+						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
 				})
 			})
 
@@ -199,7 +199,7 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("succeeds", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid template: must specify template or ytt, found both"))
+						To(MatchError("invalid template: must specify one of template or ytt, found both"))
 				})
 			})
 		})
