@@ -35,7 +35,7 @@ type ExpiringCache interface {
 //counterfeiter:generate . RepoCache
 type RepoCache interface {
 	Set(submitted, persisted *unstructured.Unstructured)
-	UnchangedSinceCached(local *unstructured.Unstructured, remote []unstructured.Unstructured) *unstructured.Unstructured
+	UnchangedSinceCached(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
 	Refresh(submitted *unstructured.Unstructured)
 }
 
@@ -67,7 +67,7 @@ func (c *cache) Refresh(submitted *unstructured.Unstructured) {
 	}
 }
 
-func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingList []unstructured.Unstructured) *unstructured.Unstructured {
+func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
 	submittedKey := getKey(submitted, submittedCachePrefix)
 	persistedKey := getKey(submitted, persistedCachePrefix)
 	submittedCached, ok := c.ec.Get(submittedKey)
@@ -92,7 +92,7 @@ func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, exist
 
 		sameSame := reflect.DeepEqual(existingSpec, persistedCachedSpec)
 		if sameSame {
-			return &existing
+			return existing
 		} else {
 			continue
 		}

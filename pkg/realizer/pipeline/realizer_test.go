@@ -16,6 +16,7 @@ package pipeline_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	. "github.com/MakeNowJust/heredoc/dot"
@@ -26,6 +27,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -33,15 +35,17 @@ import (
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/tests/integration/pipeline_service/testapi"
 )
 
 var _ = Describe("Realizer", func() {
 	var (
-		out        *Buffer
-		repository *repositoryfakes.FakeRepository
-		logger     logr.Logger
-		rlzr       realizer.Realizer
-		pipeline   *v1alpha1.Pipeline
+		out                 *Buffer
+		repository          *repositoryfakes.FakeRepository
+		logger              logr.Logger
+		rlzr                realizer.Realizer
+		pipeline            *v1alpha1.Pipeline
+		createdUnstructured *unstructured.Unstructured
 	)
 
 	BeforeEach(func() {
@@ -63,24 +67,51 @@ var _ = Describe("Realizer", func() {
 
 	Context("with a valid RunTemplate", func() {
 		BeforeEach(func() {
-			templateAPI := &v1alpha1.RunTemplate{
+			testObj := testapi.Test{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Test",
+					APIVersion: "test.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "my-stamped-resource-",
+				},
+				Spec: testapi.TestSpec{
+					Foo: "is a string",
+				},
+				Status: testapi.TestStatus{
+					ObservedGeneration: 1,
+					Conditions: []metav1.Condition{{
+						Type:               "Succeeded",
+						Status:             "True",
+						LastTransitionTime: metav1.Now(),
+						Reason:             "",
+					}},
+				},
+			}
+			dbytes, err := json.Marshal(testObj)
+			Expect(err).ToNot(HaveOccurred())
+
+			var templateAPI = &v1alpha1.RunTemplate{
 				Spec: v1alpha1.RunTemplateSpec{
 					Outputs: map[string]string{
-						"myout": "data.has",
+						"myout": "spec.foo",
 					},
 					Template: runtime.RawExtension{
-						Raw: []byte(D(`{
-								"apiVersion": "v1",
-								"kind": "ConfigMap",
-								"metadata": { "generateName": "my-stamped-resource-" },
-								"data": { "has": "is a string" }
-							}`,
-						)),
+						Raw: dbytes,
 					},
 				},
 			}
 			template := templates.NewRunTemplateModel(templateAPI)
 			repository.GetRunTemplateReturns(template, nil)
+
+			createdUnstructured = &unstructured.Unstructured{}
+
+			repository.EnsureObjectExistsOnClusterStub = func(obj *unstructured.Unstructured, allowUpdate bool) error {
+				createdUnstructured.Object = obj.Object
+				return nil
+			}
+
+			repository.ListUnstructuredReturns([]*unstructured.Unstructured{createdUnstructured}, nil)
 		})
 
 		It("stamps out the resource from the template", func() {
@@ -95,7 +126,6 @@ var _ = Describe("Realizer", func() {
 			))
 
 			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
-			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
 			stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
 			Expect(allowUpdate).To(BeFalse())
 			Expect(stamped.Object).To(
@@ -103,10 +133,10 @@ var _ = Describe("Realizer", func() {
 					"metadata": MatchKeys(IgnoreExtras, Keys{
 						"generateName": Equal("my-stamped-resource-"),
 					}),
-					"apiVersion": Equal("v1"),
-					"kind":       Equal("ConfigMap"),
-					"data": MatchKeys(IgnoreExtras, Keys{
-						"has": Equal("is a string"),
+					"apiVersion": Equal("test.run/v1alpha1"),
+					"kind":       Equal("Test"),
+					"spec": MatchKeys(IgnoreExtras, Keys{
+						"foo": Equal("is a string"),
 					}),
 				}),
 			)
@@ -130,11 +160,11 @@ var _ = Describe("Realizer", func() {
 
 		It("returns the stampedObject", func() {
 			_, _, stampedObject := rlzr.Realize(context.TODO(), pipeline, logger, repository)
-			Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{
-				"has": "is a string",
+			Expect(stampedObject.Object["spec"]).To(Equal(map[string]interface{}{
+				"foo": "is a string",
 			}))
-			Expect(stampedObject.Object["apiVersion"]).To(Equal("v1"))
-			Expect(stampedObject.Object["kind"]).To(Equal("ConfigMap"))
+			Expect(stampedObject.Object["apiVersion"]).To(Equal("test.run/v1alpha1"))
+			Expect(stampedObject.Object["kind"]).To(Equal("Test"))
 		})
 
 		Context("error on Create", func() {
@@ -186,6 +216,15 @@ var _ = Describe("Realizer", func() {
 			}
 			template := templates.NewRunTemplateModel(templateAPI)
 			repository.GetRunTemplateReturns(template, nil)
+
+			createdUnstructured = &unstructured.Unstructured{}
+
+			repository.EnsureObjectExistsOnClusterStub = func(obj *unstructured.Unstructured, allowUpdate bool) error {
+				createdUnstructured.Object = obj.Object
+				return nil
+			}
+
+			repository.ListUnstructuredReturns([]*unstructured.Unstructured{createdUnstructured}, nil)
 		})
 
 		It("logs info about the missing outputs", func() {

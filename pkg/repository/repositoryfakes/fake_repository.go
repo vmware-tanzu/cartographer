@@ -115,6 +115,19 @@ type FakeRepository struct {
 		result1 *v1alpha1.Workload
 		result2 error
 	}
+	ListUnstructuredStub        func(*unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	listUnstructuredMutex       sync.RWMutex
+	listUnstructuredArgsForCall []struct {
+		arg1 *unstructured.Unstructured
+	}
+	listUnstructuredReturns struct {
+		result1 []*unstructured.Unstructured
+		result2 error
+	}
+	listUnstructuredReturnsOnCall map[int]struct {
+		result1 []*unstructured.Unstructured
+		result2 error
+	}
 	StatusUpdateStub        func(client.Object) error
 	statusUpdateMutex       sync.RWMutex
 	statusUpdateArgsForCall []struct {
@@ -631,6 +644,70 @@ func (fake *FakeRepository) GetWorkloadReturnsOnCall(i int, result1 *v1alpha1.Wo
 	}{result1, result2}
 }
 
+func (fake *FakeRepository) ListUnstructured(arg1 *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+	fake.listUnstructuredMutex.Lock()
+	ret, specificReturn := fake.listUnstructuredReturnsOnCall[len(fake.listUnstructuredArgsForCall)]
+	fake.listUnstructuredArgsForCall = append(fake.listUnstructuredArgsForCall, struct {
+		arg1 *unstructured.Unstructured
+	}{arg1})
+	stub := fake.ListUnstructuredStub
+	fakeReturns := fake.listUnstructuredReturns
+	fake.recordInvocation("ListUnstructured", []interface{}{arg1})
+	fake.listUnstructuredMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) ListUnstructuredCallCount() int {
+	fake.listUnstructuredMutex.RLock()
+	defer fake.listUnstructuredMutex.RUnlock()
+	return len(fake.listUnstructuredArgsForCall)
+}
+
+func (fake *FakeRepository) ListUnstructuredCalls(stub func(*unstructured.Unstructured) ([]*unstructured.Unstructured, error)) {
+	fake.listUnstructuredMutex.Lock()
+	defer fake.listUnstructuredMutex.Unlock()
+	fake.ListUnstructuredStub = stub
+}
+
+func (fake *FakeRepository) ListUnstructuredArgsForCall(i int) *unstructured.Unstructured {
+	fake.listUnstructuredMutex.RLock()
+	defer fake.listUnstructuredMutex.RUnlock()
+	argsForCall := fake.listUnstructuredArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRepository) ListUnstructuredReturns(result1 []*unstructured.Unstructured, result2 error) {
+	fake.listUnstructuredMutex.Lock()
+	defer fake.listUnstructuredMutex.Unlock()
+	fake.ListUnstructuredStub = nil
+	fake.listUnstructuredReturns = struct {
+		result1 []*unstructured.Unstructured
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) ListUnstructuredReturnsOnCall(i int, result1 []*unstructured.Unstructured, result2 error) {
+	fake.listUnstructuredMutex.Lock()
+	defer fake.listUnstructuredMutex.Unlock()
+	fake.ListUnstructuredStub = nil
+	if fake.listUnstructuredReturnsOnCall == nil {
+		fake.listUnstructuredReturnsOnCall = make(map[int]struct {
+			result1 []*unstructured.Unstructured
+			result2 error
+		})
+	}
+	fake.listUnstructuredReturnsOnCall[i] = struct {
+		result1 []*unstructured.Unstructured
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeRepository) StatusUpdate(arg1 client.Object) error {
 	fake.statusUpdateMutex.Lock()
 	ret, specificReturn := fake.statusUpdateReturnsOnCall[len(fake.statusUpdateArgsForCall)]
@@ -711,6 +788,8 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getSupplyChainsForWorkloadMutex.RUnlock()
 	fake.getWorkloadMutex.RLock()
 	defer fake.getWorkloadMutex.RUnlock()
+	fake.listUnstructuredMutex.RLock()
+	defer fake.listUnstructuredMutex.RUnlock()
 	fake.statusUpdateMutex.RLock()
 	defer fake.statusUpdateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

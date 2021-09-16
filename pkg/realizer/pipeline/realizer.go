@@ -80,14 +80,24 @@ func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipel
 		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
 	}
 
-	err = repository.EnsureObjectExistsOnCluster(stampedObject, false)
+	err = repository.EnsureObjectExistsOnCluster(stampedObject.DeepCopy(), false)
 	if err != nil {
 		errorMessage := "could not create object"
 		logger.Error(err, errorMessage)
 		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
 	}
 
-	outputs, err := template.GetOutput(stampedObject)
+	stampedObject.SetLabels(labels)
+	allPipelineStampedObjects, err := repository.ListUnstructured(stampedObject)
+	if err != nil {
+		errorMessage := fmt.Sprintf("could not list pipeline objects: %s", err.Error())
+		logger.Info(errorMessage)
+		return OutputPathNotSatisfiedCondition(err), nil, stampedObject
+	}
+	// TODO: handle the case where the pipeline has changed what type of object it stamps
+	// TODO: handle the case where the pipeline has changed what runTemplate pairs with
+
+	outputs, err := template.GetOutput(pipeline.Status.Outputs, allPipelineStampedObjects)
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("could not get output: %s", err.Error())

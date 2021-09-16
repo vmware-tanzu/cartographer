@@ -17,6 +17,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -51,27 +52,42 @@ func HereYamlF(y string, args ...interface{}) string {
 }
 
 func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) error {
-	aMap, ok := obj.(map[string]interface{})
-	if !ok {
-		return errors.New("field not found")
-	}
+	switch knownType := obj.(type) {
+	case map[string]interface{}:
+		i := strings.Index(key, ".")
+		if i < 0 {
+			_, ok := knownType[key]
+			if !ok {
+				return errors.New("field not found")
+			}
+			knownType[key] = value
+		} else {
+			keyPrefix := key[:i]
+			keySuffix := key[i+1:]
+			subMap, ok := knownType[keyPrefix]
+			if !ok {
+				return errors.New("field not found")
+			}
+			return AlterFieldOfNestedStringMaps(subMap, keySuffix, value)
+		}
 
-	i := strings.Index(key, ".")
-	if i < 0 {
-		_, ok = aMap[key]
-		if !ok {
+		return nil
+	case []interface{}:
+		if key[:1] != "[" {
 			return errors.New("field not found")
 		}
-		aMap[key] = value
-	} else {
-		keyPrefix := key[:i]
-		keySuffix := key[i+1:]
-		subMap, ok := aMap[keyPrefix]
-		if !ok {
+		closeBracket := strings.Index(key, "]")
+		if closeBracket < 0 {
 			return errors.New("field not found")
 		}
-		return AlterFieldOfNestedStringMaps(subMap, keySuffix, value)
+		strIndex := key[1:closeBracket]
+		intIndex, err := strconv.Atoi(strIndex)
+		if err != nil {
+			return errors.New("field not found")
+		}
+		keySuffix := key[closeBracket+1:]
+		return AlterFieldOfNestedStringMaps(knownType[intIndex], keySuffix, value)
+	default:
+		return fmt.Errorf("unexpected type: %T", knownType)
 	}
-
-	return nil
 }
