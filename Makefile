@@ -109,6 +109,5 @@ kodata: cmd/cartographer/kodata
 cmd/cartographer/kodata: cmd/cartographer/kodata/ytt-linux-amd64
 
 cmd/cartographer/kodata/ytt-linux-amd64: Makefile
-	@# TODO support other architectures
 	curl -sL https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.36.0/ytt-linux-amd64 -o cmd/cartographer/kodata/ytt-linux-amd64
 	chmod +x cmd/cartographer/kodata/ytt-linux-amd64

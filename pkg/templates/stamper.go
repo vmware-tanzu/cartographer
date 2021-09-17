@@ -23,7 +23,9 @@ import (
 	"os/exec"
 	"path"
 	"runtime"
+	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/valyala/fasttemplate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -196,6 +198,12 @@ func (s *Stamper) applyTemplate(resourceTemplate []byte) (*unstructured.Unstruct
 }
 
 func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.Unstructured, error) {
+	logger := logr.FromContextOrDiscard(ctx)
+
+	// limit execution duration to protect against infinite loops or cpu wasting templates
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
 	ytt := "ytt"
 	// ko copies the content of the kodata directory into the container at a path referenced by $KO_DATA_PATH
 	if kodata, ok := os.LookupEnv("KO_DATA_PATH"); ok {
@@ -207,7 +215,7 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 	stdout := bytes.NewBuffer([]byte{})
 	stderr := bytes.NewBuffer([]byte{})
 
-	// TODO this would be cleaner if s.TemplatingContext was a known type
+	// inject each key of the template context as a ytt value
 	context := map[string]interface{}{}
 	b, err := json.Marshal(s.TemplatingContext)
 	if err != nil {
@@ -216,19 +224,16 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 	}
 	_ = json.Unmarshal(b, &context)
 	for k := range context {
-		// add each template context key as a data value
 		raw, _ := json.Marshal(context[k])
 		args = append(args, "--data-value-yaml", fmt.Sprintf("%s=%s", k, raw))
 	}
-
-	// TODO do we have a debug logger?
-	// fmt.Printf("ytt command: %s %s\n", ytt, args)
 
 	cmd := exec.CommandContext(ctx, ytt, args...)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
+	logger.V(1).Info("ytt call", "args", args, "input", template)
 	if err := cmd.Run(); err != nil {
 		msg := stderr.String()
 		if msg == "" {
@@ -236,9 +241,11 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 		}
 		return nil, fmt.Errorf("unable to apply ytt template: %s", msg)
 	}
+	output := stdout.String()
+	logger.V(1).Info("ytt result", "output", output)
 
 	stampedObject := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal(stdout.Bytes(), stampedObject); err != nil {
+	if err := yaml.Unmarshal([]byte(output), stampedObject); err != nil {
 		// ytt should never return invalid yaml
 		return nil, err
 	}
