@@ -68,7 +68,7 @@ install_kubebuilder() {
         echo "${KUBERNETES_CHECKSUM} $fname" | sha256sum -c
         tar xvzf $fname
 
-        mv ./kubebuilder /usr/local
+        mv ./kubebuilder/bin/* /usr/local/bin
 }
 
 install_kuttl() {

@@ -43,6 +43,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: run tests
+        env:
+          KUBEBUILDER_ASSETS: /usr/local/bin
         run: make test
 
       - name: setup e2e cluster
