@@ -51,6 +51,7 @@ func NewReconciler(repo repository.Repository, conditionManagerBuilder condition
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
+	ctx = logr.NewContext(ctx, logger)
 	logger.Info("started")
 
 	reconcileCtx := logr.NewContext(ctx, logger)
@@ -86,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	err = r.realizer.Realize(realizer.NewComponentRealizer(workload, r.repo), supplyChain)
+	err = r.realizer.Realize(ctx, realizer.NewComponentRealizer(workload, r.repo), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetClusterTemplateError:

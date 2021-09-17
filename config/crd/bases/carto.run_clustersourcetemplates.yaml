@@ -67,9 +67,10 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               urlPath:
                 type: string
+              ytt:
+                type: string
             required:
             - revisionPath
-            - template
             - urlPath
             type: object
           status:

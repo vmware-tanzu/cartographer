@@ -76,7 +76,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	condition, outputs, stampedObject := r.realizer.Realize(pipeline, logger, r.repository)
+	condition, outputs, stampedObject := r.realizer.Realize(ctx, pipeline, logger, r.repository)
 	if stampedObject != nil {
 		err = r.dynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Pipeline{}})
 		if err != nil {

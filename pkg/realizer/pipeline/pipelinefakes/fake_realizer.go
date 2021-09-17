@@ -2,6 +2,7 @@
 package pipelinefakes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -14,12 +15,13 @@ import (
 )
 
 type FakeRealizer struct {
-	RealizeStub        func(*v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)
+	RealizeStub        func(context.Context, *v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)
 	realizeMutex       sync.RWMutex
 	realizeArgsForCall []struct {
-		arg1 *v1alpha1.Pipeline
-		arg2 logr.Logger
-		arg3 repository.Repository
+		arg1 context.Context
+		arg2 *v1alpha1.Pipeline
+		arg3 logr.Logger
+		arg4 repository.Repository
 	}
 	realizeReturns struct {
 		result1 *v1.Condition
@@ -35,20 +37,21 @@ type FakeRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 *v1alpha1.Pipeline, arg2 logr.Logger, arg3 repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
+func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 *v1alpha1.Pipeline, arg3 logr.Logger, arg4 repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
 	fake.realizeMutex.Lock()
 	ret, specificReturn := fake.realizeReturnsOnCall[len(fake.realizeArgsForCall)]
 	fake.realizeArgsForCall = append(fake.realizeArgsForCall, struct {
-		arg1 *v1alpha1.Pipeline
-		arg2 logr.Logger
-		arg3 repository.Repository
-	}{arg1, arg2, arg3})
+		arg1 context.Context
+		arg2 *v1alpha1.Pipeline
+		arg3 logr.Logger
+		arg4 repository.Repository
+	}{arg1, arg2, arg3, arg4})
 	stub := fake.RealizeStub
 	fakeReturns := fake.realizeReturns
-	fake.recordInvocation("Realize", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Realize", []interface{}{arg1, arg2, arg3, arg4})
 	fake.realizeMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -62,17 +65,17 @@ func (fake *FakeRealizer) RealizeCallCount() int {
 	return len(fake.realizeArgsForCall)
 }
 
-func (fake *FakeRealizer) RealizeCalls(stub func(*v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)) {
+func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, *v1alpha1.Pipeline, logr.Logger, repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = stub
 }
 
-func (fake *FakeRealizer) RealizeArgsForCall(i int) (*v1alpha1.Pipeline, logr.Logger, repository.Repository) {
+func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, *v1alpha1.Pipeline, logr.Logger, repository.Repository) {
 	fake.realizeMutex.RLock()
 	defer fake.realizeMutex.RUnlock()
 	argsForCall := fake.realizeArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeRealizer) RealizeReturns(result1 *v1.Condition, result2 templates.Outputs, result3 *unstructured.Unstructured) {

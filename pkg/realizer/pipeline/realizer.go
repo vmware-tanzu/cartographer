@@ -17,6 +17,7 @@ package pipeline
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -30,7 +31,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)
+	Realize(ctx context.Context, pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)
 }
 
 func NewRealizer() Realizer {
@@ -43,7 +44,7 @@ type TemplatingContext struct {
 	Pipeline *v1alpha1.Pipeline `json:"pipeline"`
 }
 
-func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
+func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
 	pipeline.Spec.RunTemplateRef.Kind = "RunTemplate"
 	if pipeline.Spec.RunTemplateRef.Namespace == "" {
 		pipeline.Spec.RunTemplateRef.Namespace = pipeline.Namespace
@@ -72,7 +73,7 @@ func (p *pipelineRealizer) Realize(pipeline *v1alpha1.Pipeline, logger logr.Logg
 		labels,
 	)
 
-	stampedObject, err := stampContext.Stamp(template.GetResourceTemplate().Raw)
+	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		errorMessage := "could not stamp template"
 		logger.Error(err, errorMessage)

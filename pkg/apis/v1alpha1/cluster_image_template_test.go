@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -42,8 +43,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 		Describe("#Create", func() {
 			Context("template is well formed", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -56,6 +56,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("succeeds", func() {
@@ -65,8 +66,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 
 			Context("template sets object namespace", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -80,6 +80,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("returns an error", func() {
@@ -92,8 +93,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 		Describe("#Update", func() {
 			Context("template is well formed", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -106,6 +106,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("succeeds", func() {
@@ -115,8 +116,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 
 			Context("template sets object namespace", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -130,6 +130,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("returns an error", func() {

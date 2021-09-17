@@ -157,7 +157,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					},
 					Spec: v1alpha1.SourceTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: runtime.RawExtension{Raw: templateBytes()},
+							Template: &runtime.RawExtension{Raw: templateBytes()},
 						},
 						URLPath: "nonexistant.path",
 					},

@@ -15,15 +15,25 @@
 package templates
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/valyala/fasttemplate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
@@ -129,24 +139,20 @@ func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetect
 	}
 }
 
-func (s *Stamper) Stamp(resourceTemplate []byte) (*unstructured.Unstructured, error) {
-	var resourceTemplateJSON interface{}
-	err := json.Unmarshal(resourceTemplate, &resourceTemplateJSON)
+func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateSpec) (*unstructured.Unstructured, error) {
+	var stampedObject *unstructured.Unstructured
+	var err error
+	switch {
+	case resourceTemplate.Template != nil:
+		stampedObject, err = s.applyTemplate(resourceTemplate.Template.Raw)
+	case resourceTemplate.Ytt != "":
+		stampedObject, err = s.applyYtt(ctx, resourceTemplate.Ytt)
+	default:
+		err = fmt.Errorf("unknown resource template type, expected either template or ytt")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal to JSON: %w", err)
+		return nil, err
 	}
-
-	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplateJSON, loopDetector{})
-	if err != nil {
-		return nil, fmt.Errorf("recursively stamp json values: %w", err)
-	}
-
-	unstructuredContent, ok := stampedObjectJSON.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("stamped resource is not a map[string]interface{}: %+v", stampedObjectJSON)
-	}
-	stampedObject := &unstructured.Unstructured{}
-	stampedObject.SetUnstructuredContent(unstructuredContent)
 
 	if stampedObject.GetNamespace() == "" {
 		stampedObject.SetNamespace(s.Owner.GetNamespace())
@@ -165,6 +171,84 @@ func (s *Stamper) Stamp(resourceTemplate []byte) (*unstructured.Unstructured, er
 	})
 
 	s.mergeLabels(stampedObject)
+
+	return stampedObject, nil
+}
+
+func (s *Stamper) applyTemplate(resourceTemplate []byte) (*unstructured.Unstructured, error) {
+	var resourceTemplateJSON interface{}
+	err := json.Unmarshal(resourceTemplate, &resourceTemplateJSON)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal to JSON: %w", err)
+	}
+
+	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplateJSON, loopDetector{})
+	if err != nil {
+		return nil, fmt.Errorf("recursively stamp json values: %w", err)
+	}
+
+	unstructuredContent, ok := stampedObjectJSON.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("stamped resource is not a map[string]interface{}: %+v", stampedObjectJSON)
+	}
+	stampedObject := &unstructured.Unstructured{}
+	stampedObject.SetUnstructuredContent(unstructuredContent)
+
+	return stampedObject, nil
+}
+
+func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.Unstructured, error) {
+	logger := logr.FromContextOrDiscard(ctx)
+
+	// limit execution duration to protect against infinite loops or cpu wasting templates
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	ytt := "ytt"
+	// ko copies the content of the kodata directory into the container at a path referenced by $KO_DATA_PATH
+	if kodata, ok := os.LookupEnv("KO_DATA_PATH"); ok {
+		ytt = path.Join(kodata, fmt.Sprintf("ytt-%s-%s", runtime.GOOS, runtime.GOARCH))
+	}
+
+	args := []string{"-f", "-"}
+	stdin := bytes.NewReader([]byte(template))
+	stdout := bytes.NewBuffer([]byte{})
+	stderr := bytes.NewBuffer([]byte{})
+
+	// inject each key of the template context as a ytt value
+	context := map[string]interface{}{}
+	b, err := json.Marshal(s.TemplatingContext)
+	if err != nil {
+		// NOTE we can ignore subsequent json errors, if there's a issue with the data it will be caught here
+		return nil, fmt.Errorf("unable to marshal template context: %w", err)
+	}
+	_ = json.Unmarshal(b, &context)
+	for k := range context {
+		raw, _ := json.Marshal(context[k])
+		args = append(args, "--data-value-yaml", fmt.Sprintf("%s=%s", k, raw))
+	}
+
+	cmd := exec.CommandContext(ctx, ytt, args...)
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	logger.V(1).Info("ytt call", "args", args, "input", template)
+	if err := cmd.Run(); err != nil {
+		msg := stderr.String()
+		if msg == "" {
+			return nil, fmt.Errorf("unable to apply ytt template: %w", err)
+		}
+		return nil, fmt.Errorf("unable to apply ytt template: %s", msg)
+	}
+	output := stdout.String()
+	logger.V(1).Info("ytt result", "output", output)
+
+	stampedObject := &unstructured.Unstructured{}
+	if err := yaml.Unmarshal([]byte(output), stampedObject); err != nil {
+		// ytt should never return invalid yaml
+		return nil, err
+	}
 
 	return stampedObject, nil
 }

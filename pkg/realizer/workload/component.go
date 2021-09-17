@@ -15,6 +15,8 @@
 package workload
 
 import (
+	"context"
+
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -32,7 +34,7 @@ type WorkloadTemplatingContext struct {
 
 //counterfeiter:generate . ComponentRealizer
 type ComponentRealizer interface {
-	Do(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error)
+	Do(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error)
 }
 
 type componentRealizer struct {
@@ -47,7 +49,7 @@ func NewComponentRealizer(workload *v1alpha1.Workload, repo repository.Repositor
 	}
 }
 
-func (r *componentRealizer) Do(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error) {
+func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error) {
 	template, err := r.repo.GetClusterTemplate(component.TemplateRef)
 	if err != nil {
 		return nil, GetClusterTemplateError{
@@ -78,7 +80,7 @@ func (r *componentRealizer) Do(component *v1alpha1.SupplyChainComponent, supplyC
 		labels,
 	)
 
-	stampedObject, err := stampContext.Stamp(template.GetResourceTemplate().Raw)
+	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		return nil, StampError{
 			Err:       err,

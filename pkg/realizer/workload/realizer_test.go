@@ -15,6 +15,7 @@
 package workload_test
 
 import (
+	"context"
 	"errors"
 
 	. "github.com/onsi/ginkgo"
@@ -58,7 +59,7 @@ var _ = Describe("Realize", func() {
 
 		var executedComponentOrder []string
 
-		componentRealizer.DoCalls(func(component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
+		componentRealizer.DoCalls(func(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
 			executedComponentOrder = append(executedComponentOrder, component.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
 			if component.Name == "component1" {
@@ -75,13 +76,13 @@ var _ = Describe("Realize", func() {
 			return &templates.Output{}, nil
 		})
 
-		Expect(rlzr.Realize(componentRealizer, supplyChain)).To(Succeed())
+		Expect(rlzr.Realize(context.TODO(), componentRealizer, supplyChain)).To(Succeed())
 
 		Expect(executedComponentOrder).To(Equal([]string{"component1", "component2"}))
 	})
 
 	It("returns any error encountered realizing a component", func() {
 		componentRealizer.DoReturns(nil, errors.New("realizing is hard"))
-		Expect(rlzr.Realize(componentRealizer, supplyChain)).To(MatchError("realizing is hard"))
+		Expect(rlzr.Realize(context.TODO(), componentRealizer, supplyChain)).To(MatchError("realizing is hard"))
 	})
 })

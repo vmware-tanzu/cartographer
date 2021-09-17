@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -42,8 +43,7 @@ var _ = Describe("ClusterTemplate", func() {
 		Describe("#Create", func() {
 			Context("template is well formed", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -56,6 +56,7 @@ var _ = Describe("ClusterTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("succeeds", func() {
@@ -65,8 +66,7 @@ var _ = Describe("ClusterTemplate", func() {
 
 			Context("template sets object namespace", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -80,6 +80,7 @@ var _ = Describe("ClusterTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("returns an error", func() {
@@ -87,13 +88,17 @@ var _ = Describe("ClusterTemplate", func() {
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
-		})
 
-		Describe("#Update", func() {
-			Context("template is well formed", func() {
+			Context("template missing", func() {
+				It("succeeds", func() {
+					Expect(template.ValidateCreate()).
+						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
+				})
+			})
+
+			Context("template over specified", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -106,6 +111,34 @@ var _ = Describe("ClusterTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
+					template.Spec.Ytt = `hello: #@ data.values.hello`
+				})
+
+				It("succeeds", func() {
+					Expect(template.ValidateCreate()).
+						To(MatchError("invalid template: must specify one of template or ytt, found both"))
+				})
+			})
+		})
+
+		Describe("#Update", func() {
+			Context("template is well formed", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(&ArbitraryObject{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "some-kind",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-name",
+						},
+						Spec: ArbitrarySpec{
+							SomeKey: "some-val",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("succeeds", func() {
@@ -115,8 +148,7 @@ var _ = Describe("ClusterTemplate", func() {
 
 			Context("template sets object namespace", func() {
 				BeforeEach(func() {
-					var err error
-					template.Spec.Template.Raw, err = json.Marshal(&ArbitraryObject{
+					raw, err := json.Marshal(&ArbitraryObject{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "some-kind",
 							APIVersion: "v1",
@@ -130,11 +162,44 @@ var _ = Describe("ClusterTemplate", func() {
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
 				})
 
 				It("returns an error", func() {
 					Expect(template.ValidateUpdate(nil)).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
+				})
+			})
+
+			Context("template missing", func() {
+				It("succeeds", func() {
+					Expect(template.ValidateUpdate(nil)).
+						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
+				})
+			})
+
+			Context("template over specified", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(&ArbitraryObject{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "some-kind",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-name",
+						},
+						Spec: ArbitrarySpec{
+							SomeKey: "some-val",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
+					template.Spec.Ytt = `hello: #@ data.values.hello`
+				})
+
+				It("succeeds", func() {
+					Expect(template.ValidateUpdate(nil)).
+						To(MatchError("invalid template: must specify one of template or ytt, found both"))
 				})
 			})
 		})
