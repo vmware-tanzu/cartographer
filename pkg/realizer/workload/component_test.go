@@ -87,7 +87,7 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Data: map[string]string{
-						"player_current_lives": `$(sources.source-provider.url)$`,
+						"player_current_lives": `$(source.url)$`,
 						"some_other_info":      `$(sources.source-provider.revision)$`,
 					},
 				}
