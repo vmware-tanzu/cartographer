@@ -47,22 +47,8 @@ jobs:
           KUBEBUILDER_ASSETS: /usr/local/bin
         run: make test
 
-      - name: setup e2e cluster
-        run: ./hack/setup.sh cluster example-dependencies
-
-      - name: prepare dockerhub credentials
-        env:
-          DOCKER_USERNAME: projectcartographer
-          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: ./hack/docker-login.sh
-
-      - name: generate and install release candidate
-        env:
-          REGISTRY: projectcartographer
-        run: ./hack/setup.sh cartographer
-
-      - name: run end to end example
-        run: ./hack/setup.sh example
+      - name: run e2e example
+        run: ./hack/setup.sh cluster cartographer example-dependencies example
 
       - name: prepare release notes
         run: ./hack/release-notes.sh

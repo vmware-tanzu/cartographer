@@ -33,7 +33,7 @@ submit_release_to_github() {
 
         gh release create $version \
                 -F $RELEASE_NOTES_FILE \
-                $(find $ASSETS_DIR -name "*.yaml" -type f)
+                $(find $ASSETS_DIR -type f ! -name $(basename $RELEASE_NOTES_FILE))
 }
 
 git_current_version() {
