@@ -24,12 +24,28 @@ readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-"0.0.0-dev"}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(date -Iseconds)}
 
+readonly YTT_VERSION=${YTT_VERSION:-0.36.0}
+
 main() {
         show_vars
 
         cd $ROOT
+        download_ytt_to_kodata
         create_imgpkg_bundle
         generate_release
+}
+
+download_ytt_to_kodata() {
+        local url=https://github.com/vmware-tanzu/carvel-ytt/releases/download/v${YTT_VERSION}/ytt-linux-amd64
+        local dest=./cmd/cartographer/kodata/ytt-linux-amd64
+
+        test -x $dest && {
+                echo "ytt already found in kodata."
+                return
+        }
+
+        curl -sSL $url -o $dest
+        chmod +x $dest
 }
 
 show_vars() {
@@ -41,6 +57,7 @@ show_vars() {
 	RELEASE_VERSION:	$RELEASE_VERSION
 	ROOT:	       		$ROOT
 	SCRATCH:       		$SCRATCH
+	YTT_VERSION		$YTT_VERSION
 	"
 }
 
