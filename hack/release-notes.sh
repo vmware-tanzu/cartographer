@@ -48,7 +48,8 @@ checksums() {
         local assets_directory=$1
 
         pushd $assets_directory &>/dev/null
-        find . -name "*.yaml" -type f | xargs sha256sum
+        find . -name "*" ! -name $(basename $DESTINATION) -type f |
+                xargs sha256sum
         popd &>/dev/null
 }
 

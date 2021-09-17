@@ -99,11 +99,16 @@ create_imgpkg_bundle() {
                         $SCRATCH/bundle/config/cartographer.yaml
 
         kbld -f $SCRATCH/bundle/config/cartographer.yaml \
-                --imgpkg-lock-output $SCRATCH/bundle/.imgpkg/images.yml >/dev/null
+                --imgpkg-lock-output $SCRATCH/bundle/.imgpkg/images.yml \
+                >/dev/null
 
         imgpkg push -f $SCRATCH/bundle \
                 --bundle $BUNDLE \
                 --lock-output $SCRATCH/bundle.lock.yaml
+
+        imgpkg copy \
+                --bundle $(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
+                --to-tar $SCRATCH/bundle.tar
 }
 
 # generates the final release directory containing the files that are meant to
@@ -117,24 +122,31 @@ create_imgpkg_bundle() {
 # 	│   └── package-metadata.yaml
 # 	│   └── package.yaml
 # 	│
+# 	├── bundle.tar.gz
+# 	│
 # 	└── release.yaml
 #
 generate_release() {
-        local bundle_image=$(awk -F"image: " '{if ($2) print $2;}' $SCRATCH/bundle.lock.yaml)
-
         rm -rf ./release
         mkdir -p ./release/package
 
+        cp $SCRATCH/bundle.tar ./release
         cp $SCRATCH/bundle/config/cartographer.yaml ./release
         for package_fpath in ./packaging/package*.yaml; do
                 ytt --ignore-unknown-comments \
                         -f ./packaging/values.yaml \
                         -f $package_fpath \
-                        --data-value image=$bundle_image \
+                        --data-value image=$(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
                         --data-value releasedAt=$RELEASE_DATE \
                         --data-value version=$RELEASE_VERSION > \
                         ./release/package/$(basename $package_fpath)
         done
+}
+
+image_from_lockfile() {
+        local lockfile=$1
+
+        awk -F"image: " '{if ($2) print $2;}' $lockfile
 }
 
 main "$@"
