@@ -49,6 +49,8 @@ jobs:
           [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
       - name: run tests
+        env:
+          KUBEBUILDER_ASSETS: /usr/local/bin
         run: make test
 
       - name: run e2e example
