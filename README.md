@@ -82,68 +82,125 @@ ps.: although we recommend using [kapp] as provided in the instructions you'll
 see here, its use can be replaced by `kubectl apply`.
 
 
-#### 2. Submit Project Cartographer's Kubernetes objects to the cluster
+#### 2. Install Cartographer
 
-With the prerequisites met, it's a matter of submitting to Kubernetes the
-objects that extend its API and provide the foundation for the controller to
-run inside the cluster.
+First, head to the [releases page] and download the `bundle.tar` file available
+for the release you want to install.
 
 ```bash
-kapp deploy --yes -a cartographer -f ./releases/release.yaml
+CARTOGRAPHER_VERSION=v0.0.6
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/download/v$CARTOGRAPHER_VERSION/bundle.tar
+```
+
+This bundle contains everything we need to install Cartographer, from container
+images to Kubernetes manifests, it's all in the bundle.
+
+First, relocate it from the tarball you just downloaded to a container image
+registry that the  cluster you're willing to install Cartographer has access
+to:
+
+
+```bash
+DOCKER_REPO=10.188.0.3:5000
+
+imgpkg copy \
+  --tar bundle.tar \
+  --to-repo ${DOCKER_REPO?:Required}/cartographer-bundle \
+  --lock-output cartographer-bundle.lock.yaml
 ```
 ```console
-Target cluster 'https://127.0.0.1:34135' (nodes: kind-control-plane)
+copy | importing 2 images...
+copy | done uploading images
+Succeeded
+```
 
-Changes
+With the the bundle and all Cartographer-related images moved to the destination
+registry, we can move on to pulling the YAML files that we can use to submit to
+Kubernetes for installing Cartographer:
 
-Namespace            Name                                Kind                            Conds.  Age  Op      Op st.  Wait to    Rs  Ri
-(cluster)            cartographer-cluster-admin          ClusterRoleBinding              -       -    create  -       reconcile  -   -
-^                    clusterconfigtemplates.carto.run    CustomResourceDefinition        -       -    create  -       reconcile  -   -
-^                    clusterimagetemplates.carto.run     CustomResourceDefinition        -       -    create  -       reconcile  -   -
-^                    clustersourcetemplates.carto.run    CustomResourceDefinition        -       -    create  -       reconcile  -   -
-^                    clustersupplychains.carto.run       CustomResourceDefinition        -       -    create  -       reconcile  -   -
-^                    clustersupplychainvalidator         ValidatingWebhookConfiguration  -       -    create  -       reconcile  -   -
-^                    clustertemplates.carto.run          CustomResourceDefinition        -       -    create  -       reconcile  -   -
-^                    deliverables.carto.run              CustomResourceDefinition        -       -    create  -       reconcile  -   -
-^                    workloads.carto.run                 CustomResourceDefinition        -       -    create  -       reconcile  -   -
-cartographer-system  cartographer-controller             Deployment                      -       -    create  -       reconcile  -   -
-^                    cartographer-controller             ServiceAccount                  -       -    create  -       reconcile  -   -
-^                    cartographer-webhook                Certificate                     -       -    create  -       reconcile  -   -
-^                    cartographer-webhook                Secret                          -       -    create  -       reconcile  -   -
-^                    cartographer-webhook                Service                         -       -    create  -       reconcile  -   -
-^                    selfsigned-issuer                   Issuer                          -       -    create  -       reconcile  -   -
 
-Op:      15 create, 0 delete, 0 update, 0 noop
-Wait to: 15 reconcile, 0 delete, 0 noop
+```bash
+# pull to the directory `cartographer-bundle` the contents of the imgpkg
+# bundle as specified by the lock file.
+#
+imgpkg pull \
+  --lock cartographer-bundle.lock.yaml \
+  --output ./cartographer-bundle
+```
+```console
+Pulling bundle '10.188.0.3:5000/cartographer-bundle@sha256:e296a316385a57048cb189a3a710cecf128a62e77600a495f32d46309c6e8113'
+  Extracting layer 'sha256:0b93d1878c9be97b872f08da8d583796985919df345c39c874766142464d80e7' (1/1)
 
-Continue? [yN]:
-
-8:25:17AM: ---- applying 11 changes [0/15 done] ----
-8:25:18AM: create secret/cartographer-webhook (v1) namespace: cartographer-system
-8:25:18AM: create customresourcedefinition/clusterimagetemplates.carto.run (apiextensions.k8s.io/v1) cluster
-...
+Locating image lock file images...
+The bundle repo (10.188.0.3:5000/cartographer-bundle) is hosting every image specified in the bundle's Images Lock file (.imgpkg/images.yml)
 
 Succeeded
 ```
 
-
-ps.: if you didn't use `kapp`, but instead just `kubectl apply`, make sure you
-wait for the deployment to finish before proceeding as `kubectl apply` doesn't
-wait by default:
+Create the namespace where Cartographer's objects will be placed:
 
 ```bash
-kubectl get deployment --namespace cartographer-system --watch
+kubectl create namespace cartographer-system
 ```
 ```console
-NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
-cartographer-controller   1/1     1            1           3s
+namespace/cartographer-system created
 ```
 
-When "READY" reaches `1/1` (i.e., all the instances are up and running), hit
-`CTRL+c` to interrupt the watch sessions, and you're good to go!
+If the registry you pushed the bundle to is accessible to the cluster without
+any extra authentication needs, skip this step. Otherwise, make sure you
+provide to the `Deployment` object that runs the controller the image pull
+secrets necessary for fetching the image.
 
-Once finished, Project Cartographer has been installed in the cluster -
-navigate to the [examples directory](./examples) for a walkthrough.
+By default, the controller's ServiceAccount points at a placeholder secret
+called 'private-registry-credentials' to be used as the image pull secret, so,
+by creating such secret in the `cartographer-system` namespace Kubernetes will
+then be able to use that secret as the credenital provider for fetching the
+controller's image:
+
+```bash
+# create a secret that will have .dockerconfigjson populated with the
+# credentials for the image registry.
+#
+kubectl create secret -n cartographer-system \
+  docker-registry private-registry-credentials \
+  --docker-server=$DOCKER_REPO \
+  --docker-username=admin \
+  --docker-password=admin
+```
+```console
+secret/private-registry-credentials created
+```
+
+Now that we have the Kubernetes YAML under the `./cartographer-bundle`
+directory, we can make use of a combination of `kbld` and `kapp` to submit the
+Kubernetes the final objects that will define the installation of Cartographer
+already pointing all the image references to your registry:
+
+
+```bash
+# submit to kubernetes the kubernetes objects that describe the installation of
+# Cartographer already pointing all images to the registry we configured
+# ($DOCKER_REPO).
+#
+kapp deploy -a cartographer -f <(kbld -f ./cartographer-bundle)
+```
+```console
+```
+
+
+_(see the [Kubernetes official documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line) 
+on how to create a Secret to pull images from a private Docker registry or
+repository)._
+
+
+
+## Generating a release locally
+
+While we recommend that the installation make use of the bundles published under
+the releases page, you can also generate a local release right from the source
+code if you want.
+
+TODO
 
 
 ### extra: installation using Carvel Packaging
