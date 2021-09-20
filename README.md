@@ -57,7 +57,7 @@ proceed with installing it.
 
 ```bash
 kapp deploy --yes -a cert-manager \
-	-f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.yaml
+	-f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 ```console
 Target cluster 'https://127.0.0.1:39495' (nodes: kind-control-plane)
