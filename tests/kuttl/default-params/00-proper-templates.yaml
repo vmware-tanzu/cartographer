@@ -30,8 +30,8 @@ spec:
     metadata:
       name: test-deliverable-source
     value:
-      cat-lives: $(params[0].value)$
-      critters: $(params[1].value)$
+      cat-lives: $(params.number-of-cat-lives)$
+      critters: $(params.broodx-cicadas-per-acre)$
 
 ---
 
@@ -50,7 +50,7 @@ spec:
     metadata:
       name: test-deliverable-image
     value:
-      hammer: $(params[?(@.name=="every-problem")].value)$
+      hammer: $(params.every-problem)$
 
 ---
 
@@ -71,7 +71,7 @@ spec:
     metadata:
       name: test-deliverable-config
     value:
-      start_and_end: $(params[1].value)$
+      start_and_end: $(params.bookends)$
 
 ---
 
@@ -91,4 +91,4 @@ spec:
     metadata:
       name: test-deliverable
     value:
-      mythic_creatures: $(params[?(@.name=="tricksters")].value)$
+      mythic_creatures: $(params.tricksters)$

@@ -37,12 +37,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
-type Inputs struct {
-	Sources []SourceInput `json:"sources"`
-	Images  []ImageInput  `json:"images"`
-	Configs []ConfigInput `json:"configs"`
-}
-
 type Labels map[string]string
 
 // JsonPathContext is any structure that you intend for jsonpath to treat as it's context.

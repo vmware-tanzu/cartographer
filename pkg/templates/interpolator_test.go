@@ -109,18 +109,13 @@ var _ = Describe("Interpolator", func() {
 			}
 
 			tagInterpolator.Context = struct {
-				Params  []templates.Param `json:"params"`
-				Generic GenericType       `json:"generic"`
+				Params  templates.Params `json:"params"`
+				Generic GenericType      `json:"generic"`
 			}{
-				Params: []templates.Param{
-					{
-						Name:  "an amazing param",
-						Value: apiextensionsv1.JSON{Raw: []byte(`"exactly what you want"`)},
-					},
-					{
-						Name:  "another_param",
-						Value: apiextensionsv1.JSON{Raw: []byte(`"everything you need"`)},
-					},
+
+				Params: templates.Params{
+					"an-amazing-param": apiextensionsv1.JSON{Raw: []byte(`"exactly what you want"`)},
+					"another_param":    apiextensionsv1.JSON{Raw: []byte(`"everything you need"`)},
 				},
 				Generic: GenericType{
 					Name:  "generic-name",
@@ -233,7 +228,7 @@ var _ = Describe("Interpolator", func() {
 
 		Context("given a template referencing a missing list element", func() {
 			BeforeEach(func() {
-				template = []byte("in an empty input, you won't find $(params[0].value)$")
+				template = []byte("in an empty input, you won't find $(params[0])$")
 			})
 
 			It("Returns an error that it cannot evaluate the path", func() {
@@ -245,7 +240,7 @@ var _ = Describe("Interpolator", func() {
 
 		Context("given a template referencing a list element by index", func() {
 			BeforeEach(func() {
-				template = []byte("with the populated input, you can find $(params[1].value)$")
+				template = []byte("with the populated input, you can find $(params.another_param)$")
 			})
 
 			It("returns the proper string", func() {
@@ -260,7 +255,7 @@ var _ = Describe("Interpolator", func() {
 
 		Context("given a template referencing a list element by attribute", func() {
 			BeforeEach(func() {
-				template = []byte(`with the populated input, you can find $(params[?(@.name=="an amazing param")].value)$`)
+				template = []byte(`with the populated input, you can find $(params['an-amazing-param'])$`)
 			})
 
 			It("returns the proper string", func() {
@@ -275,13 +270,13 @@ var _ = Describe("Interpolator", func() {
 
 		Context("given a template referencing a list element by attribute but an unknown key", func() {
 			BeforeEach(func() {
-				template = []byte(`with the populated input, you can find $(params[?(@.name=="an amazing param")].notknown)$`)
+				template = []byte(`with the populated input, you can find $(params['notknown])$`)
 			})
 
 			It("Returns an error that it cannot find the value notknown", func() {
 				_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
 				Expect(err).To(BeMeaningful("interpolate tag: "))
-				Expect(err).To(BeMeaningful("evaluate jsonpath: evaluate: find results: notknown is not found"))
+				Expect(err).To(BeMeaningful("evaluate jsonpath: evaluate: jsonpath parse path '{.params['notknown]}': invalid array index 'notknown"))
 			})
 		})
 	})

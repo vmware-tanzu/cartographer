@@ -55,36 +55,40 @@ func (o Outputs) getComponentConfig(componentName string) templates.Config {
 }
 
 func (o Outputs) GenerateInputs(component *v1alpha1.SupplyChainComponent) *templates.Inputs {
-	inputs := &templates.Inputs{}
+	inputs := &templates.Inputs{
+		Sources: map[string]templates.SourceInput{},
+		Images:  map[string]templates.ImageInput{},
+		Configs: map[string]templates.ConfigInput{},
+	}
 
 	for _, referenceSource := range component.Sources {
 		source := o.getComponentSource(referenceSource.Component)
 		if source != nil {
-			inputs.Sources = append(inputs.Sources, templates.SourceInput{
+			inputs.Sources[referenceSource.Name] = templates.SourceInput{
 				URL:      source.URL,
 				Revision: source.Revision,
 				Name:     referenceSource.Name,
-			})
+			}
 		}
 	}
 
 	for _, referenceImage := range component.Images {
 		image := o.getComponentImage(referenceImage.Component)
 		if image != nil {
-			inputs.Images = append(inputs.Images, templates.ImageInput{
+			inputs.Images[referenceImage.Name] = templates.ImageInput{
 				Image: image,
 				Name:  referenceImage.Name,
-			})
+			}
 		}
 	}
 
 	for _, referenceConfig := range component.Configs {
 		config := o.getComponentConfig(referenceConfig.Component)
 		if config != nil {
-			inputs.Configs = append(inputs.Configs, templates.ConfigInput{
+			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
 				Config: config,
 				Name:   referenceConfig.Name,
-			})
+			}
 		}
 	}
 

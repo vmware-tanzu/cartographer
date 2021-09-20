@@ -24,14 +24,6 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
-type WorkloadTemplatingContext struct {
-	Params   templates.Params        `json:"params"`
-	Workload *v1alpha1.Workload      `json:"workload"`
-	Sources  []templates.SourceInput `json:"sources"`
-	Images   []templates.ImageInput  `json:"images"`
-	Configs  []templates.ConfigInput `json:"configs"`
-}
-
 //counterfeiter:generate . ComponentRealizer
 type ComponentRealizer interface {
 	Do(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error)
@@ -68,18 +60,24 @@ func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyCh
 	}
 
 	inputs := outputs.GenerateInputs(component)
-	stampContext := templates.StamperBuilder(
-		r.workload,
-		WorkloadTemplatingContext{
-			Workload: r.workload,
-			Params:   templates.ParamsBuilder(template.GetDefaultParams(), component.Params),
-			Sources:  inputs.Sources,
-			Images:   inputs.Images,
-			Configs:  inputs.Configs,
-		},
-		labels,
-	)
+	workloadTemplatingContext := map[string]interface{}{
+		"workload": r.workload,
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), component.Params),
+		"sources":  inputs.Sources,
+		"images":   inputs.Images,
+		"configs":  inputs.Configs,
+	}
+	if inputs.OnlyConfig() != nil {
+		workloadTemplatingContext["config"] = inputs.OnlyConfig()
+	}
+	if inputs.OnlyImage() != nil {
+		workloadTemplatingContext["image"] = inputs.OnlyImage()
+	}
+	if inputs.OnlySource() != nil {
+		workloadTemplatingContext["source"] = inputs.OnlySource()
+	}
 
+	stampContext := templates.StamperBuilder(r.workload, workloadTemplatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		return nil, StampError{

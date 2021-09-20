@@ -71,13 +71,13 @@ spec:
         name: go-builder
       source:
         blob:
-          url: $(sources[0].url)$
+          url: $(sources.source.url)$
 
 ---
 #
 #
 # `app-deploy` instantiates a `kapp-ctrl/App` making use of an image that comes
-# as input in the form of `$(images[0].image)$`.
+# as input in the form of `$(images.image.image)$`.
 #
 # the use of `App` here is important because of how `knative` updates the
 # knative service under the hood to include some extra annotations that _can't_
@@ -137,7 +137,7 @@ spec:
                     spec:
                       containers:
                         - name: workload
-                          image: $(images[0].image)$
+                          image: $(images.image.image)$
                           securityContext:
                             runAsUser: 1000
                       imagePullSecrets:

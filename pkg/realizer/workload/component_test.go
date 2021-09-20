@@ -87,8 +87,8 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Data: map[string]string{
-						"player_current_lives": "$(sources[0].url)$",
-						"some_other_info":      "$(sources[?(@.name==\"source-provider\")].revision)$",
+						"player_current_lives": `$(source.url)$`,
+						"some_other_info":      `$(sources.source-provider.revision)$`,
 					},
 				}
 
@@ -271,8 +271,8 @@ var _ = Describe("Component", func() {
 						Namespace: "some-namespace",
 					},
 					Data: map[string]string{
-						"player_current_lives": "$(sources[0].url)$",
-						"some_other_info":      "$(sources[?(@.name==\"source-provider\")].revision)$",
+						"player_current_lives": `$(sources.source-provider.url)$`,
+						"some_other_info":      `$(sources.source-provider.revision)$`,
 					},
 				}
 

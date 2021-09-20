@@ -43,5 +43,5 @@ spec:
     metadata:
       name: test-deliverable-source
     value:
-      urlhere: $(undefined[1].value)$
-      revisionhere: $(params[0].value)$
+      urlhere: $(undefined[1])$
+      revisionhere: $(params[0])$
