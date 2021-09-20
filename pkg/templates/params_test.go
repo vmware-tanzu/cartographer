@@ -51,10 +51,8 @@ var _ = Describe("OverrideDefaultParams", func() {
 			params := templates.ParamsBuilder(defaultParams, componentParams)
 
 			Expect(params).To(HaveLen(2))
-			Expect(params["foo"].Name).To(Equal("foo"))
-			Expect(params["foo"].Value.Raw).To(Equal([]byte("bar")))
-			Expect(params["fizz"].Name).To(Equal("fizz"))
-			Expect(params["fizz"].Value.Raw).To(Equal([]byte("buzz")))
+			Expect(params["foo"].Raw).To(Equal([]byte("bar")))
+			Expect(params["fizz"].Raw).To(Equal([]byte("buzz")))
 		})
 	})
 })

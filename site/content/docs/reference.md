@@ -167,6 +167,11 @@ spec:
       #    $(sources.<name>.url)$
       #    $(sources.<name>.revision)$
       #
+      # if there is only one source, it can be consumed as:
+      #
+      #    $(source.url)$
+      #    $(sources.revision)$
+      #
       # (optional)
       sources:
         # name of the component to provide the source information. (required)
@@ -185,6 +190,10 @@ spec:
       #
       #   $(images.<name>.image)
       #
+      # if there is only one image, it can be consumed as:
+      #
+      #   $(image)
+      #
       images: []
 
       # (optional) set of components that provide kubernetes configuration,
@@ -193,13 +202,17 @@ spec:
       #
       #   $(configs.<name>.config)
       #
+      # if there is only one config, it can be consumed as:
+      #
+      #   $(config)
+      #
       configs: []
 
       # parameters to override the defaults from the templates.
       # (optional)
       # in a template, these can be consumed as:
       #
-      #   $(params.<name>.value)
+      #   $(params.<name>)
       #
       params:
         # name of the parameter. (required, unique in this list, and must match

@@ -20,29 +20,18 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-type Param struct {
-	Name  string               `json:"name"`
-	Value apiextensionsv1.JSON `json:"value"`
-}
-
-type Params map[string]Param
+type Params map[string]apiextensionsv1.JSON
 
 func ParamsBuilder(defaultParams v1alpha1.DefaultParams, componentParams []v1alpha1.SupplyChainParam) Params {
 	newParams := Params{}
 	for _, param := range defaultParams {
-		newParams[param.Name] = Param{
-			Name:  param.Name,
-			Value: param.DefaultValue,
-		}
+		newParams[param.Name] = param.DefaultValue
 	}
 
 	for key := range newParams {
 		for _, override := range componentParams {
 			if key == override.Name {
-				newParams[key] = Param{
-					Name:  key,
-					Value: override.Value,
-				}
+				newParams[key] = override.Value
 			}
 		}
 	}
