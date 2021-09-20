@@ -18,6 +18,7 @@ metadata:
   name: dev
   labels:
     app.tanzu.vmware.com/workload-type: web
+    app.kubernetes.io/part-of: hello-world
 spec:
   source:
     git:

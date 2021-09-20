@@ -46,10 +46,11 @@ spec:
 ---
 #
 #
-# `image` instantiates a `kpack/Image` object, responsible for ensuring that
+# `image` instantiates an `Image` object, responsible for ensuring that
 # there's a container image built and pushed to a container image registry
-# whenever there's either new source code, or its image builder gets na update.
+# whenever there's either new source code, or its image builder gets an update.
 #
+# This template expects a single source as input.
 #
 apiVersion: carto.run/v1alpha1
 kind: ClusterImageTemplate
@@ -71,20 +72,69 @@ spec:
         name: go-builder
       source:
         blob:
-          url: $(sources.source.url)$
+          url: $(source.url)$
 
 ---
 #
 #
-# `app-deploy` instantiates a `kapp-ctrl/App` making use of an image that comes
-# as input in the form of `$(images.image.image)$`.
+# `app-config` instantiates a `ConfigMap` containing Kubernetes configuration for a knative `Service`. This example uses
+# ytt instead of a simple template for more complex templating.
 #
-# the use of `App` here is important because of how `knative` updates the
+# This template expects a single image as input.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: app-config
+spec:
+  ytt: |
+    #@ load("@ytt:data", "data")
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: #@ data.values.workload.metadata.name
+    data:
+      #@yaml/text-templated-strings
+      manifest.yaml: |
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        metadata:
+          name: (@= data.values.workload.metadata.name @)
+          labels:
+            (@- if hasattr(data.values.workload.metadata, "labels"): @)
+            (@- if hasattr(data.values.workload.metadata.labels, "app.kubernetes.io/part-of"): @)
+            app.kubernetes.io/part-of: (@= data.values.workload.metadata.labels["app.kubernetes.io/part-of"] @)
+            (@ end -@)
+            (@ end -@)
+            carto.run/workload-name: (@= data.values.workload.metadata.name @)
+            app.kubernetes.io/component: run
+        spec:
+          template:
+            metadata:
+              annotations:
+                autoscaling.knative.dev/minScale: "1"
+            spec:
+              containers:
+                - name: workload
+                  image: (@= data.values.image @)
+                  securityContext:
+                    runAsUser: 1000
+              imagePullSecrets:
+                - name: registry-credentials
+
+---
+#
+#
+# `app-deploy` instantiates a `App` which applies configuration from a ConfigMap.
+#
+# The use of `App` here is important because of how `knative` updates the
 # knative service under the hood to include some extra annotations that _can't_
 # be mutated once applied by knative's controller. As `kapp` is able to be
 # configured to not patch certain features (something `cartographer` can't
 # yet), we're able to bridge that gap with the use of `kapp-ctrl/App`.
 #
+# This template does not directly accept inputs but instead looks for a ConfigMap with name matching that of the Workload.
 #
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
@@ -100,48 +150,9 @@ spec:
       serviceAccountName: default
       fetch:
         - inline:
-            paths:
-              manifest.yml: |
-                ---
-                apiVersion: kapp.k14s.io/v1alpha1
-                kind: Config
-                rebaseRules:
-                  - path:
-                      - metadata
-                      - annotations
-                      - serving.knative.dev/creator
-                    type: copy
-                    sources: [new, existing]
-                    resourceMatchers: &matchers
-                      - apiVersionKindMatcher:
-                          apiVersion: serving.knative.dev/v1
-                          kind: Service
-                  - path:
-                      - metadata
-                      - annotations
-                      - serving.knative.dev/lastModifier
-                    type: copy
-                    sources: [new, existing]
-                    resourceMatchers: *matchers
-
-                ---
-                apiVersion: serving.knative.dev/v1
-                kind: Service
-                metadata:
+            pathsFrom:
+              - configMapRef:
                   name: $(workload.metadata.name)$
-                spec:
-                  template:
-                    metadata:
-                      annotations:
-                        autoscaling.knative.dev/minScale: "1"
-                    spec:
-                      containers:
-                        - name: workload
-                          image: $(images.image.image)$
-                          securityContext:
-                            runAsUser: 1000
-                      imagePullSecrets:
-                        - name: registry-credentials
       template:
         - ytt: {}
       deploy:
