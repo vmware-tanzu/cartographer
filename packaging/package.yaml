@@ -37,6 +37,13 @@ spec:
       template:
         - ytt:
             ignoreUnknownComments: true
+            inline:
+              paths:
+                namespace.yaml: |-
+                  apiVersion: v1
+                  kind: Namespace
+                  metadata:
+                    name: cartographer-system
         - kbld: {}
       deploy:
         - kapp:

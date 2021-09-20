@@ -31,12 +31,12 @@ main() {
 update_or_create_docker_config() {
         local server=$1
         local token=$2
-        local config=$3
+        local config_file=$3
 
         readonly qry='.auths["%s"] = {"auth": "%s"}'
 
-	test -s $config || echo '{}' > $config
-        cat $config | jq "$(printf "$qry" $server $token)" >$config
+        test -s $config_file || echo '{}' >$config_file
+        cat $config_file | jq "$(printf "$qry" $server $token)" >$config_file
 }
 
 basic_auth() {

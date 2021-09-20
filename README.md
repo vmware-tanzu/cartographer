@@ -101,8 +101,14 @@ to:
 
 
 ```bash
+# set the repository where images should be reloated to, for instance, to
+# relocate to a project named "foo" in DockerHub: DOCKER_REPO=foo
+#
 DOCKER_REPO=10.188.0.3:5000
 
+
+# relocate
+#
 imgpkg copy \
   --tar bundle.tar \
   --to-repo ${DOCKER_REPO?:Required}/cartographer-bundle \
@@ -185,6 +191,24 @@ already pointing all the image references to your registry:
 kapp deploy -a cartographer -f <(kbld -f ./cartographer-bundle)
 ```
 ```console
+resolve | final: 10.188.0.3:5000/cartographer-27a7f49719016b1cfc534e74c3d36805@sha256:26c3dd5c8a38658218f22c03136c3b8adf45398a72ea7dde9524ec24bfa04783 -> 10.188.0.3:5000/cartographer-bundle@sha256:26c3dd5c8a38658218f22c03136c3b8adf45398a72ea7dde9524ec24bfa04783
+Target cluster 'https://127.0.0.1:32907' (nodes: cartographer-control-plane)
+
+Changes
+
+Namespace            Name                              Kind                      Conds.  Age  Op      Op st.  Wait to    Rs  Ri
+(cluster)            clusterconfigtemplates.carto.run  CustomResourceDefinition  0/0 t   49s  update  -       reconcile  ok  -
+^                    clusterimagetemplates.carto.run   CustomResourceDefinition  0/0 t   49s  update  -       reconcile  ok  -
+^                    clustersourcetemplates.carto.run  CustomResourceDefinition  0/0 t   49s  update  -       reconcile  ok  -
+^                    clustersupplychains.carto.run     CustomResourceDefinition  0/0 t   48s  update  -       reconcile  ok  -
+...
+
+
+6:34:57PM: ok: reconcile customresourcedefinition/clustersupplychains.carto.run (apiextensions.k8s.io/v1) cluster
+6:34:57PM: ---- applying complete [11/11 done] ----
+6:34:57PM: ---- waiting complete [11/11 done] ----
+
+Succeeded
 ```
 
 
@@ -194,22 +218,17 @@ repository)._
 
 
 
-## Generating a release locally
+### Installation using Carvel Packaging
 
-While we recommend that the installation make use of the bundles published under
-the releases page, you can also generate a local release right from the source
-code if you want.
-
-TODO
-
-
-### extra: installation using Carvel Packaging
-
-Although Cartographer can be installed via plain `kubectl apply` or  `kapp
-deploy` like mentioned above, this repository also provides [carvel Packaging]
-objects.
+Another way that you can go about installing Cartographer is with the use of
+[carvel Packaging] provided by [kapp controller]. These, when used alongside
+[secretgen controller], provide a great experience for, in a declarative way,
+installing Cartographer.
 
 To make use of them, first, make sure those pre-requisites above are satified
+
+
+#### Prerequisites
 
 1. admin access to a Kubernetes Cluster and [cert-manager]
 
@@ -250,8 +269,44 @@ Namespace        Name                                                    Kind
 Succeeded
 ```
 
+3. [secretgen-controller] installed
+
+```bash
+kubectl get crd secretexports.secretgen.carvel.dev
+```
+```console
+NAME                                 CREATED AT
+secretexports.secretgen.carvel.dev   2021-09-20T18:10:10Z
+```
+
+In case you don't (i.e., you see _"secretexports.secretgen.carvel.dev" not
+found_), proceed with installing it.
+
+```bash
+kapp deploy --yes -a secretgen-controller \
+  -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.5.0/release.yml
+```
+```console
+Target cluster 'https://127.0.0.1:45829' (nodes: cartographer-control-plane)
+
+Changes
+
+Namespace             Name                                       Kind                      Conds.  Age  Op      Op st.  Wait to    Rs  Ri
+(cluster)             certificates.secretgen.k14s.io             CustomResourceDefinition  -       -    create  -       reconcile  -   -
+^                     passwords.secretgen.k14s.io                CustomResourceDefinition  -       -    create  -       reconcile  -   -
+^                     rsakeys.secretgen.k14s.io                  CustomResourceDefinition  -       -    create  -       reconcile  -   -
+...
+6:13:25PM: ok: reconcile deployment/secretgen-controller (apps/v1) namespace: secretgen-controller
+6:13:25PM: ---- applying complete [11/11 done] ----
+6:13:25PM: ---- waiting complete [11/11 done] ----
+
+Succeeded
+```
+
+
 3. the `default` service account has the capabilities necessary for installing
    submitting all those objects above to the cluster
+
 
 ```bash
 kubectl create clusterrolebinding default-cluster-admin \
@@ -262,11 +317,64 @@ kubectl create clusterrolebinding default-cluster-admin \
 clusterrolebinding.rbac.authorization.k8s.io/default-cluster-admin created
 ```
 
+
+#### Package installation
+
+With the prerequisites satisfied, go ahead and download the `package*` files,
+as well as the `imgpkg` bundle:
+
+```bash
+CARTOGRAPHER_VERSION=v0.0.6
+
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/download/v$CARTOGRAPHER_VERSION/bundle.tar
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/download/v$CARTOGRAPHER_VERSION/package.yaml
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/download/v$CARTOGRAPHER_VERSION/package-metadata.yaml
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/download/v$CARTOGRAPHER_VERSION/package-install.yaml
+```
+
+First, relocate the bundle:
+
+```bash
+# set the repository where images should be reloated to, for instance, to
+# relocate to a project named "foo" in DockerHub: DOCKER_REPO=foo
+#
+DOCKER_REPO=10.188.0.3:5000
+
+
+# relocate
+#
+imgpkg copy \
+  --tar bundle.tar \
+  --to-repo ${DOCKER_REPO?:Required}/cartographer-bundle \
+  --lock-output cartographer-bundle.lock.yaml
+```
+
+Now that the bundle is in our repository, update the Package object to point at
+it (use the image from `cartographer-bundle.lock.yaml`):
+
+
+```diff
+  apiVersion: data.packaging.carvel.dev/v1alpha1
+  kind: Package
+  ..
+    template:
+      spec:
+        fetch:
+        - imgpkgBundle:
+-           image: IMAGE
++           image: 10.188.0.3:5000/cartographer-bundle@sha256:e296a3163
+        template:
+```
+
 That done, submit the packaging objects to Kubernetes so that `kapp-controller`
 will materialize them into an installation of Cartographer:
 
+
 ```bash
-kapp deploy --yes -a cartographer -f ./release/package
+kapp deploy --yes -a cartographer \
+  -f ./package-metadata.yaml \
+  -f ./package.yaml \
+  -f ./package-install.yaml
 ```
 ```console
 Target cluster 'https://127.0.0.1:42483' (nodes: cartographer-control-plane)
@@ -289,17 +397,17 @@ default    cartographer.carto.run            PackageMetadata  -       -    creat
 Succeeded
 ```
 
-ps.: if you relocated the images here to a private registry that requires
-authentication, make sure you create a Secret with the credentials to the
-registry as well as a `SecretExport` object to make those credentials available
-to other namespaces.
+if you relocated the images here to a private registry that requires
+authentication, make sure you create a `Secret` with the credentials to the
+registry as well as a `SecretExport` object to make those credentials
+available to other namespaces.
 
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: registry-credentials
+  name: shared-registry-credentials
 type: kubernetes.io/dockerconfigjson # needs to be this type
 stringData:
   .dockerconfigjson: |
@@ -316,7 +424,7 @@ stringData:
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
 metadata:
-  name: registry-credentials
+  name: shared-registry-credentials
 spec:
   toNamespaces:
     - "*"
@@ -354,32 +462,6 @@ Continue? [yN]: y
 8:28:22AM: ---- waiting complete [20/20 done] ----
 
 Succeeded
-```
-
-In case you used `kubectl apply` instead of `kapp`, you can point at the same
-file used to install (`./releases/release.yaml`) but then use the `delete`
-command:
-
-```bash
-kubectl delete -f ./releases/release.yaml
-kubectl delete namespace cartographer-system
-```
-```console
-customresourcedefinition.apiextensions.k8s.io "clusterconfigtemplates.carto.run" deleted
-customresourcedefinition.apiextensions.k8s.io "clusterimagetemplates.carto.run" deleted
-customresourcedefinition.apiextensions.k8s.io "clustersourcetemplates.carto.run" deleted
-customresourcedefinition.apiextensions.k8s.io "clustersupplychains.carto.run" deleted
-customresourcedefinition.apiextensions.k8s.io "clustertemplates.carto.run" deleted
-customresourcedefinition.apiextensions.k8s.io "deliverables.carto.run" deleted
-customresourcedefinition.apiextensions.k8s.io "workloads.carto.run" deleted
-deployment.apps "cartographer-controller" deleted
-serviceaccount "cartographer-controller" deleted
-clusterrolebinding.rbac.authorization.k8s.io "cartographer-cluster-admin" deleted
-validatingwebhookconfiguration.admissionregistration.k8s.io "clustersupplychainvalidator" deleted
-certificate.cert-manager.io "cartographer-webhook" deleted
-issuer.cert-manager.io "selfsigned-issuer" deleted
-service "cartographer-webhook" deleted
-secret "cartographer-webhook" deleted
 ```
 
 

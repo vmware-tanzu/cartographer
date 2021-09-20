@@ -38,14 +38,14 @@ jobs:
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
 
-      - name: lint
-        run: |-
-          make lint
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
-
       - name: check copyright header
         run: |-
           make copyright
+          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
+
+      - name: lint
+        run: |-
+          make lint
           [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
       - name: run tests

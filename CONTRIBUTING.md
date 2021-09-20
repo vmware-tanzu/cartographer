@@ -129,64 +129,52 @@ ensure that the commits of Branch A are easily readable when reading Branch B's 
 
 ## Creating new releases
 
-### Automated
-There is a github action to automatically create releases on Github. To trigger this action:
-- Create a tag with the prefix `v` and a semver suffix. e.g. `v1.0.3`
-- Push the tag
-- Watch the magic! There should be a new build happening here: https://github.com/vmware-tanzu/cartographer/actions/workflows/release.yaml
-- Observe the result. There should be a new release here: https://github.com/vmware-tanzu/cartographer/releases
-- Click `edit`, update the changelog with any relevant information. Update the release.
+A release of Cartographer consists of:
 
-### Manual
-It is possible to create a release manually:
+1. a tagget commit in the Git history
+2. a GitHub release aiming at that tag making available a few assets that make
+   Cartographer installable in a cluster
 
-Before getting started, make sure you have a running `docker` daemon and all
-the dependencies mentioned above in the [Development Dependencies
-section](#development-dependencies).
+While the second step is manual (someone needs to `git tag` and then `git
+push`), the second isn't: the [release.yaml](.github/workflows/release.yaml)
+GitHub workflow takes care of preparing the assets and pushing to GitHub all
+the necessary bits.
+
+Although `2` is automated, it's still possible to do the procedure manually.
 
 
-### What it consists of
+### Manually building and pushing release assets to GitHub
 
-Releasing Cartographer consists of producing:
 
-- a YAML file that contains all the necessary Kubernetes objects that needs to
-  be submitted to a cluster in order to have the controller running there with
-  the proper access to the Kubernetes API in such environment.
-
-- [carvel Packaging] objects to integrate with the package management APIs
-  offered by [kapp-controller].
-
-```
-./release/
-├── cartographer.yaml
-└── package
-    ├── package-install.yaml
-    ├── package-metadata.yaml
-    └── package.yaml
-```
-
-Despite the process being automated with GitHub actions whenever a new tag is
-pushed, it can be done manually too (the GitHub workflow just wraps these steps
-around).
-
+0. a container image registry that we can temporarily push images to
 
 ```bash
-# prepare ~/.docker/config.json with the credentials necessary for
-# pushing images to a # container image registry.
+# `cluster` brings up a local container image registry and a kubernetes
+# cluster that we can use to push images to and try the installation
+# out (this cluster already trusts the local registry).
 #
-# if you're a maintainer, head to `lastpass` and search for
-# projectcartographer dockerhub credentials.
-#
-docker login
+./hack/setup.sh cluster
+```
 
 
-# run the release generation script pointing at our registry of choice
-# (for a final release, `projectcartographer`).
-#
-# when done, the `release` directory will be populated with a series of
-# YAML files as described in the example above.
-#
-REGISTRY=projectcartographer ./hack/release.sh
+1. tag the current commit for release
+
+```bash
+git tag v0.0.6-rc
+```
+
+
+2. generate the release assets
+
+```bash
+RELEASE_VERSION=v0.0.6-rc ./hack/release.sh
+```
+
+
+3. submit to github
+
+```bash
+RELEASE_VERSION=v0.0.6-rc ./hack/release.sh
 ```
 
 

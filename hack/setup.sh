@@ -22,6 +22,7 @@ readonly HOST_ADDR=${HOST_ADDR:-$($DIR/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
+readonly RELEASE_VERSION=${RELEASE_VERSION:-"0.0.0-dev"}
 
 readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
@@ -81,13 +82,14 @@ main() {
 
 install_cartographer_package() {
         log "build cartographer release and installing it"
-        env REGISTRY=$REGISTRY ./hack/release.sh
+        env REGISTRY=$REGISTRY RELEASE_VERSION=$RELEASE_VERSION ./hack/release.sh
 
         ytt --ignore-unknown-comments \
                 --data-value registry=$REGISTRY \
                 -f ./hack/registry-auth |
-                kapp deploy -a registry-credentials --yes \
-                        -f ./release/package -f-
+                kapp deploy -a cartographer --yes \
+                        -f ./release/package \
+                        -f-
 }
 
 show_usage_help() {
@@ -123,6 +125,16 @@ display_vars() {
 start_registry() {
         log "starting registry"
 
+        echo -e "\n\nregistry credentials:\n
+	username: admin
+	password: admin
+	"
+
+        DOCKER_USERNAME=admin \
+                DOCKER_PASSWORD=admin \
+                DOCKER_REGISTRY=$REGISTRY \
+                $DIR/docker-login.sh
+
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
                 echo "registry already exists"
                 return
@@ -137,16 +149,6 @@ start_registry() {
                 --name $REGISTRY_CONTAINER_NAME \
                 --publish "${REGISTRY_PORT}:5000" \
                 registry:2
-
-        echo -e "\n\nregistry credentials:\n
-	username: admin
-	password: admin
-	"
-
-        DOCKER_USERNAME=admin \
-                DOCKER_PASSWORD=admin \
-                DOCKER_REGISTRY=$REGISTRY \
-                $DIR/docker-login.sh
 }
 
 start_local_cluster() {

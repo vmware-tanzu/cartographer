@@ -28,12 +28,17 @@ readonly YTT_VERSION=0.36.0
 readonly YTT_CHECKSUM=d81ecf6c47209f6ac527e503a6fd85e999c3c2f8369e972794047bddc7e5fbe2
 
 main() {
-        show_vars
+        readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
 
+        show_vars
         cd $ROOT
+
         download_ytt_to_kodata
         create_imgpkg_bundle
-        generate_release
+        create_carvel_packaging_objects
+
+        populate_release_directory
+        create_release_notes
 }
 
 show_vars() {
@@ -43,6 +48,7 @@ show_vars() {
 	REGISTRY:		$REGISTRY
 	RELEASE_DATE:		$RELEASE_DATE
 	RELEASE_VERSION:	$RELEASE_VERSION
+	PREVIOUS_VERSION:	$PREVIOUS_VERSION
 	ROOT:	       		$ROOT
 	SCRATCH:       		$SCRATCH
 	YTT_VERSION		$YTT_VERSION
@@ -70,18 +76,24 @@ download_ytt_to_kodata() {
 # is expected of bundles for Packages (see ref):
 #
 #
-# 	.
+# 	$scratch
 # 	├── bundle
 # 	│   ├── .imgpkg
 # 	│   │   └── images.yml			absolute image references to
 # 	│   │					images in this bundle
 # 	│   │
 # 	│   └── config
-# 	│       └── cartographer.yaml		everything from the release
+# 	│       ├── cartographer.yaml		everything from the release
+# 	│       │
+# 	│       ├── objects/			extra objects to include in the
+# 	│       │				bundle to aid the installation
 # 	│       │
 # 	│       └── overlays/			overlays to tweak properties
 # 	│                       		from the release according to
 # 	│                       		packaging configuration
+# 	│
+# 	├── bundle.tar				tarball of the imgpkg bundle
+# 	│
 # 	│
 # 	└── bundle.lock.yaml			exact image reference to this
 # 						bundle
@@ -111,6 +123,28 @@ create_imgpkg_bundle() {
                 --to-tar $SCRATCH/bundle.tar
 }
 
+create_carvel_packaging_objects() {
+        mkdir -p $SCRATCH/package
+
+        for package_fpath in ./packaging/package*.yaml; do
+                ytt --ignore-unknown-comments \
+                        -f ./packaging/values.yaml \
+                        -f $package_fpath \
+                        --data-value image=$(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
+                        --data-value releasedAt=$RELEASE_DATE \
+                        --data-value version=$RELEASE_VERSION > \
+                        $SCRATCH/package/$(basename $package_fpath)
+        done
+
+}
+
+create_release_notes() {
+        local changeset="$(git_changeset $RELEASE_VERSION $PREVIOUS_VERSION)"
+        local assets_checksums=$(checksums ./release)
+
+        release_body "$changeset" "$assets_checksums" >./release/CHANGELOG.md
+}
+
 # generates the final release directory containing the files that are meant to
 # be used during installation.
 #
@@ -122,31 +156,77 @@ create_imgpkg_bundle() {
 # 	│   └── package-metadata.yaml
 # 	│   └── package.yaml
 # 	│
-# 	├── bundle.tar.gz
-# 	│
-# 	└── release.yaml
+# 	└── bundle.tar.gz
 #
-generate_release() {
+populate_release_directory() {
         rm -rf ./release
         mkdir -p ./release/package
 
         cp $SCRATCH/bundle.tar ./release
-        cp $SCRATCH/bundle/config/cartographer.yaml ./release
-        for package_fpath in ./packaging/package*.yaml; do
-                ytt --ignore-unknown-comments \
-                        -f ./packaging/values.yaml \
-                        -f $package_fpath \
-                        --data-value image=$(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
-                        --data-value releasedAt=$RELEASE_DATE \
-                        --data-value version=$RELEASE_VERSION > \
-                        ./release/package/$(basename $package_fpath)
-        done
+        cp -r $SCRATCH/package ./release
 }
 
 image_from_lockfile() {
         local lockfile=$1
 
         awk -F"image: " '{if ($2) print $2;}' $lockfile
+}
+
+checksums() {
+        local assets_directory=$1
+
+        pushd $assets_directory &>/dev/null
+        find . -name "*" -type f | xargs sha256sum
+        popd &>/dev/null
+}
+
+
+git_changeset() {
+        local current_version=$1
+        local previous_version=$2
+
+	[[ $current_version != v* ]] && current_version=v$current_version
+	[[ $previous_version != v* ]] && previous_version=v$previous_version
+
+        git -c log.showSignature=false \
+                log \
+                --pretty=oneline \
+                --abbrev-commit \
+                --no-decorate \
+                --no-color \
+                "${previous_version}..${current_version}"
+}
+
+git_previous_version() {
+        local current_version=$1
+
+        git tag --sort=-v:refname -l 'v*' |
+                grep -A1 $current_version |
+                tail -n1
+}
+
+release_body() {
+        local changeset="$1"
+        local checksums="$2"
+
+        readonly fmt='
+# Change Set
+
+%s
+
+
+# Installation
+
+See https://github.com/vmware-tanzu/cartographer#installation.
+
+
+# Checksums
+
+```
+%s
+```
+  '
+        printf "$fmt" "$changeset" "$checksums"
 }
 
 main "$@"
