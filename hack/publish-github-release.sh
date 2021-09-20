@@ -29,10 +29,11 @@ main() {
 }
 
 submit_release_to_github() {
-        local version=$1
+        local version=v$1
 
         gh release create $version \
-                -F $RELEASE_NOTES_FILE \
+                --draft \
+                --notes-file $RELEASE_NOTES_FILE \
                 $(find $ASSETS_DIR -type f ! -name $(basename $RELEASE_NOTES_FILE))
 }
 
