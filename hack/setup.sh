@@ -26,6 +26,13 @@ readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
 readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
+readonly CERT_MANAGER_VERSION=1.5.3
+readonly KAPP_CONTROLLER_VERSION=0.24.0
+readonly KNATIVE_SERVING_VERSION=0.25.0
+readonly KPACK_VERSION=0.3.1
+readonly SECRETGEN_CONTROLLER_VERSION=0.5.0
+readonly SOURCE_CONTROLLER_VERSION=0.15.4
+
 main() {
         test $# -eq 0 && show_usage_help
         display_vars $@
@@ -45,7 +52,9 @@ main() {
                         ;;
 
                 example-dependencies)
-                        install_dependencies
+                        install_source_controller
+                        install_kpack
+                        install_knative_serving
                         ;;
 
                 example)
@@ -167,18 +176,10 @@ nodes:
 EOF
 }
 
-install_dependencies() {
-        log "installing example dependencies"
-
-        install_source_controller
-        install_kpack
-        install_knative_serving
-}
-
 install_cert_manager() {
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.yaml |
+                -f https://github.com/jetstack/cert-manager/releases/download/v$CERT_MANAGER_VERSION/cert-manager.yaml |
                 kapp deploy --yes -a cert-manager -f-
 }
 
@@ -191,15 +192,15 @@ install_source_controller() {
 
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.crds.yaml \
-                -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.deployment.yaml |
+                -f https://github.com/fluxcd/source-controller/releases/download/v$SOURCE_CONTROLLER_VERSION/source-controller.crds.yaml \
+                -f https://github.com/fluxcd/source-controller/releases/download/v$SOURCE_CONTROLLER_VERSION/source-controller.deployment.yaml |
                 kapp deploy --yes -a gitops-toolkit --into-ns gitops-toolkit -f-
 }
 
 install_kpack() {
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f https://github.com/pivotal/kpack/releases/download/v0.3.1/release-0.3.1.yaml |
+                -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml |
                 kapp deploy --yes -a kpack -f-
 
 }
@@ -211,21 +212,21 @@ install_kapp_controller() {
 
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.24.0/release.yml |
+                -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml |
                 kapp deploy --yes -a kapp-controller -f-
 }
 
 install_secretgen_controller() {
         ytt --ignore-unknown-comments \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
-                -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.5.0/release.yml |
+                -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v$SECRETGEN_CONTROLLER_VERSION/release.yml |
                 kapp deploy --yes -a secretgen-controller -f-
 }
 
 install_knative_serving() {
         ytt --ignore-unknown-comments \
-                -f https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml \
-                -f https://github.com/knative/serving/releases/download/v0.25.0/serving-crds.yaml \
+                -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml \
+                -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml |
                 kapp deploy --yes -a knative-serving -f-
 }
