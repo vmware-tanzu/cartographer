@@ -116,7 +116,7 @@ notes:
 
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside. 
 
-_ref: [pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/workload.go)_
+_ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
 
 
 ### ClusterSupplyChain
@@ -228,7 +228,7 @@ spec:
 ```
 
 
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_supply_chain.go)_
+_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/cluster_supply_chain.go)_
 
 
 ### ClusterSourceTemplate
@@ -288,7 +288,7 @@ spec:
       ignore: ""
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/cluster_source_template.go)_
 
 
 ### ClusterImageTemplate
@@ -331,7 +331,7 @@ spec:
           url: $(sources.provider.url)$
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ### ClusterConfigTemplate
 
@@ -381,7 +381,7 @@ spec:
             - name: registry-credentials
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
@@ -445,4 +445,4 @@ spec:
         - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_
