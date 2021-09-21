@@ -6,6 +6,9 @@ Cartographer is a Kubernetes native [Choreographer]. It allows users to configur
 
 Cartographer also allows for separation of controls between a user who is responsible for defining a Supply Chain (known as a App Operator) and a user who is focused on creating applications (Developer). These roles are not necessarily mutually exclusive, but provide the ability to create a separation concern.
 
+## Known Issues
+- **WARNING!!** At this time, the Supply Chain ClusterRoleBinding has more permissions than it needs. This will be fixed in an upcoming release.
+The issue can be tracked [here](https://github.com/vmware-tanzu/cartographer/issues/51).
 
 ## Documentation
 
