@@ -54,22 +54,14 @@ metadata:
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
-    
-    #@ def by_name(list, name):
-    #@   for item in list:
-    #@     if item.name == name:
-    #@       return item
-    #@     end
-    #@   end
-    #@ end
 
     apiVersion: v1
     kind: ConfigMap
     metadata:
       name: example-image-configmap
     data:
-      player_current_lives: #@ data.values.sources[0].url
-      some_other_info: #@ by_name(sources, 'solo-source-provider').revision
+      player_current_lives: #@ data.values.source.url
+      some_other_info: #@ data.values.sources['solo-source-provider'].revision
   imagePath: data.some_other_info
 
 ---
@@ -86,7 +78,7 @@ spec:
     metadata:
       name: example-config-configmap
     data:
-      favorite_color: #@ data.values.images[0].image
+      favorite_color: #@ data.values.image.image
   configPath: data.favorite_color
 
 ---
@@ -103,4 +95,4 @@ spec:
     metadata:
       name: example-config
     data:
-      best_name: #@ data.values.configs[0].config
+      best_name: #@ data.values.config.config
