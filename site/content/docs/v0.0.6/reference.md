@@ -1,3 +1,5 @@
+# Spec Reference
+
 ## GVK
 
 ### Version
@@ -61,18 +63,20 @@ spec:
         tag: "v0.0.1"
         commit: "b4df00d"
 
-    imgpkgBundle:
-      # imgpkg bundle containing the source code to be used throughout
-      # the supply chain
-      #
-      image: harbor-repo.vmware.com/tanzu_desktop/golang-sample-source@sha256:e508a587
+    # image containing the source code to be used throughout
+    # the supply chain
+    #
+    image: harbor-repo.vmware.com/tanzu_desktop/golang-sample-source@sha256:e508a587
 
 
-  # services to be bound through service-bindings
+  # serviceClaims to be bound through service-bindings
   #
-  services:
-    - apiVersion: services.tanzu.vmware.com/v1alpha1
-      kind: RabbitMQ
+  serviceClaims:
+    - name: broker
+      ref: 
+        apiVersion: services.tanzu.vmware.com/v1alpha1
+        kind: RabbitMQ
+        name: rabbit-broker
 
 
   # image with the app already built
@@ -112,7 +116,7 @@ notes:
 
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside. 
 
-_ref: [cartographer/pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/workload.go)_
+_ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
 
 
 ### ClusterSupplyChain
@@ -160,8 +164,13 @@ spec:
       # 
       # in a template, these can be consumed as: 
       #
-      #    $(sources[<idx>]url)$
-      #    $(sources[<idx>]revision)$
+      #    $(sources.<name>.url)$
+      #    $(sources.<name>.revision)$
+      #
+      # if there is only one source, it can be consumed as:
+      #
+      #    $(source.url)$
+      #    $(sources.revision)$
       #
       # (optional)
       sources:
@@ -169,7 +178,7 @@ spec:
         #
         - component: source-provider
           # name to be referenced in the template via a query over the list of
-          # sources (for instance, `$(sources.$(name=="provider").url)`.
+          # sources (for instance, `$(sources.provider.url)`.
           #
           # (required, unique in this list)
           #
@@ -179,7 +188,11 @@ spec:
       #
       # in a template, these can be consumed as:
       #
-      #   $(images[<idx>].image)
+      #   $(images.<name>.image)
+      #
+      # if there is only one image, it can be consumed as:
+      #
+      #   $(image)
       #
       images: []
 
@@ -187,12 +200,19 @@ spec:
       # for instance, podTemplateSpecs.
       # in a template, these can be consumed as:
       #
-      #   $(configs[<idx>].config)
+      #   $(configs.<name>.config)
+      #
+      # if there is only one config, it can be consumed as:
+      #
+      #   $(config)
       #
       configs: []
 
       # parameters to override the defaults from the templates.
       # (optional)
+      # in a template, these can be consumed as:
+      #
+      #   $(params.<name>)
       #
       params:
         # name of the parameter. (required, unique in this list, and must match
@@ -208,7 +228,7 @@ spec:
 ```
 
 
-_ref: [cartographer/pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_supply_chain.go)_
+_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/cluster_supply_chain.go)_
 
 
 ### ClusterSourceTemplate
@@ -264,11 +284,11 @@ spec:
       interval: 3m
       url: $(workload.spec.source.git.url)$
       ref: $(workload.spec.source.git.ref)$
-      gitImplementation: $(params[?(@.name=="git-implementation")].value)$
+      gitImplementation: $(params.git-implementation.value)$
       ignore: ""
 ```
 
-_ref: [cartographer/pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/cluster_source_template.go)_
 
 
 ### ClusterImageTemplate
@@ -308,10 +328,10 @@ spec:
         name: java-builder
       source:
         blob:
-          url: $(sources[0].url)$
+          url: $(sources.provider.url)$
 ```
 
-_ref: [cartographer/pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ### ClusterConfigTemplate
 
@@ -352,7 +372,7 @@ spec:
         spec:
           containers:
             - name: workload
-              image: $(images[?(@.name=="solo-image-provider")].image)$
+              image: $(images.solo-image-provider.image)$
               env: $(workload.spec.env)$
               resources: $(workload.spec.resources)$
               securityContext:
@@ -361,7 +381,7 @@ spec:
             - name: registry-credentials
 ```
 
-_ref: [cartographer/pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
@@ -416,7 +436,7 @@ spec:
                   template:
                     spec:
                       containers:
-                        - image: $(images[0].image)$
+                        - image: $(images.<name-of-image-provider>.image)$
                           securityContext:
                             runAsUser: 1000
       template:
@@ -425,4 +445,4 @@ spec:
         - kapp: {}
 ```
 
-_ref: [cartographer/pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_

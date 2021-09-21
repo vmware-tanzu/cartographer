@@ -17,12 +17,10 @@ toc:
     subfolderitems:
       - page: About
         url: /
-  - title: Install/Uninstall
+  - title: Install
     subfolderitems:
       - page: Installing Cartographer
-        url: /installing
-      - page: Uninstalling Cartographer
-        url: /uninstalling
+        url: /install
   - title: Reference
     subfolderitems:
       - page: CRD Reference
