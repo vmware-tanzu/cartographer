@@ -337,50 +337,6 @@ _ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/c
 
 Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further components in the chain.
 
-For instance, a resource that given an image, exposes a complete `podTemplateSpec` to be embedded in a knative service.
-
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterConfigTemplate
-metadata:
-  name: convention-service-battery
-spec:
-  # default parameters. see ClusterSourceTemplate for more info. (optional)
-  #
-  params: []
-
-  # jsonpath expression to instruct where in the object templated out an 
-  # a kubernetes configuration can be found (required)
-  #
-  configPath: .status.template
-
-  # how to template out the kubernetes object. (required)
-  #
-  template:
-    apiVersion: opinions.local/v1alpha1
-    kind: WorkloadDecorator
-    metadata:
-      name: $(workload.metadata.name)$-workload-template
-    spec:
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/part-of: $(workload.metadata.name)$
-          annotations:
-            autoscaling.knative.dev/minScale: "1"
-            autoscaling.knative.dev/maxScale: "1"
-        spec:
-          containers:
-            - name: workload
-              image: $(images.solo-image-provider.image)$
-              env: $(workload.spec.env)$
-              resources: $(workload.spec.resources)$
-              securityContext:
-                runAsUser: 1000
-          imagePullSecrets:
-            - name: registry-credentials
-```
-
 _ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
 
 

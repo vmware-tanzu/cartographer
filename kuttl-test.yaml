@@ -18,6 +18,8 @@ startControlPlane: true
 testDirs:
   - tests/kuttl
 crdDir: config/crd/bases
+manifestDirs:
+  - tests/crd
 commands:
   - command: build/cartographer
     background: true
