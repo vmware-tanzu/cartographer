@@ -16,10 +16,10 @@ The supply chain consists of components that are specified via Templates.
 Each template acts as a wrapper for existing Kubernetes resources and allows them to be used with Cartographer.
 There are currently four different types of templates that can be use in a Cartographer supply chain:
 
-* Source Template ([Spec Reference](reference.md#clustersoucetemplate))
-* Build Template ([Spec Reference](reference.md#clusterbuildtemplate))
-* Opinion Template ([Spec Reference](reference.md#clusteropiniontemplate))
-* Cluster Config Template ([Spec Reference](reference.md#clusterconfigtemplate))
+* Source Template ([Spec Reference](reference.md#clustersourcetemplate))
+* Image Template ([Spec Reference](reference.md#clusterimagetemplate))
+* Config Template ([Spec Reference](reference.md#clusterconfigtemplate))
+* Generic Template ([Spec Reference](reference.md#clustertemplate))
 
 Contrary to many other Kubernetes native workflow tools that already exist in the market, 
 Cartographer does not “run” any of the objects themselves. Instead, it monitors the execution of 
