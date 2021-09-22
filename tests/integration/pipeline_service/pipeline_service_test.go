@@ -71,7 +71,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 						matchExpressions:
 						- operator : In
 						  scopeName: PriorityClass
-						  values: [$(pipeline.metadata.labels.some-val)$]
+						  values: [$(pipeline.spec.inputs.key)$]
 				`,
 				testNS, testNS,
 			)
@@ -97,13 +97,13 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					metadata:
 					  namespace: %s
 					  name: my-pipeline
-					  labels:
-					    some-val: first
 					spec:
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
 					    kind: RunTemplate
+					  inputs:
+					    key: val
 					`,
 					testNS, testNS)
 
@@ -134,12 +134,12 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				}, "2s").Should(BeNumerically("<=", 1))
 
 				Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
-				Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("first"))
+				Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("val"))
 			})
 
 			Context("and the Pipeline object is updated", func() {
 				BeforeEach(func() {
-					Expect(AlterFieldOfNestedStringMaps(pipelineDefinition.Object, "metadata.labels.some-val", "second")).To(Succeed())
+					Expect(AlterFieldOfNestedStringMaps(pipelineDefinition.Object, "spec.inputs.key", "new-val")).To(Succeed())
 					Expect(c.Update(ctx, pipelineDefinition, &client.UpdateOptions{})).To(Succeed())
 				})
 				It("creates a second object alongside the first", func() {
@@ -162,8 +162,8 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 						return element.(v1.ResourceQuota).Spec.ScopeSelector.MatchExpressions[0].Values[0]
 					}
 					Expect(resourceList.Items).To(MatchAllElements(id, Elements{
-						"first":  Not(BeNil()),
-						"second": Not(BeNil()),
+						"val":     Not(BeNil()),
+						"new-val": Not(BeNil()),
 					}))
 				})
 			})
