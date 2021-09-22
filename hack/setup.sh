@@ -22,7 +22,7 @@ readonly HOST_ADDR=${HOST_ADDR:-$($DIR/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
-readonly RELEASE_VERSION=${RELEASE_VERSION:-"0.0.0-dev"}
+readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
 
 readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane

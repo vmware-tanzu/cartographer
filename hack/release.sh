@@ -21,13 +21,13 @@ readonly ROOT=$(cd $(dirname $0)/.. && pwd)
 readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
 readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
-readonly RELEASE_VERSION=${RELEASE_VERSION:-"0.0.0-dev"}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(date -Iseconds)}
 
 readonly YTT_VERSION=0.36.0
 readonly YTT_CHECKSUM=d81ecf6c47209f6ac527e503a6fd85e999c3c2f8369e972794047bddc7e5fbe2
 
 main() {
+        readonly RELEASE_VERSION=${RELEASE_VERSION:-$(git_current_version)}
         readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
 
         show_vars
@@ -132,7 +132,7 @@ create_carvel_packaging_objects() {
                         -f $package_fpath \
                         --data-value image=$(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
                         --data-value releasedAt=$RELEASE_DATE \
-                        --data-value version=$RELEASE_VERSION > \
+                        --data-value version=${RELEASE_VERSION#v} > \
                         $SCRATCH/package/$(basename $package_fpath)
         done
 
@@ -180,13 +180,13 @@ checksums() {
         popd &>/dev/null
 }
 
-
 git_changeset() {
         local current_version=$1
         local previous_version=$2
 
-	[[ $current_version != v* ]] && current_version=v$current_version
-	[[ $previous_version != v* ]] && previous_version=v$previous_version
+        [[ $current_version != v* ]] && current_version=v$current_version
+        [[ $previous_version != v* ]] && previous_version=v$previous_version
+        [[ $(git tag -l $current_version) == "" ]] && current_version=HEAD
 
         git -c log.showSignature=false \
                 log \
@@ -197,12 +197,27 @@ git_changeset() {
                 "${previous_version}..${current_version}"
 }
 
+git_current_version() {
+        local tag=$(git tag --points-at HEAD)
+
+        if [[ $tag == "" ]]; then
+                tag="v0.0.0-dev"
+        fi
+
+        printf $tag
+}
+
 git_previous_version() {
         local current_version=$1
 
-        git tag --sort=-v:refname -l 'v*' |
-                grep -A1 $current_version |
-                tail -n1
+        local version_filter=$(printf '^%s$' $current_version)
+        [[ $(git tag -l $current_version) == "" ]] && version_filter='.'
+
+        git tag --sort=-v:refname -l |
+                grep -A30 $version_filter |
+                tail -n +2 |
+                grep -P '^v\d+\.\d+\.\d+$' |
+                head -n1
 }
 
 release_body() {
