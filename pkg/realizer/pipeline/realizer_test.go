@@ -191,9 +191,32 @@ var _ = Describe("Realizer", func() {
 					}),
 				)
 			})
-
 		})
 
+		Context("listing previously created objects fails", func() {
+			BeforeEach(func() {
+				repository.ListUnstructuredReturns(nil, errors.New("some list error"))
+			})
+
+			It("logs the error", func() {
+				_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(out).To(Say(`"msg":"could not list pipeline objects: some list error"`))
+			})
+
+			It("returns a condition stating that it failed to list created objects", func() {
+				condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(*condition).To(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal("RunTemplateReady"),
+						"Status":  Equal(metav1.ConditionFalse),
+						"Reason":  Equal("FailedToListCreatedObjects"),
+						"Message": Equal("could not list pipeline objects: some list error"),
+					}),
+				)
+			})
+		})
 	})
 
 	Context("with unsatisfied output paths", func() {

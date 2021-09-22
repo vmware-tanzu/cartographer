@@ -34,6 +34,7 @@ const (
 	StampedObjectRejectedByAPIServerRunTemplateReason = "StampedObjectRejectedByAPIServer"
 	OutputPathNotSatisfiedRunTemplateReason           = "OutputPathNotSatisfied"
 	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
+	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
 )
 
 // +kubebuilder:object:root=true

@@ -33,7 +33,6 @@ var _ = Describe("RunTemplate", func() {
 			apiTemplate                                                         *v1alpha1.RunTemplate
 			firstStampedObject, secondStampedObject, unconditionedStampedObject *unstructured.Unstructured
 			stampedObjects                                                      []*unstructured.Unstructured
-			originalOutputs                                                     map[string]apiextensionsv1.JSON
 		)
 
 		BeforeEach(func() {
@@ -100,218 +99,143 @@ var _ = Describe("RunTemplate", func() {
 			_, _, err = dec.Decode([]byte(unconditionedStampedObjectManifest), nil, unconditionedStampedObject)
 			Expect(err).NotTo(HaveOccurred())
 		})
-
-		Context("when the previous outputs are empty", func() {
+		Context("when there is one object", func() {
 			BeforeEach(func() {
-				originalOutputs = make(map[string]apiextensionsv1.JSON)
+				stampedObjects = []*unstructured.Unstructured{firstStampedObject}
 			})
 
-			Context("when there is one object", func() {
+			Context("with no outputs", func() {
+				It("returns an empty list", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs).To(BeEmpty())
+				})
+			})
+
+			Context("with valid output paths defined", func() {
 				BeforeEach(func() {
-					stampedObjects = []*unstructured.Unstructured{firstStampedObject}
-				})
-
-				Context("with no outputs", func() {
-					It("returns an empty list", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs).To(BeEmpty())
-					})
-				})
-
-				Context("with valid output paths defined", func() {
-					BeforeEach(func() {
-						apiTemplate.Spec.Outputs = map[string]string{
-							"simplistic": "spec.simple",
-							"complexish": "spec.complex",
-						}
-					})
-
-					Context("when the object has not succeeded", func() {
-						BeforeEach(func() {
-							Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed()) // TODO: fix this notation or start using a jsonpath parser
-						})
-						It("returns an empty list", func() {
-							template := templates.NewRunTemplateModel(apiTemplate)
-							outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-							Expect(err).NotTo(HaveOccurred())
-							Expect(outputs).To(BeEmpty())
-						})
-					})
-
-					Context("when the object has succeeded", func() {
-						It("returns the outputs", func() {
-							template := templates.NewRunTemplateModel(apiTemplate)
-							outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-							Expect(err).NotTo(HaveOccurred())
-							Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
-							Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
-						})
-					})
-				})
-
-				Context("with invalid output paths defined", func() {
-					BeforeEach(func() {
-						apiTemplate.Spec.Outputs = map[string]string{
-							"complexish": "spec.nonexistant",
-						}
-					})
-					It("returns an error", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						_, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("get output: evaluate: find results: nonexistant is not found"))
-					})
-				})
-			})
-		})
-
-		Context("when the previous outputs had a value", func() {
-			BeforeEach(func() {
-				originalOutputs = map[string]apiextensionsv1.JSON{
-					"simplistic": apiextensionsv1.JSON{Raw: []byte(`"original simple"`)},
-				}
-			})
-
-			Context("when there is one object", func() {
-				BeforeEach(func() {
-					stampedObjects = []*unstructured.Unstructured{firstStampedObject}
-				})
-
-				Context("with no outputs", func() {
-					It("returns an empty list", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs).To(BeEmpty())
-					})
-				})
-
-				Context("with valid output paths defined", func() {
-					BeforeEach(func() {
-						apiTemplate.Spec.Outputs = map[string]string{
-							"simplistic": "spec.simple",
-							"complexish": "spec.complex",
-						}
-					})
-
-					Context("when the object has not succeeded", func() {
-						BeforeEach(func() {
-							Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed()) // TODO: fix this notation or start using a jsonpath parser
-						})
-						It("returns the pipeline's previous output", func() {
-							template := templates.NewRunTemplateModel(apiTemplate)
-							outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-							Expect(err).NotTo(HaveOccurred())
-							Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"original simple"`)}))
-						})
-					})
-
-					It("returns the new outputs", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
-						Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
-					})
-				})
-
-				Context("with invalid output paths defined", func() {
-					BeforeEach(func() {
-						apiTemplate.Spec.Outputs = map[string]string{
-							"complexish": "spec.nonexistant",
-						}
-					})
-					It("returns an error", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						_, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(Equal("get output: evaluate: find results: nonexistant is not found"))
-					})
-				})
-			})
-
-			Context("when there are multiple objects", func() {
-				BeforeEach(func() {
-					stampedObjects = []*unstructured.Unstructured{secondStampedObject, firstStampedObject}
-
 					apiTemplate.Spec.Outputs = map[string]string{
 						"simplistic": "spec.simple",
 						"complexish": "spec.complex",
 					}
 				})
 
-				Context("when none have succeeded", func() {
+				Context("when the object has not succeeded", func() {
 					BeforeEach(func() {
-						Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
-						Expect(utils.AlterFieldOfNestedStringMaps(secondStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
+						Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed()) // TODO: fix this notation or start using a jsonpath parser
 					})
-					It("returns the pipeline's previous output", func() {
+					It("returns empty outputs", func() {
 						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
+						outputs, err := template.GetOutput(stampedObjects)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"original simple"`)}))
+						Expect(outputs).To(BeEmpty())
 					})
 				})
-				Context("when only the least recently has succeeded", func() {
-					BeforeEach(func() {
-						Expect(utils.AlterFieldOfNestedStringMaps(secondStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
-					})
-					It("returns the output of the earlier submitted and successful object", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
-						Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
-					})
-				})
-				Context("when all have succeeded", func() {
-					It("returns the output of the most recently submitted and successful object", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-simple"`)}))
-						Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-complex"`)}))
-					})
-				})
-				Context("when the field of one object don't match the declared output fields", func() {
-					BeforeEach(func() {
-						apiTemplate.Spec.Outputs = map[string]string{
-							"simplistic": "spec.only-exists-on-first-object",
-						}
-					})
 
-					It("returns the output of the most recently submitted, successful, non-error inducing object", func() {
-						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(originalOutputs, stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"populated"`)}))
-					})
+				It("returns the new outputs", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
+					Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
 				})
-				Context("when the fields of all object don't match the declared output fields", func() {
+			})
+
+			Context("with invalid output paths defined", func() {
+				BeforeEach(func() {
+					apiTemplate.Spec.Outputs = map[string]string{
+						"complexish": "spec.nonexistant",
+					}
+				})
+				It("returns an error", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					_, err := template.GetOutput(stampedObjects)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("get output: evaluate: find results: nonexistant is not found"))
+				})
+			})
+		})
+
+		Context("when there are multiple objects", func() {
+			BeforeEach(func() {
+				stampedObjects = []*unstructured.Unstructured{secondStampedObject, firstStampedObject}
+
+				apiTemplate.Spec.Outputs = map[string]string{
+					"simplistic": "spec.simple",
+					"complexish": "spec.complex",
+				}
+			})
+
+			Context("when none have succeeded", func() {
+				BeforeEach(func() {
+					Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
+					Expect(utils.AlterFieldOfNestedStringMaps(secondStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
+				})
+				It("returns empty outputs", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs).To(BeEmpty())
+				})
+			})
+			Context("when only the least recently has succeeded", func() {
+				BeforeEach(func() {
+					Expect(utils.AlterFieldOfNestedStringMaps(secondStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
+				})
+				It("returns the output of the earlier submitted and successful object", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
+					Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
+				})
+			})
+			Context("when all have succeeded", func() {
+				It("returns the output of the most recently submitted and successful object", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-simple"`)}))
+					Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-complex"`)}))
+				})
+			})
+			Context("when the field of one object don't match the declared output fields", func() {
+				BeforeEach(func() {
+					apiTemplate.Spec.Outputs = map[string]string{
+						"simplistic": "spec.only-exists-on-first-object",
+					}
+				})
+
+				It("returns the output of the most recently submitted, successful, non-error inducing object", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"populated"`)}))
+				})
+			})
+			Context("when the fields of all objects don't match the declared output fields", func() {
+				BeforeEach(func() {
+					apiTemplate.Spec.Outputs = map[string]string{
+						"simplistic": "spec.nonexistant",
+					}
+				})
+				It("returns a helpful error", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					_, err := template.GetOutput(stampedObjects)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("get output: evaluate: find results: nonexistant is not found"))
+				})
+
+				Context("and one does not have succeeded condition", func() {
 					BeforeEach(func() {
-						apiTemplate.Spec.Outputs = map[string]string{
-							"simplistic": "spec.nonexistant",
-						}
+						stampedObjects = []*unstructured.Unstructured{unconditionedStampedObject, firstStampedObject}
 					})
 					It("returns a helpful error", func() {
 						template := templates.NewRunTemplateModel(apiTemplate)
-						_, err := template.GetOutput(originalOutputs, stampedObjects)
+						_, err := template.GetOutput(stampedObjects)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("get output: evaluate: find results: nonexistant is not found"))
-					})
-
-					Context("and one does not have succeeded condition", func() {
-						BeforeEach(func() {
-							stampedObjects = []*unstructured.Unstructured{unconditionedStampedObject, firstStampedObject}
-						})
-						It("returns a helpful error", func() {
-							template := templates.NewRunTemplateModel(apiTemplate)
-							_, err := template.GetOutput(originalOutputs, stampedObjects)
-							Expect(err).To(HaveOccurred())
-							Expect(err.Error()).To(Equal("get output: evaluate: find results: nonexistant is not found"))
-						})
 					})
 				})
 			})

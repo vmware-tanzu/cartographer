@@ -31,23 +31,24 @@ type Outputs map[string]apiextensionsv1.JSON
 type RunTemplate interface {
 	GetName() string
 	GetResourceTemplate() v1alpha1.TemplateSpec
-	GetOutput(outputs map[string]apiextensionsv1.JSON, stampedObjects []*unstructured.Unstructured) (Outputs, error)
+	GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, error)
 }
 
 type runTemplate struct {
 	template *v1alpha1.RunTemplate
 }
 
-func (t runTemplate) GetOutput(outputs map[string]apiextensionsv1.JSON, stampedObjects []*unstructured.Unstructured) (Outputs, error) {
+func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, error) {
 	var (
 		updateError                        error
-		everyObjectErrored, outputUpdated  bool
+		everyObjectErrored                 bool
 		mostRecentlySubmittedSuccesfulTime *time.Time
 	)
 
+	outputs := Outputs{}
+
 	evaluator := eval.EvaluatorBuilder()
 
-	outputUpdated = false
 	everyObjectErrored = true
 
 	for _, stampedObject := range stampedObjects {
@@ -75,7 +76,6 @@ func (t runTemplate) GetOutput(outputs map[string]apiextensionsv1.JSON, stampedO
 			}
 
 			outputs = provisionalOutputs
-			outputUpdated = true
 		}
 
 		if objectErr != nil {
@@ -85,7 +85,7 @@ func (t runTemplate) GetOutput(outputs map[string]apiextensionsv1.JSON, stampedO
 		}
 	}
 
-	if !outputUpdated && everyObjectErrored {
+	if everyObjectErrored {
 		return nil, updateError
 	}
 

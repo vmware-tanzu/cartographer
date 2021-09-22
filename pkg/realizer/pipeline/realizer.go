@@ -87,22 +87,24 @@ func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipel
 		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
 	}
 
-	stampedObject.SetLabels(labels)
-	allPipelineStampedObjects, err := repository.ListUnstructured(stampedObject)
+	objectForListCall := stampedObject.DeepCopy()
+	objectForListCall.SetLabels(labels)
+
+	allPipelineStampedObjects, err := repository.ListUnstructured(objectForListCall)
 	if err != nil {
-		errorMessage := fmt.Sprintf("could not list pipeline objects: %s", err.Error())
-		logger.Info(errorMessage)
-		return OutputPathNotSatisfiedCondition(err), nil, stampedObject
+		err := fmt.Errorf("could not list pipeline objects: %w", err)
+		logger.Info(err.Error())
+		return FailedToListCreatedObjectsCondition(err), nil, stampedObject
 	}
-	// TODO: handle the case where the pipeline has changed what type of object it stamps
-	// TODO: handle the case where the pipeline has changed what runTemplate pairs with
 
-	outputs, err := template.GetOutput(pipeline.Status.Outputs, allPipelineStampedObjects)
-
+	outputs, err := template.GetOutput(allPipelineStampedObjects)
 	if err != nil {
 		errorMessage := fmt.Sprintf("could not get output: %s", err.Error())
 		logger.Info(errorMessage)
 		return OutputPathNotSatisfiedCondition(err), nil, stampedObject
+	}
+	if len(outputs) == 0 {
+		outputs = pipeline.Status.Outputs
 	}
 
 	return RunTemplateReadyCondition(), outputs, stampedObject
