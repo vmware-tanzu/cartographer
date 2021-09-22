@@ -38,8 +38,7 @@ submit_release_to_github() {
 }
 
 git_current_version() {
-        git tag --sort=-v:refname -l 'v*' |
-                head -n1
+        git tag --points-at HEAD
 }
 
 main "$@"
