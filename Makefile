@@ -67,47 +67,9 @@ coverage:
 lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
 
-release: gen-manifests kodata
-	mkdir -p releases
-	ytt --ignore-unknown-comments -f ./config | ko resolve -f- > ./releases/release.yaml
-	kbld -f releases/release.yaml --imgpkg-lock-output releases/.imgpkg/images.yml
-	imgpkg push -b projectcartographer/cartographer-bundle -f releases --file-exclusion releases/kbld.lock.yml --lock-output releases/kbld.lock.yml
-	go run github.com/google/addlicense \
-		-f ./hack/boilerplate.go.txt \
-		releases
-
-install-cert-manager:
-	kapp deploy --yes -a cert-manager \
-		-f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.yaml
-
-prep-deploy: install-cert-manager
-	kubectl create ns cartographer-system || true
-
-deploy: prep-deploy
-	kapp deploy --yes -a cartographer -f ./releases/release.yaml
-
-tear-down-local:
-	./hack/local-dev/delete-local-cluster-and-registry.sh
-
-create-local:
-	./hack/local-dev/create-local-cluster-and-registry.sh
-
-deploy-local: create-local prep-deploy gen-manifests kodata
-	ytt -f ./config --ignore-unknown-comments | \
-		KO_DOCKER_REPO=localhost:65432 ko resolve -f- | \
-		kapp deploy --yes -a cartographer -f -
-
 copyright:
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
 		-ignore site/static/\*\* \
 		-ignore site/themes/\*\* \
 		.
-
-kodata: cmd/cartographer/kodata
-
-cmd/cartographer/kodata: cmd/cartographer/kodata/ytt-linux-amd64
-
-cmd/cartographer/kodata/ytt-linux-amd64: Makefile
-	curl -sL https://github.com/vmware-tanzu/carvel-ytt/releases/download/v0.36.0/ytt-linux-amd64 -o cmd/cartographer/kodata/ytt-linux-amd64
-	chmod +x cmd/cartographer/kodata/ytt-linux-amd64

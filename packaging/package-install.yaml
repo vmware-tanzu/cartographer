@@ -13,14 +13,22 @@
 # limitations under the License.
 
 #@ load("@ytt:data", "data")
-#@ load("@ytt:json", "json")
 
 ---
-apiVersion: v1
-kind: Secret
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
 metadata:
-  name: registry-credentials
-type: kubernetes.io/dockerconfigjson
-stringData:
-  #@ registry_creds = {"username": data.values.registry.username, "password": data.values.registry.password}
-  .dockerconfigjson: #@ json.encode({"auths": {data.values.registry.server: registry_creds}})
+  name: #@ data.values.name + "." + data.values.domain + "." + data.values.version
+  annotations:
+    kapp.k14s.io/change-group: "carto.run/install"
+    kapp.k14s.io/change-rule: "upsert after upserting carto.run/meta"
+spec:
+  serviceAccountName: default
+  packageRef:
+    refName: #@ data.values.name + "." + data.values.domain
+    versionSelection:
+      constraints: #@ data.values.version
+      prereleases:
+        identifiers:
+          - 'dev'
+          - 'rc'

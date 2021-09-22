@@ -12,15 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#@ load("@ytt:data", "data")
-#@ load("@ytt:json", "json")
-
+#@data/values-schema
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: registry-credentials
-type: kubernetes.io/dockerconfigjson
-stringData:
-  #@ registry_creds = {"username": data.values.registry.username, "password": data.values.registry.password}
-  .dockerconfigjson: #@ json.encode({"auths": {data.values.registry.server: registry_creds}})
+
+username: admin
+password: admin
+registry: "__MUST BE SET__"
+

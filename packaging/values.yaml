@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cat <<EOF | ctlptl delete -f -
-apiVersion: ctlptl.dev/v1alpha1
-kind: Registry
-name: cartographer-registry
+#@ load("@ytt:data", "data")
+
+#@data/values
 ---
-apiVersion: ctlptl.dev/v1alpha1
-kind: Cluster
-product: kind
-name: kind-cartographer
-registry: cartographer-registry
-EOF
+name: cartographer
+domain: carto.run
+image: __REPLACE_ME__
+releasedAt: __REPLACE_ME__
+version: __REPLACE_ME__
