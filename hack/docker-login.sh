@@ -35,7 +35,11 @@ update_or_create_docker_config() {
 
         readonly qry='.auths["%s"] = {"auth": "%s"}'
 
-        test -s $config_file || echo '{}' >$config_file
+        local current_content=$(jq '.' $config_file)
+        if [[ "$current_content" == "" ]]; then
+                echo '{}' >$config_file
+        fi
+
         cat $config_file | jq "$(printf "$qry" $server $token)" >$config_file
 }
 
