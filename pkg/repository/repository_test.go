@@ -206,7 +206,7 @@ spec:
 
 					submitted, persisted := cache.UnchangedSinceCachedArgsForCall(0)
 					Expect(*submitted).To(Equal(*stampedObj))
-					Expect(persisted[0]).To(Equal(*existingObj))
+					Expect(persisted[0]).To(Equal(existingObj))
 				})
 
 				Context("and the cache determines there has been no change since the last update", func() {

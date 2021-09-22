@@ -42,6 +42,7 @@ type Repository interface {
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
 	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error)
+	ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
 }
 
 type repository struct {
@@ -57,7 +58,7 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 }
 
 func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
-	unstructuredList, err := r.listUnstructured(obj)
+	unstructuredList, err := r.ListUnstructured(obj)
 	if err != nil {
 		return err
 	}
@@ -81,16 +82,16 @@ func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured,
 	}
 }
 
-func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates []unstructured.Unstructured) *unstructured.Unstructured {
+func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates []*unstructured.Unstructured) *unstructured.Unstructured {
 	for _, candidate := range candidates {
 		if candidate.GetName() == target.GetName() && candidate.GetNamespace() == target.GetNamespace() {
-			return &candidate
+			return candidate
 		}
 	}
 	return nil
 }
 
-func (r *repository) listUnstructured(obj *unstructured.Unstructured) ([]unstructured.Unstructured, error) {
+func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	unstructuredList := &unstructured.UnstructuredList{}
 	unstructuredList.SetGroupVersionKind(obj.GroupVersionKind())
 
@@ -103,7 +104,12 @@ func (r *repository) listUnstructured(obj *unstructured.Unstructured) ([]unstruc
 		return nil, fmt.Errorf("list: %w", err)
 	}
 
-	return unstructuredList.Items, nil
+	pointersToUnstructureds := make([]*unstructured.Unstructured, len(unstructuredList.Items))
+
+	for i, item := range unstructuredList.Items {
+		pointersToUnstructureds[i] = item.DeepCopy()
+	}
+	return pointersToUnstructureds, nil
 }
 
 func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {

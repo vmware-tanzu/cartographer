@@ -155,7 +155,7 @@ var _ = Describe("Cache", func() {
 		})
 
 		Describe("UnchangedSinceCached", func() {
-			var existingObjsOnAPIServer []unstructured.Unstructured
+			var existingObjsOnAPIServer []*unstructured.Unstructured
 
 			BeforeEach(func() {
 				persistedObjInCache = *persisted
@@ -163,7 +163,7 @@ var _ = Describe("Cache", func() {
 				submittedObjInCache = *submitted
 				submittedFoundInCache = true
 
-				existingObjsOnAPIServer = append(existingObjsOnAPIServer, *persisted.DeepCopy())
+				existingObjsOnAPIServer = append(existingObjsOnAPIServer, persisted.DeepCopy())
 			})
 
 			Context("when the submitted object is not present in the cache", func() {

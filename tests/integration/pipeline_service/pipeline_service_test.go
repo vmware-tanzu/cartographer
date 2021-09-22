@@ -17,12 +17,12 @@ package pipeline_service_test
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +43,18 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 	})
+
+	getPipelineTestStatus := func() (metav1.Condition, error) {
+		pipeline := &v1alpha1.Pipeline{}
+		err := c.Get(ctx, client.ObjectKey{Name: "my-pipeline", Namespace: testNS}, pipeline)
+		if err != nil {
+			return metav1.Condition{}, err
+		}
+		testStatusCondition := &metav1.Condition{}
+		testStatusConditionJson := pipeline.Status.Outputs["test-status"].Raw
+		err = json.Unmarshal(testStatusConditionJson, testStatusCondition)
+		return *testStatusCondition, err
+	}
 
 	Describe("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
 		BeforeEach(func() {
@@ -252,87 +264,6 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 		})
 	})
 
-	Describe("A RunTemplate that selects for outputs that can be immediately read", func() {
-		BeforeEach(func() {
-			runTemplateYaml := HereYamlF(`
-				---
-				apiVersion: carto.run/v1alpha1
-				kind: RunTemplate
-				metadata:
-				  namespace: %s
-				  name: my-run-template
-				spec:
-				  outputs:
-					my-first-output: spec.foo
-				  template:
-					apiVersion: test.run/v1alpha1
-					kind: Test
-					metadata:
-					  name: test-crd
-					spec:
-					  foo: "bar"
-				`,
-				testNS,
-			)
-
-			runTemplateDefinition = &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			err := c.Delete(ctx, runTemplateDefinition)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		Context("a Pipeline is applied with outputs that match immediately", func() {
-			BeforeEach(func() {
-				pipelineYaml := HereYamlF(`---
-					apiVersion: carto.run/v1alpha1
-					kind: Pipeline
-					metadata:
-					  namespace: %s
-					  name: my-pipeline
-					  labels:
-					    some-val: first
-					spec:
-					  runTemplateRef: 
-					    name: my-run-template
-					    namespace: %s
-					    kind: RunTemplate
-					`,
-					testNS, testNS)
-
-				pipelineDefinition = &unstructured.Unstructured{}
-				err := yaml.Unmarshal([]byte(pipelineYaml), pipelineDefinition)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = c.Create(ctx, pipelineDefinition, &client.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				err := c.Delete(ctx, pipelineDefinition)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("populates the pipeline.Status.outputs", func() {
-				pipeline := &v1alpha1.Pipeline{}
-
-				Eventually(func() (map[string]apiextensionsv1.JSON, error) {
-					err := c.Get(ctx, client.ObjectKey{Name: "my-pipeline", Namespace: testNS}, pipeline)
-					return pipeline.Status.Outputs, err
-				}).Should(MatchKeys(IgnoreExtras, Keys{
-					"my-first-output": Equal(apiextensionsv1.JSON{Raw: []byte("\"bar\"")}),
-				}))
-
-			})
-		})
-	})
-
 	Describe("A RunTemplate that selects for outputs that are eventually available", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
@@ -395,10 +326,205 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("populates the pipeline.Status.outputs", func() {
+		It("populates the pipeline.Status.outputs properly", func() {
 			opts := []client.ListOption{
 				client.InNamespace(testNS),
 				client.MatchingLabels(map[string]string{"carto.run/pipeline-name": "my-pipeline"}),
+			}
+
+			testsList := &testapi.TestList{}
+
+			Eventually(func() ([]testapi.Test, error) {
+				err := c.List(ctx, testsList, opts...)
+				return testsList.Items, err
+			}).Should(HaveLen(1))
+
+			By("reflecting status when succeeded is true")
+			testToUpdate := &testsList.Items[0]
+			testToUpdate.Status.Conditions = []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "True",
+					Reason:             "LifeIsGood",
+					LastTransitionTime: metav1.Now(),
+				},
+				{
+					Type:               "Succeeded",
+					Status:             "True",
+					Reason:             "Success",
+					LastTransitionTime: metav1.Now(),
+				},
+			}
+			err := c.Status().Update(ctx, testToUpdate)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(getPipelineTestStatus, "10s").Should(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionStatus("True")),
+				"Reason": Equal("LifeIsGood"),
+			}))
+
+			By("reflecting the past status succeeded is no longer succeeded")
+			testToUpdate.Status.Conditions = []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "False",
+					Reason:             "LifeIsSad",
+					LastTransitionTime: metav1.Now(),
+				},
+				{
+					Type:               "Succeeded",
+					Status:             "False",
+					Reason:             "Failure",
+					LastTransitionTime: metav1.Now(),
+				},
+			}
+
+			err = c.Status().Update(ctx, testToUpdate)
+			Expect(err).NotTo(HaveOccurred())
+
+			Consistently(getPipelineTestStatus).Should(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionStatus("True")),
+				"Reason": Equal("LifeIsGood"),
+			}))
+
+			By("reflecting the most recent status when succeeded is true again")
+
+			testToUpdate.Status.Conditions = []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "True",
+					Reason:             "LifeIsGreat",
+					LastTransitionTime: metav1.Now(),
+				},
+				{
+					Type:               "Succeeded",
+					Status:             "True",
+					Reason:             "Success",
+					LastTransitionTime: metav1.Now(),
+				},
+			}
+
+			err = c.Status().Update(ctx, testToUpdate)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(getPipelineTestStatus, "10s").Should(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionStatus("True")),
+				"Reason": Equal("LifeIsGreat"),
+			}))
+		})
+	})
+
+	Describe("Multiple objects created", func() {
+		BeforeEach(func() {
+			pipelineYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Pipeline
+					metadata:
+					  namespace: %s
+					  name: my-pipeline
+					  labels:
+					    some-val: first
+					spec:
+					  runTemplateRef: 
+					    name: my-run-template
+					    namespace: %s
+					    kind: RunTemplate
+					`,
+				testNS, testNS)
+
+			pipelineDefinition = &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(pipelineYaml), pipelineDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, pipelineDefinition, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			runTemplateYaml := HereYamlF(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: RunTemplate
+				metadata:
+				  namespace: %s
+				  name: my-run-template
+				spec:
+				  outputs:
+					test-status: status.conditions[?(@.type=="Ready")]
+				  template:
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  generateName: test-crd-
+					  labels:
+					    gen: "1"
+					spec:
+					  foo: "bar"
+				`,
+				testNS,
+			)
+
+			runTemplateDefinition = &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			opts := []client.ListOption{
+				client.InNamespace(testNS),
+				client.MatchingLabels(map[string]string{"carto.run/pipeline-name": "my-pipeline"}),
+			}
+
+			testsList := &testapi.TestList{}
+
+			Eventually(func() ([]testapi.Test, error) {
+				err := c.List(ctx, testsList, opts...)
+				return testsList.Items, err
+			}).Should(HaveLen(1))
+
+			// This is in order to ensure gen 1 object and gen 2 object have different creationTimestamps
+			time.Sleep(time.Second)
+
+			Expect(AlterFieldOfNestedStringMaps(runTemplateDefinition.Object, "spec.template.metadata.labels.gen", "2")).To(Succeed())
+
+			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() ([]testapi.Test, error) {
+				err := c.List(ctx, testsList, opts...)
+				return testsList.Items, err
+			}).Should(HaveLen(2))
+
+			// This is in order to ensure gen 2 object and gen 3 object have different creationTimestamps
+			// Gen 3 object is needed to demonstrate behaviour when the most recently submitted is not successful
+			time.Sleep(time.Second)
+
+			Expect(AlterFieldOfNestedStringMaps(runTemplateDefinition.Object, "spec.template.metadata.labels.gen", "3")).To(Succeed())
+
+			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() ([]testapi.Test, error) {
+				err := c.List(ctx, testsList, opts...)
+				return testsList.Items, err
+			}).Should(HaveLen(3))
+		})
+
+		AfterEach(func() {
+			err := c.Delete(ctx, pipelineDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Delete(ctx, runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("populates the pipeline.Status.outputs properly", func() {
+			By("updating pipeline status based on the most recently submitted and successful object")
+			opts := []client.ListOption{
+				client.InNamespace(testNS),
+				client.MatchingLabels(map[string]string{"gen": "2"}),
 			}
 
 			testsList := &testapi.TestList{}
@@ -415,29 +541,57 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					Status:             "True",
 					Reason:             "LifeIsGood",
 					LastTransitionTime: metav1.Now(),
+					Message:            "this is generation 2",
+				},
+				{
+					Type:               "Succeeded",
+					Status:             "True",
+					Reason:             "Success",
+					LastTransitionTime: metav1.Now(),
 				},
 			}
 			err := c.Status().Update(ctx, testToUpdate)
 			Expect(err).NotTo(HaveOccurred())
 
-			pipeline := &v1alpha1.Pipeline{}
+			Eventually(getPipelineTestStatus, "10s").Should(MatchFields(IgnoreExtras, Fields{
+				"Message": Equal("this is generation 2"),
+			}))
 
-			Eventually(func() (map[string]apiextensionsv1.JSON, error) {
-				err := c.Get(ctx, client.ObjectKey{Name: "my-pipeline", Namespace: testNS}, pipeline)
-				return pipeline.Status.Outputs, err
-			}).Should(HaveKey(Equal("test-status")))
+			By("not updating pipeline status based on the less recently submitted and successful objects")
+			opts = []client.ListOption{
+				client.InNamespace(testNS),
+				client.MatchingLabels(map[string]string{"gen": "1"}),
+			}
 
-			testStatusCondition := &metav1.Condition{}
-			testStatusConditionJson := pipeline.Status.Outputs["test-status"].Raw
-			err = json.Unmarshal(testStatusConditionJson, testStatusCondition)
+			Eventually(func() ([]testapi.Test, error) {
+				err := c.List(ctx, testsList, opts...)
+				return testsList.Items, err
+			}).Should(HaveLen(1))
+
+			testToUpdate = &testsList.Items[0]
+			testToUpdate.Status.Conditions = []metav1.Condition{
+				{
+					Type:               "Ready",
+					Status:             "True",
+					Reason:             "LifeIsGood",
+					LastTransitionTime: metav1.Now(),
+					Message:            "but this is earlier generation 1",
+				},
+				{
+					Type:               "Succeeded",
+					Status:             "True",
+					Reason:             "Success",
+					LastTransitionTime: metav1.Now(),
+				},
+			}
+			err = c.Status().Update(ctx, testToUpdate)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(*testStatusCondition).To(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Status": Equal(metav1.ConditionStatus("True")),
-				"Reason": Equal("LifeIsGood"),
+			Consistently(getPipelineTestStatus, "1s").Should(MatchFields(IgnoreExtras, Fields{
+				"Message": And(
+					Equal("this is generation 2"),
+					Not(Equal("but this is earlier generation 1"))),
 			}))
 		})
 	})
-
 })
