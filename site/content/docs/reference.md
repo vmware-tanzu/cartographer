@@ -125,6 +125,7 @@ With a `ClusterSupplyChain`, app operators describe which "shape of applications
 
 Those `Workload`s that match `spec.selector` then go through the components specified in `spec.components`.
 
+A component can emit values, which the supply chain can make available to other components. 
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -233,8 +234,9 @@ _ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/clu
 
 ### ClusterSourceTemplate
 
-`ClusterSourceTemplate` indicates how the supply chain could instantiate a provider of source code information (url and revision).
+`ClusterSourceTemplate` indicates how the supply chain could instantiate an object responsible for providing source code.
 
+The `ClusterSourceTemplate` requires definition of a `urlPath` and `revisionPath`. `ClusterSourceTemplate` will update its status to emit `url` and `revision` values, which are reflections of the values at the path on the created objects. The supply chain may make these values available to other components.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -293,8 +295,9 @@ _ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/
 
 ### ClusterImageTemplate
 
-`ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container images, for instance, one that takes source code, builds a container image out of it and presents under its `.status` the reference to that produced image.
+`ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container images, for instance, one that takes source code, builds a container image out of it.
 
+The `ClusterImageTemplate` requires definition of an `imagePath`. `ClusterImageTemplate` will update its status to emit an `image` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other components.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -337,13 +340,16 @@ _ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/c
 
 Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further components in the chain.
 
+The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfigTemplate` will update its status to emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other components.
+
 _ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
 
-A ClusterTemplate instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor components.
+A `ClusterTemplate` instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor components.
 
+The `ClusterTemplate` does not emit values to the supply chain.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
