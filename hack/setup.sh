@@ -239,7 +239,7 @@ setup_example() {
                 --data-value registry.server=$REGISTRY \
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
-                --data-value image_prefix="example-" |
+                --data-value image_prefix="$REGISTRY/example-" |
                 kapp deploy --yes -a example -f-
 }
 
