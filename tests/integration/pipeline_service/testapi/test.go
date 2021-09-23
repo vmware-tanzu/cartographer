@@ -19,6 +19,7 @@
 package testapi
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,7 +29,7 @@ import (
 type Test struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              TestSpec   `json:"spec"`
+	Spec              apiextensionsv1.JSON   `json:"spec"`
 	Status            TestStatus `json:"status,omitempty"`
 }
 

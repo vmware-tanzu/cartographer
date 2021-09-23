@@ -5,8 +5,11 @@ run: build
 
 gen-objects:
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
-                object \
-                paths=./pkg/apis/v1alpha1
+		object \
+        paths=./pkg/apis/v1alpha1
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+        object \
+        paths=./tests/integration/pipeline_service/testapi
 gen-manifests:
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
@@ -15,6 +18,14 @@ gen-manifests:
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+		crd \
+		paths=./pkg/apis/v1alpha1 \
+		output:crd:artifacts:config=tests/integration/pipeline_service/testapi/crds
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+        crd \
+        paths=./tests/integration/pipeline_service/testapi \
+        output:crd:artifacts:config=tests/integration/pipeline_service/testapi/crds
 
 test-gen-objects:
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \

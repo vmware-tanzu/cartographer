@@ -17,7 +17,7 @@ kind: TestSuite
 startControlPlane: true
 testDirs:
   - tests/kuttl
-crdDir: config/crd/bases
+crdDir: tests/integration/pipeline_service/testapi/crds
 manifestDirs:
   - tests/crd
 commands:
