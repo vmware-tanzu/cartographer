@@ -40,7 +40,8 @@ update_or_create_docker_config() {
                 echo '{}' >$config_file
         fi
 
-        cat $config_file | jq "$(printf "$qry" $server $token)" >$config_file
+        config=$(jq "$(printf "$qry" $server $token)" < "$config_file")
+        echo "$config" > $config_file
 }
 
 basic_auth() {
