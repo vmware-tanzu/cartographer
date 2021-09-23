@@ -42,7 +42,7 @@ spec:
   serviceAccountRef:
     name: service-account
     namespace: default
-  tag: #@ data.values.image_prefix + "go-builder"
+  tag: #@ data.values.registry.server + "/" + data.values.image_prefix + "go-builder"
   stack:
     name: stack
     kind: ClusterStack

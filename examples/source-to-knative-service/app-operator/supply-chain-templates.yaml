@@ -64,7 +64,7 @@ spec:
     metadata:
       name: $(workload.metadata.name)$
     spec:
-      tag: #@ data.values.image_prefix + "$(workload.metadata.name)$"
+      tag: #@ data.values.registry.server + "/" + data.values.image_prefix + "$(workload.metadata.name)$"
       serviceAccount: service-account
       builder:
         kind: ClusterBuilder
