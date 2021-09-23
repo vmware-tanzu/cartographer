@@ -41,7 +41,34 @@ spec:
       ref: $(workload.spec.source.git.ref)$
       gitImplementation: libgit2
       ignore: ""
+---
 
+#
+#
+# `source-tester` uses a tekton Pipeline to validate the source.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: tests
+spec:
+  urlPath: spec.inputs.url
+  revisionPath: spec.inputs.revision
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      runTemplateRef:
+        kind: RunTemplate
+        name: testing
+
+      inputs:
+        url: $(source.url)$
+        revision: $(source.revision)$
 
 ---
 #

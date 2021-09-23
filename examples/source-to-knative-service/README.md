@@ -114,6 +114,11 @@ kapp deploy --yes -a knative-serving \
   -f https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml
 ```
 
+- [tekton], for running pipelines.
+```bash
+kapp deploy --yes -a tekton https://storage.googleapis.com/tekton-releases/pipeline/v0.28.0/release.yaml
+```
+
 4. Authorization to push images to a container image registry
 
 As mentioned before, in this example we make use of `kpack` to build container

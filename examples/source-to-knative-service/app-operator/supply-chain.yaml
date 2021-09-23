@@ -32,13 +32,21 @@ spec:
         kind: ClusterSourceTemplate
         name: source
 
+    - name: source-tester
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: tests
+      sources:
+        - component: source-provider
+          name: source
+
     - name: image-builder
       templateRef:
         kind: ClusterImageTemplate
         name: image
       sources:
         - component: source-provider
-          name: source
+          name: source-tester
 
     - name: config-provider
       templateRef:
