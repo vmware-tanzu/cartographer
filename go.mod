@@ -22,7 +22,7 @@ require (
 	sigs.k8s.io/cluster-api v0.4.3
 	sigs.k8s.io/controller-runtime v0.10.1
 	sigs.k8s.io/controller-tools v0.7.0
-	sigs.k8s.io/yaml v1.2.0
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
