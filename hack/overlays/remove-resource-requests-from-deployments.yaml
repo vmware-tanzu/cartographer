@@ -14,19 +14,29 @@
 
 #@ load("@ytt:overlay", "overlay")
 
-#@overlay/match by=overlay.subset({"kind":"Deployment"}), expects="1+"
+#! Remove resource requirements to support smaller environments
+
+#@ is_dep = overlay.subset({"kind": "Deployment"})
+#@ is_ds = overlay.subset({"kind": "DaemonSet"})
+#@ is_sts = overlay.subset({"kind": "StatefulSet"})
+
+#@overlay/match by=overlay.or_op(is_dep, is_ds, is_sts),expects="1+"
 ---
 spec:
-  #@overlay/match
   template:
     spec:
-      #@overlay/match
+      #@overlay/match when=1
+      initContainers:
+      #@overlay/match by=overlay.all,when="1+"
+      -
+        #@overlay/match missing_ok=True
+        #@overlay/remove
+        resources: {}
+
+      #@overlay/match when=1
       containers:
-        #@overlay/match by=overlay.all,expects="0+"
-        - resources:
-            #@overlay/match missing_ok=True
-            #@overlay/replace
-            requests: {}
-            #@overlay/match missing_ok=True
-            #@overlay/replace
-            limits: {}
+      #@overlay/match by=overlay.all,when="1+"
+      -
+        #@overlay/match missing_ok=True
+        #@overlay/remove
+        resources: {}

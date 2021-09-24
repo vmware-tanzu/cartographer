@@ -33,6 +33,7 @@ readonly KNATIVE_SERVING_VERSION=0.25.0
 readonly KPACK_VERSION=0.3.1
 readonly SECRETGEN_CONTROLLER_VERSION=0.5.0
 readonly SOURCE_CONTROLLER_VERSION=0.15.4
+readonly TEKTON_VERSION=0.28.0
 
 main() {
         test $# -eq 0 && show_usage_help
@@ -56,6 +57,7 @@ main() {
                         install_source_controller
                         install_kpack
                         install_knative_serving
+                        install_tekton
                         ;;
 
                 example)
@@ -231,6 +233,13 @@ install_knative_serving() {
                 -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml \
                 -f $DIR/overlays/remove-resource-requests-from-deployments.yaml |
                 kapp deploy --yes -a knative-serving -f-
+}
+
+install_tekton() {
+        ytt --ignore-unknown-comments \
+                -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v$TEKTON_VERSION/release.yaml \
+                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml |
+                kapp deploy --yes -a tekton -f-
 }
 
 setup_example() {
