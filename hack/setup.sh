@@ -132,10 +132,7 @@ start_registry() {
 	password: admin
 	"
 
-        DOCKER_USERNAME=admin \
-                DOCKER_PASSWORD=admin \
-                DOCKER_REGISTRY=$REGISTRY \
-                $DIR/docker-login.sh
+        ko login $REGISTRY -u admin -p admin
 
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
                 echo "registry already exists"
