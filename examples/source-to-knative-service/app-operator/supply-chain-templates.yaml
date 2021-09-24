@@ -184,3 +184,35 @@ spec:
         - ytt: {}
       deploy:
         - kapp: {}
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: git-writer
+spec:
+  params:
+    - name: git_username
+      default: Carto Grapher
+    - name: git_user_email
+      default: carto@carto.run
+    - name: commit_message
+      default: "Update repo based on supply chain run"
+    - name: github_storage_repository
+      default: example/example-repo/
+  template:
+    apiVersion: carto.run/v1alpha1
+      kind: Pipeline
+      metadata:
+        name: $(workload.metadata.name)$-git-writer
+      spec:
+        runTemplateRef:
+          name: git-writer
+
+        inputs:
+          input_config_map_name: $(workload.metadata.name)$
+          input_config_map_field: manifest.yaml
+          github_storage_repository: $(params.github_storage_repository)$
+          commit_message: $(params.commit_message)$
+          git_username: $(params.git_username)$
+          git_user_email: $(params.git_user_email)$

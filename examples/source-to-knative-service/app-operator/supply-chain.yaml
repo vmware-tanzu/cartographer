@@ -60,3 +60,8 @@ spec:
       templateRef:
         kind: ClusterTemplate
         name: app-deploy
+
+    - name: git-writer
+      templateRef:
+        kind: ClusterTemplate
+        name: git-writer

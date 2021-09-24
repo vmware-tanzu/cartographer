@@ -35,3 +35,45 @@ spec:
           value: $(pipeline.spec.inputs.url)$
         - name: source-revision
           value: $(pipeline.spec.inputs.revision)$
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: RunTemplate
+metadata:
+  name: git-writer
+spec:
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      generateName: $(pipeline.metadata.name)$-
+    spec:
+      taskRef:
+        name: git-cli
+      workspaces:
+        - name: source
+          emptyDir: { }
+        - name: input
+          configmap:
+            name: $(pipeline.spec.inputs.input_config_map_name)$
+        - name: ssh-directory
+          secret:
+            secretName: ssh-key-secret
+      params:
+        - name: GIT_SCRIPT
+          value: |
+            git init
+            git remote add origin git@github.com:$(pipeline.spec.inputs.github_storage_repository)$
+            git pull origin main
+            git checkout main
+            cp $(workspaces.input.path)/$(pipeline.spec.inputs.input_config_map_field)$ .
+            git add .
+            git commit -m "$(pipeline.spec.inputs.input_config_map_field)$"
+            git push
+        - name: GIT_USER_NAME
+          value: $(pipeline.spec.inputs.git_username)$
+        - name: GIT_USER_EMAIL
+          value: $(pipeline.spec.inputs.git_user_email)$
+        - name: USER_HOME
+          value: /root

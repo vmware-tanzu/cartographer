@@ -119,6 +119,11 @@ kapp deploy --yes -a knative-serving \
 kapp deploy --yes -a tekton https://storage.googleapis.com/tekton-releases/pipeline/v0.28.0/release.yaml
 ```
 
+- [tekton git-cli task], for writing to a git repo
+```bash
+kapp deploy --yes -a tekton-git-cli https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
+```
+
 4. Authorization to push images to a container image registry
 
 As mentioned before, in this example we make use of `kpack` to build container
