@@ -61,19 +61,22 @@ spec:
           secret:
             secretName: ssh-key-secret
       params:
-        - name: GIT_SCRIPT
-          value: |
-            git init
-            git remote add origin git@github.com:$(pipeline.spec.inputs.github_storage_repository)$
-            git pull origin main
-            git checkout main
-            cp $(workspaces.input.path)/$(pipeline.spec.inputs.input_config_map_field)$ .
-            git add .
-            git commit -m "$(pipeline.spec.inputs.input_config_map_field)$"
-            git push
         - name: GIT_USER_NAME
           value: $(pipeline.spec.inputs.git_username)$
         - name: GIT_USER_EMAIL
           value: $(pipeline.spec.inputs.git_user_email)$
         - name: USER_HOME
           value: /root
+        - name: GIT_SCRIPT
+          value: |
+            export CONFIG_MAP_FIELD=$(pipeline.spec.inputs.input_config_map_field)$
+            export COMMIT_MESSAGE=$(pipeline.spec.inputs.input_config_map_field)$
+            git init
+            git remote add origin git@github.com:$(pipeline.spec.inputs.github_storage_repository)$
+            git pull origin main
+            git checkout main
+            export INPUT_PATH=$(workspaces.input.path)
+            cp "$INPUT_PATH"/"$CONFIG_MAP_FIELD" .
+            git add .
+            git commit -m "$COMMIT_MESSAGE"
+            git push
