@@ -87,6 +87,8 @@ coverage:
 .PHONY: lint
 lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
+	$(MAKE) -C hack lint
+
 
 .PHONY: copyright
 copyright:
