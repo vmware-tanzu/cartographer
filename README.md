@@ -247,7 +247,7 @@ found_), proceed with installing it.
 
 ```bash
 kapp deploy --yes -a kapp-controller \
-  -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.24.0/release.yml
+  -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.25.0/release.yml
 ```
 ```console
 Target cluster 'https://127.0.0.1:39993' (nodes: cartographer-control-plane)

@@ -99,7 +99,7 @@ kubectl create clusterrolebinding default-admin \
   --serviceaccount=default:default
 
 kapp deploy --yes -a kapp-controller \
-	-f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.22.0/release.yml
+	-f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.25.0/release.yml
 ```
 
 - [knative-serving], for being the runtime of the application we want to deploy.
