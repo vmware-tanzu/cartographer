@@ -14,6 +14,8 @@ The Cartographer project team welcomes contributions from the community. If you 
 - [`kind`]: to run a local cluster
 - [`ko`]: for building and pushing the controller's container image
 - [`kuttl`]: for integration testing
+- [`shellcheck`]: for shell script linting
+  [`ytt`]: for Cluster Templates with `ytt:` sections
 
 [`ctlptl`]: https://github.com/tilt-dev/ctlptl
 [`go`]: https://golang.org/dl/
@@ -22,6 +24,7 @@ The Cartographer project team welcomes contributions from the community. If you 
 [`kind`]: https://kind.sigs.k8s.io/docs/user/quick-start/
 [`ko`]: https://github.com/google/ko
 [`kuttl`]: https://github.com/kudobuilder/kuttl
+[`shellcheck`]: https://github.com/koalaman/shellcheck
 [`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 
 
