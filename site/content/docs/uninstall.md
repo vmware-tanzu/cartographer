@@ -30,3 +30,10 @@ Continue? [yN]: y
 
 Succeeded
 ```
+
+[admission webhook]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+[carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
+[cert-manager]: https://github.com/jetstack/cert-manager
+[kapp-controller]: https://carvel.dev/kapp-controller/
+[kapp]: https://carvel.dev/kapp/
+[kind]: https://github.com/kubernetes-sigs/kind
