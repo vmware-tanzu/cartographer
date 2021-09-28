@@ -1,11 +1,19 @@
 This RFC aims to tackle at once:
 
+
+# Main goal
+Separation of concerns.
+
+When writing a SourceTemplate, the only CRD a Template Author needs to use is a Source CRD
+
+Giving:
+1. Isolation from workloads and extensive supply chain definitions
+1. Simplifying the creation of a template to reduce the Input Surface area of a components
+1. Speed up testing.
+
+# Other things
+
 1. The use of intermediate state crd's for templates
-1. Treating templates as first class, such that they
-    1. Work standalone
-    1. Are easily treated as entries in a catalog of Templates
-    1. Can be easily authored by tool creators, and shared with app-operators
-    1. are fully isolated from references to a `workload`
 1. Make the RunTemplate and Cluster*Templates closer cousins, as they already appear to be on paper.
 
 # Current Vs Planned
@@ -60,9 +68,9 @@ spec:
         kind: Pipeline
         metadata:
           name: $(workload.name)$
+          labels:
+             source-provider: "run-my-code"
         spec:
-          runTemplateRef:
-            name: my-run-template-inputs
           inputs:
             source-url: $(source.url)$
             source-revision: $(source.revision)$
