@@ -21,7 +21,7 @@ readonly ROOT=$(cd $(dirname $0)/.. && pwd)
 readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
 readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
-readonly RELEASE_DATE=${RELEASE_DATE:-$(date -Iseconds)}
+readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
 readonly YTT_VERSION=0.36.0
 readonly YTT_CHECKSUM=d81ecf6c47209f6ac527e503a6fd85e999c3c2f8369e972794047bddc7e5fbe2
@@ -216,7 +216,7 @@ git_previous_version() {
         git tag --sort=-v:refname -l |
                 grep -A30 $version_filter |
                 tail -n +2 |
-                grep -P '^v\d+\.\d+\.\d+$' |
+                grep -E '^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$' |
                 head -n1
 }
 
