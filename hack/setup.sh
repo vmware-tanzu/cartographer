@@ -37,9 +37,9 @@ readonly TEKTON_VERSION=0.28.0
 
 main() {
         test $# -eq 0 && show_usage_help
-        display_vars $@
+        display_vars "$@"
 
-        for command in $@; do
+        for command in "$@"; do
                 case $command in
                 cluster)
                         start_registry
@@ -114,7 +114,7 @@ show_usage_help() {
 display_vars() {
         echo "Variables:
 
-	COMMANDS: 	$@
+	COMMANDS: 	$*
 
 	DIR:		$DIR
 	HOST_ADDR:	$HOST_ADDR
