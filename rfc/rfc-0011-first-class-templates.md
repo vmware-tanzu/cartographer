@@ -7,7 +7,6 @@ This RFC aims to tackle at once:
     1. Can be easily authored by tool creators, and shared with app-operators
     1. are fully isolated from references to a `workload`
 1. Make the RunTemplate and Cluster*Templates closer cousins, as they already appear to be on paper.
-1. Make Supply Chains easily extensible without code changes
 
 # Current Vs Planned
 Current:
@@ -83,11 +82,11 @@ spec:
   ytt: |
     #@ load("@ytt:data", "data")
 
-    #@ if hasattr(data.values.workload.spec.source, "git"):
+    #@ if hasattr(data.values.spec.source, "git"):
     apiVersion: source.toolkit.fluxcd.io/v1beta1
     kind: GitRepository
     metadata:
-      name: #@ data.values.workload.metadata.name
+      name: #@ data.values.metadata.name
       labels:
         app.kubernetes.io/component: source
         #@ if/end hasattr(data.values.metadata, "labels") and hasattr(data.values.metadata.labels, "app.kubernetes.io/part-of"):
