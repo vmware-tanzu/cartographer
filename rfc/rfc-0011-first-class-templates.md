@@ -58,7 +58,9 @@ spec:
           labels:
             source-provider: "mr-git-fetch"
         spec:
-          source: $(workload.spec.source)$
+          inputs:
+            sources: 
+              - $(workload.spec.source)$
     - name: test-provider
       sources:
         - component: source-provider
@@ -75,6 +77,7 @@ spec:
             source-url: $(source.url)$
             source-revision: $(source.revision)$
 ```
+
 
 # Source-Provider template
 ```yaml
