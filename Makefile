@@ -22,11 +22,13 @@ gen-manifests:
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
-.PHONY: test-gen-objects
-test-gen-objects:
+tests/integration/pipeline_service/testapi/zz_generated.deepcopy.go: tests/integration/pipeline_service/testapi/*.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
                 paths=./tests/integration/pipeline_service/testapi
+
+.PHONY: test-gen-objects
+test-gen-objects: tests/integration/pipeline_service/testapi/zz_generated.deepcopy.go
 
 tests/integration/pipeline_service/testapi/crds/*.yaml: tests/integration/pipeline_service/testapi/*.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
@@ -53,7 +55,7 @@ test-unit:
 	go run github.com/onsi/ginkgo/ginkgo -r pkg
 
 .PHONY: test-integration
-test-integration:
+test-integration: test-gen-manifests test-gen-objects
 	go run github.com/onsi/ginkgo/ginkgo -r tests/integration
 
 .PHONY: test-kuttl
