@@ -12,8 +12,10 @@ gen-objects:
                 object \
                 paths=./pkg/apis/v1alpha1
 
-.PHONY: gen-manifests
-gen-manifests:
+crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
+crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
+
+config/crd/bases/*.yaml &: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
 		paths=./pkg/apis/v1alpha1 \
@@ -21,6 +23,9 @@ gen-manifests:
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
+
+.PHONY: gen-manifests
+gen-manifests: config/crd/bases/*.yaml
 
 test_crd_sources := $(wildcard tests/resources/*.go)
 test_object_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(test_crd_sources))
