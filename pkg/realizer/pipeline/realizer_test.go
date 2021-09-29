@@ -35,7 +35,7 @@ import (
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"github.com/vmware-tanzu/cartographer/tests/integration/pipeline_service/testapi"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Realizer", func() {
@@ -67,7 +67,7 @@ var _ = Describe("Realizer", func() {
 
 	Context("with a valid RunTemplate", func() {
 		BeforeEach(func() {
-			testObj := testapi.Test{
+			testObj := resources.Test{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Test",
 					APIVersion: "test.run/v1alpha1",
@@ -75,10 +75,10 @@ var _ = Describe("Realizer", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "my-stamped-resource-",
 				},
-				Spec: testapi.TestSpec{
+				Spec: resources.TestSpec{
 					Foo: "is a string",
 				},
-				Status: testapi.TestStatus{
+				Status: resources.TestStatus{
 					ObservedGeneration: 1,
 					Conditions: []metav1.Condition{{
 						Type:               "Succeeded",
@@ -161,7 +161,8 @@ var _ = Describe("Realizer", func() {
 		It("returns the stampedObject", func() {
 			_, _, stampedObject := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 			Expect(stampedObject.Object["spec"]).To(Equal(map[string]interface{}{
-				"foo": "is a string",
+				"foo":   "is a string",
+				"value": nil,
 			}))
 			Expect(stampedObject.Object["apiVersion"]).To(Equal("test.run/v1alpha1"))
 			Expect(stampedObject.Object["kind"]).To(Equal("Test"))

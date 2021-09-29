@@ -39,12 +39,12 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
-	"github.com/vmware-tanzu/cartographer/tests/integration/pipeline_service/testapi"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 func TestWebhookIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
+	RunSpecs(t, "Pipeline Service Integration Suite")
 }
 
 var (
@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 		},
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "..", "config", "crd", "bases"),
-			filepath.Join("testapi", "crds"),
+			filepath.Join("..", "..", "resources", "crds"),
 		},
 		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
 	}
@@ -127,7 +127,7 @@ var _ = BeforeSuite(func() {
 	err = corev1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = testapi.AddToScheme(scheme)
+	err = resources.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	c, err = client.New(apiConfig, client.Options{

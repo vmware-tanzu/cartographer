@@ -22,25 +22,25 @@ gen-manifests:
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
-tests/integration/pipeline_service/testapi/zz_generated.deepcopy.go: tests/integration/pipeline_service/testapi/*.go
+tests/resources/zz_generated.deepcopy.go: tests/resources/*.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
-                paths=./tests/integration/pipeline_service/testapi
+                paths=./tests/resources
 
 .PHONY: test-gen-objects
-test-gen-objects: tests/integration/pipeline_service/testapi/zz_generated.deepcopy.go
+test-gen-objects: tests/resources/zz_generated.deepcopy.go
 
-tests/integration/pipeline_service/testapi/crds/*.yaml: tests/integration/pipeline_service/testapi/*.go
+tests/resources/crds/*.yaml: tests/resources/*.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
-		paths=./tests/integration/pipeline_service/testapi \
-		output:crd:artifacts:config=./tests/integration/pipeline_service/testapi/crds
+		paths=./tests/resources \
+		output:crd:artifacts:config=./tests/resources/crds
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
-		./tests/integration/pipeline_service/testapi/crds
+		./tests/resources/crds
 
 .PHONY: test-gen-manifests
-test-gen-manifests: tests/integration/pipeline_service/testapi/crds/*.yaml
+test-gen-manifests: tests/resources/crds/*.yaml
 
 .PHONY: clean-fakes
 clean-fakes:
@@ -51,7 +51,7 @@ generate: clean-fakes
 	go generate ./...
 
 .PHONY: test-unit
-test-unit:
+test-unit: test-gen-objects
 	go run github.com/onsi/ginkgo/ginkgo -r pkg
 
 .PHONY: test-integration
@@ -92,7 +92,6 @@ coverage:
 lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
 	$(MAKE) -C hack lint
-
 
 .PHONY: copyright
 copyright:
