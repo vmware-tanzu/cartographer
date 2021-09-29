@@ -7,4 +7,4 @@
 - Rasheed Abdul-Aziz, squeedee, VMware
 - Sam Coward, idoru, VMware
 - Todd Ritchie, pivotal-todd-ritchie, VMware
-- Waciuma Wanjohi, waciuma4pivotal, VMware
+- Waciuma Wanjohi, waciumawanjohi, VMware
