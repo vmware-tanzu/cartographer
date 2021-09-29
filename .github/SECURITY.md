@@ -44,20 +44,20 @@ The VMware Security Team will respond to vulnerability reports as follows:
 4. If a vulnerability is acknowledged and the timeline for a fix is determined, the Security Team will work on a plan to communicate with the appropriate community, including identifying mitigating steps that affected users can take to protect themselves until the fix is rolled out.
 5. The Security Team will also create a [CVSS](https://www.first.org/cvss/specification-document) using the [CVSS Calculator](https://www.first.org/cvss/calculator/3.0). The Security Team makes the final call on the calculated CVSS; it is better to move quickly than making the CVSS perfect. Issues may also be reported to [Mitre](https://cve.mitre.org/) using this [scoring calculator](https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator). The CVE will initially be set to private.
 6. The Security Team will work on fixing the vulnerability and perform internal testing before preparing to roll out the fix.
-7. The Security Team will provide early disclosure of the vulnerability by emailing the [Cartographer Distributors](<DISTRIBUTORS EMAIL LINK>) mailing list. Distributors can initially plan for the vulnerability patch ahead of the fix, and later can test the fix and provide feedback to the Cartographer team. See the section **Early Disclosure to Cartographer Distributors List** for details about how to join this mailing list.
+7. The Security Team will provide early disclosure of the vulnerability by emailing the [Cartographer Distributors](cartographer-distributors@googlegroups.com) mailing list. Distributors can initially plan for the vulnerability patch ahead of the fix, and later can test the fix and provide feedback to the Cartographer team. See the section **Early Disclosure to Cartographer Distributors List** for details about how to join this mailing list.
 8. A public disclosure date is negotiated by the VMware SecurityTeam, the bug submitter, and the distributors list. We prefer to fully disclose the bug as soon as possible once a user mitigation or patch is available. It is reasonable to delay disclosure when the bug or the fix is not yet fully understood, the solution is not well-tested, or for distributor coordination. The timeframe for disclosure is from immediate (especially if it’s already publicly known) to a few weeks. For a critical vulnerability with a straightforward mitigation, we expect the report date for the public disclosure date to be on the order of 14 business days. The VMware Security Team holds the final say when setting a public disclosure date.
 9. Once the fix is confirmed, the Security Team will patch the vulnerability in the next patch or minor release, and backport a patch release into all earlier supported releases. Upon release of the patched version of Cartographer, we will follow the **Public Disclosure Process**.
 
 ## Public Disclosure Process
 
-The Security Team publishes a [public advisory](<LINK TO SECURTY ADVISORIES IN YOUR REPO>) to the Cartographer community via GitHub. In most cases, additional communication via Slack, Twitter, mailing lists, blog and other channels will assist in educating Cartographer users and rolling out the patched release to affected users.
+The Security Team publishes a [public advisory](https://github.com/vmware-tanzu/cartographer/security/advisories) to the Cartographer community via GitHub. In most cases, additional communication via Slack, Twitter, mailing lists, blog and other channels will assist in educating Cartographer users and rolling out the patched release to affected users.
 
 The Security Team will also publish any mitigating steps users can take until the fix can be applied to their Cartographer instances. Cartographer distributors will handle creating and publishing their own security advisories.
 
 ## Mailing lists
 
 *   Use security@vmware.com to report security concerns to the VMware Security Team, who uses the list to privately discuss security issues and fixes prior to disclosure.
-*   Join the [Cartographer Distributors](<DISTRIBUTORS EMAIL LINK>) mailing list for early private information and vulnerability disclosure. Early disclosure may include mitigating steps and additional information on security patch releases. See below for information on how Cartographer distributors or vendors can apply to join this list.
+*   Join the [Cartographer Distributors](cartographer-distributors@googlegroups.com) mailing list for early private information and vulnerability disclosure. Early disclosure may include mitigating steps and additional information on security patch releases. See below for information on how Cartographer distributors or vendors can apply to join this list.
 
 ## Early Disclosure to Cartographer Distributors List
 
@@ -65,7 +65,7 @@ The private list is intended to be used primarily to provide actionable informat
 
 ## Membership Criteria
 
-To be eligible to join the [Cartographer Distributors](<DISTRIBUTORS EMAIL LINK>) mailing list, you should:
+To be eligible to join the [Cartographer Distributors](cartographer-distributors@googlegroups.com) mailing list, you should:
 
 1. Be an active distributor of Cartographer.
 2. Have a user base that is not limited to your own organization.
@@ -87,7 +87,7 @@ In the unfortunate event that you share information beyond what is permitted by 
 
 ## Requesting to Join
 
-Send new membership requests to <DISTRIBUTORS EMAIL LINK>. In the body of your request please specify how you qualify for membership and fulfill each criterion listed in the Membership Criteria section above.
+Send new membership requests to cartographer-distributors@googlegroups.com. In the body of your request please specify how you qualify for membership and fulfill each criterion listed in the Membership Criteria section above.
 
 
 ## Confidentiality, integrity and availability
