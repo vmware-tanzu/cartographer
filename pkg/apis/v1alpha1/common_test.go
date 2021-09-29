@@ -43,7 +43,7 @@ var _ = Describe("common", func() {
 			It("returns an error", func() {
 				_, err := v1alpha1.GetAPITemplate("Rubbish")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("component does not have valid kind: Rubbish"))
+				Expect(err.Error()).To(Equal("resource does not have valid kind: Rubbish"))
 			})
 
 		})

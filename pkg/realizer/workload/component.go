@@ -24,29 +24,29 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
-//counterfeiter:generate . ComponentRealizer
-type ComponentRealizer interface {
-	Do(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error)
+//counterfeiter:generate . ResourceRealizer
+type ResourceRealizer interface {
+	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*templates.Output, error)
 }
 
-type componentRealizer struct {
+type resourceRealizer struct {
 	workload *v1alpha1.Workload
 	repo     repository.Repository
 }
 
-func NewComponentRealizer(workload *v1alpha1.Workload, repo repository.Repository) ComponentRealizer {
-	return &componentRealizer{
+func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository) ResourceRealizer {
+	return &resourceRealizer{
 		workload: workload,
 		repo:     repo,
 	}
 }
 
-func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs Outputs) (*templates.Output, error) {
-	template, err := r.repo.GetClusterTemplate(component.TemplateRef)
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*templates.Output, error) {
+	template, err := r.repo.GetClusterTemplate(resource.TemplateRef)
 	if err != nil {
 		return nil, GetClusterTemplateError{
 			Err:         err,
-			TemplateRef: component.TemplateRef,
+			TemplateRef: resource.TemplateRef,
 		}
 	}
 
@@ -54,15 +54,15 @@ func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyCh
 		"carto.run/workload-name":             r.workload.Name,
 		"carto.run/workload-namespace":        r.workload.Namespace,
 		"carto.run/cluster-supply-chain-name": supplyChainName,
-		"carto.run/component-name":            component.Name,
+		"carto.run/resource-name":             resource.Name,
 		"carto.run/template-kind":             template.GetKind(),
 		"carto.run/cluster-template-name":     template.GetName(),
 	}
 
-	inputs := outputs.GenerateInputs(component)
+	inputs := outputs.GenerateInputs(resource)
 	workloadTemplatingContext := map[string]interface{}{
 		"workload": r.workload,
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), component.Params),
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), resource.Params),
 		"sources":  inputs.Sources,
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,
@@ -81,8 +81,8 @@ func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyCh
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		return nil, StampError{
-			Err:       err,
-			Component: component,
+			Err:      err,
+			Resource: resource,
 		}
 	}
 
@@ -97,8 +97,8 @@ func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyCh
 	output, err := template.GetOutput(stampedObject)
 	if err != nil {
 		return nil, RetrieveOutputError{
-			Err:       err,
-			component: component,
+			Err:      err,
+			resource: resource,
 		}
 	}
 

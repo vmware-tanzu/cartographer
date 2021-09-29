@@ -68,57 +68,57 @@ func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Conditi
 	}
 }
 
-// -- Component conditions
+// -- Resource conditions
 
-func ComponentsSubmittedCondition() metav1.Condition {
+func ResourcesSubmittedCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.WorkloadComponentsSubmitted,
+		Type:   v1alpha1.WorkloadResourcesSubmitted,
 		Status: metav1.ConditionTrue,
-		Reason: v1alpha1.CompleteComponentsSubmittedReason,
+		Reason: v1alpha1.CompleteResourcesSubmittedReason,
 	}
 }
 
 func TemplateObjectRetrievalFailureCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadComponentsSubmitted,
+		Type:    v1alpha1.WorkloadResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateObjectRetrievalFailureComponentsSubmittedReason,
+		Reason:  v1alpha1.TemplateObjectRetrievalFailureResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func MissingValueAtPathCondition(componentName, expression string) metav1.Condition {
+func MissingValueAtPathCondition(resourceName, expression string) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadComponentsSubmitted,
+		Type:    v1alpha1.WorkloadResourcesSubmitted,
 		Status:  metav1.ConditionUnknown,
-		Reason:  v1alpha1.MissingValueAtPathComponentsSubmittedReason,
-		Message: fmt.Sprintf("Component '%s' is waiting to read value '%s'", componentName, expression),
+		Reason:  v1alpha1.MissingValueAtPathResourcesSubmittedReason,
+		Message: fmt.Sprintf("Resource '%s' is waiting to read value '%s'", resourceName, expression),
 	}
 }
 
 func TemplateStampFailureCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadComponentsSubmitted,
+		Type:    v1alpha1.WorkloadResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateStampFailureComponentsSubmittedReason,
+		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
 func TemplateRejectedByAPIServerCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadComponentsSubmitted,
+		Type:    v1alpha1.WorkloadResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateRejectedByAPIServerComponentsSubmittedReason,
+		Reason:  v1alpha1.TemplateRejectedByAPIServerResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func UnknownComponentErrorCondition(err error) metav1.Condition {
+func UnknownResourceErrorCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadComponentsSubmitted,
+		Type:    v1alpha1.WorkloadResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.UnknownErrorComponentsSubmittedReason,
+		Reason:  v1alpha1.UnknownErrorResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }

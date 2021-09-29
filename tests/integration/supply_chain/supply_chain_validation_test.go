@@ -43,16 +43,16 @@ var _ = Describe("SupplyChainValidation", func() {
 				Namespace: "default",
 			},
 			Spec: v1alpha1.SupplyChainSpec{
-				Components: []v1alpha1.SupplyChainComponent{},
-				Selector:   map[string]string{"integration-test": "workload-no-supply-chain"},
+				Resources: []v1alpha1.SupplyChainResource{},
+				Selector:  map[string]string{"integration-test": "workload-no-supply-chain"},
 			},
 		}
 	}
 	var SupplyChainWithTemplateReference = func(templateName string, templateKind string) *v1alpha1.ClusterSupplyChain {
 		result := BaseSupplyChain("my-supply-chain")
-		result.Spec.Components = []v1alpha1.SupplyChainComponent{
+		result.Spec.Resources = []v1alpha1.SupplyChainResource{
 			{
-				Name: "funky-component",
+				Name: "funky-resource",
 				TemplateRef: v1alpha1.ClusterTemplateReference{
 					Kind: templateKind,
 					Name: templateName,
@@ -72,10 +72,10 @@ var _ = Describe("SupplyChainValidation", func() {
 		_ = c.Delete(ctx, supplyChain)
 	})
 
-	Context("Supply Chain component names are unique", func() {
+	Context("Supply Chain resource names are unique", func() {
 		Context("Submitting a new supply chain", func() {
 			BeforeEach(func() {
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -101,7 +101,7 @@ var _ = Describe("SupplyChainValidation", func() {
 
 		Context("Updating a valid supply chain", func() {
 			BeforeEach(func() {
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -122,9 +122,9 @@ var _ = Describe("SupplyChainValidation", func() {
 			})
 
 			It("Accepts the supply chain", func() {
-				supplyChain.Spec.Components = append(
-					supplyChain.Spec.Components,
-					v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = append(
+					supplyChain.Spec.Resources,
+					v1alpha1.SupplyChainResource{
 						Name: "another-other-source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
@@ -137,7 +137,7 @@ var _ = Describe("SupplyChainValidation", func() {
 					err := c.Get(ctx, client.ObjectKey{Name: supplyChain.Name}, supplyChain)
 					Expect(err).ToNot(HaveOccurred())
 
-					components := []v1alpha1.SupplyChainComponent{
+					resources := []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
 							TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -161,7 +161,7 @@ var _ = Describe("SupplyChainValidation", func() {
 						},
 					}
 
-					supplyChain.Spec.Components = components
+					supplyChain.Spec.Resources = resources
 
 					return c.Update(ctx, supplyChain)
 				})
@@ -171,11 +171,11 @@ var _ = Describe("SupplyChainValidation", func() {
 		})
 	})
 
-	Context("Supply Chain component names are identical", func() {
+	Context("Supply Chain resource names are identical", func() {
 		var err error
 		Context("Submitting a new supply chain", func() {
 			BeforeEach(func() {
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -195,13 +195,13 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the supply chain", func() {
 				err = c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("duplicate component name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
+				Expect(err.Error()).To(ContainSubstring("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
 			})
 		})
 
 		Context("Updating a valid supply chain", func() {
 			BeforeEach(func() {
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -219,35 +219,35 @@ var _ = Describe("SupplyChainValidation", func() {
 					err := c.Get(ctx, client.ObjectKey{Name: supplyChain.Name}, supplyChain)
 					Expect(err).ToNot(HaveOccurred())
 
-					component := v1alpha1.SupplyChainComponent{
+					resource := v1alpha1.SupplyChainResource{
 						Name: "source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "git-template---default-params",
 						},
 					}
-					components := []v1alpha1.SupplyChainComponent{
-						component,
-						component,
+					resources := []v1alpha1.SupplyChainResource{
+						resource,
+						resource,
 					}
 
-					supplyChain.Spec.Components = components
+					supplyChain.Spec.Resources = resources
 
 					return c.Update(ctx, supplyChain)
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("duplicate component name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
+				Expect(err.Error()).To(ContainSubstring("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
 			})
 		})
 	})
 
-	Context("component types are mismatched", func() {
+	Context("resource types are mismatched", func() {
 		var err error
 		Context("Submitting a new supply chain", func() {
 			BeforeEach(func() {
 				supplyChain = BaseSupplyChain("my-supply-chain")
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -261,10 +261,10 @@ var _ = Describe("SupplyChainValidation", func() {
 							Kind: "ClusterImageTemplate",
 							Name: "kpack-battery",
 						},
-						Sources: []v1alpha1.ComponentReference{
+						Sources: []v1alpha1.ResourceReference{
 							{
-								Component: "provider",
-								Name:      "solo-source-provider",
+								Resource: "provider",
+								Name:     "solo-source-provider",
 							},
 						},
 					},
@@ -273,7 +273,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the supply chain", func() {
 				err = c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("component 'provider' providing 'solo-source-provider' must reference a ClusterSourceTemplate"))
+				Expect(err.Error()).To(ContainSubstring("resource 'provider' providing 'solo-source-provider' must reference a ClusterSourceTemplate"))
 			})
 		})
 	})
@@ -308,7 +308,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the the supply chain", func() {
 				err := c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("spec.components.templateRef.name in body should be at least 1 chars long"))
+				Expect(err.Error()).To(ContainSubstring("spec.resources.templateRef.name in body should be at least 1 chars long"))
 			})
 		})
 
@@ -323,7 +323,7 @@ var _ = Describe("SupplyChainValidation", func() {
 				spec:
 				  selector:
 				    integration-test: must-have-selector
-				components:
+				resources:
 				- name: source-provider
 				  templateRef:
 				    kind: ClusterSourceTemplate
@@ -337,7 +337,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the the supply chain", func() {
 				err := c.Create(ctx, supplyChainUnstructured)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`ClusterSupplyChain.carto.run "my-supply-chain" is invalid: spec.components:`))
+				Expect(err.Error()).To(ContainSubstring(`ClusterSupplyChain.carto.run "my-supply-chain" is invalid: spec.resources:`))
 			})
 		})
 

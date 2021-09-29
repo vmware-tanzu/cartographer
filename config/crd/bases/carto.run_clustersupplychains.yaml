@@ -48,31 +48,31 @@ spec:
             type: object
           spec:
             properties:
-              components:
+              resources:
                 items:
                   properties:
                     configs:
                       items:
                         properties:
-                          component:
-                            type: string
                           name:
                             type: string
+                          resource:
+                            type: string
                         required:
-                        - component
                         - name
+                        - resource
                         type: object
                       type: array
                     images:
                       items:
                         properties:
-                          component:
-                            type: string
                           name:
                             type: string
+                          resource:
+                            type: string
                         required:
-                        - component
                         - name
+                        - resource
                         type: object
                       type: array
                     name:
@@ -92,13 +92,13 @@ spec:
                     sources:
                       items:
                         properties:
-                          component:
-                            type: string
                           name:
                             type: string
+                          resource:
+                            type: string
                         required:
-                        - component
                         - name
+                        - resource
                         type: object
                       type: array
                     templateRef:
@@ -127,7 +127,7 @@ spec:
                   type: string
                 type: object
             required:
-            - components
+            - resources
             - selector
             type: object
           status:

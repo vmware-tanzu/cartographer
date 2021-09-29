@@ -41,7 +41,7 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 	case "ClusterTemplate":
 		template = &ClusterTemplate{}
 	default:
-		return nil, fmt.Errorf("component does not have valid kind: %s", templateKind)
+		return nil, fmt.Errorf("resource does not have valid kind: %s", templateKind)
 	}
 	return template, nil
 }

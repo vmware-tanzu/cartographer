@@ -20,7 +20,7 @@ metadata:
 spec:
   selector:
     integration-test: "broken-path"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
@@ -34,7 +34,7 @@ metadata:
 spec:
   selector:
     integration-test: "broken-tag"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate

@@ -83,7 +83,7 @@ var _ = Describe("Reconciler", func() {
 					Generation: 1,
 				},
 				Spec: v1alpha1.SupplyChainSpec{
-					Components: []v1alpha1.SupplyChainComponent{
+					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "first name",
 							TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -181,20 +181,20 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("when retrieving a component template fails", func() {
+		Context("when retrieving a resource template fails", func() {
 			BeforeEach(func() {
 				repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
 				repo.GetClusterTemplateReturnsOnCall(1, nil, errors.New("getting templates is hard"))
 			})
 
-			It("adds a positive templates NOT found condition listing the failed component", func() {
+			It("adds a positive templates NOT found condition listing the failed resource", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
 			})
 
 			It("returns an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(MatchError(ContainSubstring("handle component")))
+				Expect(err).To(MatchError(ContainSubstring("handle resource")))
 				Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
 			})
 
@@ -204,19 +204,19 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 			})
 
-			Context("when retrieving multiple component templates fails", func() {
+			Context("when retrieving multiple resource templates fails", func() {
 				BeforeEach(func() {
 					repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("first error is all that matters"))
 				})
 
-				It("adds a positive templates NOT found condition listing the failed componentS", func() {
+				It("adds a positive templates NOT found condition listing the failed resourceS", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"first name", "second name"})))
 				})
 
 				It("returns an error", func() {
 					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).To(MatchError(ContainSubstring("handle component")))
+					Expect(err).To(MatchError(ContainSubstring("handle resource")))
 					Expect(err).To(MatchError(ContainSubstring("first error is all that matters")))
 					Expect(err).NotTo(MatchError(ContainSubstring("getting templates is hard")))
 				})

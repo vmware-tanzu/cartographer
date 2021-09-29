@@ -24,7 +24,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, componentRealizer ComponentRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error
 }
 
 type realizer struct{}
@@ -33,16 +33,16 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, componentRealizer ComponentRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) error {
 	outs := NewOutputs()
 
-	for i := range supplyChain.Spec.Components {
-		component := supplyChain.Spec.Components[i]
-		out, err := componentRealizer.Do(ctx, &component, supplyChain.Name, outs)
+	for i := range supplyChain.Spec.Resources {
+		resource := supplyChain.Spec.Resources[i]
+		out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
 		if err != nil {
 			return err
 		}
-		outs.AddOutput(component.Name, out)
+		outs.AddOutput(resource.Name, out)
 	}
 
 	return nil

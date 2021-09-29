@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	WorkloadReady               = "Ready"
-	WorkloadSupplyChainReady    = "SupplyChainReady"
-	WorkloadComponentsSubmitted = "ComponentsSubmitted"
+	WorkloadReady              = "Ready"
+	WorkloadSupplyChainReady   = "SupplyChainReady"
+	WorkloadResourcesSubmitted = "ResourcesSubmitted"
 )
 
 const (
@@ -39,12 +39,12 @@ const (
 )
 
 const (
-	CompleteComponentsSubmittedReason                       = "ComponentSubmissionComplete"
-	TemplateObjectRetrievalFailureComponentsSubmittedReason = "TemplateObjectRetrievalFailure"
-	MissingValueAtPathComponentsSubmittedReason             = "MissingValueAtPath"
-	TemplateStampFailureComponentsSubmittedReason           = "TemplateStampFailure"
-	TemplateRejectedByAPIServerComponentsSubmittedReason    = "TemplateRejectedByAPIServer"
-	UnknownErrorComponentsSubmittedReason                   = "UnknownError"
+	CompleteResourcesSubmittedReason                       = "ResourceSubmissionComplete"
+	TemplateObjectRetrievalFailureResourcesSubmittedReason = "TemplateObjectRetrievalFailure"
+	MissingValueAtPathResourcesSubmittedReason             = "MissingValueAtPath"
+	TemplateStampFailureResourcesSubmittedReason           = "TemplateStampFailure"
+	TemplateRejectedByAPIServerResourcesSubmittedReason    = "TemplateRejectedByAPIServer"
+	UnknownErrorResourcesSubmittedReason                   = "UnknownError"
 )
 
 // +kubebuilder:object:root=true

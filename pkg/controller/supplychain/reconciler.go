@@ -102,25 +102,25 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 
 func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) error {
 	var (
-		componentHandlingError, err error
-		componentsNotFound          []string
+		resourceHandlingError, err error
+		resourcesNotFound          []string
 	)
 
-	for _, component := range chain.Spec.Components {
-		_, err = r.repo.GetClusterTemplate(component.TemplateRef)
+	for _, resource := range chain.Spec.Resources {
+		_, err = r.repo.GetClusterTemplate(resource.TemplateRef)
 		if err != nil {
-			componentsNotFound = append(componentsNotFound, component.Name)
-			if componentHandlingError == nil {
-				componentHandlingError = fmt.Errorf("handle component: %w", err)
+			resourcesNotFound = append(resourcesNotFound, resource.Name)
+			if resourceHandlingError == nil {
+				resourceHandlingError = fmt.Errorf("handle resource: %w", err)
 			}
 		}
 	}
 
-	if componentHandlingError != nil {
-		r.conditionManager.AddPositive(TemplatesNotFoundCondition(componentsNotFound))
+	if resourceHandlingError != nil {
+		r.conditionManager.AddPositive(TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
 		r.conditionManager.AddPositive(TemplatesFoundCondition())
 	}
 
-	return componentHandlingError
+	return resourceHandlingError
 }

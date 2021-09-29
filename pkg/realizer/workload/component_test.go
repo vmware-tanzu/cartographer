@@ -33,20 +33,20 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-var _ = Describe("Component", func() {
+var _ = Describe("Resource", func() {
 
 	var (
-		component       v1alpha1.SupplyChainComponent
+		resource        v1alpha1.SupplyChainResource
 		workload        v1alpha1.Workload
 		outputs         realizer.Outputs
 		supplyChainName string
 		fakeRepo        repositoryfakes.FakeRepository
-		r               realizer.ComponentRealizer
+		r               realizer.ResourceRealizer
 	)
 
 	BeforeEach(func() {
-		component = v1alpha1.SupplyChainComponent{
-			Name: "component-1",
+		resource = v1alpha1.SupplyChainResource{
+			Name: "resource-1",
 			TemplateRef: v1alpha1.ClusterTemplateReference{
 				Kind: "ClusterImageTemplate",
 				Name: "image-template-1",
@@ -59,20 +59,20 @@ var _ = Describe("Component", func() {
 
 		fakeRepo = repositoryfakes.FakeRepository{}
 		workload = v1alpha1.Workload{}
-		r = realizer.NewComponentRealizer(&workload, &fakeRepo)
+		r = realizer.NewResourceRealizer(&workload, &fakeRepo)
 	})
 
 	Describe("Do", func() {
 		When("passed a workload with outputs", func() {
 			BeforeEach(func() {
-				component.Sources = []v1alpha1.ComponentReference{
+				resource.Sources = []v1alpha1.ResourceReference{
 					{
-						Name:      "source-provider",
-						Component: "previous-component",
+						Name:     "source-provider",
+						Resource: "previous-resource",
 					},
 				}
 
-				outputs.AddOutput("previous-component", &templates.Output{Source: &templates.Source{
+				outputs.AddOutput("previous-resource", &templates.Output{Source: &templates.Source{
 					URL:      "some-url",
 					Revision: "some-revision",
 				}})
@@ -118,7 +118,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("creates a stamped object and returns the outputs", func() {
-				out, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				out, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
 				stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
@@ -140,7 +140,7 @@ var _ = Describe("Component", func() {
 				}))
 				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
 					"carto.run/cluster-supply-chain-name": "supply-chain-name",
-					"carto.run/component-name":            "component-1",
+					"carto.run/resource-name":             "resource-1",
 					"carto.run/cluster-template-name":     "image-template-1",
 					"carto.run/workload-name":             "",
 					"carto.run/workload-namespace":        "",
@@ -158,7 +158,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("returns GetClusterTemplateError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
@@ -190,9 +190,9 @@ var _ = Describe("Component", func() {
 			})
 
 			It("returns StampError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to stamp object for component 'component-1'"))
+				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource 'resource-1'"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
 			})
 		})
@@ -240,7 +240,7 @@ var _ = Describe("Component", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
@@ -249,14 +249,14 @@ var _ = Describe("Component", func() {
 
 		When("unable to EnsureObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
-				component.Sources = []v1alpha1.ComponentReference{
+				resource.Sources = []v1alpha1.ResourceReference{
 					{
-						Name:      "source-provider",
-						Component: "previous-component",
+						Name:     "source-provider",
+						Resource: "previous-resource",
 					},
 				}
 
-				outputs.AddOutput("previous-component", &templates.Output{Source: &templates.Source{
+				outputs.AddOutput("previous-resource", &templates.Output{Source: &templates.Source{
 					URL:      "some-url",
 					Revision: "some-revision",
 				}})
@@ -301,7 +301,7 @@ var _ = Describe("Component", func() {
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))

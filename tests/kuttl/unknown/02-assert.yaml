@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# then the workload componentsSubmitted condition is unknown
+# then the workload resourcesSubmitted condition is unknown
 
 apiVersion: carto.run/v1alpha1
 kind: Workload
@@ -23,14 +23,14 @@ status:
     - type: SupplyChainReady
       status: "True"
       reason: Ready
-    - type: ComponentsSubmitted
+    - type: ResourcesSubmitted
       status: "Unknown"
       reason: MissingValueAtPath
-      message: "Component 'image-provider' is waiting to read value '.data.best_school'"
+      message: "Resource 'image-provider' is waiting to read value '.data.best_school'"
     - type: Ready
       status: "Unknown"
       reason: MissingValueAtPath
-      message: "Component 'image-provider' is waiting to read value '.data.best_school'"
+      message: "Resource 'image-provider' is waiting to read value '.data.best_school'"
   supplyChainRef:
     name: responsible-ops-unknown
     kind: ClusterSupplyChain

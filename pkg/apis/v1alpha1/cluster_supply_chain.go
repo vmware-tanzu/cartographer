@@ -51,38 +51,38 @@ type ClusterSupplyChain struct {
 func (c *ClusterSupplyChain) validateNewState() error {
 	names := make(map[string]bool)
 
-	for _, component := range c.Spec.Components {
-		if _, ok := names[component.Name]; ok {
+	for _, resource := range c.Spec.Resources {
+		if _, ok := names[resource.Name]; ok {
 			return fmt.Errorf(
-				"duplicate component name '%s' found in clustersupplychain '%s'",
-				component.Name,
+				"duplicate resource name '%s' found in clustersupplychain '%s'",
+				resource.Name,
 				c.Name,
 			)
 		}
-		names[component.Name] = true
+		names[resource.Name] = true
 	}
 
-	for _, component := range c.Spec.Components {
-		if err := c.validateComponentRefs(component.Sources, "ClusterSourceTemplate"); err != nil {
+	for _, resource := range c.Spec.Resources {
+		if err := c.validateResourceRefs(resource.Sources, "ClusterSourceTemplate"); err != nil {
 			return fmt.Errorf(
-				"invalid sources for component '%s': %w",
-				component.Name,
+				"invalid sources for resource '%s': %w",
+				resource.Name,
 				err,
 			)
 		}
 
-		if err := c.validateComponentRefs(component.Images, "ClusterImageTemplate"); err != nil {
+		if err := c.validateResourceRefs(resource.Images, "ClusterImageTemplate"); err != nil {
 			return fmt.Errorf(
-				"invalid images for component '%s': %w",
-				component.Name,
+				"invalid images for resource '%s': %w",
+				resource.Name,
 				err,
 			)
 		}
 
-		if err := c.validateComponentRefs(component.Configs, "ClusterConfigTemplate"); err != nil {
+		if err := c.validateResourceRefs(resource.Configs, "ClusterConfigTemplate"); err != nil {
 			return fmt.Errorf(
-				"invalid configs for component '%s': %w",
-				component.Name,
+				"invalid configs for resource '%s': %w",
+				resource.Name,
 				err,
 			)
 		}
@@ -91,20 +91,20 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	return nil
 }
 
-func (c *ClusterSupplyChain) validateComponentRefs(references []ComponentReference, targetKind string) error {
+func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference, targetKind string) error {
 	for _, ref := range references {
-		referencedComponent := c.getComponentByName(ref.Component)
-		if referencedComponent == nil {
+		referencedResource := c.getResourceByName(ref.Resource)
+		if referencedResource == nil {
 			return fmt.Errorf(
-				"'%s' is provided by unknown component '%s'",
+				"'%s' is provided by unknown resource '%s'",
 				ref.Name,
-				ref.Component,
+				ref.Resource,
 			)
 		}
-		if referencedComponent.TemplateRef.Kind != targetKind {
+		if referencedResource.TemplateRef.Kind != targetKind {
 			return fmt.Errorf(
-				"component '%s' providing '%s' must reference a %s",
-				referencedComponent.Name,
+				"resource '%s' providing '%s' must reference a %s",
+				referencedResource.Name,
 				ref.Name,
 				targetKind,
 			)
@@ -113,10 +113,10 @@ func (c *ClusterSupplyChain) validateComponentRefs(references []ComponentReferen
 	return nil
 }
 
-func (c *ClusterSupplyChain) getComponentByName(name string) *SupplyChainComponent {
-	for _, component := range c.Spec.Components {
-		if component.Name == name {
-			return &component
+func (c *ClusterSupplyChain) getResourceByName(name string) *SupplyChainResource {
+	for _, resource := range c.Spec.Resources {
+		if resource.Name == name {
+			return &resource
 		}
 	}
 
@@ -150,8 +150,8 @@ func GetSelectorsFromObject(o client.Object) []string {
 }
 
 type SupplyChainSpec struct {
-	Components []SupplyChainComponent `json:"components"`
-	Selector   map[string]string      `json:"selector"`
+	Resources []SupplyChainResource `json:"resources"`
+	Selector  map[string]string     `json:"selector"`
 }
 
 type SupplyChainParam struct {
@@ -159,13 +159,13 @@ type SupplyChainParam struct {
 	Value apiextensionsv1.JSON `json:"value"`
 }
 
-type SupplyChainComponent struct {
+type SupplyChainResource struct {
 	Name        string                   `json:"name"`
 	TemplateRef ClusterTemplateReference `json:"templateRef"`
 	Params      []SupplyChainParam       `json:"params,omitempty"`
-	Sources     []ComponentReference     `json:"sources,omitempty"`
-	Images      []ComponentReference     `json:"images,omitempty"`
-	Configs     []ComponentReference     `json:"configs,omitempty"`
+	Sources     []ResourceReference      `json:"sources,omitempty"`
+	Images      []ResourceReference      `json:"images,omitempty"`
+	Configs     []ResourceReference      `json:"configs,omitempty"`
 }
 
 type ClusterTemplateReference struct {
@@ -175,9 +175,9 @@ type ClusterTemplateReference struct {
 	Name string `json:"name"`
 }
 
-type ComponentReference struct {
-	Name      string `json:"name"`
-	Component string `json:"component"`
+type ResourceReference struct {
+	Name     string `json:"name"`
+	Resource string `json:"resource"`
 }
 
 type SupplyChainStatus struct {

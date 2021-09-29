@@ -4,7 +4,7 @@
 
 Cartographer is a Supply Chain Choreographer for Kubernetes. It allows App Operators to create pre-approved paths to production by integrating k8s resources with the elements of their existing toolchains (e.g. Jenkins).
 
-Each pre-approved supply chain creates a paved road to production; orchestrating supply chain components - test, build, scan, and deploy - allowing developers to be able to focus on delivering value to their users while also providing App Operators with the peace of mind that all code in production has passed through all of the steps of an approved workflow.
+Each pre-approved supply chain creates a paved road to production; orchestrating supply chain resources - test, build, scan, and deploy - allowing developers to be able to focus on delivering value to their users while also providing App Operators with the peace of mind that all code in production has passed through all of the steps of an approved workflow.
 
 ## Cartographer Design and Philosophy
 
@@ -12,7 +12,7 @@ Cartographer is a supply chain choreographer for Kubernetes. In other words, Car
 allows users to define all of the steps that an application must go through to create an image and Kubernetes configuration.
 Users achieve this with the Supply Chain abstraction ([Spec Reference](reference.md#clustersupplychain)).
 
-The supply chain consists of components that are specified via Templates.
+The supply chain consists of resources that are specified via Templates.
 Each template acts as a wrapper for existing Kubernetes resources and allows them to be used with Cartographer.
 There are currently four different types of templates that can be use in a Cartographer supply chain:
 
@@ -23,7 +23,7 @@ There are currently four different types of templates that can be use in a Carto
 
 Contrary to many other Kubernetes native workflow tools that already exist in the market,
 Cartographer does not “run” any of the objects themselves. Instead, it monitors the execution of
-each component and templates the following component in the supply chain after a given component has
+each resource and templates the following resource in the supply chain after a given resource has
 completed execution and updated its status.
 
 The supply chain may also be extended to include integrations to existing CI and CD pipelines by using the Pipeline Service (which is part of Cartographer Core). The Pipeline Service acts as a wrapper for existing CI and CD tooling (with support for Tekton, and with plans to support more providers in the future) and provides a declarative way for pipelines to be run inside of Cartographer.
