@@ -22,7 +22,10 @@ gen-manifests:
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
-tests/resources/zz_generated.deepcopy.go: tests/resources/*.go
+test_crd_sources := $(wildcard tests/resources/*.go)
+test_object_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(test_crd_sources))
+
+tests/resources/zz_generated.deepcopy.go: $(test_object_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
                 paths=./tests/resources
@@ -30,7 +33,8 @@ tests/resources/zz_generated.deepcopy.go: tests/resources/*.go
 .PHONY: test-gen-objects
 test-gen-objects: tests/resources/zz_generated.deepcopy.go
 
-tests/resources/crds/*.yaml: tests/resources/*.go
+test_crds := tests/resources/test.go
+tests/resources/crds/test.run_tests.yaml: $(test_crds) tests/resources/groupversion_info.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
 		paths=./tests/resources \
@@ -40,7 +44,7 @@ tests/resources/crds/*.yaml: tests/resources/*.go
 		./tests/resources/crds
 
 .PHONY: test-gen-manifests
-test-gen-manifests: tests/resources/crds/*.yaml
+test-gen-manifests: tests/resources/crds/*
 
 .PHONY: clean-fakes
 clean-fakes:
