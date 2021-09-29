@@ -22,16 +22,17 @@ spec:
       default: 9
     - name: broodx-cicadas-per-acre
       default: 1400000
-  urlPath: .value.cat-lives
-  revisionPath: .value.critters
+  urlPath: .spec.value.cat-lives
+  revisionPath: .spec.value.critters
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-source
-    value:
-      cat-lives: $(params.number-of-cat-lives)$
-      critters: $(params.broodx-cicadas-per-acre)$
+    spec:
+      value:
+        cat-lives: $(params.number-of-cat-lives)$
+        critters: $(params.broodx-cicadas-per-acre)$
 
 ---
 
@@ -43,14 +44,15 @@ spec:
   params:
     - name: every-problem
       default: "nail"
-  imagePath: .value.hammer
+  imagePath: .spec.value.hammer
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-image
-    value:
-      hammer: $(params.every-problem)$
+    spec:
+      value:
+        hammer: $(params.every-problem)$
 
 ---
 
@@ -64,14 +66,15 @@ spec:
       default: [ "sail", "motor", "dragon"]
     - name: bookends
       default: {"hi": "bye"}
-  configPath: .value.start_and_end
+  configPath: .spec.value.start_and_end
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-config
-    value:
-      start_and_end: $(params.bookends)$
+    spec:
+      value:
+        start_and_end: $(params.bookends)$
 
 ---
 
@@ -86,9 +89,10 @@ spec:
     - name: easter
       default: egg
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable
-    value:
-      mythic_creatures: $(params.tricksters)$
+    spec:
+      value:
+        mythic_creatures: $(params.tricksters)$

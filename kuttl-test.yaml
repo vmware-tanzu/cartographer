@@ -19,7 +19,7 @@ testDirs:
   - tests/kuttl
 crdDir: config/crd/bases
 manifestDirs:
-  - tests/crd
+  - tests/integration/pipeline_service/testapi/crds
 commands:
   - command: build/cartographer
     background: true
