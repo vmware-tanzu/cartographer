@@ -17,12 +17,14 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly DIR=$(cd $(dirname $0) && pwd)
-readonly HOST_ADDR=${HOST_ADDR:-$($DIR/ip.py)}
+# shellcheck disable=SC2155
+readonly DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
+readonly DOCKER_CONFIG="/tmp/cartographer-docker"
 
 readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
@@ -84,10 +86,10 @@ main() {
 
 install_cartographer_package() {
         log "build cartographer release and installing it"
-        env REGISTRY=$REGISTRY RELEASE_VERSION=$RELEASE_VERSION ./hack/release.sh
+        env REGISTRY="$REGISTRY" RELEASE_VERSION="$RELEASE_VERSION" ./hack/release.sh
 
         ytt --ignore-unknown-comments \
-                --data-value registry=$REGISTRY \
+                --data-value registry="$REGISTRY" \
                 -f ./hack/registry-auth |
                 kapp deploy -a cartographer --yes \
                         -f ./release/package \
@@ -96,23 +98,25 @@ install_cartographer_package() {
 
 show_usage_help() {
         echo "usage: $0 <command...>"
-        echo "commands:
+        cat <<-COMMANDS
+	commands:
 
-- cluster 		brings up a local cluster and a registry
+	- cluster 		brings up a local cluster and a registry
 
-- cartographer 		build a release of cartographer and install it in the
+	- cartographer 		build a release of cartographer and install it in the
 			cluster
 
-- example-dependencies 	installs dependencies used throughout examples
-- example 		install the example and runs a minimal test on it
+	- example-dependencies 	installs dependencies used throughout examples
+	- example 		install the example and runs a minimal test on it
 
-- teardown		gets rid of the local cluster and registry created
-- teardown-example 	gets rid of just the example installed (workload, etc)
-	"
+	- teardown		gets rid of the local cluster and registry created
+	- teardown-example 	gets rid of just the example installed (workload, etc)
+	COMMANDS
 }
 
 display_vars() {
-        echo "Variables:
+        cat <<-DISPLAY
+	Variables:
 
 	COMMANDS: 	$*
 
@@ -121,21 +125,21 @@ display_vars() {
 	KIND_IMAGE:	$KIND_IMAGE
 	REGISTRY:	$REGISTRY
 	REGISTRY_PORT:	$REGISTRY_PORT
-	"
+	DISPLAY
 }
 
 start_registry() {
         log "starting registry"
 
         echo -e "\n\nregistry credentials:\n
-	username: admin
-	password: admin
-	"
+        username: admin
+        password: admin
+        "
 
         DOCKER_USERNAME=admin \
                 DOCKER_PASSWORD=admin \
                 DOCKER_REGISTRY=$REGISTRY \
-                $DIR/docker-login.sh
+                "$DIR/docker-login.sh"
 
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
                 echo "registry already exists"
@@ -144,12 +148,12 @@ start_registry() {
 
         docker run \
                 --detach \
-                -v $DIR/registry-auth:/auth \
+                -v "$DIR/registry-auth:/auth" \
                 -e "REGISTRY_AUTH=htpasswd" \
                 -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
-                -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
-                --name $REGISTRY_CONTAINER_NAME \
-                --publish "${REGISTRY_PORT}:5000" \
+                -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
+                --name "$REGISTRY_CONTAINER_NAME" \
+                --publish "${REGISTRY_PORT}":5000 \
                 registry:2
 }
 
@@ -182,7 +186,7 @@ EOF
 
 install_cert_manager() {
         ytt --ignore-unknown-comments \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/jetstack/cert-manager/releases/download/v$CERT_MANAGER_VERSION/cert-manager.yaml |
                 kapp deploy --yes -a cert-manager -f-
 }
@@ -195,7 +199,7 @@ install_source_controller() {
                 --serviceaccount=gitops-toolkit:default || true
 
         ytt --ignore-unknown-comments \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/fluxcd/source-controller/releases/download/v$SOURCE_CONTROLLER_VERSION/source-controller.crds.yaml \
                 -f https://github.com/fluxcd/source-controller/releases/download/v$SOURCE_CONTROLLER_VERSION/source-controller.deployment.yaml |
                 kapp deploy --yes -a gitops-toolkit --into-ns gitops-toolkit -f-
@@ -203,7 +207,7 @@ install_source_controller() {
 
 install_kpack() {
         ytt --ignore-unknown-comments \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml |
                 kapp deploy --yes -a kpack -f-
 
@@ -215,14 +219,14 @@ install_kapp_controller() {
                 --serviceaccount=default:default || true
 
         ytt --ignore-unknown-comments \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml |
                 kapp deploy --yes -a kapp-controller -f-
 }
 
 install_secretgen_controller() {
         ytt --ignore-unknown-comments \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml \
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v$SECRETGEN_CONTROLLER_VERSION/release.yml |
                 kapp deploy --yes -a secretgen-controller -f-
 }
@@ -231,21 +235,21 @@ install_knative_serving() {
         ytt --ignore-unknown-comments \
                 -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml \
                 -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml |
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" |
                 kapp deploy --yes -a knative-serving -f-
 }
 
 install_tekton() {
         ytt --ignore-unknown-comments \
                 -f https://storage.googleapis.com/tekton-releases/pipeline/previous/v$TEKTON_VERSION/release.yaml \
-                -f $DIR/overlays/remove-resource-requests-from-deployments.yaml |
+                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" |
                 kapp deploy --yes -a tekton -f-
 }
 
 setup_example() {
         ytt --ignore-unknown-comments \
-                -f $DIR/../examples/source-to-knative-service \
-                --data-value registry.server=$REGISTRY \
+                -f "$DIR/../examples/source-to-knative-service" \
+                --data-value registry.server="$REGISTRY" \
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-" |
@@ -262,19 +266,20 @@ test_example() {
         for i in {15..1}; do
                 echo "- attempt $i"
 
-                local deployed_pods=$(kubectl get pods \
+                local deployed_pods
+                deployed_pods=$(kubectl get pods \
                         -l 'serving.knative.dev/configuration=dev' \
                         -o name)
 
-                if [[ ! -z "$deployed_pods" ]]; then
-                        log "SUCCEEDED! sweet"
+                if [[ -n "$deployed_pods" ]]; then
+                        log 'SUCCEEDED! sweet'
                         exit 0
                 fi
 
-                sleep $i
+                sleep "$i"
         done
 
-        log "FAILED :("
+        log 'FAILED :('
         exit 1
 }
 

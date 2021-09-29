@@ -18,37 +18,37 @@ set -o pipefail
 set -o nounset
 
 readonly DOCKER_REGISTRY=${DOCKER_REGISTRY:-"https://index.docker.io/v1/"}
-readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"$(realpath ~/.docker/config.json)"}
-readonly DOCKER_USERNAME=$DOCKER_USERNAME
-readonly DOCKER_PASSWORD=$DOCKER_PASSWORD
+readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"$(realpath ~/.docker)"}
+readonly DOCKER_USERNAME="${DOCKER_USERNAME}"
+readonly DOCKER_PASSWORD="${DOCKER_PASSWORD}"
 
 main() {
-        local auth=$(basic_auth $DOCKER_USERNAME $DOCKER_PASSWORD)
+        local auth
+        auth=$(basic_auth "${DOCKER_USERNAME}" "${DOCKER_PASSWORD}")
 
-        update_or_create_docker_config $DOCKER_REGISTRY $auth $DOCKER_CONFIG
+        mkdir -p "$DOCKER_CONFIG"
+        update_or_create_docker_config "${DOCKER_REGISTRY}" "$auth" "${DOCKER_CONFIG}/config.json"
 }
 
 update_or_create_docker_config() {
-        local server=$1
-        local token=$2
-        local config_file=$3
+        local server="$1"
+        local token="$2"
+        local config_file="$3"
 
-        readonly qry='.auths["%s"] = {"auth": "%s"}'
+        local query
+        query="$(printf '.auths["%s"] = {"auth": "%s"}' "$server" "$token")"
 
-        local current_content=$(jq '.' $config_file)
-        if [[ "$current_content" == "" ]]; then
-                echo '{}' >$config_file
-        fi
+        local config
+        config=$(jq "$query" < "$config_file")
 
-        config=$(jq "$(printf "$qry" $server $token)" < "$config_file")
-        echo "$config" > $config_file
+        echo "$config" > "$config_file"
 }
 
 basic_auth() {
-        local username=$1
+        local username="$1"
         local password=$2
 
-        printf '%s:%s' $username $password | base64
+        printf '%s:%s' "$username" "$password" | base64
 }
 
 main "$@"
