@@ -17,7 +17,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly ROOT=$(cd $(dirname $0)/.. && pwd)
+ROOT=$(cd "$(dirname $0)"/.. && pwd)
+readonly ROOT
+
 readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
 readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
@@ -45,27 +47,29 @@ show_vars() {
         echo "Vars:
 
 	BUNDLE:	       		$BUNDLE
-	REGISTRY:		$REGISTRY
-	RELEASE_DATE:		$RELEASE_DATE
+	REGISTRY:		      $REGISTRY
+	RELEASE_DATE:		  $RELEASE_DATE
 	RELEASE_VERSION:	$RELEASE_VERSION
 	PREVIOUS_VERSION:	$PREVIOUS_VERSION
-	ROOT:	       		$ROOT
+	ROOT:	       		  $ROOT
 	SCRATCH:       		$SCRATCH
-	YTT_VERSION		$YTT_VERSION
+	YTT_VERSION		    $YTT_VERSION
 	"
 }
 
 download_ytt_to_kodata() {
         local url=https://github.com/vmware-tanzu/carvel-ytt/releases/download/v${YTT_VERSION}/ytt-linux-amd64
         local fname=ytt-linux-amd64
-        local dest=$(realpath ./cmd/cartographer/kodata/$fname)
+
+        local dest
+        dest=$(realpath ./cmd/cartographer/kodata/$fname)
 
         test -x $dest && echo "${YTT_CHECKSUM} $dest" | sha256sum -c && {
                 echo "ytt already found in kodata."
                 return
         }
 
-        pushd $(mktemp -d)
+        pushd "$(mktemp -d)"
         curl -sSOL $url
         echo "${YTT_CHECKSUM} $fname" | sha256sum -c
         install -m 0755 $fname $dest
@@ -78,19 +82,19 @@ download_ytt_to_kodata() {
 #
 # 	$scratch
 # 	├── bundle
-# 	│   ├── .imgpkg
-# 	│   │   └── images.yml			absolute image references to
-# 	│   │					images in this bundle
-# 	│   │
-# 	│   └── config
-# 	│       ├── cartographer.yaml		everything from the release
-# 	│       │
-# 	│       ├── objects/			extra objects to include in the
-# 	│       │				bundle to aid the installation
-# 	│       │
-# 	│       └── overlays/			overlays to tweak properties
-# 	│                       		from the release according to
-# 	│                       		packaging configuration
+# 	│   ├── .imgpkg
+# 	│   │   └── images.yml			absolute image references to
+# 	│   │					images in this bundle
+# 	│   │
+# 	│   └── config
+# 	│       ├── cartographer.yaml		everything from the release
+# 	│       │
+# 	│       ├── objects/			extra objects to include in the
+# 	│       │				bundle to aid the installation
+# 	│       │
+# 	│       └── overlays/			overlays to tweak properties
+# 	│                       		from the release according to
+# 	│                       		packaging configuration
 # 	│
 # 	├── bundle.tar				tarball of the imgpkg bundle
 # 	│
@@ -119,7 +123,7 @@ create_imgpkg_bundle() {
                 --lock-output $SCRATCH/bundle.lock.yaml
 
         imgpkg copy \
-                --bundle $(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
+                --bundle "$(image_from_lockfile $SCRATCH/bundle.lock.yaml)" \
                 --to-tar $SCRATCH/bundle.tar
 }
 
@@ -130,17 +134,20 @@ create_carvel_packaging_objects() {
                 ytt --ignore-unknown-comments \
                         -f ./packaging/values.yaml \
                         -f $package_fpath \
-                        --data-value image=$(image_from_lockfile $SCRATCH/bundle.lock.yaml) \
+                        --data-value image="$(image_from_lockfile $SCRATCH/bundle.lock.yaml)" \
                         --data-value releasedAt=$RELEASE_DATE \
                         --data-value version=${RELEASE_VERSION#v} > \
-                        $SCRATCH/package/$(basename $package_fpath)
+                        $SCRATCH/package/"$(basename $package_fpath)"
         done
 
 }
 
 create_release_notes() {
-        local changeset="$(git_changeset $RELEASE_VERSION $PREVIOUS_VERSION)"
-        local assets_checksums=$(checksums ./release)
+        local changeset
+        changeset="$(git_changeset $RELEASE_VERSION $PREVIOUS_VERSION)"
+
+        local assets_checksums
+        assets_checksums=$(checksums ./release)
 
         release_body "$changeset" "$assets_checksums" >./release/CHANGELOG.md
 }
@@ -176,7 +183,7 @@ checksums() {
         local assets_directory=$1
 
         pushd $assets_directory &>/dev/null
-        find . -name "*" -type f | xargs sha256sum
+        find . -name "*" -type f -exec sha256sum {} +
         popd &>/dev/null
 }
 
@@ -198,7 +205,8 @@ git_changeset() {
 }
 
 git_current_version() {
-        local tag=$(git tag --points-at HEAD)
+        local tag
+        tag=$(git tag --points-at HEAD)
 
         if [[ $tag == "" ]]; then
                 tag="v0.0.0-dev"
@@ -210,7 +218,9 @@ git_current_version() {
 git_previous_version() {
         local current_version=$1
 
-        local version_filter=$(printf '^%s$' $current_version)
+        local version_filter
+        version_filter=$(printf '^%s$' $current_version)
+
         [[ $(git tag -l $current_version) == "" ]] && version_filter='.'
 
         git tag --sort=-v:refname -l |
