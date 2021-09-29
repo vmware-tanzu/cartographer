@@ -248,7 +248,7 @@ NAME     READY     STATUS    RESTARTS   AGE    IP           NODE
 nginx    1/1       Running   0          13s    10.200.0.4   worker0
 ```
 
-## Cartogrpaher word list
+## Cartographer word list
 
 
 A list of Cartographer-specific terms and words to be used consistently across the site.
