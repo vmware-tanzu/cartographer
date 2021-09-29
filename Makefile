@@ -6,14 +6,13 @@ build: gen-objects gen-manifests
 run: build
 	build/cartographer
 
-.PHONY: gen-objects
-gen-objects:
+crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
+crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
+
+pkg/apis/v1alpha1/zz_generated.deepcopy.go: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
                 paths=./pkg/apis/v1alpha1
-
-crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
-crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
 
 config/crd/bases/*.yaml &: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
@@ -23,6 +22,9 @@ config/crd/bases/*.yaml &: $(crd_sources)
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
+
+.PHONY: gen-objects
+gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
 
 .PHONY: gen-manifests
 gen-manifests: config/crd/bases/*.yaml
