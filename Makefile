@@ -28,8 +28,7 @@ test-gen-objects:
                 object \
                 paths=./tests/integration/pipeline_service/testapi
 
-.PHONY: test-gen-manifests
-test-gen-manifests:
+tests/integration/pipeline_service/testapi/crds/*.yaml: tests/integration/pipeline_service/testapi/*.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
 		paths=./tests/integration/pipeline_service/testapi \
@@ -37,6 +36,9 @@ test-gen-manifests:
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
 		./tests/integration/pipeline_service/testapi/crds
+
+.PHONY: test-gen-manifests
+test-gen-manifests: tests/integration/pipeline_service/testapi/crds/*.yaml
 
 .PHONY: clean-fakes
 clean-fakes:
@@ -55,7 +57,7 @@ test-integration:
 	go run github.com/onsi/ginkgo/ginkgo -r tests/integration
 
 .PHONY: test-kuttl
-test-kuttl: build
+test-kuttl: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test --test $$(basename $(focus)); else kubectl kuttl test; fi
 
 .PHONY: list-kuttl
