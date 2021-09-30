@@ -39,7 +39,7 @@ update_or_create_docker_config() {
         query="$(printf '.auths["%s"] = {"auth": "%s"}' "$server" "$token")"
 
         local config
-        config=$(jq "$query" < "$config_file")
+        config=$(echo {} | jq "$query")
 
         echo "$config" > "$config_file"
 }
