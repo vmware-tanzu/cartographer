@@ -34,30 +34,29 @@ data:
   workload_resources_requests_cpu: 250m
 
 ---
-
-apiVersion: carto.run/v1alpha1
-kind: Deliverable
+apiVersion: test.run/v1alpha1
+kind: Test
 metadata:
   name: test-deliverable-list
-value:
-  env:
-    - name: SPRING_PROFILES_ACTIVE
-      value: mysql
+spec:
+  value:
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: mysql
 
 ---
-
-apiVersion: carto.run/v1alpha1
-kind: Deliverable
+apiVersion: test.run/v1alpha1
+kind: Test
 metadata:
   name: test-deliverable-object
-value:
-  git:
-    url: https://github.com/spring-projects/spring-petclinic.git
-    ref:
-      branch: main
+spec:
+  value:
+    git:
+      url: https://github.com/spring-projects/spring-petclinic.git
+      ref:
+        branch: main
 
 ---
-
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:

@@ -30,7 +30,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	. "github.com/vmware-tanzu/cartographer/pkg/utils"
-	"github.com/vmware-tanzu/cartographer/tests/integration/pipeline_service/testapi"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Stamping a resource on Pipeline Creation", func() {
@@ -332,9 +332,9 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				client.MatchingLabels(map[string]string{"carto.run/pipeline-name": "my-pipeline"}),
 			}
 
-			testsList := &testapi.TestList{}
+			testsList := &resources.TestList{}
 
-			Eventually(func() ([]testapi.Test, error) {
+			Eventually(func() ([]resources.Test, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))
@@ -477,9 +477,9 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				client.MatchingLabels(map[string]string{"carto.run/pipeline-name": "my-pipeline"}),
 			}
 
-			testsList := &testapi.TestList{}
+			testsList := &resources.TestList{}
 
-			Eventually(func() ([]testapi.Test, error) {
+			Eventually(func() ([]resources.Test, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))
@@ -492,7 +492,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() ([]testapi.Test, error) {
+			Eventually(func() ([]resources.Test, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(2))
@@ -506,7 +506,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() ([]testapi.Test, error) {
+			Eventually(func() ([]resources.Test, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(3))
@@ -527,9 +527,9 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				client.MatchingLabels(map[string]string{"gen": "2"}),
 			}
 
-			testsList := &testapi.TestList{}
+			testsList := &resources.TestList{}
 
-			Eventually(func() ([]testapi.Test, error) {
+			Eventually(func() ([]resources.Test, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))
@@ -563,7 +563,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				client.MatchingLabels(map[string]string{"gen": "1"}),
 			}
 
-			Eventually(func() ([]testapi.Test, error) {
+			Eventually(func() ([]resources.Test, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))

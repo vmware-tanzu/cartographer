@@ -6,14 +6,15 @@ build: gen-objects gen-manifests
 run: build
 	build/cartographer
 
-.PHONY: gen-objects
-gen-objects:
+crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
+crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
+
+pkg/apis/v1alpha1/zz_generated.deepcopy.go: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
                 paths=./pkg/apis/v1alpha1
 
-.PHONY: gen-manifests
-gen-manifests:
+config/crd/bases/*.yaml &: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
 		paths=./pkg/apis/v1alpha1 \
@@ -22,21 +23,35 @@ gen-manifests:
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
-.PHONY: test-gen-objects
-test-gen-objects:
+.PHONY: gen-objects
+gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
+
+.PHONY: gen-manifests
+gen-manifests: config/crd/bases/*.yaml
+
+test_crd_sources := $(wildcard tests/resources/*.go)
+test_object_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(test_crd_sources))
+
+tests/resources/zz_generated.deepcopy.go: $(test_object_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
-                paths=./tests/integration/pipeline_service/testapi
+                paths=./tests/resources
 
-.PHONY: test-gen-manifests
-test-gen-manifests:
+.PHONY: test-gen-objects
+test-gen-objects: tests/resources/zz_generated.deepcopy.go
+
+test_crds := tests/resources/test.go
+tests/resources/crds/test.run_tests.yaml: $(test_crds) tests/resources/groupversion_info.go
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
-		paths=./tests/integration/pipeline_service/testapi \
-		output:crd:artifacts:config=./tests/integration/pipeline_service/testapi/crds
+		paths=./tests/resources \
+		output:crd:artifacts:config=./tests/resources/crds
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
-		./tests/integration/pipeline_service/testapi/crds
+		./tests/resources/crds
+
+.PHONY: test-gen-manifests
+test-gen-manifests: tests/resources/crds/*
 
 .PHONY: clean-fakes
 clean-fakes:
@@ -47,15 +62,15 @@ generate: clean-fakes
 	go generate ./...
 
 .PHONY: test-unit
-test-unit:
+test-unit: test-gen-objects
 	go run github.com/onsi/ginkgo/ginkgo -r pkg
 
 .PHONY: test-integration
-test-integration:
+test-integration: test-gen-manifests test-gen-objects
 	go run github.com/onsi/ginkgo/ginkgo -r tests/integration
 
 .PHONY: test-kuttl
-test-kuttl: build
+test-kuttl: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test --test $$(basename $(focus)); else kubectl kuttl test; fi
 
 .PHONY: list-kuttl
@@ -88,7 +103,6 @@ coverage:
 lint: copyright
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
 	$(MAKE) -C hack lint
-
 
 .PHONY: copyright
 copyright:

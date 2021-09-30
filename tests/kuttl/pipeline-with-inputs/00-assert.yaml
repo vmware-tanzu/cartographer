@@ -14,16 +14,17 @@
 
 ---
 
-apiVersion: carto.run/v1alpha1
-kind: Deliverable
-value:
-  object:
-    nested: hi
-    still-nested: bye
-  list:
-    - position: one
-      val: first
-    - position: two
-      val: second
-  string: silly
-  int: 3
+apiVersion: test.run/v1alpha1
+kind: Test
+spec:
+  value:
+    object:
+      nested: hi
+      still-nested: bye
+    list:
+      - position: one
+        val: first
+      - position: two
+        val: second
+    string: silly
+    int: 3
