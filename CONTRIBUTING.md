@@ -28,6 +28,59 @@ The Cartographer project team welcomes contributions from the community. If you 
 [`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 
 
+## Contribution workflow
+
+This section describes the process for contributing a bug fix or new feature.
+
+### Before you submit a pull request
+
+This project operates according to the _talk, then code_ rule.
+If you plan to submit a pull request for anything more than a typo or obvious bug fix, first you _should_ [raise an issue][new-issue] to discuss your proposal, before submitting any code.
+
+Depending on the size of the feature you may be expected to first write an RFC. Follow the [RFC Process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) documented in Cartographer's Governance.
+
+### Commit message and PR guidelines
+
+- Have a short subject on the first line and a body.
+- Use the imperative mood (ie "If applied, this commit will (subject)" should make sense).
+- Put a summary of the main area affected by the commit at the start,
+  with a colon as delimiter. For example 'docs:', 'extensions/(extensionname):', 'design:' or something similar.
+- Do not merge commits that don't relate to the affected issue (e.g. "Updating from PR comments", etc). Should
+  the need to cherrypick a commit or rollback arise, it should be clear what a specific commit's purpose is.
+- If the main branch has moved on, you'll need to rebase before we can merge,
+  so merging upstream main or rebasing from upstream before opening your
+  PR will probably save you some time.
+
+Pull requests *must* include a `Fixes #NNNN` or `Updates #NNNN` comment.
+Remember that `Fixes` will close the associated issue, and `Updates` will link the PR to it.
+
+#### Sample commit message
+
+```text
+extensions/extenzi: Add quux functions
+
+To implement the quux functions from #xxyyz, we need to
+flottivate the crosp, then ensure that the orping is
+appred.
+
+Fixes #xxyyz
+
+Signed-off-by: Your Name <you@youremail.com>
+```
+
+### Merging commits
+
+Pull requests with multiple commits can be merged with the [Create a merge commit](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges) option.
+Merging pull requests with multiple commits can make sense in cases where a change involves code generation or mechanical changes that can be cleanly separated from semantic changes.
+
+Maintainers should feel free to request authors to squash their branches. Maintainers should default to this if the branch contains WIP commits.
+
+### PR CI Actions
+
+Before a PR is accepted it will need to pass the validation checks. Authors can find a reasonable degree of of surety that they will pass by running `make test` though this is only a subset of the checks that validation undertakes (for example, validation does an e2e test).
+
+---
+
 ## Running a local cluster
 
 A local Kubernetes cluster with a local registry and Cartographer installed can
@@ -230,54 +283,4 @@ ps.: those commands can be all specified at once, for instance:
 
 [carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
 [imgpkg bundle]: https://carvel.dev/imgpkg/docs/latest/
-
-## Contribution workflow
-
-This section describes the process for contributing a bug fix or new feature.
-
-### Before you submit a pull request
-
-This project operates according to the _talk, then code_ rule.
-If you plan to submit a pull request for anything more than a typo or obvious bug fix, first you _should_ [raise an issue][new-issue] to discuss your proposal, before submitting any code.
-
-Depending on the size of the feature you may be expected to first write an RFC. Follow the [RFC Process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) documented in Cartographer's Governance.
-
-### Commit message and PR guidelines
-
-- Have a short subject on the first line and a body.
-- Use the imperative mood (ie "If applied, this commit will (subject)" should make sense).
-- Put a summary of the main area affected by the commit at the start,
-  with a colon as delimiter. For example 'docs:', 'extensions/(extensionname):', 'design:' or something similar.
-- Do not merge commits that don't relate to the affected issue (e.g. "Updating from PR comments", etc). Should
-  the need to cherrypick a commit or rollback arise, it should be clear what a specific commit's purpose is.
-- If the main branch has moved on, you'll need to rebase before we can merge,
-  so merging upstream main or rebasing from upstream before opening your
-  PR will probably save you some time.
-
-Pull requests *must* include a `Fixes #NNNN` or `Updates #NNNN` comment.
-Remember that `Fixes` will close the associated issue, and `Updates` will link the PR to it.
-
-#### Sample commit message
-
-```text
-extensions/extenzi: Add quux functions
-
-To implement the quux functions from #xxyyz, we need to
-flottivate the crosp, then ensure that the orping is
-appred.
-
-Fixes #xxyyz
-
-Signed-off-by: Your Name <you@youremail.com>
-```
-
-### Merging commits
-
-Pull requests with multiple commits can be merged with the [Create a merge commit](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges) option.
-Merging pull requests with multiple commits can make sense in cases where a change involves code generation or mechanical changes that can be cleanly separated from semantic changes.
-
-Maintainers should feel free to request authors to squash their branches. Maintainers should default to this if the branch contains WIP commits.
-
-### PR CI Actions
-
-Before a PR is accepted it will need to pass the validation checks. Authors can find a reasonable degree of of surety that they will pass by running `make test` though this is only a subset of the checks that validation undertakes (for example, validation does an e2e test). 
+ 

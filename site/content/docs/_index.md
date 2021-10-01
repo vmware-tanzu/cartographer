@@ -6,7 +6,7 @@ cascade:
 
 ## TLDR
 
-Cartographer is a Kubernetes native Supply Chain Choreographer. It allows App Operators to create pre-approved paths to production by integrating k8s resources with the elements of their existing toolchains (e.g. Jenkins).
+Cartographer is a Kubernetes native Supply Chain Choreographer. It allows App Operators to create pre-approved paths to production by integrating Kubernetes resources with the elements of their existing toolchains (e.g. Jenkins).
 
 Each pre-approved supply chain creates a paved road to production; orchestrating supply chain components - test, build, scan, and deploy - allowing developers to be able to focus on delivering value to their users while also providing App Operators with the peace of mind that all code in production has passed through all of the steps of an approved workflow.
 
@@ -36,4 +36,4 @@ While the supply chain is operator facing, Cartographer also provides an abstrac
 
 By design, supply chains can be reused by many workloads. This allows an operator to specify the steps in the path to production a single time, and for developers to specify their applications independently but for each to use the same path to production. The intent is that developers are able to focus on providing value for their users and can reach production quickly and easily, while providing peace of mind for app operators, who are ensured that each application has passed through the steps of the path to production that they’ve defined.
 
-![Cartographer High Level Diagram](images/ownership-flow.png)
+![Cartographer High Level Diagram](img/ownership-flow.png)
