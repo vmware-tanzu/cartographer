@@ -17,7 +17,6 @@ Users: Members who engage with the Cartographer community, providing valuable fe
 
 **Maintainers**: The Cartographer project leaders are currently all employees of VMware. They are responsible for the overall health and direction of the project; final reviewers of PRs and responsible for releases. Some maintainers are responsible for one or more components within a project, acting as technical leads for that component. Maintainers are expected to contribute code and documentation, review PRs including ensuring quality of code, triage issues, proactively fix bugs, and perform maintenance tasks for these components. If a maintainer leaves VMware, they will also leave their maintainer position. As the project matures and more contributors are getting involved, this section might be revised.
 
-
 ## Request for Comment (RFC) Process
 
 One of the most important aspects in any open source community is the concept of requests for comments (RFC). All large changes to the codebase and/or new features, including ones proposed by maintainers, should be preceded by an RFC in this repository. This process allows for all members of the community to weigh in on the concept (including the technical details), share their comments and ideas, and offer to help. It also ensures that members are not duplicating work or inadvertently stepping on toes by making large conflicting changes.
