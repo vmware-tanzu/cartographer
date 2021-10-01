@@ -16,10 +16,11 @@
 // +groupName=test.run
 // +kubebuilder:object:generate=true
 
-package testapi
+package resources
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:root=true
@@ -38,8 +39,9 @@ type TestStatus struct {
 }
 
 type TestSpec struct {
-	// +kubebuilder:validation:Required
-	Foo string `json:"foo"`
+	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Value runtime.RawExtension `json:"value,omitempty"`
 }
 
 // +kubebuilder:object:root=true

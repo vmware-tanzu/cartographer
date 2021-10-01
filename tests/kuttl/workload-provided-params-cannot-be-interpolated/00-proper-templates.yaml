@@ -18,16 +18,17 @@ kind: ClusterSourceTemplate
 metadata:
   name: git-template---template-broken-path
 spec:
-  urlPath: .value.urlThereNotHere
-  revisionPath: .value.revisionhere
+  urlPath: .spec.value.urlThereNotHere
+  revisionPath: .spec.value.revisionhere
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-source
-    value:
-      urlhere: "www.myurl.com"
-      revisionhere: 55
+    spec:
+      value:
+        urlhere: "www.myurl.com"
+        revisionhere: 55
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -35,13 +36,14 @@ kind: ClusterSourceTemplate
 metadata:
   name: git-template---template-broken-tag
 spec:
-  urlPath: .value.urlhere
-  revisionPath: .value.revisionhere
+  urlPath: .spec.value.urlhere
+  revisionPath: .spec.value.revisionhere
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-source
-    value:
-      urlhere: $(undefined[1])$
-      revisionhere: $(params[0])$
+    spec:
+      value:
+        urlhere: $(undefined[1])$
+        revisionhere: $(params[0])$

@@ -26,15 +26,15 @@ kind: ClusterSupplyChain
 
 Cartographer is composed of several custom resources, some of them being cluster-wide:
 
-- `ClusterSupplyChain`
-- `ClusterSourceTemplate`
-- `ClusterImageTemplate`
-- `ClusterConfigTemplate`
-- `ClusterTemplate`
+- [`ClusterSupplyChain`](#clustersupplychain)
+- [`ClusterSourceTemplate`](#clustersourcetemplate)
+- [`ClusterImageTemplate`](#clusterimagetemplate)
+- [`ClusterConfigTemplate`](#clusterconfigtemplate)
+- [`ClusterTemplate`](#clustertemplate)
 
-and two that are namespace-scoped:
+and one that is namespace-scoped:
 
-- `Workload`
+- [`Workload`](#workload)
 
 
 ### Workload
@@ -223,7 +223,7 @@ spec:
           # value to be passed down to the template's parameters, supporting
           # interpolation.
           #
-          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")])$
+          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")].value)$
         - name: jvm
           value: openjdk
 ```

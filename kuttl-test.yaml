@@ -19,7 +19,7 @@ testDirs:
   - tests/kuttl
 crdDir: config/crd/bases
 manifestDirs:
-  - tests/crd
+  - tests/resources/crds
 commands:
   - command: build/cartographer
     background: true

@@ -38,15 +38,16 @@ kind: ClusterSourceTemplate
 metadata:
   name: deliverable-list---templates-refer-to-workload
 spec:
-  urlPath: .value
+  urlPath: .spec.value
   revisionPath: .metadata.name
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-list
-    value:
-      env: $(workload.spec.env)$
+    spec:
+      value:
+        env: $(workload.spec.env)$
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -54,12 +55,13 @@ kind: ClusterSourceTemplate
 metadata:
   name: deliverable-object---templates-refer-to-workload
 spec:
-  urlPath: .value
+  urlPath: .spec.value
   revisionPath: .metadata.name
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       name: test-deliverable-object
-    value:
-      git: $(workload.spec.source.git)$
+    spec:
+      value:
+        git: $(workload.spec.source.git)$

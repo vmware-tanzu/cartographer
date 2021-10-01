@@ -44,7 +44,7 @@ import (
 
 func TestWebhookIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
+	RunSpecs(t, "Supply Chain Integration Suite")
 }
 
 var (

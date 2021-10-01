@@ -222,7 +222,7 @@ spec:
           # value to be passed down to the template's parameters, supporting
           # interpolation.
           #
-          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")])$
+          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")].value)$
         - name: jvm
           value: openjdk
 ```

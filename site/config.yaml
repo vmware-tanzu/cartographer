@@ -47,7 +47,7 @@ menu:
   # - name: Update Images
   #   url: /docs/contributing/
 params:
-  twitter_url: "https://twitter.com/"
+  twitter_url: "https://twitter.com/OssCartographer"
   github_url: "https://github.com/vmware-tanzu/cartographer"
   slack_url: "https://slack.com/"
   github_base_url: "https://github.com/vmware-tanzu/cartographer"

@@ -19,12 +19,13 @@ metadata:
   name: my-run-template-inputs
 spec:
   template:
-    apiVersion: carto.run/v1alpha1
-    kind: Deliverable
+    apiVersion: test.run/v1alpha1
+    kind: Test
     metadata:
       generateName: my-stamped-resource-inputs-
-    value:
-      object: $(pipeline.spec.inputs.some-object)$
-      list: $(pipeline.spec.inputs.some-list)$
-      string: $(pipeline.spec.inputs.some-string)$
-      int: $(pipeline.spec.inputs.some-int)$
+    spec:
+      value:
+        object: $(pipeline.spec.inputs.some-object)$
+        list: $(pipeline.spec.inputs.some-list)$
+        string: $(pipeline.spec.inputs.some-string)$
+        int: $(pipeline.spec.inputs.some-int)$
