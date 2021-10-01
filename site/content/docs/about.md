@@ -2,14 +2,14 @@
 
 ## TLDR
 
-Cartographer is a Supply Chain Choreographer for Kubernetes. It allows App Operators to create pre-approved paths to production by integrating Kubernetes resources with the elements of their existing toolchains (e.g. Jenkins).
+Cartographer is a [Supply Chain Choreographer](https://tanzu.vmware.com/developer/guides/ci-cd/supply-chain-choreography/) for Kubernetes. It allows App Operators to create pre-approved paths to production by integrating Kubernetes resources with the elements of their existing toolchains (e.g. Jenkins).
 
 Each pre-approved supply chain creates a paved road to production; orchestrating supply chain components - test, build, scan, and deploy - allowing developers to be able to focus on delivering value to their users while also providing App Operators with the peace of mind that all code in production has passed through all of the steps of an approved workflow.
 
 ## Cartographer Design and Philosophy
 
-Cartographer is a supply chain choreographer for Kubernetes. In other words, Cartographer 
-allows users to define all of the steps that an application must go through to create an image and Kubernetes configuration.
+Cartographer allows users to define all of the steps that an application must go through to create an image and Kubernetes configuration.
+
 Users achieve this with the Supply Chain abstraction ([Spec Reference](reference.md#clustersupplychain)).
 
 The supply chain consists of components that are specified via Templates. 
