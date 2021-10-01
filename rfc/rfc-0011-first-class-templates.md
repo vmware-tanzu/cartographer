@@ -125,3 +125,44 @@ spec:
     #@ end
 
 ```
+
+
+# Normalization of records
+
+The generic form of a template-as-a-transform currently looks like:
+
+```
+template = (templateString, [outputPaths, <<conditionFn>>] })
+stamp(inputs, template) => <<output>>
+```
+
+Issues we would like to address
+* `<<output>>` is resolved by outputPaths but the captured values are not persisted  
+* `inputs` 
+  * are monotypic (except for Pipeline Service) thus forcing generic fields such as,
+    Supply Chain: `(params, sources, images)`
+    Delivery: `(configs, sources, deployment)`
+  * are not persisted.
+   
+```yaml
+    apiVersion: carto.run/v1alpha1
+    kind: Source
+    metadata:
+      name: $(workload.name)$
+      labels:
+        source-provider: "mr-git-fetch"
+    spec:
+      inputs: # supported inputs are in a CRD definitition, and their value is easily read with `kubectl get source <name>`
+        sources: 
+          - git: 
+              url: http://....
+        images: []
+        configs: []
+    status:
+      conditions:
+        ....
+      outputs:
+        source: # clearly defined output schema
+          ....
+      # space to record history of this object without cluttering up a workload.
+```
