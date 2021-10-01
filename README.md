@@ -2,7 +2,7 @@
 
 Cartographer is a Kubernetes native [Choreographer]. It allows users to configure K8s resources into re-usable [_Supply Chains_](site/content/docs/reference.md#ClusterSupplyChain) that can be used to define all of the stages that an [_Application Workload_](site/content/docs/reference.md#Workload) must go through to get to an environment.
 
-[Choreographer]: https://solace.com/blog/microservices-choreography-vs-orchestration/#:~:text=Orchestration%20entails%20actively%20controlling%20all,without%20requiring%20supervision%20and%20instructions
+[Choreographer]: https://tanzu.vmware.com/developer/guides/supply-chain-choreography/
 
 Cartographer also allows for separation of controls between a user who is responsible for defining a Supply Chain (known as a App Operator) and a user who is focused on creating applications (Developer). These roles are not necessarily mutually exclusive, but provide the ability to create a separation concern.
 
