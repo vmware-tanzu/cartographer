@@ -6,7 +6,7 @@ The community has adopted this security disclosure and response policy to ensure
 
 ## Supported Versions
 
-<Insert information for your project>
+- 1.0.0
 
 ## Reporting a Vulnerability - Private Disclosure Process
 
