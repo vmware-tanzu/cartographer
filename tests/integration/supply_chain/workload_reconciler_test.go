@@ -244,7 +244,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				}
 
 				return logLine.Timestamp - previousSeconds
-			}, 2*time.Second).Should(BeNumerically(">", 1.0))
+			}, 2500*time.Millisecond).Should(BeNumerically(">", 1.0))
 
 			By("accepting a supply chain")
 			supplyChain := newClusterSupplyChain("supplychain-bob", map[string]string{"name": "webapp"})
