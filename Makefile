@@ -73,9 +73,18 @@ test-integration: test-gen-manifests test-gen-objects
 test-kuttl: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test --test $$(basename $(focus)); else kubectl kuttl test; fi
 
+.PHONY: test-kuttl-pipeline-service
+test-kuttl-pipeline-service: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/pipeline-service --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/pipeline-service; fi
+
+.PHONY: test-kuttl-supply-chain
+test-kuttl-supply-chain: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/supply-chain --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/supply-chain; fi
+
+
 .PHONY: list-kuttl
 list-kuttl:
-	(cd tests/kuttl && find . -maxdepth 1 -type d)
+	(cd tests/kuttl && find . -maxdepth 2 -type d)
 
 .PHONY: test-kuttl-kind
 test-kuttl-kind: build
