@@ -77,7 +77,7 @@ Maintainers should feel free to request authors to squash their branches. Mainta
 
 ### PR CI Actions
 
-Before a PR is accepted it will need to pass the validation checks. Authors can find a reasonable degree of of surety that they will pass by running `make test` though this is only a subset of the checks that validation undertakes (for example, validation does an e2e test).
+Before a PR is accepted it will need to pass the validation checks. Authors can find a reasonable degree of of surety that they will pass by running `make test` and `make lint`. `make test` is only a subset of the checks that validation undertakes (for example, validation does an e2e test). If `make lint` fails, it might autocorrect your errors, but you will need to add the fixes to your commit.
 
 ---
 

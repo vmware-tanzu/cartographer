@@ -21,9 +21,9 @@ This is why we’ve created and open-sourced Cartographer, a tightly scoped tool
 
 Cartographer allows users to configure Kubernetes resources into re-usable supply chains that can be used to define all of the stages that an Application Workload must go through to get to an environment. We call these stages the path to production.  
 
-Cartographer separates controls between a user (responsible for defining a Supply Chain; known as an App Operator) and a user (the application creator; Developer) .These roles are not necessarily mutually exclusive, but provide the ability to create a separation concerns which means developers can focus on writing code, and platforms teams can focus on smoothing and securing their path to production. 
+Cartographer separates controls between a user (responsible for defining a Supply Chain; known as an App Operator) and a user (the application creator; Developer). These roles are not necessarily mutually exclusive, but provide the ability to create a separation concerns which means developers can focus on writing code, and platforms teams can focus on smoothing and securing their path to production. 
 
-**Want to learn more?**
+### Want to learn more?
 
 - [Getting Started with Cartographer](https://github.com/vmware-tanzu/cartographer#getting-started) 
 - Your First Supply Chain: [Source to Knative Service](https://github.com/vmware-tanzu/cartographer/blob/main/examples/source-to-knative-service/README.md) 
