@@ -57,7 +57,7 @@ The Security Team will also publish any mitigating steps users can take until th
 ## Mailing lists
 
 *   Use security@vmware.com to report security concerns to the VMware Security Team, who uses the list to privately discuss security issues and fixes prior to disclosure.
-*   Join the [Cartographer Distributors](cartographer-distributors@googlegroups.com) mailing list for early private information and vulnerability disclosure. Early disclosure may include mitigating steps and additional information on security patch releases. See below for information on how Cartographer distributors or vendors can apply to join this list.
+*   Join the [Cartographer Distributors]([cartographer-distributors@googlegroups.com](https://groups.google.com/g/cartographer-distributors)) mailing list for early private information and vulnerability disclosure. Early disclosure may include mitigating steps and additional information on security patch releases. See below for information on how Cartographer distributors or vendors can apply to join this list.
 
 ## Early Disclosure to Cartographer Distributors List
 
@@ -65,7 +65,7 @@ The private list is intended to be used primarily to provide actionable informat
 
 ## Membership Criteria
 
-To be eligible to join the [Cartographer Distributors](cartographer-distributors@googlegroups.com) mailing list, you should:
+To be eligible to join the [Cartographer Distributors]([cartographer-distributors@googlegroups.com](https://groups.google.com/g/cartographer-distributors)) mailing list, you should:
 
 1. Be an active distributor of Cartographer.
 2. Have a user base that is not limited to your own organization.
@@ -87,7 +87,7 @@ In the unfortunate event that you share information beyond what is permitted by 
 
 ## Requesting to Join
 
-Send new membership requests to cartographer-distributors@googlegroups.com. In the body of your request please specify how you qualify for membership and fulfill each criterion listed in the Membership Criteria section above.
+Send new membership requests to [cartographer-distributors@googlegroups.com](https://groups.google.com/g/cartographer-distributors). In the body of your request please specify how you qualify for membership and fulfill each criterion listed in the Membership Criteria section above.
 
 
 ## Confidentiality, integrity and availability

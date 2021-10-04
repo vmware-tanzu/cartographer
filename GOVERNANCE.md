@@ -11,7 +11,7 @@ We are committed to the project not only delivering the distribution, but also b
 
 ## Community
 
-Users: Members who engage with the Cartographer community, providing valuable feedback and unique perspectives.
+**Users**: Members who engage with the Cartographer community, providing valuable feedback and unique perspectives.
 
 **Contributors**: Members who contribute to the project through documentation, code reviews, responding to issues, participation in proposal discussions, contributing code, etc. The project welcomes code contributions to the Cartographer project, as well as contributor-originated packages that add capabilities from other projects. These contributed packages will conform to the Cartographer packaging requirements and lifecycle management.
 
