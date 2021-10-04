@@ -17,7 +17,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly ROOT=$(cd $(dirname $0)/.. && pwd)
+ROOT=$(cd "$(dirname $0)/.." && pwd)
+readonly ROOT
+
 readonly RELEASE_NOTES_FILE=${RELEASE_NOTES:-$ROOT/release/CHANGELOG.md}
 readonly ASSETS_DIR=${ASSETS_DIR:-$ROOT/release}
 
@@ -31,10 +33,13 @@ main() {
 submit_release_to_github() {
         local version=v$1
 
+        local release_notes_basename
+        release_notes_basename="$(basename $RELEASE_NOTES_FILE)"
+
         gh release create $version \
                 --draft \
                 --notes-file $RELEASE_NOTES_FILE \
-                $(find $ASSETS_DIR -type f ! -name $(basename $RELEASE_NOTES_FILE))
+                "$(find $ASSETS_DIR -type f ! -name $release_notes_basename)"
 }
 
 git_current_version() {
