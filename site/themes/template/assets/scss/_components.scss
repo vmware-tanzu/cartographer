@@ -6,7 +6,7 @@
     background-color: $mainblue;
     color: $white;
     .text-block {
-        max-width: 550px;
+        max-width: 700px;
         padding: 0px 0px 10px 0px;
         p {
             margin-bottom: 20px;
@@ -719,4 +719,8 @@
             display: none;
         }
     }
+}
+
+.community-logo{
+    width: 75px;
 }
