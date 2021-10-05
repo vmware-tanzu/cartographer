@@ -92,7 +92,7 @@ webhooks:
 
 ---
 
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: cartographer-webhook
@@ -108,7 +108,7 @@ spec:
   secretName: cartographer-webhook
 ---
 
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: selfsigned-issuer
