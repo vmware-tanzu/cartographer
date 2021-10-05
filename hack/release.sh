@@ -111,7 +111,7 @@ create_imgpkg_bundle() {
         cp -r ./packaging/{objects,overlays} $SCRATCH/bundle/config
 
         ytt --ignore-unknown-comments -f ./config |
-                KO_DOCKER_REPO=$REGISTRY ko resolve -f- > \
+                KO_DOCKER_REPO=$REGISTRY ko resolve -B -f- > \
                         $SCRATCH/bundle/config/cartographer.yaml
 
         kbld -f $SCRATCH/bundle/config/cartographer.yaml \
