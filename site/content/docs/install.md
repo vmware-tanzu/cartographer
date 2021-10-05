@@ -1,18 +1,34 @@
 # Installing Cartographer
 
-### Pre-requisites
+There are three recommended ways of installing Cartographer:
 
-1. A running Kubernetes cluster (v1.19+) with admin permissions
+1. with a single YAML file (quick!)
+2. using an [imgpkg bundle], making easier for relocation
+3. using a [carvel Packaging] objects, for an opinionated package-based
+   workflow
 
-In case you don't, [kind] is a great alternative for running Kubernetes
-locally, specially if you already have Docker installed (that is all it takes).
+If all you want to do is get started quick and fetching images from DockerHub
+is not an issue, [`1`](#1-single-file-quick-install) is the way to go.
+Otherwise, check out the other approaches (especially if you want to have
+everything relocated to a registry of your own).
 
-2. [cert-manager], so that certificates can be created and maintained to
-   support the controller's [admission webhook]
+tl;dr _(having [cert-manager] already installed)_:
 
-### Steps
+```bash
+kubectl create namespace cartographer-system
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+```
 
-#### 1. Ensure **[cert-manager]** is installed in the cluster
+
+## Pre-requisites
+
+### Admin capabilities in a recent-enough Kubernetes cluster (v1.19+)
+
+Currently, Cartographer doesn't provide support for granular permissions (see
+[#51]), as such, to configure the supply chain (which is cluster-wide), you
+must have admin capabilities in the cluster you're targetting.
+
+### [cert-manager] for managing the controller's certificates
 
 In order to have Cartographer's validation webhooks up and running in the
 cluster, [cert-manager] is utilized to generate TLS certificates as well to keep
@@ -32,8 +48,10 @@ In case you don't (i.e., you see _""certificates.cert-manager.io" not found"_),
 proceed with installing it.
 
 ```bash
+CERT_MANAGER_VERSION=1.5.3
+
 kapp deploy --yes -a cert-manager \
-	-f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
+	-f https://github.com/jetstack/cert-manager/releases/download/v$CERT_MANAGER_VERSION/cert-manager.yaml
 ```
 ```console
 Target cluster 'https://127.0.0.1:39495' (nodes: kind-control-plane)
@@ -55,14 +73,74 @@ ps.: although we recommend using [kapp] as provided in the instructions you'll
 see here, its use can be replaced by `kubectl apply`.
 
 
-#### 2. Install Cartographer
+## 1. Single file, Quick install
+
+Cartographer releases include a file (`cartographer.yaml`) that contains all
+necessary files for installing it in a cluster
+
+```console
+Resources in file './bundle/cartographer.yaml'
+
+Namespace            Name                              Kind
+(cluster)            cartographer-cluster-admin        ClusterRoleBinding
+^                    clusterconfigtemplates.carto.run  CustomResourceDefinition
+^                    clusterimagetemplates.carto.run   CustomResourceDefinition
+^                    clustersourcetemplates.carto.run  CustomResourceDefinition
+^                    clustersupplychains.carto.run     CustomResourceDefinition
+^                    clustersupplychainvalidator       ValidatingWebhookConfiguration
+^                    clustertemplates.carto.run        CustomResourceDefinition
+^                    pipelines.carto.run               CustomResourceDefinition
+^                    runtemplates.carto.run            CustomResourceDefinition
+^                    workloads.carto.run               CustomResourceDefinition
+
+cartographer-system  cartographer-controller           Deployment
+^                    cartographer-controller           ServiceAccount
+^                    cartographer-webhook              Certificate
+^                    cartographer-webhook              Secret
+^                    cartographer-webhook              Service
+^                    private-registry-credentials      Secret
+^                    selfsigned-issuer                 Issuer
+```
+
+
+providing all the necessary objects that would entail a full installation of
+it.
+
+To install it, first create the namespace where the controller will be
+installed:
+
+```bash
+kubectl create namespace cartographer-system
+```
+```console
+namespace/cartographer-system created
+```
+
+and then, submit the objects included in the release:
+
+```bash
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+```
+```console
+customresourcedefinition.apiextensions.k8s.io/clusterconfigtemplates.carto.run configured
+customresourcedefinition.apiextensions.k8s.io/clusterimagetemplates.carto.run configured
+...
+secret/cartographer-webhook created
+```
+
+
+## 2. Bundle tarball
+
+This installation method is great for those that want to host Cartographer's
+image and installation objects by themselves - either so they live in a public
+container image registry of their own, or for air-gapped scenarios where bits
+need to be moved in an offline fashion.
 
 First, head to the [releases page] and download the `bundle.tar` file available
 for the release you want to install.
 
 ```bash
-CARTOGRAPHER_VERSION=v0.0.6
-curl -SOL https://github.com/vmware-tanzu/cartographer/releases/download/v$CARTOGRAPHER_VERSION/bundle.tar
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/latest/download/bundle.tar
 ```
 
 This bundle contains everything we need to install Cartographer, from container
@@ -185,13 +263,13 @@ Succeeded
 ```
 
 
-_(see the [Kubernetes official documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line) 
+_(see the [Kubernetes official documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line)
 on how to create a Secret to pull images from a private Docker registry or
 repository)._
 
 
 
-### Installation using Carvel Packaging
+## 3. Installation using Carvel Packaging
 
 Another way that you can go about installing Cartographer is with the use of
 [carvel Packaging] provided by [kapp controller]. These, when used alongside
@@ -201,7 +279,7 @@ installing Cartographer.
 To make use of them, first, make sure those pre-requisites above are satified
 
 
-#### Prerequisites
+### Prerequisites
 
 1. admin access to a Kubernetes Cluster and [cert-manager]
 
@@ -290,8 +368,7 @@ kubectl create clusterrolebinding default-cluster-admin \
 clusterrolebinding.rbac.authorization.k8s.io/default-cluster-admin created
 ```
 
-
-#### Package installation
+### Package installation
 
 With the prerequisites satisfied, go ahead and download the `package*` files,
 as well as the `imgpkg` bundle:
@@ -403,9 +480,12 @@ spec:
     - "*"
 ```
 
+[#1]: https://github.com/vmware-tanzu/cartographer/issues/51
 [admission webhook]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
 [carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
 [cert-manager]: https://github.com/jetstack/cert-manager
+[imgpkg bundle]: https://carvel.dev/imgpkg/docs/latest/
 [kapp-controller]: https://carvel.dev/kapp-controller/
 [kapp]: https://carvel.dev/kapp/
 [kind]: https://github.com/kubernetes-sigs/kind
+[releases page]: https://github.com/vmware-tanzu/cartographer/releases
