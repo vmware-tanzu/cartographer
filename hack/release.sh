@@ -163,13 +163,15 @@ create_release_notes() {
 # 	│   └── package-metadata.yaml
 # 	│   └── package.yaml
 # 	│
-# 	└── bundle.tar.gz
+# 	├── cartographer.yaml
+# 	└── bundle.tar
 #
 populate_release_directory() {
         rm -rf ./release
         mkdir -p ./release/package
 
         cp $SCRATCH/bundle.tar ./release
+        cp $SCRATCH/bundle/config/cartographer.yaml ./release
         cp -r $SCRATCH/package ./release
 }
 
