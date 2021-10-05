@@ -595,6 +595,24 @@
         @include breakpoint(large) {
             width: 22%;
         }
+        @include breakpoint(small){
+            h4{
+                font-weight: bold;
+                font-size: 12px;
+                word-break: break-word;
+                padding-right: 2px;
+            }
+            a{
+                font-size: 10px;
+                word-break: break-word; 
+            }
+            button{
+                // width: 30%;
+                background-image:none !important;
+                padding: 10px 10px 10px 10px !important;
+                font-size: 12px !important;
+            }
+        }
     }
     .docs-content {
         width: 75%;
