@@ -157,13 +157,13 @@ make test-kuttl-kind  # see below section about testing with a full cluster.
 ```
 
 
-## Merge Request Flow
+## Pull Request Flow
 
-Often, code in a merge request will be worked on by a pair from the team maintaining Catographer.
-In this case, a merge request should be made by one engineer. The second engineer should approve
-the merge request. If the work is not blocking other stories, the merge request should stay open
-overnight, to allow others on the team time to read. The following morning, a merge should be
-completed.
+Often, code in a pull request will be worked on by a pair from the team maintaining Catographer.
+In this case, a pull request should be made by one engineer. The second engineer should approve
+the pull request. If the work is not blocking other stories, the pull request should stay open
+overnight, to allow others on the team time to read. The following morning, the pull request should be
+merged.
 
 
 ## Maintaining a useful commit history
