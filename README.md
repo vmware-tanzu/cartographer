@@ -1,4 +1,5 @@
-# Project Cartographer
+# Cartographer
+<img src="site/themes/template/static/img/cartographer-logo.png">
 
 Cartographer is a Kubernetes native [Choreographer]. It allows users to configure K8s resources into re-usable [_Supply Chains_](site/content/docs/reference.md#ClusterSupplyChain) that can be used to define all of the stages that an [_Application Workload_](site/content/docs/reference.md#Workload) must go through to get to an environment.
 
