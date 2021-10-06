@@ -236,6 +236,8 @@ spec:
                     description: Image is an OCI image is a registry that contains
                       source code
                     type: string
+                  subPath:
+                    type: string
                 type: object
             type: object
           status:

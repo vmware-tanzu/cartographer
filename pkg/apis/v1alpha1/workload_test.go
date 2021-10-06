@@ -100,6 +100,14 @@ var _ = Describe("Workload", func() {
 			Expect(jsonValue).To(ContainSubstring("image"))
 			Expect(jsonValue).To(ContainSubstring("omitempty"))
 		})
+
+		It("allows but does not require a subpath", func() {
+			subpathField, found := workloadSourceType.FieldByName("Subpath")
+			Expect(found).To(BeTrue())
+			jsonValue := subpathField.Tag.Get("json")
+			Expect(jsonValue).To(ContainSubstring("subPath"))
+			Expect(jsonValue).To(ContainSubstring("omitempty"))
+		})
 	})
 
 	Describe("Workload Git", func() {

@@ -82,7 +82,8 @@ type WorkloadSpec struct {
 type WorkloadSource struct {
 	Git *WorkloadGit `json:"git,omitempty"`
 	// Image is an OCI image is a registry that contains source code
-	Image *string `json:"image,omitempty"`
+	Image   *string `json:"image,omitempty"`
+	Subpath *string `json:"subPath,omitempty"`
 }
 
 type WorkloadGit struct {
