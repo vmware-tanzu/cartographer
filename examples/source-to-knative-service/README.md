@@ -66,8 +66,10 @@ In this example, we leverage the following dependencies:
   images using buildpacks
 
 ```bash
+KPACK_VERSION=0.4.0
+
 kapp deploy --yes -a kpack \
-	-f https://github.com/pivotal/kpack/releases/download/v0.3.1/release-0.3.1.yaml
+	-f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
 ```
 
 - [source-controller], for providing the ability to find new commits to a git
