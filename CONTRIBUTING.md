@@ -230,7 +230,7 @@ RELEASE_VERSION=v0.0.6-rc ./hack/release.sh
 3. submit to github
 
 ```bash
-RELEASE_VERSION=v0.0.6-rc ./hack/release.sh
+RELEASE_VERSION=v0.0.6-rc ./hack/publish-github-release.sh
 ```
 
 

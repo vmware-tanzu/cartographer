@@ -111,7 +111,7 @@ create_imgpkg_bundle() {
         cp -r ./packaging/{objects,overlays} $SCRATCH/bundle/config
 
         ytt --ignore-unknown-comments -f ./config |
-                KO_DOCKER_REPO=$REGISTRY ko resolve -f- > \
+                KO_DOCKER_REPO=$REGISTRY ko resolve -B -f- > \
                         $SCRATCH/bundle/config/cartographer.yaml
 
         kbld -f $SCRATCH/bundle/config/cartographer.yaml \
@@ -163,13 +163,15 @@ create_release_notes() {
 # 	│   └── package-metadata.yaml
 # 	│   └── package.yaml
 # 	│
-# 	└── bundle.tar.gz
+# 	├── cartographer.yaml
+# 	└── bundle.tar
 #
 populate_release_directory() {
         rm -rf ./release
         mkdir -p ./release/package
 
         cp $SCRATCH/bundle.tar ./release
+        cp $SCRATCH/bundle/config/cartographer.yaml ./release
         cp -r $SCRATCH/package ./release
 }
 
