@@ -46,6 +46,7 @@ main() {
                 case $command in
                 cluster)
                         start_registry
+                        start_repository
                         start_local_cluster
                         install_cert_manager
                         install_kapp_controller
@@ -158,6 +159,34 @@ start_registry() {
                 --name "$REGISTRY_CONTAINER_NAME" \
                 --publish "${REGISTRY_PORT}":5000 \
                 registry:2
+}
+
+start_repository() {
+        log "start repository"
+
+        docker-compose up -d
+        container_id=$(docker ps | cut -d ' ' -f1 | head -2 | tail -1)
+        docker cp golden-app.ini "$container_id:/data/gitea/conf/app.ini"
+        docker restart "$container_id"
+        gitea_token="$(docker exec -u git "$container_id" gitea admin user create --username hi --password hi --email hi@example.com --admin --access-token --must-change-password=false | head -1 | rev | cut -d ' ' -f1 | rev)"
+
+        # Place a private key in ~/.ssh
+        mytmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
+        pushd "$mytmpdir"
+          ssh-keygen -t rsa -b 4096 -C "hi@example.com" -f gitea-key -P ""
+          ssh-add gitea-key
+        popd
+
+        #Curl to add the public key to the user (Add the access token to this call)
+        curl -X 'POST' \
+          'http://localhost:3000/api/v1/admin/users/hi/keys' \
+          -H 'accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -H "Authorization: token $gitea_token" \
+          -d "{\"key\": \"$(cat gitea-key.pub)\", \"read_only\": false, \"title\": \"string\"}"
+
+        #Curl to create repo
+        curl -X 'POST'   'http://localhost:3000/api/v1/user/repos'   -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{"name": "my-repo", "private": false}' -H "Authorization: token $gitea_token"
 }
 
 start_local_cluster() {
@@ -302,3 +331,5 @@ log() {
 }
 
 main "$@"
+
+}
