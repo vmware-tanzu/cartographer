@@ -7,7 +7,7 @@ This document defines the project governance for Cartographer, an open source pr
 
 Cartographer is a Choreographer for Kubernetes. It allows users to configure K8s resources into re-usable [_Supply Chains_](site/content/docs/reference.md#ClusterSupplyChain) that can be used to define all of the stages that an [_Application Workload_](site/content/docs/reference.md#Workload) must go through to get to an environment. 
 
-We are committed to the project not only delivering the distribution, but also building an open, inclusive, and productive open, inclusive, and productive vendor driven open source community; together, we will advance a reliable, nimble, and extensible foundation for modern applications.
+We are committed to the project not only delivering the distribution, but also building an open, inclusive, and productive vendor driven open source community; together, we will advance a reliable, nimble, and extensible foundation for modern applications.
 
 ## Community
 
