@@ -137,9 +137,10 @@ start_registry() {
         password: admin
         "
 
-        DOCKER_USERNAME=admin \
+        env DOCKER_USERNAME=admin \
                 DOCKER_PASSWORD=admin \
-                DOCKER_REGISTRY=$REGISTRY \
+                DOCKER_REGISTRY="$REGISTRY" \
+                DOCKER_CONFIG="$DOCKER_CONFIG" \
                 "$DIR/docker-login.sh"
 
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
