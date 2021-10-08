@@ -167,3 +167,342 @@ spec:
 
 ```
 
+## Examples
+
+### Deploy-only
+
+In the following simple example, the Delivery:
+
+1. Fetches Kubernetes configuration from a git repository
+2. Deploys to the cluster using kapp controller
+
+Deliverable
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: my-app
+  labels:
+    app.tanzu.vmware.com/deliverable-type: web
+spec:
+  source:
+    git:
+      url: https://github.com/example/hello-world-ops
+      ref:
+        branch: prod
+```
+
+ClusterDelivery
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDelivery
+metadata:
+  name: delivery
+spec:
+  selector:
+    app.tanzu.vmware.com/deliverable-type: web
+  resources:
+    - name: config-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: git-repository
+    - name: deployer
+      templateRef:
+        kind: ClusterDeployTemplate
+        name: app-deploy
+      source:
+        resource: config-provider
+```
+
+ClusterSourceTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source
+spec:
+  urlPath: .status.artifact.url
+  revisionPath: .status.artifact.revision
+
+  template:
+    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    kind: GitRepository
+    metadata:
+      name: $(deliverable.metadata.name)$
+    spec:
+      interval: 1m
+      url: $(deliverable.spec.source.git.url)$
+      ref: $(deliverable.spec.source.git.ref)$
+      gitImplementation: libgit2
+      ignore: ""
+```
+
+ClusterDeployTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeployTemplate
+metadata:
+  name: app-deploy
+spec:
+  observedCompletion: # uses observedGeneration
+    succeeded: {key: 'status.conditions.#(type=="ReconcileSucceeded").status', value: "True"}
+    failed:    {key: 'status.conditions.#(type=="ReconcileFailed").status', value: "False"}
+
+  template:
+    apiVersion: kappctrl.k14s.io/v1alpha1
+    kind: App
+    metadata:
+      name: $(deliverable.metadata.name)$
+    spec:
+      serviceAccountName: default
+      fetch:
+       - http:
+          url: $(source.url)$
+          # grab only portion of download (optional)
+          subPath: $(source.subPath)$
+      template:
+        - ytt: {}
+      deploy:
+        - kapp: {}
+```
+
+### Staging Cluster
+
+In the following more complex example, the Delivery:
+
+1. Fetches Kubernetes configuration from a git repository
+2. Fetches Integration tests from the same git repository
+3. Deploys to a staging cluster using kapp controller
+4. Runs Integration and performance tests against deployed app
+5. Promotes to production via pull request if integration tests pass
+
+Deliverable
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: my-app
+  labels:
+    app.tanzu.vmware.com/deliverable-type: web
+spec:
+  config:
+    git:
+      url: https://github.com/ekcasey/hello-world-ops
+      ref:
+        branch: staging
+```
+
+ClusterDelivery
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDelivery
+metadata:
+  name: delivery
+spec:
+  selector:
+    app.tanzu.vmware.com/deliverable-type: web
+  resources:
+    - name: config-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: git-repository
+    - name: deployer
+      templateRef:
+        kind: ClusterDeployTemplate
+        name: app-deploy
+      source:
+        resource: config-provider
+    - name: integration-tester
+      templateRef:
+        kind: ClusterDeliveryTemplate
+        name: tekton-testing-pipeline
+      deployment:
+        resource: deployer
+    - name: performance-tester
+      templateRef:
+        kind: ClusterDeliveryTemplate
+        name: tekton-performance-pipeline
+      deployment:
+        resource: integration-tester
+    - name: promoter
+      templateRef:
+        kind: ClusterTemplate
+        name: git-merge
+      sources:
+      - resource: performance-tester # need way to merge parallel tests eventually
+```
+
+ClusterSourceTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source
+spec:
+  urlPath: .status.artifact.url
+  revisionPath: .status.artifact.revision
+
+  template:
+    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    kind: GitRepository
+    metadata:
+      name: $(deliverable.metadata.name)$
+    spec:
+      interval: 1m
+      url: $(deliverable.spec.source.git.url)$
+      ref: $(deliverable.spec.source.git.ref)$
+      gitImplementation: libgit2
+      ignore: ""
+```
+
+ClusterDeployTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeployTemplate
+metadata:
+  name: app-deploy
+spec:
+  observedCompletion: # uses observedGeneration
+    succeeded: {key: 'status.conditions.#(type=="ReconcileSucceeded").status', value: "True"}
+    failed:    {key: 'status.conditions.#(type=="ReconcileFailed").status', value: "False"}
+
+  template:
+    apiVersion: kappctrl.k14s.io/v1alpha1
+    kind: App
+    metadata:
+      name: $(deliverable.metadata.name)$
+    spec:
+      serviceAccountName: default
+      fetch:
+       - http:
+          url: $(source.url)$
+          # grab only portion of download (optional)
+          subPath: $(source.subPath)$
+      template:
+        - ytt: {}
+      deploy:
+        - kapp: {}
+```
+
+ClusterDeliveryTemplate - Integration Test
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeliveryTemplate
+metadata:
+  name: tekton-integration-tests
+spec:
+
+
+  # could also use observedCompletion
+  observedMatches:
+  - input: $(spec.inputs.revision)$
+    output: $(status.latestInputs.revision)$
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      generateName: $(workload.name)$-integration-
+    spec:
+      inputs:
+        url: $(deployment.url)$
+        revision: $(deployment.revision)$
+        pipelineName: test
+
+      runTemplateRef:
+        name: default-tekton-source-provider
+
+```
+
+ClusterDeliveryTemplate - Performance Test
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeliveryTemplate
+metadata:
+  name: tekton-performance-tests
+spec:
+  # could also use observedCompletion
+  observedMatches:
+  - input: $(spec.inputs.revision)$
+    output: $(status.outputs.revision)$
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      generateName: $(workload.name)$-performance-
+    spec:
+      inputs:
+        url: $(deployment.url)$
+        revision: $(deployment.revision)$
+        pipelineName: test
+
+      runTemplateRef:
+        name: default-tekton-source-provider
+
+```
+
+ClusterTemplate - Git Merge
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: git-merge
+spec:
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      generateName: $(workload.name)$-promotion-
+    spec:
+      inputs:
+        url: $(source.url)$
+        revision: $(source.revision)$
+        pipeline: test
+
+      runTemplateRef:
+        name: default-tekton-template
+```
+
+PipelineRun - Tests
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: RunTemplate
+metadata:
+  name: default-tekton-source-provider
+spec:
+  completion:
+    succeeded: {key: 'status.conditions.#(type=="Succeeded").status', value: "True"}
+    failed:    {key: 'status.conditions.#(type=="Succeeded").status', value: "False"}
+
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: $(pipeline.metadata.name)$-
+    spec:
+      pipelineRef: 
+        name: $(pipeline.spec.inputs.pipelineName)$
+
+      workspaces:
+        - name: source
+          volumeClaimTemplate:
+            spec:
+              accessModes: [ ReadWriteOnce ]
+
+
+      params:
+        - name: source-url
+          value: $(pipeline.spec.inputs.source-url)$
+        - name: source-revision
+          value: $(pipeline.spec.inputs.source-revision)$
+
+```
+
+## Unresolved Questions
+
+1. What is going on with resource limits? It seems like they make sense to include in Deliverable but they currently live in Workload.
+
+2. What is going on with the runtime environment? We could bake this into the config during the integration phase (SupplyChain) but users may want to set different values in different environments (e.g., staging vs. prod) and should therefore probably move to Deliverable?
+
+
