@@ -11,3 +11,6 @@ coverage.*
 
 kubeconfig
 /release
+
+hack/gitea-key
+hack/gitea-key.pub

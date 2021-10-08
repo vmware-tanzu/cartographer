@@ -193,13 +193,23 @@ metadata:
 spec:
   params:
     - name: git_username
-      default: Waciuma Wanjohi
+      default: hi
     - name: git_user_email
-      default: lwanjohi@vmware.com
+      default: hi@example.com
     - name: commit_message
       default: "Update repo based on supply chain run"
     - name: github_storage_repository
-      default: waciumawanjohi/test-tekton-git-cli.git
+      default: 2222/hi/my-repo.git
+    - name: git_ssh_name
+      default: ssh://git
+    - name: git_server
+      default: localhost
+    - name: git_ssh_command
+      default: "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    - name: branch
+      default: master
+    - name: git_ssh_variant
+      default: ssh
   template:
     apiVersion: carto.run/v1alpha1
     kind: Pipeline
@@ -216,3 +226,8 @@ spec:
         commit_message: $(params.commit_message)$
         git_username: $(params.git_username)$
         git_user_email: $(params.git_user_email)$
+        git_ssh_command: $(params.git_ssh_command)$
+        git_ssh_name: $(params.git_ssh_name)$
+        git_server: $(params.git_server)$
+        branch: $(params.branch)$
+        git_ssh_variant: $(params.git_ssh_variant)$

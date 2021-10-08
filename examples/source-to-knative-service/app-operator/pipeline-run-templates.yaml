@@ -70,11 +70,19 @@ spec:
         - name: GIT_SCRIPT
           value: |
             export CONFIG_MAP_FIELD=$(pipeline.spec.inputs.input_config_map_field)$
-            export COMMIT_MESSAGE=$(pipeline.spec.inputs.input_config_map_field)$
+            export COMMIT_MESSAGE=$(pipeline.spec.inputs.commit_message)$
+            if [[ -n "$(pipeline.spec.inputs.git_ssh_command)$" ]]
+            then
+              export GIT_SSH_COMMAND="$(pipeline.spec.inputs.git_ssh_command)$"
+            fi
+            if [[ -n "$(pipeline.spec.inputs.git_ssh_variant)$" ]]
+            then
+              export GIT_SSH_VARIANT="$(pipeline.spec.inputs.git_ssh_variant)$"
+            fi
             git init
-            git remote add origin git@github.com:$(pipeline.spec.inputs.github_storage_repository)$
-            git pull origin main
-            git checkout main
+            git remote add origin $(pipeline.spec.inputs.git_ssh_name)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.github_storage_repository)$
+            git pull origin $(pipeline.spec.inputs.branch)$
+            git checkout $(pipeline.spec.inputs.branch)$
             export INPUT_PATH=$(workspaces.input.path)
             cp "$INPUT_PATH"/"$CONFIG_MAP_FIELD" .
             git add .

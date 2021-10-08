@@ -76,6 +76,7 @@ main() {
 
                 teardown)
                         delete_containers
+                        delete_gitea_keys
                         ;;
 
                 *)
@@ -164,29 +165,40 @@ start_registry() {
 start_repository() {
         log "start repository"
 
-        docker-compose up -d
-        container_id=$(docker ps | cut -d ' ' -f1 | head -2 | tail -1)
-        docker cp golden-app.ini "$container_id:/data/gitea/conf/app.ini"
-        docker restart "$container_id"
-        gitea_token="$(docker exec -u git "$container_id" gitea admin user create --username hi --password hi --email hi@example.com --admin --access-token --must-change-password=false | head -1 | rev | cut -d ' ' -f1 | rev)"
+        # Bring up gitea server container
+        docker-compose -f hack/docker-compose.yaml up -d
 
-        # Place a private key in ~/.ssh
-        mytmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
-        pushd "$mytmpdir"
-          ssh-keygen -t rsa -b 4096 -C "hi@example.com" -f gitea-key -P ""
-          ssh-add gitea-key
-        popd
+        # Apply gitea configuration
+        CONTAINER_ID=$(docker ps | cut -d ' ' -f1 | head -2 | tail -1)
+        docker cp hack/golden-app.ini "$CONTAINER_ID:/data/gitea/conf/app.ini"
+        docker restart "$CONTAINER_ID"
 
-        #Curl to add the public key to the user (Add the access token to this call)
-        curl -X 'POST' \
-          'http://localhost:3000/api/v1/admin/users/hi/keys' \
-          -H 'accept: application/json' \
-          -H 'Content-Type: application/json' \
-          -H "Authorization: token $gitea_token" \
-          -d "{\"key\": \"$(cat gitea-key.pub)\", \"read_only\": false, \"title\": \"string\"}"
+        # Create user in server
+        DOCKER_EXEC_SUCCESS=false
+        until $DOCKER_EXEC_SUCCESS
+        do
+          GITEA_TOKEN="$(docker exec -u git "$CONTAINER_ID" gitea admin user create --username hi --password hi --email hi@example.com --admin --access-token --must-change-password=false | head -1 | rev | cut -d ' ' -f1 | rev)" && DOCKER_EXEC_SUCCESS=true || echo "attempting docker exec again" && sleep 5
+        done
 
-        #Curl to create repo
-        curl -X 'POST'   'http://localhost:3000/api/v1/user/repos'   -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{"name": "my-repo", "private": false}' -H "Authorization: token $gitea_token"
+        # Generate public/private key
+        ssh-keygen -t rsa -b 4096 -C "hi@example.com" -f hack/gitea-key -P ""
+        GITEA_KEY_PUB="$(cat hack/gitea-key.pub)"
+
+        # Add the public key to the user on the server
+        CURL_SUCCEED=false
+        until $CURL_SUCCEED
+        do
+          curl -X 'POST' \
+            'http://localhost:3000/api/v1/admin/users/hi/keys' \
+            -H 'accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -d "{\"key\": \"$GITEA_KEY_PUB\", \"read_only\": false, \"title\": \"string\"}" \
+            --fail && CURL_SUCCEED=true || echo "retrying curl" && sleep 5
+        done
+
+        # Create a repo on the server
+        curl -X 'POST'   'http://localhost:3000/api/v1/user/repos'   -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{"name": "my-repo", "private": false}' -H "Authorization: token $GITEA_TOKEN"
 }
 
 start_local_cluster() {
@@ -289,8 +301,8 @@ setup_example() {
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-" \
-                --data-value base64_encoded_ssh_key=$(lpass show --notes waciumawanjohi-test-tekton-git-cli-ssh-key) \
-                --data-value base64_encoded_github_host="Z2l0aHViLmNvbSwxNDAuODIuMTEzLjQgc3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBQkl3QUFBUUVBcTJBN2hSR21kbm05dFVEYk85SURTd0JLNlRiUWErUFhZUENQeTZyYlRyVHR3N1BIa2NjS3JwcDB5VmhwNUhkRUljS3I2cExsVkRCZk9MWDlRVXN5Q09WMHd6ZmpJSk5sR0VZc2RsTEppekhoYm4ybVVqdlNBSFFxWkVUWVA4MWVGekxRTm5QSHQ0RVZWVWg3VmZERVNVODRLZXptRDVRbFdwWExtdlUzMS95TWYrU2U4eGhIVHZLU0NaSUZJbVd3b0c2bWJVb1dmOW56cElvYVNqQit3ZXFxVVVtcGFhYXNYVmFsNzJKK1VYMkIrMlJQVzNSY1QwZU96UWdxbEpMM1JLclRKdmRzakUzSkVBdkdxM2xHSFNaWHkyOEczc2t1YTJTbVZpL3c0eUNFNmdiT0RxblRXbGc3K3dDNjA0eWRHWEE4VkppUzVhcDQzSlhpVUZGQWFRPT0K" |
+                --data-value base64_encoded_ssh_key="$(cat hack/gitea-key | base64)" \
+                --data-value base64_encoded_github_host="" |
                 kapp deploy --yes -a example -f-
 }
 
@@ -324,6 +336,11 @@ test_example() {
 delete_containers() {
         docker rm -f $REGISTRY_CONTAINER_NAME || true
         docker rm -f $KUBERNETES_CONTAINER_NAME || true
+        docker-compose -f hack/docker-compose.yaml down -v
+}
+
+delete_gitea_keys() {
+        rm hack/gitea-key.pub hack/gitea-key
 }
 
 log() {
@@ -331,5 +348,3 @@ log() {
 }
 
 main "$@"
-
-}
