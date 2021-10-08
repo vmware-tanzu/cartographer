@@ -64,4 +64,106 @@ Alternatives:
 
 ## Implementation
 
-TBD
+### API
+
+Deliverable
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: <name>
+  labels:
+    app.tanzu.vmware.com/deliverable-type: <type>
+spec:
+  source:
+    git:
+      url: <url>
+      subPath: <path>
+      ref:
+        branch: <branch>
+```
+
+ClusterDelivery
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDelivery
+metadata:
+  name: <name>
+spec:
+  selector:
+    app.tanzu.vmware.com/deliverable-type: <type>
+  resources:
+    - name: config-provider
+      templateRef:
+        kind: <template-kind>
+        name: <template-name>
+      deployment: # kind=ClusterDeliveryTemplate 
+        resource: <resource-name>
+      sources: # kind=*
+      - resource: <resource-name>
+      configs: # kind=ClusterSourceTemplate
+      - resource: <resource-name>
+
+```
+
+ClusterSourceTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: <name>
+spec:
+  urlPath: <jsonpath-in-status>
+  revisionPath: <jsonpath-in-status>
+
+  template: <jsonpath-style-template>
+  ytt: <ytt-style-template-string>
+
+```
+
+ClusterDeployTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeployTemplate
+metadata:
+  name: <name>
+spec:
+  observedCompletion: # uses observedGeneration
+    succeeded:
+      key: <jsonpath-in-status>
+      value: <expected-value>
+    failed:
+      key: <jsonpath-in-status>
+      value: <expected-value>
+  observedMatches: # alternative to observedCompletion
+  - input: <jsonpath-in-spec>
+    output: <jsonpath-in-status>
+
+  template: <jsonpath-style-template>
+  ytt: <ytt-style-template-string>
+
+```
+
+ClusterDeliveryTemplate
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeliveryTemplate
+metadata:
+  name: <name>
+spec:
+  observedCompletion: # uses observedGeneration
+    succeeded:
+      key: <jsonpath-in-status>
+      value: <expected-value>
+    failed:
+      key: <jsonpath-in-status>
+      value: <expected-value>
+  observedMatches: # alternative to observedCompletion
+  - input: <jsonpath-in-spec>
+    output: <jsonpath-in-status>
+
+  template: <jsonpath-style-template>
+  ytt: <ytt-style-template-string>
+
+```
+
