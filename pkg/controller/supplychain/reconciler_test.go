@@ -133,7 +133,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(out).To(Say(`"namespace":"my-namespace"`))
 		})
 
-		It("updates the status of the workload", func() {
+		It("updates the status of the supply chain", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.StatusUpdateCallCount()).To(Equal(1))

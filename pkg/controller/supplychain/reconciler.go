@@ -64,6 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("get supplyChain: %w", err)
 	}
 
+	// fixme: discuss DeepCopy() as a prophylactic
 	supplyChain := sc.DeepCopy()
 
 	r.conditionManager = r.conditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)

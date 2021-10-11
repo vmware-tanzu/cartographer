@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package delivery_test
 
 import (
-	"fmt"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type JsonPathError struct {
-	Err        error
-	expression string
-}
-
-func NewJsonPathError(expression string, err error) JsonPathError {
-	return JsonPathError{
-		Err:        err,
-		expression: expression,
-	}
-}
-
-func (e JsonPathError) Error() string {
-	return fmt.Errorf("evaluate json path '%s': %w", e.expression, e.Err).Error()
-}
-
-func (e JsonPathError) JsonPathExpression() string {
-	return e.expression
+func TestDelivery(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Delivery Suite")
 }

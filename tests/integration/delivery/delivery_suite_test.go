@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supply_chain_test
+package delivery_test
 
 import (
 	"context"
@@ -41,9 +41,9 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/root"
 )
 
-func TestSupplyChainIntegration(t *testing.T) {
+func TestDeliveryIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Supply Chain Integration Suite")
+	RunSpecs(t, "Delivery Integration Suite")
 }
 
 var (
@@ -66,9 +66,6 @@ var _ = BeforeSuite(func() {
 
 	// start kube-apiserver and etcd
 	testEnv = &envtest.Environment{
-		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
-		},
 		CRDDirectoryPaths:        []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
 	}
@@ -112,7 +109,7 @@ var _ = BeforeSuite(func() {
 	// Can take a long time to start serving
 	// FIXME: use a real health check, not log line detection
 
-	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("serving webhook server"))
+	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("Starting Controller"))
 	time.Sleep(200 * time.Millisecond)
 
 	// --- create client

@@ -12,28 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package helpers
 
 import (
-	"fmt"
+	"context"
+
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type JsonPathError struct {
-	Err        error
-	expression string
-}
-
-func NewJsonPathError(expression string, err error) JsonPathError {
-	return JsonPathError{
-		Err:        err,
-		expression: expression,
+func EnsureNamespace(namespace string, client client.Client) error {
+	ns := v1.Namespace{
+		ObjectMeta: v12.ObjectMeta{
+			Name: namespace,
+		},
+		TypeMeta: v12.TypeMeta{
+			Kind:       "Namespace",
+			APIVersion: "v1",
+		},
 	}
-}
-
-func (e JsonPathError) Error() string {
-	return fmt.Errorf("evaluate json path '%s': %w", e.expression, e.Err).Error()
-}
-
-func (e JsonPathError) JsonPathExpression() string {
-	return e.expression
+	err := client.Create(context.TODO(), &ns)
+	if errors.IsAlreadyExists(err) {
+		return nil
+	}
+	return err
 }

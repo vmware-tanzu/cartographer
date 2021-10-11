@@ -30,6 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/vmware-tanzu/cartographer/pkg/controller/delivery"
+
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
@@ -61,6 +63,10 @@ func RegisterControllers(mgr manager.Manager) error {
 
 	if err := registerSupplyChainController(mgr); err != nil {
 		return fmt.Errorf("register supply-chain controller: %w", err)
+	}
+
+	if err := registerDeliveryController(mgr); err != nil {
+		return fmt.Errorf("register delivery controller: %w", err)
 	}
 
 	if err := registerPipelineServiceController(mgr); err != nil {
@@ -114,6 +120,26 @@ func registerSupplyChainController(mgr manager.Manager) error {
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.ClusterSupplyChain{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
+
+	return nil
+}
+
+func registerDeliveryController(mgr manager.Manager) error {
+	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
+
+	ctrl, err := pkgcontroller.New("delivery", mgr, pkgcontroller.Options{
+		Reconciler: delivery.NewReconciler(repo),
+	})
+	if err != nil {
+		return fmt.Errorf("controller new: %w", err)
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.ClusterDelivery{}},
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)

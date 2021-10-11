@@ -67,6 +67,8 @@ func (r *componentRealizer) Do(ctx context.Context, component *v1alpha1.SupplyCh
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,
 	}
+
+	// Todo: this belongs in Stamp.
 	if inputs.OnlyConfig() != nil {
 		workloadTemplatingContext["config"] = inputs.OnlyConfig()
 	}

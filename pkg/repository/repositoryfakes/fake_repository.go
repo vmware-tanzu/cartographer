@@ -38,6 +38,32 @@ type FakeRepository struct {
 		result1 templates.Template
 		result2 error
 	}
+	GetDeliveryStub        func(string) (*v1alpha1.ClusterDelivery, error)
+	getDeliveryMutex       sync.RWMutex
+	getDeliveryArgsForCall []struct {
+		arg1 string
+	}
+	getDeliveryReturns struct {
+		result1 *v1alpha1.ClusterDelivery
+		result2 error
+	}
+	getDeliveryReturnsOnCall map[int]struct {
+		result1 *v1alpha1.ClusterDelivery
+		result2 error
+	}
+	GetDeliveryClusterTemplateStub        func(v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error)
+	getDeliveryClusterTemplateMutex       sync.RWMutex
+	getDeliveryClusterTemplateArgsForCall []struct {
+		arg1 v1alpha1.DeliveryClusterTemplateReference
+	}
+	getDeliveryClusterTemplateReturns struct {
+		result1 templates.Template
+		result2 error
+	}
+	getDeliveryClusterTemplateReturnsOnCall map[int]struct {
+		result1 templates.Template
+		result2 error
+	}
 	GetPipelineStub        func(string, string) (*v1alpha1.Pipeline, error)
 	getPipelineMutex       sync.RWMutex
 	getPipelineArgsForCall []struct {
@@ -264,6 +290,134 @@ func (fake *FakeRepository) GetClusterTemplateReturnsOnCall(i int, result1 templ
 		})
 	}
 	fake.getClusterTemplateReturnsOnCall[i] = struct {
+		result1 templates.Template
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetDelivery(arg1 string) (*v1alpha1.ClusterDelivery, error) {
+	fake.getDeliveryMutex.Lock()
+	ret, specificReturn := fake.getDeliveryReturnsOnCall[len(fake.getDeliveryArgsForCall)]
+	fake.getDeliveryArgsForCall = append(fake.getDeliveryArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetDeliveryStub
+	fakeReturns := fake.getDeliveryReturns
+	fake.recordInvocation("GetDelivery", []interface{}{arg1})
+	fake.getDeliveryMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetDeliveryCallCount() int {
+	fake.getDeliveryMutex.RLock()
+	defer fake.getDeliveryMutex.RUnlock()
+	return len(fake.getDeliveryArgsForCall)
+}
+
+func (fake *FakeRepository) GetDeliveryCalls(stub func(string) (*v1alpha1.ClusterDelivery, error)) {
+	fake.getDeliveryMutex.Lock()
+	defer fake.getDeliveryMutex.Unlock()
+	fake.GetDeliveryStub = stub
+}
+
+func (fake *FakeRepository) GetDeliveryArgsForCall(i int) string {
+	fake.getDeliveryMutex.RLock()
+	defer fake.getDeliveryMutex.RUnlock()
+	argsForCall := fake.getDeliveryArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRepository) GetDeliveryReturns(result1 *v1alpha1.ClusterDelivery, result2 error) {
+	fake.getDeliveryMutex.Lock()
+	defer fake.getDeliveryMutex.Unlock()
+	fake.GetDeliveryStub = nil
+	fake.getDeliveryReturns = struct {
+		result1 *v1alpha1.ClusterDelivery
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetDeliveryReturnsOnCall(i int, result1 *v1alpha1.ClusterDelivery, result2 error) {
+	fake.getDeliveryMutex.Lock()
+	defer fake.getDeliveryMutex.Unlock()
+	fake.GetDeliveryStub = nil
+	if fake.getDeliveryReturnsOnCall == nil {
+		fake.getDeliveryReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.ClusterDelivery
+			result2 error
+		})
+	}
+	fake.getDeliveryReturnsOnCall[i] = struct {
+		result1 *v1alpha1.ClusterDelivery
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetDeliveryClusterTemplate(arg1 v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error) {
+	fake.getDeliveryClusterTemplateMutex.Lock()
+	ret, specificReturn := fake.getDeliveryClusterTemplateReturnsOnCall[len(fake.getDeliveryClusterTemplateArgsForCall)]
+	fake.getDeliveryClusterTemplateArgsForCall = append(fake.getDeliveryClusterTemplateArgsForCall, struct {
+		arg1 v1alpha1.DeliveryClusterTemplateReference
+	}{arg1})
+	stub := fake.GetDeliveryClusterTemplateStub
+	fakeReturns := fake.getDeliveryClusterTemplateReturns
+	fake.recordInvocation("GetDeliveryClusterTemplate", []interface{}{arg1})
+	fake.getDeliveryClusterTemplateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetDeliveryClusterTemplateCallCount() int {
+	fake.getDeliveryClusterTemplateMutex.RLock()
+	defer fake.getDeliveryClusterTemplateMutex.RUnlock()
+	return len(fake.getDeliveryClusterTemplateArgsForCall)
+}
+
+func (fake *FakeRepository) GetDeliveryClusterTemplateCalls(stub func(v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error)) {
+	fake.getDeliveryClusterTemplateMutex.Lock()
+	defer fake.getDeliveryClusterTemplateMutex.Unlock()
+	fake.GetDeliveryClusterTemplateStub = stub
+}
+
+func (fake *FakeRepository) GetDeliveryClusterTemplateArgsForCall(i int) v1alpha1.DeliveryClusterTemplateReference {
+	fake.getDeliveryClusterTemplateMutex.RLock()
+	defer fake.getDeliveryClusterTemplateMutex.RUnlock()
+	argsForCall := fake.getDeliveryClusterTemplateArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRepository) GetDeliveryClusterTemplateReturns(result1 templates.Template, result2 error) {
+	fake.getDeliveryClusterTemplateMutex.Lock()
+	defer fake.getDeliveryClusterTemplateMutex.Unlock()
+	fake.GetDeliveryClusterTemplateStub = nil
+	fake.getDeliveryClusterTemplateReturns = struct {
+		result1 templates.Template
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetDeliveryClusterTemplateReturnsOnCall(i int, result1 templates.Template, result2 error) {
+	fake.getDeliveryClusterTemplateMutex.Lock()
+	defer fake.getDeliveryClusterTemplateMutex.Unlock()
+	fake.GetDeliveryClusterTemplateStub = nil
+	if fake.getDeliveryClusterTemplateReturnsOnCall == nil {
+		fake.getDeliveryClusterTemplateReturnsOnCall = make(map[int]struct {
+			result1 templates.Template
+			result2 error
+		})
+	}
+	fake.getDeliveryClusterTemplateReturnsOnCall[i] = struct {
 		result1 templates.Template
 		result2 error
 	}{result1, result2}
@@ -776,6 +930,10 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.ensureObjectExistsOnClusterMutex.RUnlock()
 	fake.getClusterTemplateMutex.RLock()
 	defer fake.getClusterTemplateMutex.RUnlock()
+	fake.getDeliveryMutex.RLock()
+	defer fake.getDeliveryMutex.RUnlock()
+	fake.getDeliveryClusterTemplateMutex.RLock()
+	defer fake.getDeliveryClusterTemplateMutex.RUnlock()
 	fake.getPipelineMutex.RLock()
 	defer fake.getPipelineMutex.RUnlock()
 	fake.getRunTemplateMutex.RLock()
