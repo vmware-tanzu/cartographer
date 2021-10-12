@@ -297,8 +297,10 @@ In case you don't (i.e., you see _"packageinstalls.packaging.carvel.dev" not
 found_), proceed with installing it.
 
 ```bash
+KAPP_CONTROLLER_VERSION=0.27.0
+
 kapp deploy --yes -a kapp-controller \
-  -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.25.0/release.yml
+  -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml
 ```
 ```console
 Target cluster 'https://127.0.0.1:39993' (nodes: cartographer-control-plane)
