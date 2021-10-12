@@ -87,7 +87,7 @@ main() {
 
 install_cartographer_package() {
         log "build cartographer release and installing it"
-        env REGISTRY="$REGISTRY" RELEASE_VERSION="$RELEASE_VERSION" ./hack/release.sh
+        env REGISTRY="$REGISTRY" RELEASE_VERSION="$RELEASE_VERSION" DOCKER_CONFIG="$DOCKER_CONFIG" ./hack/release.sh
 
         ytt --ignore-unknown-comments \
                 --data-value registry="$REGISTRY" \
