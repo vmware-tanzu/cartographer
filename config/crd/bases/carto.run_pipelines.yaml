@@ -64,6 +64,23 @@ spec:
                 required:
                 - name
                 type: object
+              selector:
+                properties:
+                  matchingLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  resource:
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                    type: object
+                required:
+                - matchingLabels
+                - resource
+                type: object
             required:
             - runTemplateRef
             type: object

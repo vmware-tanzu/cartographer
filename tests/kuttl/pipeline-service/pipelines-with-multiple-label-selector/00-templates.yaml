@@ -1,0 +1,69 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source---multi-label-selector
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-first-configmap
+    data:
+      url: $(workload.spec.source.git.url)$
+      branch: "main"
+  urlPath: data.url
+  revisionPath: data.branch
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: pipeline-source-template---multi-label-selector
+spec:
+  # TODO: update in story 4
+  urlPath: .spec.runTemplateRef.name
+  revisionPath: .spec.runTemplateRef.name
+
+  params:
+    - name: expected-param
+      default:
+        key: value
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      name: pipeline---multi-label-selector
+      labels:
+        my-label: this-is-it
+    spec:
+      runTemplateRef:
+        name: run-template---multi-label-selector
+
+      selector:
+        resource:
+          apiVersion: test.run/v1alpha1
+          kind: Test
+        matchingLabels:
+          pipelines.carto.run/group: $(workload.metadata.labels['pipelines\.carto\.run/group'])$
+          pipelines.carto.run/stage: $(workload.metadata.labels['pipelines\.carto\.run/stage'])$
+
+      inputs:
+        source-url: $(source.url)$
+        source-revision: $(source.revision)$
+        definition: $(params.expected-param)$

@@ -56,7 +56,18 @@ type PipelineStatus struct {
 type PipelineSpec struct {
 	// +kubebuilder:validation:Required
 	RunTemplateRef TemplateReference               `json:"runTemplateRef"`
+	Selector       *ResourceSelector               `json:"selector,omitempty"`
 	Inputs         map[string]apiextensionsv1.JSON `json:"inputs,omitempty"`
+}
+
+type ResourceSelector struct {
+	Resource       ResourceType      `json:"resource"`
+	MatchingLabels map[string]string `json:"matchingLabels"`
+}
+
+type ResourceType struct {
+	APIVersion string `json:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty"`
 }
 
 type TemplateReference struct {
