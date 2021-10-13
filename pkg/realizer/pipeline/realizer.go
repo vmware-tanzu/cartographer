@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -41,7 +42,8 @@ func NewRealizer() Realizer {
 type pipelineRealizer struct{}
 
 type TemplatingContext struct {
-	Pipeline *v1alpha1.Pipeline `json:"pipeline"`
+	Pipeline *v1alpha1.Pipeline     `json:"pipeline"`
+	Selected map[string]interface{} `json:"selected"`
 }
 
 func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
@@ -65,10 +67,21 @@ func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipel
 		"carto.run/run-template-namespace": pipeline.Spec.RunTemplateRef.Namespace,
 	}
 
+	selected, err := resolveSelector(pipeline.Spec.Selector, repository)
+	if err != nil {
+		errorMessage := fmt.Sprintf("could not resolve selector (apiVersion:%s kind:%s labels:%v)",
+			pipeline.Spec.Selector.Resource.APIVersion,
+			pipeline.Spec.Selector.Resource.Kind,
+			pipeline.Spec.Selector.MatchingLabels)
+		logger.Error(err, errorMessage)
+		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
+	}
+
 	stampContext := templates.StamperBuilder(
 		pipeline,
 		TemplatingContext{
 			Pipeline: pipeline,
+			Selected: selected,
 		},
 		labels,
 	)
@@ -108,4 +121,25 @@ func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipel
 	}
 
 	return RunTemplateReadyCondition(), outputs, stampedObject
+}
+
+func resolveSelector(selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+	if selector == nil {
+		return nil, nil
+	}
+	queryObj := &unstructured.Unstructured{}
+	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
+	queryObj.SetLabels(selector.MatchingLabels)
+
+	results, err := repository.ListUnstructured(queryObj)
+	if err != nil {
+		return nil, fmt.Errorf("could not list objects matching selector: %w", err)
+	}
+
+	if len(results) == 0 {
+		return nil, fmt.Errorf("selector did not match any objects")
+	} else if len(results) > 1 {
+		return nil, fmt.Errorf("selector matched multiple objects")
+	}
+	return results[0].Object, nil
 }

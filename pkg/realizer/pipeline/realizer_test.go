@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	. "github.com/MakeNowJust/heredoc/dot"
 	"github.com/go-logr/logr"
@@ -76,7 +77,8 @@ var _ = Describe("Realizer", func() {
 					GenerateName: "my-stamped-resource-",
 				},
 				Spec: resources.TestSpec{
-					Foo: "is a string",
+					Foo:   "is a string",
+					Value: runtime.RawExtension{Raw: []byte(`"$(selected)$"`)},
 				},
 				Status: resources.TestStatus{
 					ObservedGeneration: 1,
@@ -214,6 +216,146 @@ var _ = Describe("Realizer", func() {
 						"Status":  Equal(metav1.ConditionFalse),
 						"Reason":  Equal("FailedToListCreatedObjects"),
 						"Message": Equal("could not list pipeline objects: some list error"),
+					}),
+				)
+			})
+		})
+
+		Context("pipeline selector resolves successfully", func() {
+			BeforeEach(func() {
+				pipeline.Spec.Selector = &v1alpha1.ResourceSelector{
+					Resource: v1alpha1.ResourceType{
+						APIVersion: "apiversion-to-be-selected",
+						Kind:       "kind-to-be-selected",
+					},
+					MatchingLabels: map[string]string{"expected-label": "expected-value"},
+				}
+				repository.ListUnstructuredReturns([]*unstructured.Unstructured{{map[string]interface{}{"useful-value": "from-selected-object"}}}, nil)
+			})
+
+			It("makes the selected object available in the templating context", func() {
+				_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(repository.ListUnstructuredCallCount()).To(Equal(2))
+				clientQueryObjectForSelector := repository.ListUnstructuredArgsForCall(0)
+				Expect(clientQueryObjectForSelector.GetAPIVersion()).To(Equal("apiversion-to-be-selected"))
+				Expect(clientQueryObjectForSelector.GetKind()).To(Equal("kind-to-be-selected"))
+				Expect(clientQueryObjectForSelector.GetLabels()).To(Equal(map[string]string{"expected-label": "expected-value"}))
+
+				Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
+				stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
+				Expect(allowUpdate).To(BeFalse())
+				Expect(stamped.Object).To(
+					MatchKeys(IgnoreExtras, Keys{
+						"metadata": MatchKeys(IgnoreExtras, Keys{
+							"generateName": Equal("my-stamped-resource-"),
+						}),
+						"apiVersion": Equal("test.run/v1alpha1"),
+						"kind":       Equal("Test"),
+						"spec": MatchKeys(IgnoreExtras, Keys{
+							"value": MatchKeys(IgnoreExtras, Keys{
+								"useful-value": Equal("from-selected-object"),
+							}),
+						}),
+					}),
+				)
+			})
+		})
+
+		Context("pipeline selector matches too many objects", func() {
+			BeforeEach(func() {
+				pipeline.Spec.Selector = &v1alpha1.ResourceSelector{
+					Resource: v1alpha1.ResourceType{
+						APIVersion: "apiversion-to-be-selected",
+						Kind:       "kind-to-be-selected",
+					},
+					MatchingLabels: map[string]string{"expected-label": "expected-value"},
+				}
+				repository.ListUnstructuredReturns([]*unstructured.Unstructured{{map[string]interface{}{}}, {map[string]interface{}{}}}, nil)
+			})
+
+			It("logs the error", func() {
+				_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(out).To(Say(`"msg":"could not resolve selector \(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map\[expected-label:expected-value\]\)"`))
+				Expect(out).To(Say(`"error":"selector matched multiple objects"`))
+			})
+
+			It("returns a condition stating that it failed to create", func() {
+				condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(*condition).To(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal("RunTemplateReady"),
+						"Status":  Equal(metav1.ConditionFalse),
+						"Reason":  Equal("TemplateStampFailure"),
+						"Message": Equal("could not resolve selector (apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value]): selector matched multiple objects"),
+					}),
+				)
+			})
+		})
+
+		Context("pipeline selector does not match any objects", func() {
+			BeforeEach(func() {
+				pipeline.Spec.Selector = &v1alpha1.ResourceSelector{
+					Resource: v1alpha1.ResourceType{
+						APIVersion: "apiversion-to-be-selected",
+						Kind:       "kind-to-be-selected",
+					},
+					MatchingLabels: map[string]string{"expected-label": "expected-value"},
+				}
+				repository.ListUnstructuredReturns([]*unstructured.Unstructured{}, nil)
+			})
+
+			It("logs the error", func() {
+				_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(out).To(Say(`"msg":"could not resolve selector \(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map\[expected-label:expected-value\]\)"`))
+				Expect(out).To(Say(`"error":"selector did not match any objects"`))
+			})
+
+			It("returns a condition stating that it failed to create", func() {
+				condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(*condition).To(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal("RunTemplateReady"),
+						"Status":  Equal(metav1.ConditionFalse),
+						"Reason":  Equal("TemplateStampFailure"),
+						"Message": Equal("could not resolve selector (apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value]): selector did not match any objects"),
+					}),
+				)
+			})
+		})
+
+		Context("pipeline selector cannot be resolved", func() {
+			BeforeEach(func() {
+				pipeline.Spec.Selector = &v1alpha1.ResourceSelector{
+					Resource: v1alpha1.ResourceType{
+						APIVersion: "apiversion-to-be-selected",
+						Kind:       "kind-to-be-selected",
+					},
+					MatchingLabels: map[string]string{"expected-label": "expected-value"},
+				}
+				repository.ListUnstructuredReturns(nil, fmt.Errorf("listing unstructured is hard"))
+			})
+
+			It("logs the error", func() {
+				_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(out).To(Say(`"msg":"could not resolve selector \(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map\[expected-label:expected-value\]\)"`))
+				Expect(out).To(Say(`"error":"could not list objects matching selector: listing unstructured is hard"`))
+			})
+
+			It("returns a condition stating that it failed to create", func() {
+				condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
+
+				Expect(*condition).To(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal("RunTemplateReady"),
+						"Status":  Equal(metav1.ConditionFalse),
+						"Reason":  Equal("TemplateStampFailure"),
+						"Message": Equal("could not resolve selector (apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value]): could not list objects matching selector: listing unstructured is hard"),
 					}),
 				)
 			})
