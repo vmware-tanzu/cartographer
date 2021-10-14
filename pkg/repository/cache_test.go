@@ -64,6 +64,24 @@ var _ = Describe("Cache", func() {
 			Expect(persistedValue).To(Equal(*persisted))
 			Expect(persistedExpiryDuration).To(Equal(repository.CacheExpiryDuration))
 		})
+
+		Context("constructs a key using generateName", func() {
+			BeforeEach(func() {
+				submitted.SetName("")
+				submitted.SetGenerateName("some-generated-")
+			})
+
+			It("stores the submitted and persisted values paired in the cache", func() {
+				cache.Set(submitted, persisted)
+
+				Expect(fakeExpiringCache.SetCallCount()).To(Equal(2))
+
+				submittedKey, _, _ := fakeExpiringCache.SetArgsForCall(0)
+				Expect(submittedKey).To(Equal("submitted:its-ns:the-kind:some-generated-"))
+				persistedKey, _, _ := fakeExpiringCache.SetArgsForCall(1)
+				Expect(persistedKey).To(Equal("persisted:its-ns:the-kind:some-generated-"))
+			})
+		})
 	})
 
 	Describe("functions that rely on the state of the cache", func() {
@@ -137,7 +155,7 @@ var _ = Describe("Cache", func() {
 		})
 
 		Describe("UnchangedSinceCached", func() {
-			var existingObjectOnApiServer *unstructured.Unstructured
+			var existingObjsOnAPIServer []*unstructured.Unstructured
 
 			BeforeEach(func() {
 				persistedObjInCache = *persisted
@@ -145,7 +163,7 @@ var _ = Describe("Cache", func() {
 				submittedObjInCache = *submitted
 				submittedFoundInCache = true
 
-				existingObjectOnApiServer = persisted.DeepCopy()
+				existingObjsOnAPIServer = append(existingObjsOnAPIServer, persisted.DeepCopy())
 			})
 
 			Context("when the submitted object is not present in the cache", func() {
@@ -155,7 +173,7 @@ var _ = Describe("Cache", func() {
 				})
 
 				It("is false", func() {
-					Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeFalse())
+					Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 				})
 			})
 
@@ -163,25 +181,25 @@ var _ = Describe("Cache", func() {
 				It("is false", func() {
 					newSubmission := submitted.DeepCopy()
 					newSubmission.SetLabels(map[string]string{"now-with": "funky-labels"})
-					Expect(cache.UnchangedSinceCached(newSubmission, existingObjectOnApiServer)).To(BeFalse())
+					Expect(cache.UnchangedSinceCached(newSubmission, existingObjsOnAPIServer)).To(BeNil())
 				})
 			})
 
 			Context("when the submitted object is the same as the cached submitted object", func() {
 				Context("when the existing object has no spec", func() {
 					It("is false", func() {
-						Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeFalse())
+						Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 					})
 				})
 
 				Context("when the existing object has a spec", func() {
 					BeforeEach(func() {
-						existingObjectOnApiServer.UnstructuredContent()["spec"] = map[string]interface{}{"oh-look": "its-a-spec"}
+						existingObjsOnAPIServer[0].UnstructuredContent()["spec"] = map[string]interface{}{"oh-look": "its-a-spec"}
 					})
 
 					Context("when the persisted object has no spec", func() {
 						It("is false", func() {
-							Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeFalse())
+							Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 						})
 					})
 
@@ -192,7 +210,7 @@ var _ = Describe("Cache", func() {
 						})
 
 						It("is false", func() {
-							Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeFalse())
+							Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 						})
 					})
 
@@ -202,18 +220,18 @@ var _ = Describe("Cache", func() {
 						})
 
 						It("is false", func() {
-							Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeFalse())
+							Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 						})
 					})
 
 					Context("when the persisted object has a spec", func() {
 						Context("when the existing object spec is the same as the cached submitted object spec", func() {
 							BeforeEach(func() {
-								persisted.UnstructuredContent()["spec"] = existingObjectOnApiServer.UnstructuredContent()["spec"]
+								persisted.UnstructuredContent()["spec"] = existingObjsOnAPIServer[0].UnstructuredContent()["spec"]
 							})
 
 							It("is true", func() {
-								Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeTrue())
+								Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
 							})
 						})
 
@@ -223,7 +241,7 @@ var _ = Describe("Cache", func() {
 							})
 
 							It("is false", func() {
-								Expect(cache.UnchangedSinceCached(submitted, existingObjectOnApiServer)).To(BeFalse())
+								Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 							})
 						})
 					})

@@ -12,19 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: kbld.k14s.io/v1alpha1
-kind: Config
-sources:
-  - image: controller-image
-    path: .
-    pack:
-      build:
-        builder: paketobuildpacks/builder:tiny
-destinations:
-  - image: controller-image
-    newImage: projectcartographer/cartographer-controller
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: private-registry-credentials
+  namespace: cartographer-system
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: e30K
 
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,6 +41,8 @@ spec:
         app: cartographer-controller
     spec:
       serviceAccount: cartographer-controller
+      imagePullSecrets:
+        - name: private-registry-credentials
       volumes:
         - name: cert
           secret:
@@ -48,7 +50,7 @@ spec:
             secretName: cartographer-webhook
       containers:
         - name: cartographer-controller
-          image: controller-image
+          image: ko://github.com/vmware-tanzu/cartographer/cmd/cartographer
           args:
             - -cert-dir=/cert
           securityContext:

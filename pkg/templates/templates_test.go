@@ -81,6 +81,7 @@ var _ = Describe("Templates", func() {
 				Expect(templateModel).NotTo(BeNil())
 			})
 		})
+
 		Context("when passed a ClusterTemplate", func() {
 			BeforeEach(func() {
 				apiTemplate = &v1alpha1.ClusterTemplate{}
@@ -92,6 +93,7 @@ var _ = Describe("Templates", func() {
 				Expect(templateModel).NotTo(BeNil())
 			})
 		})
+
 		Context("when passed an unsupported object", func() {
 			BeforeEach(func() {
 				apiTemplate = &v1alpha1.Workload{}

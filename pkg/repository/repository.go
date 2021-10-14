@@ -17,7 +17,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,13 +33,16 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error
-	GetTemplate(reference v1alpha1.TemplateReference) (templates.Template, error)
+	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
+	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
+	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.RunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
+	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error)
+	ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
 }
 
 type repository struct {
@@ -55,56 +57,62 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	}
 }
 
-func (r *repository) AssureObjectExistsOnCluster(obj *unstructured.Unstructured) error {
-	submitted := obj.DeepCopy()
-	existingUnstructured, err := r.getExistingUnstructured(obj)
-
-	var createOrPatchErr error
-	if api_errors.IsNotFound(err) {
-		createOrPatchErr = r.createUnstructured(obj)
-	} else if err != nil {
+func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
+	unstructuredList, err := r.ListUnstructured(obj)
+	if err != nil {
 		return err
-	} else if r.rc.UnchangedSinceCached(submitted, existingUnstructured) {
-		r.rc.Refresh(submitted)
+	}
 
-		updateObjWithValuesFromAPIServer(obj, existingUnstructured)
-
+	cacheHit := r.rc.UnchangedSinceCached(obj, unstructuredList)
+	if cacheHit != nil {
+		r.rc.Refresh(obj.DeepCopy())
+		*obj = *cacheHit
 		return nil
+	}
+
+	var outdatedObject *unstructured.Unstructured
+	if allowUpdate {
+		outdatedObject = getOutdatedUnstructuredByName(obj, unstructuredList)
+	}
+
+	if outdatedObject != nil {
+		return r.patchUnstructured(outdatedObject, obj)
 	} else {
-		createOrPatchErr = r.patchUnstructured(existingUnstructured, obj)
+		return r.createUnstructured(obj)
 	}
+}
 
-	if createOrPatchErr != nil {
-		return createOrPatchErr
+func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates []*unstructured.Unstructured) *unstructured.Unstructured {
+	for _, candidate := range candidates {
+		if candidate.GetName() == target.GetName() && candidate.GetNamespace() == target.GetNamespace() {
+			return candidate
+		}
 	}
-
-	r.rc.Set(submitted, obj.DeepCopy())
-
 	return nil
 }
 
-func updateObjWithValuesFromAPIServer(obj *unstructured.Unstructured, existingUnstructured *unstructured.Unstructured) {
-	objVal := reflect.ValueOf(obj)
-	existingVal := reflect.ValueOf(existingUnstructured)
-	reflect.Indirect(objVal).Set(reflect.Indirect(existingVal))
-}
+func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+	unstructuredList := &unstructured.UnstructuredList{}
+	unstructuredList.SetGroupVersionKind(obj.GroupVersionKind())
 
-func (r *repository) getExistingUnstructured(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	existingUnstructured := unstructured.Unstructured{}
-	existingUnstructured.SetGroupVersionKind(obj.GroupVersionKind())
-
-	err := r.cl.Get(context.TODO(), client.ObjectKey{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-	}, &existingUnstructured)
-	if err != nil && !api_errors.IsNotFound(err) {
-		return nil, fmt.Errorf("get: %w", err)
+	opts := []client.ListOption{
+		client.InNamespace(obj.GetNamespace()),
+		client.MatchingLabels(obj.GetLabels()),
+	}
+	err := r.cl.List(context.TODO(), unstructuredList, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("list: %w", err)
 	}
 
-	return &existingUnstructured, err
+	pointersToUnstructureds := make([]*unstructured.Unstructured, len(unstructuredList.Items))
+
+	for i, item := range unstructuredList.Items {
+		pointersToUnstructureds[i] = item.DeepCopy()
+	}
+	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Template, error) {
+func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
 	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
@@ -119,24 +127,50 @@ func (r *repository) GetTemplate(ref v1alpha1.TemplateReference) (templates.Temp
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("NewModelFromAPI: %w", err)
+		return nil, fmt.Errorf("new model from api: %w", err)
+	}
+
+	return template, nil
+}
+
+func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.RunTemplate, error) {
+
+	runTemplate := &v1alpha1.RunTemplate{}
+
+	err := r.cl.Get(context.TODO(), client.ObjectKey{
+		Name:      ref.Name,
+		Namespace: ref.Namespace,
+	}, runTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
+	template := templates.NewRunTemplateModel(runTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("new model from api: %w", err)
 	}
 
 	return template, nil
 }
 
 func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
+	submitted := obj.DeepCopy()
 	if err := r.cl.Create(context.TODO(), obj); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
+
+	r.rc.Set(submitted, obj.DeepCopy())
 	return nil
 }
 
 func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
+	submitted := obj.DeepCopy()
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.cl.Patch(context.TODO(), obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)
 	}
+
+	r.rc.Set(submitted, obj.DeepCopy())
 	return nil
 }
 
@@ -171,6 +205,24 @@ func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workl
 	}
 
 	return &workload, nil
+}
+
+func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error) {
+	pipeline := &v1alpha1.Pipeline{}
+
+	err := r.cl.Get(context.TODO(),
+		client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		},
+		pipeline,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("get-pipeline: %w", err)
+	}
+
+	return pipeline, nil
 }
 
 func supplyChainSelectorMatchesWorkloadLabels(selector map[string]string, labels map[string]string) bool {

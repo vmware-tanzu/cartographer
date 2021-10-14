@@ -15,16 +15,22 @@
 package templates_test
 
 import (
+	"context"
+	"os"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -53,8 +59,12 @@ var _ = Describe("Stamper", func() {
 
 			})
 			It("sets the owner reference in the stamped output", func() {
-				template := `{ "kind": "Silly", "apiVersion": "silly.io/v1"}`
-				stamped, err := stamper.Stamp([]byte(template))
+				template := v1alpha1.TemplateSpec{
+					Template: &runtime.RawExtension{
+						Raw: []byte(`{ "kind": "Silly", "apiVersion": "silly.io/v1"}`),
+					},
+				}
+				stamped, err := stamper.Stamp(context.TODO(), template)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -72,30 +82,38 @@ var _ = Describe("Stamper", func() {
 			})
 
 			Context("template does not specify a namespace", func() {
-				var template string
+				var template v1alpha1.TemplateSpec
 				BeforeEach(func() {
-					template = `{ "kind": "Silly", "apiVersion": "silly.io/v1"}`
+					template = v1alpha1.TemplateSpec{
+						Template: &runtime.RawExtension{
+							Raw: []byte(`{ "kind": "Silly", "apiVersion": "silly.io/v1"}`),
+						},
+					}
 				})
 
 				It("sets the namespace to match the owner", func() {
-					stamped, err := stamper.Stamp([]byte(template))
+					stamped, err := stamper.Stamp(context.TODO(), template)
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(stamped.GetNamespace()).To(Equal("owner-ns"))
 				})
 			})
 			Context("template does specify a namespace", func() {
-				var template string
+				var template v1alpha1.TemplateSpec
 				BeforeEach(func() {
-					template = `{
-						"kind": "Silly",
-						"apiVersion": "silly.io/v1",
-						"metadata": { "namespace": "template-ns" }
-					}`
+					template = v1alpha1.TemplateSpec{
+						Template: &runtime.RawExtension{
+							Raw: []byte(`{
+								"kind": "Silly",
+								"apiVersion": "silly.io/v1",
+								"metadata": { "namespace": "template-ns" }
+							}`),
+						},
+					}
 				})
 
 				It("does not change the namespace", func() {
-					stamped, err := stamper.Stamp([]byte(template))
+					stamped, err := stamper.Stamp(context.TODO(), template)
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(stamped.GetNamespace()).To(Equal("template-ns"))
@@ -105,32 +123,24 @@ var _ = Describe("Stamper", func() {
 		})
 
 		DescribeTable("tag evaluation of template",
-			func(template, subJSON string, expected interface{}, expectedErr string) {
-				template = `{ "kind": "Silly", "key": "` + template + `"}`
+			func(tmpl string, subJSON string, expected interface{}, expectedErr string) {
+				template := v1alpha1.TemplateSpec{
+					Template: &runtime.RawExtension{
+						Raw: []byte(`{ "kind": "Silly", "key": "` + tmpl + `"}`),
+					},
+				}
 				params := templates.Params{
-					{
-						Name: "sub",
-						Value: apiextensionsv1.JSON{
-							Raw: []byte(subJSON),
-						},
+					"sub": {
+						Raw: []byte(subJSON),
 					},
-					{
-						Name: "extra-for-nested",
-						Value: apiextensionsv1.JSON{
-							Raw: []byte(`"nested"`),
-						},
+					"extra-for-nested": {
+						Raw: []byte(`"nested"`),
 					},
-					{
-						Name: "infinite-recurse",
-						Value: apiextensionsv1.JSON{
-							Raw: []byte(`"$(params[0].value)$"`),
-						},
+					"infinite-recurse": {
+						Raw: []byte(`"$(params.sub)$"`),
 					},
-					{
-						Name: "bigger-infinite-recurse",
-						Value: apiextensionsv1.JSON{
-							Raw: []byte(`"$(params[2].value)$"`),
-						},
+					"bigger-infinite-recurse": {
+						Raw: []byte(`"$(params.infinite-recurse)$"`),
 					},
 				}
 
@@ -143,7 +153,7 @@ var _ = Describe("Stamper", func() {
 				}
 
 				stamper := templates.StamperBuilder(owner, templatingContext, templates.Labels{})
-				stampedUnstructured, err := stamper.Stamp([]byte(template))
+				stampedUnstructured, err := stamper.Stamp(context.TODO(), template)
 				if expectedErr != "" {
 					Expect(err).To(HaveOccurred())
 					Expect(err).To(MatchError(ContainSubstring(expectedErr)))
@@ -163,49 +173,112 @@ var _ = Describe("Stamper", func() {
 				`$($()$`, `"some-value"`, "", "unrecognized character in action"),
 
 			Entry(`Single tag, string value and type preserved`,
-				`$(params[0].value)$`, `"5"`, "5", ""),
+				`$(params.sub)$`, `"5"`, "5", ""),
 
 			Entry(`Single tag, string value with nested tag`,
-				`$(params[0].value)$`, `"$(params[1].value)$"`, "nested", ""),
+				`$(params.sub)$`, `"$(params.extra-for-nested)$"`, "nested", ""),
 
 			Entry(`Single tag, number value and type preserved`,
-				`$(params[0].value)$`, `5`, float64(5), ""),
+				`$(params.sub)$`, `5`, float64(5), ""),
 
 			Entry(`Single tag, map value and type preserved, nested tags evaluated`,
-				`$(params[0].value)$`, `{"foo": "$(params[1].value)$"}`, map[string]interface{}{"foo": "nested"}, ""),
+				`$(params.sub)$`, `{"foo": "$(params.extra-for-nested)$"}`, map[string]interface{}{"foo": "nested"}, ""),
 
 			Entry(`Single tag, array value and type preserved, nested tags evaluated`,
-				`$(params[0].value)$`, `["foo", "$(params[1].value)$"]`, []interface{}{"foo", "nested"}, ""),
+				`$(params.sub)$`, `["foo", "$(params['extra-for-nested'])$"]`, []interface{}{"foo", "nested"}, ""),
 
 			Entry(`Multiple tags, result becomes a string`,
-				`$(params[0].value)$$(params[0].value)$`, `5`, "55", ""),
+				`$(params.sub)$$(params.sub)$`, `5`, "55", ""),
 
 			Entry(`Adjacent non-tag (letter), result becomes a string`,
-				`b$(params[0].value)$`, `5`, "b5", ""),
+				`b$(params.sub)$`, `5`, "b5", ""),
 
 			Entry(`Adjacent non-tag (number), result still becomes a string`,
-				`5$(params[0].value)$`, `5`, "55", ""),
+				`5$(params.sub)$`, `5`, "55", ""),
 
 			Entry(`Adjacent non-tag, string value with nested tag`,
-				`HI:$(params[0].value)$`, `"$(params[1].value)$"`, "HI:nested", ""),
+				`HI:$(params.sub)$`, `"$(params.extra-for-nested)$"`, "HI:nested", ""),
 
 			Entry(`Looks like an array, but result must be preserved as string`,
-				`[$(params[0].value)$]`, `5`, "[5]", ""),
+				`[$(params.sub)$]`, `5`, "[5]", ""),
 
 			Entry(`Looks like a map, but result must be preserved as string`,
-				`{\"foo\": $(params[0].value)$}`, `5`, `{"foo": 5}`, ""),
+				`{\"foo\": $(params.sub)$}`, `5`, `{"foo": 5}`, ""),
 
 			Entry(`Infinite recursion should error`,
-				`$(params[0].value)$`, `"$(params[2].value)$"`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub)$`, `"$(params.infinite-recurse)$"`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
 
 			Entry(`Infinite recursion should error`,
-				`$(params[0].value)$`, `"$(params[3].value)$"`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[3].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub)$`, `"$(params.bigger-infinite-recurse)$"`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.bigger-infinite-recurse)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
 
 			Entry(`Infinite recursion with a map should error`,
-				`$(params[0].value)$`, `{"foo": "$(params[2].value)$"}`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub)$`, `{"foo": "$(params.infinite-recurse)$"}`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
 
 			Entry(`Infinite recursion with an array should error`,
-				`$(params[0].value)$`, `["foo", "$(params[2].value)$"]`, nil, "infinite tag loop detected: $(params[0].value)$ -> $(params[2].value)$ -> $(params[0].value)$"),
+				`$(params.sub)$`, `["foo", "$(params.infinite-recurse)$"]`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
+		)
+
+		DescribeTable("tag evaluation of ytt template",
+			func(tmpl string, subJSON string, expected interface{}, koDataPath string, expectedErr string) {
+				template := v1alpha1.TemplateSpec{
+					Ytt: `
+#@ load("@ytt:data", "data")
+
+
+apiVersion: v1
+kind: TestResource
+key: ` + tmpl + `
+`,
+				}
+				params := templates.Params{
+					"sub": apiextensionsv1.JSON{Raw: []byte(subJSON)},
+				}
+
+				owner := &v1.ConfigMap{}
+
+				templatingContext := struct {
+					Params templates.Params `json:"params"`
+				}{
+					Params: params,
+				}
+
+				if koDataPath != "" {
+					// set KO_DATA_PATH for this test, and then restore the previous value
+					previous, set := os.LookupEnv("KO_DATA_PATH")
+					defer func() {
+						if set {
+							os.Setenv("KO_DATA_PATH", previous)
+						} else {
+							os.Unsetenv("KO_DATA_PATH")
+						}
+					}()
+					os.Setenv("KO_DATA_PATH", koDataPath)
+				}
+
+				stamper := templates.StamperBuilder(owner, templatingContext, templates.Labels{})
+				stampedUnstructured, err := stamper.Stamp(context.TODO(), template)
+				if expectedErr != "" {
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring(expectedErr)))
+				} else {
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stampedUnstructured.Object["key"]).To(Equal(expected))
+				}
+			},
+
+			Entry(`String value and type preserved`,
+				`#@ data.values.params.sub`, `"5"`, "5", "", ""),
+			Entry(`Number value and type preserved`,
+				`#@ data.values.params.sub`, `5`, int64(5), "", ""),
+			Entry(`Map value and type preserved`,
+				`#@ data.values.params.sub`, `{"foo": "bar"}`, map[string]interface{}{"foo": "bar"}, "", ""),
+
+			Entry(`Invalid template`,
+				"#@ data.values.invalid", `""`, nil, "", "unable to apply ytt template:"),
+			Entry(`Invalid context`,
+				"#@ data.values.params['sub']", `"`, nil, "", "unable to marshal template context:"),
+			Entry(`Invalid ytt`,
+				"#@ data.values.params['sub']", `""`, nil, "/not/a/path/to/ytt", "unable to apply ytt template: fork/exec"),
 		)
 	})
 })

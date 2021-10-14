@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	. "github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
 var _ = Describe("common", func() {
@@ -29,19 +29,19 @@ var _ = Describe("common", func() {
 
 		DescribeTable("valid template kinds",
 			func(templateKind string, expectedTemplate interface{}) {
-				actualTemplate, err := GetAPITemplate(templateKind)
+				actualTemplate, err := v1alpha1.GetAPITemplate(templateKind)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(reflect.TypeOf(actualTemplate)).To(Equal(reflect.TypeOf(expectedTemplate)))
 			},
-			Entry("ClusterSourceTemplate", "ClusterSourceTemplate", &ClusterSourceTemplate{}),
-			Entry("ClusterImageTemplate", "ClusterImageTemplate", &ClusterImageTemplate{}),
-			Entry("ClusterConfigTemplate", "ClusterConfigTemplate", &ClusterConfigTemplate{}),
-			Entry("ClusterTemplate", "ClusterTemplate", &ClusterTemplate{}),
+			Entry("ClusterSourceTemplate", "ClusterSourceTemplate", &v1alpha1.ClusterSourceTemplate{}),
+			Entry("ClusterImageTemplate", "ClusterImageTemplate", &v1alpha1.ClusterImageTemplate{}),
+			Entry("ClusterConfigTemplate", "ClusterConfigTemplate", &v1alpha1.ClusterConfigTemplate{}),
+			Entry("ClusterTemplate", "ClusterTemplate", &v1alpha1.ClusterTemplate{}),
 		)
 
 		Context("unknown template kind", func() {
 			It("returns an error", func() {
-				_, err := GetAPITemplate("Rubbish")
+				_, err := v1alpha1.GetAPITemplate("Rubbish")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("component does not have valid kind: Rubbish"))
 			})

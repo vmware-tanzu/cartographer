@@ -66,8 +66,10 @@ In this example, we leverage the following dependencies:
   images using buildpacks
 
 ```bash
+KPACK_VERSION=0.4.0
+
 kapp deploy --yes -a kpack \
-	-f https://github.com/pivotal/kpack/releases/download/v0.3.1/release-0.3.1.yaml
+	-f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
 ```
 
 - [source-controller], for providing the ability to find new commits to a git
@@ -84,8 +86,8 @@ kubectl create clusterrolebinding gitops-toolkit-admin \
 
 kapp deploy --yes -a gitops-toolkit \
   --into-ns gitops-toolkit \
-  -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.crds.yaml \
-  -f https://github.com/fluxcd/source-controller/releases/download/v0.15.3/source-controller.deployment.yaml
+  -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.crds.yaml \
+  -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.deployment.yaml
 ```
 
 - [kapp-controller], for providing us with the ability of deploying multiple
@@ -98,8 +100,10 @@ kubectl create clusterrolebinding default-admin \
   --clusterrole=cluster-admin \
   --serviceaccount=default:default
 
+KAPP_CONTROLLER_VERSION=0.27.0
+
 kapp deploy --yes -a kapp-controller \
-	-f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v0.22.0/release.yml
+	-f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml
 ```
 
 - [knative-serving], for being the runtime of the application we want to deploy.

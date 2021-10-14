@@ -107,7 +107,7 @@ func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) er
 	)
 
 	for _, component := range chain.Spec.Components {
-		_, err = r.repo.GetTemplate(component.TemplateRef)
+		_, err = r.repo.GetClusterTemplate(component.TemplateRef)
 		if err != nil {
 			componentsNotFound = append(componentsNotFound, component.Name)
 			if componentHandlingError == nil {

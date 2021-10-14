@@ -19,8 +19,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,10 +37,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -54,7 +53,7 @@ var _ = Describe("Reconciler", func() {
 			req              ctrl.Request
 			repo             *repositoryfakes.FakeRepository
 			conditionManager *conditionsfakes.FakeConditionManager
-			rlzr             *realizerfakes.FakeRealizer
+			rlzr             *workloadfakes.FakeRealizer
 			wl               *v1alpha1.Workload
 			workloadLabels   map[string]string
 		)
@@ -72,7 +71,7 @@ var _ = Describe("Reconciler", func() {
 
 			conditionManager.IsSuccessfulReturns(true)
 
-			rlzr = &realizerfakes.FakeRealizer{}
+			rlzr = &workloadfakes.FakeRealizer{}
 			rlzr.RealizeReturns(nil)
 
 			repo = &repositoryfakes.FakeRepository{}
@@ -232,7 +231,14 @@ var _ = Describe("Reconciler", func() {
 
 			Context("but the supply chain is not in a ready state", func() {
 				BeforeEach(func() {
-					supplyChain.Status.Conditions = []metav1.Condition{}
+					supplyChain.Status.Conditions = []metav1.Condition{
+						{
+							Type:    "Ready",
+							Status:  "False",
+							Reason:  "SomeReason",
+							Message: "some informative message",
+						},
+					}
 					repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain}, nil)
 				})
 				It("returns a helpful error", func() {
@@ -243,15 +249,23 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report supply chain not ready", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.MissingReadyInSupplyChainCondition()))
+					expectedCondition := metav1.Condition{
+						Type:               v1alpha1.WorkloadSupplyChainReady,
+						Status:             metav1.ConditionFalse,
+						ObservedGeneration: 0,
+						LastTransitionTime: metav1.Time{},
+						Reason:             "SomeReason",
+						Message:            "some informative message",
+					}
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.MissingReadyInSupplyChainCondition(expectedCondition)))
 				})
 			})
 
 			Context("but the realizer returns an error", func() {
-				Context("of type GetTemplateError", func() {
+				Context("of type GetClusterTemplateError", func() {
 					var templateError error
 					BeforeEach(func() {
-						templateError = realizer.GetTemplateError{
+						templateError = realizer.GetClusterTemplateError{
 							Err: errors.New("some error"),
 						}
 						rlzr.RealizeReturns(templateError)

@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -26,6 +25,10 @@ import (
 type clusterSourceTemplate struct {
 	template  *v1alpha1.ClusterSourceTemplate
 	evaluator evaluator
+}
+
+func (t clusterSourceTemplate) GetKind() string {
+	return t.template.Kind
 }
 
 func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
@@ -60,8 +63,8 @@ func (t clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructure
 	}, nil
 }
 
-func (t clusterSourceTemplate) GetResourceTemplate() runtime.RawExtension {
-	return t.template.Spec.Template
+func (t clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+	return t.template.Spec.TemplateSpec
 }
 
 func (t clusterSourceTemplate) GetDefaultParams() v1alpha1.DefaultParams {

@@ -1,0 +1,21 @@
+{{ define "main" }}
+{{ $latest := (cond (.Site.Params.docs_versioning) .Site.Params.docs_latest "") }}
+	<main>
+		{{ partial "hero.html" . }}
+		{{ partial "homepage-grid.html" . }}
+		<div class="bg-grey introduction">
+			<div class="wrapper grid two">
+				<div class="col">
+					<p class="strong"><a href='/docs/{{ $latest }}/'>Learn More About Cartographer</a></p>
+					<p>Learn more about Cartographer and how to create supply chains</p>
+				</div>
+				<div class="col">
+					<p class="strong"><a href='https://tanzu.vmware.com/developer/guides/ci-cd/supply-chain-choreography/'>Choreography vs. Orchestration</a></p>
+					<p>Cartographer is a choreographer, see how this paradigm differs from orchestration</p>
+				</div>
+			</div>
+		</div>
+		{{ partial "use-cases.html" . }}
+		<!--{{ partial "contributors.html" . }}-->
+	</main>
+{{ end }}

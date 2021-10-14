@@ -1,4 +1,8 @@
+
 # Draft RFC 0006 Replace sources[0]
+
+[Draft PR](https://github.com/vmware-tanzu/cartographer/pull/73)
+
 
 ## Summary
 

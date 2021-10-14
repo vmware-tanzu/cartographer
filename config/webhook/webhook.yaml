@@ -33,9 +33,66 @@ webhooks:
         path: /validate-carto-run-v1alpha1-clustersupplychain
     sideEffects: None
     admissionReviewVersions: ["v1", "v1beta1"]
+  - name: config-template-validator.cartographer.com
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["carto.run"]
+        apiVersions: ["v1alpha1"]
+        resources: ["clusterconfigtemplates"]
+        scope: "Cluster"
+    clientConfig:
+      service:
+        name: cartographer-webhook
+        namespace: cartographer-system
+        path: /validate-carto-run-v1alpha1-clusterconfigtemplate
+    sideEffects: None
+    admissionReviewVersions: ["v1", "v1beta1"]
+  - name: image-template-validator.cartographer.com
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["carto.run"]
+        apiVersions: ["v1alpha1"]
+        resources: ["clusterimagetemplates"]
+        scope: "Cluster"
+    clientConfig:
+      service:
+        name: cartographer-webhook
+        namespace: cartographer-system
+        path: /validate-carto-run-v1alpha1-clusterimagetemplate
+    sideEffects: None
+    admissionReviewVersions: ["v1", "v1beta1"]
+  - name: source-template-validator.cartographer.com
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["carto.run"]
+        apiVersions: ["v1alpha1"]
+        resources: ["clustersourcetemplates"]
+        scope: "Cluster"
+    clientConfig:
+      service:
+        name: cartographer-webhook
+        namespace: cartographer-system
+        path: /validate-carto-run-v1alpha1-clustersourcetemplate
+    sideEffects: None
+    admissionReviewVersions: ["v1", "v1beta1"]
+  - name: template-validator.cartographer.com
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["carto.run"]
+        apiVersions: ["v1alpha1"]
+        resources: ["clustertemplates"]
+        scope: "Cluster"
+    clientConfig:
+      service:
+        name: cartographer-webhook
+        namespace: cartographer-system
+        path: /validate-carto-run-v1alpha1-clustertemplate
+    sideEffects: None
+    admissionReviewVersions: ["v1", "v1beta1"]
+
 ---
 
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: cartographer-webhook
@@ -51,7 +108,7 @@ spec:
   secretName: cartographer-webhook
 ---
 
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: selfsigned-issuer
@@ -78,3 +135,4 @@ apiVersion: v1
 metadata:
   name: cartographer-webhook
   namespace: cartographer-system
+type: Opaque

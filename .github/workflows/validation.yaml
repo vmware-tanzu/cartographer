@@ -22,45 +22,36 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: checkout
+        uses: actions/checkout@v2
+        with: {fetch-depth: 0}
 
       - name: set up Go
         uses: actions/setup-go@v2
-        with: {go-version: 1.17}
+        with: {go-version: '^1.17.1'}
 
-      - name: setup base OS dependencies
+      - name: check copyright header
         run: |-
-          sudo apt update && sudo apt install -y \
-            curl \
-            tar
-
-      - name: setup binaries
-        run: |-
-          set -o errexit
-          set -o nounset
-          set -o pipefail
-
-          export K8S_VERSION=1.19.2
-          export KUTTL_VERSION=0.11.1
-
-          curl -sSL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-${K8S_VERSION}-linux-amd64.tar.gz" | tar xvzf -
-          sudo mv ./kubebuilder /usr/local
-          sudo chown -R `whoami` /usr/local/kubebuilder
-
-          curl -sSL -o kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_x86_64
-          sudo install -m 0755 ./kubectl-kuttl /usr/local/bin
-
-      - name: run all tests
-        run: |-
-          export PATH=$PATH:/usr/local/kubebuilder/bin
-          make test
+          make copyright
+          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
       - name: lint
         run: |-
           make lint
           [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
-      - name: check copyright header
+      - name: setup base dependencies
         run: |-
-          make copyright
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
+          sudo apt update && sudo apt install -y curl tar
+          ./hack/ci/install-binaries.sh ko kubebuilder kuttl
+
+      - name: setup carvel tooling binaries
+        uses: vmware-tanzu/carvel-setup-action@v1
+
+      - name: run tests
+        env:
+          KUBEBUILDER_ASSETS: /usr/local/bin
+        run: make test
+
+      - name: run e2e example
+        run: ./hack/setup.sh cluster cartographer example-dependencies example

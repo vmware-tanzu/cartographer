@@ -1,0 +1,13 @@
+{{ $latest := (cond (.Site.Params.docs_versioning) .Site.Params.docs_latest "") }}
+<div class="hero homepage">
+	<div class="wrapper">
+		<div class="text-block">
+			<h1>Easily Build Cloud Native Supply Chains</h1>
+			<p>Cartographer allows you to create secure and reusable supply chains that define all of your application CI and CD in one place, in cluster.</p>
+			<div class="buttons">
+                <a class="button" href="/docs/{{ $latest }}/">Learn More</a>
+                <a class="button secondary" href="https://www.github.com/vmware-tanzu/cartographer/releases/latest">Download Cartographer</a>
+            </div>
+		</div>
+	</div>
+</div>

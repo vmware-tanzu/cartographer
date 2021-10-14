@@ -18,7 +18,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
   name: clusterconfigtemplates.carto.run
 spec:
@@ -65,9 +65,10 @@ spec:
               template:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              ytt:
+                type: string
             required:
             - configPath
-            - template
             type: object
           status:
             type: object

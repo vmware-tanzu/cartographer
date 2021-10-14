@@ -26,15 +26,15 @@ kind: ClusterSupplyChain
 
 Cartographer is composed of several custom resources, some of them being cluster-wide:
 
-- `ClusterSupplyChain`
-- `ClusterSourceTemplate`
-- `ClusterImageTemplate`
-- `ClusterConfigTemplate`
-- `ClusterTemplate`
+- [`ClusterSupplyChain`](#clustersupplychain)
+- [`ClusterSourceTemplate`](#clustersourcetemplate)
+- [`ClusterImageTemplate`](#clusterimagetemplate)
+- [`ClusterConfigTemplate`](#clusterconfigtemplate)
+- [`ClusterTemplate`](#clustertemplate)
 
-and two that are namespace-scoped:
+and one that is namespace-scoped:
 
-- `Workload`
+- [`Workload`](#workload)
 
 
 ### Workload
@@ -116,7 +116,7 @@ notes:
 
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside. 
 
-_ref: [pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/workload.go)_
+_ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
 
 
 ### ClusterSupplyChain
@@ -125,6 +125,7 @@ With a `ClusterSupplyChain`, app operators describe which "shape of applications
 
 Those `Workload`s that match `spec.selector` then go through the components specified in `spec.components`.
 
+A component can emit values, which the supply chain can make available to other components. 
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -164,8 +165,13 @@ spec:
       # 
       # in a template, these can be consumed as: 
       #
-      #    $(sources[<idx>]url)$
-      #    $(sources[<idx>]revision)$
+      #    $(sources.<name>.url)$
+      #    $(sources.<name>.revision)$
+      #
+      # if there is only one source, it can be consumed as:
+      #
+      #    $(source.url)$
+      #    $(sources.revision)$
       #
       # (optional)
       sources:
@@ -173,7 +179,7 @@ spec:
         #
         - component: source-provider
           # name to be referenced in the template via a query over the list of
-          # sources (for instance, `$(sources.$(name=="provider").url)`.
+          # sources (for instance, `$(sources.provider.url)`.
           #
           # (required, unique in this list)
           #
@@ -183,7 +189,11 @@ spec:
       #
       # in a template, these can be consumed as:
       #
-      #   $(images[<idx>].image)
+      #   $(images.<name>.image)
+      #
+      # if there is only one image, it can be consumed as:
+      #
+      #   $(image)
       #
       images: []
 
@@ -191,12 +201,19 @@ spec:
       # for instance, podTemplateSpecs.
       # in a template, these can be consumed as:
       #
-      #   $(configs[<idx>].config)
+      #   $(configs.<name>.config)
+      #
+      # if there is only one config, it can be consumed as:
+      #
+      #   $(config)
       #
       configs: []
 
       # parameters to override the defaults from the templates.
       # (optional)
+      # in a template, these can be consumed as:
+      #
+      #   $(params.<name>)
       #
       params:
         # name of the parameter. (required, unique in this list, and must match
@@ -206,19 +223,20 @@ spec:
           # value to be passed down to the template's parameters, supporting
           # interpolation.
           #
-          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")])$
+          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")].value)$
         - name: jvm
           value: openjdk
 ```
 
 
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_supply_chain.go)_
+_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/cluster_supply_chain.go)_
 
 
 ### ClusterSourceTemplate
 
-`ClusterSourceTemplate` indicates how the supply chain could instantiate a provider of source code information (url and revision).
+`ClusterSourceTemplate` indicates how the supply chain could instantiate an object responsible for providing source code.
 
+The `ClusterSourceTemplate` requires definition of a `urlPath` and `revisionPath`. `ClusterSourceTemplate` will update its status to emit `url` and `revision` values, which are reflections of the values at the path on the created objects. The supply chain may make these values available to other components.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -268,17 +286,18 @@ spec:
       interval: 3m
       url: $(workload.spec.source.git.url)$
       ref: $(workload.spec.source.git.ref)$
-      gitImplementation: $(params[?(@.name=="git-implementation")].value)$
+      gitImplementation: $(params.git-implementation.value)$
       ignore: ""
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/cluster_source_template.go)_
 
 
 ### ClusterImageTemplate
 
-`ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container images, for instance, one that takes source code, builds a container image out of it and presents under its `.status` the reference to that produced image.
+`ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container images, for instance, one that takes source code, builds a container image out of it.
 
+The `ClusterImageTemplate` requires definition of an `imagePath`. `ClusterImageTemplate` will update its status to emit an `image` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other components.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -312,66 +331,25 @@ spec:
         name: java-builder
       source:
         blob:
-          url: $(sources[0].url)$
+          url: $(sources.provider.url)$
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ### ClusterConfigTemplate
 
 Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further components in the chain.
 
-For instance, a resource that given an image, exposes a complete `podTemplateSpec` to be embedded in a knative service.
+The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfigTemplate` will update its status to emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other components.
 
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterConfigTemplate
-metadata:
-  name: convention-service-battery
-spec:
-  # default parameters. see ClusterSourceTemplate for more info. (optional)
-  #
-  params: []
-
-  # jsonpath expression to instruct where in the object templated out an 
-  # a kubernetes configuration can be found (required)
-  #
-  configPath: .status.template
-
-  # how to template out the kubernetes object. (required)
-  #
-  template:
-    apiVersion: opinions.local/v1alpha1
-    kind: WorkloadDecorator
-    metadata:
-      name: $(workload.metadata.name)$-workload-template
-    spec:
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/part-of: $(workload.metadata.name)$
-          annotations:
-            autoscaling.knative.dev/minScale: "1"
-            autoscaling.knative.dev/maxScale: "1"
-        spec:
-          containers:
-            - name: workload
-              image: $(images[?(@.name=="solo-image-provider")].image)$
-              env: $(workload.spec.env)$
-              resources: $(workload.spec.resources)$
-              securityContext:
-                runAsUser: 1000
-          imagePullSecrets:
-            - name: registry-credentials
-```
-
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
 
-A ClusterTemplate instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor components.
+A `ClusterTemplate` instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor components.
 
+The `ClusterTemplate` does not emit values to the supply chain.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -420,7 +398,7 @@ spec:
                   template:
                     spec:
                       containers:
-                        - image: $(images[0].image)$
+                        - image: $(images.<name-of-image-provider>.image)$
                           securityContext:
                             runAsUser: 1000
       template:
@@ -429,4 +407,4 @@ spec:
         - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.3/pkg/apis/v1alpha1/cluster_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_

@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -26,10 +25,11 @@ import (
 )
 
 type Template interface {
-	GetResourceTemplate() runtime.RawExtension
+	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetDefaultParams() v1alpha1.DefaultParams
 	GetOutput(stampedObject *unstructured.Unstructured) (*Output, error)
 	GetName() string
+	GetKind() string
 }
 
 func NewModelFromAPI(template client.Object) (Template, error) {

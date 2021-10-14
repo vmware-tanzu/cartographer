@@ -18,16 +18,13 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -35,35 +32,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-func alterFieldOfNestedStringMaps(obj interface{}, key string, value string) error {
-	aMap, ok := obj.(map[string]interface{})
-	if !ok {
-		return errors.New("field not found")
-	}
-
-	i := strings.Index(key, ".")
-	if i < 0 {
-		_, ok = aMap[key]
-		if !ok {
-			return errors.New("field not found")
-		}
-		aMap[key] = value
-	} else {
-		keyPrefix := key[:i]
-		keySuffix := key[i+1:]
-		subMap, ok := aMap[keyPrefix]
-		if !ok {
-			return errors.New("field not found")
-		}
-		return alterFieldOfNestedStringMaps(subMap, keySuffix, value)
-	}
-
-	return nil
-}
-
-var _ = Describe("Repository", func() {
+var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
@@ -81,7 +53,7 @@ var _ = Describe("Repository", func() {
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("AssureObjectExistsOnCluster", func() {
+		Context("EnsureObjectExistsOnCluster", func() {
 			var stampedObj *unstructured.Unstructured
 
 			BeforeEach(func() {
@@ -107,53 +79,51 @@ spec:
 			})
 
 			It("attempts to get the object from the apiServer", func() {
-				Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+				Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 
-				Expect(cl.GetCallCount()).To(Equal(1))
+				Expect(cl.ListCallCount()).To(Equal(1))
 
-				stampedObjKey := client.ObjectKey{
-					Namespace: stampedObj.GetNamespace(),
-					Name:      stampedObj.GetName(),
+				listOptions := []client.ListOption{
+					client.InNamespace(stampedObj.GetNamespace()),
+					client.MatchingLabels(stampedObj.GetLabels()),
 				}
 
-				_, getCallKey, blankObjToBePopulatedByClient := cl.GetArgsForCall(0)
-				Expect(getCallKey).To(Equal(stampedObjKey))
-				Expect(blankObjToBePopulatedByClient.GetObjectKind().GroupVersionKind()).To(Equal(stampedObj.GroupVersionKind()))
+				_, objectList, options := cl.ListArgsForCall(0)
+				unstructuredList, ok := objectList.(*unstructured.UnstructuredList)
+				Expect(ok).To(BeTrue())
+				Expect(len(unstructuredList.Items)).To(Equal(0))
+				Expect(options).To(Equal(listOptions))
+				Expect(unstructuredList.GetObjectKind().GroupVersionKind()).To(Equal(stampedObj.GroupVersionKind()))
 			})
 
 			Context("when the apiServer errors when trying to get the object", func() {
 				BeforeEach(func() {
-					cl.GetReturns(errors.New("some-error"))
+					cl.ListReturns(errors.New("some-error"))
 				})
 
 				It("returns a helpful error", func() {
-					err := repo.AssureObjectExistsOnCluster(stampedObj)
-					Expect(err).To(MatchError(ContainSubstring("get: some-error")))
+					err := repo.EnsureObjectExistsOnCluster(stampedObj, true)
+					Expect(err).To(MatchError(ContainSubstring("list: some-error")))
 				})
 
 				It("does not create or patch any objects", func() {
-					_ = repo.AssureObjectExistsOnCluster(stampedObj)
+					_ = repo.EnsureObjectExistsOnCluster(stampedObj, true)
 					Expect(cl.CreateCallCount()).To(Equal(0))
 					Expect(cl.PatchCallCount()).To(Equal(0))
 				})
 
 				It("does not write to the submitted or persisted cache", func() {
-					_ = repo.AssureObjectExistsOnCluster(stampedObj)
+					_ = repo.EnsureObjectExistsOnCluster(stampedObj, true)
 					Expect(cache.SetCallCount()).To(Equal(0))
 				})
 			})
 
 			Context("and the apiServer attempts to get the object and it doesn't exist", func() {
 				BeforeEach(func() {
-					groupResource := schema.GroupResource{
-						Group:    stampedObj.GetAPIVersion(),
-						Resource: stampedObj.GetKind(),
-					}
-					cl.GetReturns(kerrors.NewNotFound(groupResource, stampedObj.GetName()))
+					// default behavior is empty list - no need to stub
 				})
-
 				It("attempts to create the object", func() {
-					Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+					Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 
 					Expect(cl.CreateCallCount()).To(Equal(1))
 					_, createCallObj, _ := cl.CreateArgsForCall(0)
@@ -166,12 +136,12 @@ spec:
 					})
 
 					It("returns a helpful error", func() {
-						err := repo.AssureObjectExistsOnCluster(stampedObj)
+						err := repo.EnsureObjectExistsOnCluster(stampedObj, true)
 						Expect(err).To(MatchError(ContainSubstring("create: some-error")))
 					})
 
 					It("does not write to the submitted or persisted cache", func() {
-						_ = repo.AssureObjectExistsOnCluster(stampedObj)
+						_ = repo.EnsureObjectExistsOnCluster(stampedObj, true)
 						Expect(cache.SetCallCount()).To(Equal(0))
 					})
 				})
@@ -180,7 +150,7 @@ spec:
 					var returnedCreatedObj *unstructured.Unstructured
 					BeforeEach(func() {
 						returnedCreatedObj = stampedObj.DeepCopy()
-						Expect(alterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
+						Expect(utils.AlterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
 						cl.CreateStub = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 							objVal := reflect.ValueOf(obj)
 							returnVal := reflect.ValueOf(returnedCreatedObj)
@@ -191,13 +161,13 @@ spec:
 					})
 
 					It("does not return an error", func() {
-						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 					})
 
 					It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(1))
 						submitted, persisted := cache.SetArgsForCall(0)
 						Expect(*submitted).To(Equal(*originalStampedObj))
@@ -206,50 +176,59 @@ spec:
 				})
 			})
 
-			Context("and apiServer succeeds in getting the object", func() {
-				var existingObj *unstructured.Unstructured
+			Context("and apiServer succeeds in getting the list of object(s)", func() {
+				var (
+					existingObj     *unstructured.Unstructured
+					existingObjList unstructured.UnstructuredList
+				)
 
 				BeforeEach(func() {
 					existingObj = &unstructured.Unstructured{}
-					existingObj.SetName("im-the-previous-one")
-					cl.GetStub = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-						objVal := reflect.ValueOf(obj)
-						prevVal := reflect.ValueOf(existingObj)
+					existingObj.SetName("hello")
+					existingObj.SetNamespace("default")
+					existingObj.SetGeneration(5)
 
-						reflect.Indirect(objVal).Set(reflect.Indirect(prevVal))
+					existingObjList = unstructured.UnstructuredList{
+						Items: []unstructured.Unstructured{*existingObj},
+					}
+					cl.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingObjList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
 						return nil
 					}
 				})
 
 				It("the cache is consulted to see if there was a change since the last time the cache was updated", func() {
-					Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+					Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 					Expect(cache.UnchangedSinceCachedCallCount()).To(Equal(1))
 
 					submitted, persisted := cache.UnchangedSinceCachedArgsForCall(0)
 					Expect(*submitted).To(Equal(*stampedObj))
-					Expect(*persisted).To(Equal(*existingObj))
+					Expect(persisted[0]).To(Equal(existingObj))
 				})
 
 				Context("and the cache determines there has been no change since the last update", func() {
 					BeforeEach(func() {
-						cache.UnchangedSinceCachedReturns(true)
+						cache.UnchangedSinceCachedReturns(existingObj)
 					})
 
 					It("does not create or patch any objects", func() {
-						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 						Expect(cl.CreateCallCount()).To(Equal(0))
 						Expect(cl.PatchCallCount()).To(Equal(0))
 					})
 
 					It("does not write to the submitted or persisted cache", func() {
-						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(0))
 					})
 
 					It("refreshes the cache entry", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 						Expect(cache.RefreshCallCount()).To(Equal(1))
 						Expect(cache.RefreshArgsForCall(0)).To(Equal(originalStampedObj))
 					})
@@ -257,7 +236,7 @@ spec:
 					It("populates the object passed into the function with the object in apiServer", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						_ = repo.AssureObjectExistsOnCluster(stampedObj)
+						_ = repo.EnsureObjectExistsOnCluster(stampedObj, true)
 
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
@@ -266,58 +245,200 @@ spec:
 
 				Context("and the cache determines there has been a change since the last update", func() {
 					BeforeEach(func() {
-						cache.UnchangedSinceCachedReturns(false)
+						cache.UnchangedSinceCachedReturns(nil)
 					})
 
-					It("patches the object", func() {
-						Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
-						Expect(cl.PatchCallCount()).To(Equal(1))
+					Context("and allowUpdate is true", func() {
+						Context("list has exactly one object", func() {
+							It("patches the object", func() {
+								Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
+								Expect(cl.PatchCallCount()).To(Equal(1))
+							})
+
+							Context("and the patch succeeds", func() {
+								var returnedPatchedObj *unstructured.Unstructured
+
+								BeforeEach(func() {
+									returnedPatchedObj = stampedObj.DeepCopy()
+									Expect(utils.AlterFieldOfNestedStringMaps(returnedPatchedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
+									cl.PatchStub = func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+										objVal := reflect.ValueOf(obj)
+										returnVal := reflect.ValueOf(returnedPatchedObj)
+
+										reflect.Indirect(objVal).Set(reflect.Indirect(returnVal))
+										return nil
+									}
+								})
+
+								It("does not return an error", func() {
+									Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
+								})
+
+								It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+									originalStampedObj := stampedObj.DeepCopy()
+
+									Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
+									Expect(cache.SetCallCount()).To(Equal(1))
+									submitted, persisted := cache.SetArgsForCall(0)
+									Expect(*submitted).To(Equal(*originalStampedObj))
+									Expect(*persisted).To(Equal(*returnedPatchedObj))
+								})
+							})
+
+							Context("and the patch fails", func() {
+								BeforeEach(func() {
+									cl.PatchReturns(errors.New("some-error"))
+								})
+								It("returns a helpful error", func() {
+									err := repo.EnsureObjectExistsOnCluster(stampedObj, true)
+									Expect(err).To(MatchError(ContainSubstring("patch: some-error")))
+								})
+
+								It("does not write to the submitted or persisted cache", func() {
+									_ = repo.EnsureObjectExistsOnCluster(stampedObj, true)
+									Expect(cache.SetCallCount()).To(Equal(0))
+								})
+							})
+						})
+
+						Context("list has more than one object", func() {
+							Context("and the list contains the correct object", func() {
+								BeforeEach(func() {
+									rogueObjectWithDuplicateLabels := existingObj.DeepCopy()
+									Expect(utils.AlterFieldOfNestedStringMaps(rogueObjectWithDuplicateLabels.Object, "metadata.name", "goodbye")).To(Succeed())
+									existingObjList = unstructured.UnstructuredList{
+										Items: []unstructured.Unstructured{*existingObj, *rogueObjectWithDuplicateLabels},
+									}
+								})
+
+								It("it patches", func() {
+									Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
+									Expect(cl.PatchCallCount()).To(Equal(1))
+								})
+							})
+
+							Context("and the list does not contain the correct object", func() {
+								BeforeEach(func() {
+									rogueObjectWithDuplicateLabels := existingObj.DeepCopy()
+									Expect(utils.AlterFieldOfNestedStringMaps(rogueObjectWithDuplicateLabels.Object, "metadata.name", "goodbye")).To(Succeed())
+									secondRogueObjectWithDuplicateLabels := existingObj.DeepCopy()
+									Expect(utils.AlterFieldOfNestedStringMaps(secondRogueObjectWithDuplicateLabels.Object, "metadata.name", "farewell")).To(Succeed())
+									existingObjList = unstructured.UnstructuredList{
+										Items: []unstructured.Unstructured{*rogueObjectWithDuplicateLabels, *secondRogueObjectWithDuplicateLabels},
+									}
+								})
+								It("it creates", func() {
+									Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
+									Expect(cl.CreateCallCount()).To(Equal(1))
+								})
+							})
+						})
 					})
 
-					Context("and the patch succeeds", func() {
-						var returnedPatchedObj *unstructured.Unstructured
-
-						BeforeEach(func() {
-							returnedPatchedObj = stampedObj.DeepCopy()
-							Expect(alterFieldOfNestedStringMaps(returnedPatchedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
-							cl.PatchStub = func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-								objVal := reflect.ValueOf(obj)
-								returnVal := reflect.ValueOf(returnedPatchedObj)
-
-								reflect.Indirect(objVal).Set(reflect.Indirect(returnVal))
-								return nil
-							}
+					Context("and allowUpate is false", func() {
+						It("creates a new object", func() {
+							Expect(repo.EnsureObjectExistsOnCluster(stampedObj, false)).To(Succeed())
+							Expect(cl.PatchCallCount()).To(Equal(0))
+							Expect(cl.CreateCallCount()).To(Equal(1))
 						})
 
-						It("does not return an error", func() {
-							Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
+						Context("and the create succeeds", func() {
+							var returnedCreatedObj *unstructured.Unstructured
+
+							BeforeEach(func() {
+								returnedCreatedObj = stampedObj.DeepCopy()
+								Expect(utils.AlterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
+								cl.CreateStub = func(ctx context.Context, object client.Object, option ...client.CreateOption) error {
+									objVal := reflect.ValueOf(object)
+									returnVal := reflect.ValueOf(returnedCreatedObj)
+
+									reflect.Indirect(objVal).Set(reflect.Indirect(returnVal))
+									return nil
+								}
+							})
+
+							It("does not return an error", func() {
+								Expect(repo.EnsureObjectExistsOnCluster(stampedObj, false)).To(Succeed())
+							})
+
+							It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+								originalStampedObj := stampedObj.DeepCopy()
+
+								Expect(repo.EnsureObjectExistsOnCluster(stampedObj, false)).To(Succeed())
+								Expect(cache.SetCallCount()).To(Equal(1))
+								submitted, persisted := cache.SetArgsForCall(0)
+								Expect(*submitted).To(Equal(*originalStampedObj))
+								Expect(*persisted).To(Equal(*returnedCreatedObj))
+							})
 						})
 
-						It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
-							originalStampedObj := stampedObj.DeepCopy()
+						Context("and the create fails", func() {
+							BeforeEach(func() {
+								cl.CreateReturns(errors.New("some-error"))
+							})
+							It("returns a helpful error", func() {
+								err := repo.EnsureObjectExistsOnCluster(stampedObj, false)
+								Expect(err).To(MatchError(ContainSubstring("create: some-error")))
+							})
 
-							Expect(repo.AssureObjectExistsOnCluster(stampedObj)).To(Succeed())
-							Expect(cache.SetCallCount()).To(Equal(1))
-							submitted, persisted := cache.SetArgsForCall(0)
-							Expect(*submitted).To(Equal(*originalStampedObj))
-							Expect(*persisted).To(Equal(*returnedPatchedObj))
+							It("does not write to the submitted or persisted cache", func() {
+								_ = repo.EnsureObjectExistsOnCluster(stampedObj, false)
+								Expect(cache.SetCallCount()).To(Equal(0))
+							})
 						})
 					})
+				})
+			})
+		})
 
-					Context("and the patch fails", func() {
-						BeforeEach(func() {
-							cl.PatchReturns(errors.New("some-error"))
-						})
-						It("returns a helpful error", func() {
-							err := repo.AssureObjectExistsOnCluster(stampedObj)
-							Expect(err).To(MatchError(ContainSubstring("patch: some-error")))
-						})
+		Context("GetSupplyChainsForWorkload", func() {
+			BeforeEach(func() {
+				cl.ListReturns(errors.New("some list error"))
+			})
 
-						It("does not write to the submitted or persisted cache", func() {
-							_ = repo.AssureObjectExistsOnCluster(stampedObj)
-							Expect(cache.SetCallCount()).To(Equal(0))
-						})
-					})
+			It("attempts to list the object from the apiServer", func() {
+				_, err := repo.GetSupplyChainsForWorkload(&v1alpha1.Workload{})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("list supply chains:"))
+			})
+		})
+
+		Context("GetSupplyChain", func() {
+			BeforeEach(func() {
+				cl.GetReturns(errors.New("some get error"))
+			})
+
+			It("attempts to get the object from the apiServer", func() {
+				_, err := repo.GetSupplyChain("sc-name")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("get:"))
+			})
+		})
+
+		Context("GetClusterTemplate", func() {
+			Context("when the template reference kind is not in our gvk", func() {
+				It("returns a helpful error", func() {
+					reference := v1alpha1.ClusterTemplateReference{
+						Kind: "some-unsupported-kind",
+					}
+					_, err := repo.GetClusterTemplate(reference)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get api template:"))
+				})
+			})
+
+			Context("when the client returns an error on the get", func() {
+				BeforeEach(func() {
+					cl.GetReturns(errors.New("some bad get error"))
+				})
+				It("returns a helpful error", func() {
+					reference := v1alpha1.ClusterTemplateReference{
+						Kind: "ClusterImageTemplate",
+						Name: "image-template",
+					}
+					_, err := repo.GetClusterTemplate(reference)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get:"))
 				})
 			})
 		})
@@ -344,7 +465,7 @@ spec:
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("GetTemplate", func() {
+		Context("GetClusterTemplate", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -355,13 +476,53 @@ spec:
 			})
 
 			It("gets the template successfully", func() {
-				templateRef := v1alpha1.TemplateReference{
+				templateRef := v1alpha1.ClusterTemplateReference{
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetTemplate(templateRef)
+				template, err := repo.GetClusterTemplate(templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
+			})
+		})
+
+		Context("GetRunTemplate", func() {
+			BeforeEach(func() {
+				clientObjects = []client.Object{
+					&v1alpha1.RunTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "first-template",
+							Namespace: "ns1",
+						},
+					},
+					&v1alpha1.RunTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "second-template",
+							Namespace: "ns2",
+						},
+					}}
+			})
+
+			It("gets the template successfully", func() {
+				templateRef := v1alpha1.TemplateReference{
+					Kind:      "RunTemplate",
+					Name:      "second-template",
+					Namespace: "ns2",
+				}
+				template, err := repo.GetRunTemplate(templateRef)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(template.GetName()).To(Equal("second-template"))
+			})
+
+			It("finds nothing with a mismatched namespace", func() {
+				templateRef := v1alpha1.TemplateReference{
+					Kind:      "RunTemplate",
+					Name:      "second-template",
+					Namespace: "ns1",
+				}
+				_, err := repo.GetRunTemplate(templateRef)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("not found"))
 			})
 		})
 
@@ -380,6 +541,65 @@ spec:
 				workload, err := repo.GetWorkload("workload-name", "workload-namespace")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(workload.GetName()).To(Equal("workload-name"))
+			})
+
+			Context("workload doesnt exist", func() {
+				It("returns an error", func() {
+					_, err := repo.GetWorkload("workload-that-does-not-exist-name", "workload-namespace")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get:"))
+				})
+			})
+		})
+
+		Context("GetPipeline", func() {
+			BeforeEach(func() {
+				pipeline := &v1alpha1.Pipeline{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pipeline-name",
+						Namespace: "pipeline-namespace",
+					},
+				}
+				clientObjects = []client.Object{pipeline}
+			})
+
+			It("gets the pipeline successfully", func() {
+				pipeline, err := repo.GetPipeline("pipeline-name", "pipeline-namespace")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pipeline.GetName()).To(Equal("pipeline-name"))
+			})
+
+			Context("pipeline doesnt exist", func() {
+				It("returns an error", func() {
+					_, err := repo.GetPipeline("pipeline-that-does-not-exist-name", "pipeline-namespace")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get-pipeline:"))
+				})
+			})
+		})
+
+		Context("GetSupplyChain", func() {
+			BeforeEach(func() {
+				supplyChain := &v1alpha1.ClusterSupplyChain{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "sc-name",
+					},
+				}
+				clientObjects = []client.Object{supplyChain}
+			})
+
+			It("gets the supply chain successfully", func() {
+				sc, err := repo.GetSupplyChain("sc-name")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(sc.GetName()).To(Equal("sc-name"))
+			})
+
+			Context("supply chain doesnt exist", func() {
+				It("returns no error", func() {
+					sc, err := repo.GetSupplyChain("sc-that-does-not-exist-name")
+					Expect(err).ToNot(HaveOccurred())
+					Expect(sc).To(BeNil())
+				})
 			})
 		})
 

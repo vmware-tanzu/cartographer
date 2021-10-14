@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/cache"
+	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	pkgcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -31,9 +32,11 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
+	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -60,6 +63,10 @@ func RegisterControllers(mgr manager.Manager) error {
 		return fmt.Errorf("register supply-chain controller: %w", err)
 	}
 
+	if err := registerPipelineServiceController(mgr); err != nil {
+		return fmt.Errorf("register pipeline-service controller: %w", err)
+	}
+
 	return nil
 }
 
@@ -67,7 +74,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
 
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
-		Reconciler: workload.NewReconciler(repo, conditions.NewConditionManager, realizer.NewRealizer()),
+		Reconciler: workload.NewReconciler(repo, conditions.NewConditionManager, realizerworkload.NewRealizer()),
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
@@ -115,6 +122,43 @@ func registerSupplyChainController(mgr manager.Manager) error {
 	return nil
 }
 
+func registerPipelineServiceController(mgr manager.Manager) error {
+	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
+
+	reconciler := pipeline.NewReconciler(repo, realizerpipeline.NewRealizer())
+	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
+		Reconciler: reconciler,
+	})
+	if err != nil {
+		return fmt.Errorf("controller new pipeline-service: %w", err)
+	}
+
+	reconciler.AddTracking(&external.ObjectTracker{
+		Controller: ctrl,
+	})
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.Pipeline{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return fmt.Errorf("watch [pipeline-service]: %w", err)
+	}
+
+	mapper := Mapper{
+		Client: mgr.GetClient(),
+		Logger: mgr.GetLogger().WithName("pipeline"),
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.RunTemplate{}},
+		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToPipelineRequests),
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
+
+	return nil
+}
+
 func IndexResources(mgr manager.Manager, ctx context.Context) error {
 	fieldIndexer := mgr.GetFieldIndexer()
 
@@ -126,16 +170,7 @@ func IndexResources(mgr manager.Manager, ctx context.Context) error {
 }
 
 func indexSupplyChains(ctx context.Context, fieldIndexer client.FieldIndexer) error {
-	err := fieldIndexer.IndexField(ctx, &v1alpha1.ClusterSupplyChain{}, "spec.selector",
-		func(o client.Object) []string {
-			sc := o.(*v1alpha1.ClusterSupplyChain)
-			var res []string
-			for key, value := range sc.Spec.Selector {
-				res = append(res, fmt.Sprintf("%s: %s", key, value))
-			}
-
-			return res
-		})
+	err := fieldIndexer.IndexField(ctx, &v1alpha1.ClusterSupplyChain{}, "spec.selector", v1alpha1.GetSelectorsFromObject)
 	if err != nil {
 		return fmt.Errorf("index field supply-chain.selector: %w", err)
 	}

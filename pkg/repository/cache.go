@@ -35,7 +35,7 @@ type ExpiringCache interface {
 //counterfeiter:generate . RepoCache
 type RepoCache interface {
 	Set(submitted, persisted *unstructured.Unstructured)
-	UnchangedSinceCached(local, remote *unstructured.Unstructured) bool
+	UnchangedSinceCached(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
 	Refresh(submitted *unstructured.Unstructured)
 }
 
@@ -67,7 +67,7 @@ func (c *cache) Refresh(submitted *unstructured.Unstructured) {
 	}
 }
 
-func (c *cache) UnchangedSinceCached(submitted, existing *unstructured.Unstructured) bool {
+func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
 	submittedKey := getKey(submitted, submittedCachePrefix)
 	persistedKey := getKey(submitted, persistedCachePrefix)
 	submittedCached, ok := c.ec.Get(submittedKey)
@@ -76,25 +76,40 @@ func (c *cache) UnchangedSinceCached(submitted, existing *unstructured.Unstructu
 	persistedCached := c.getPersistedCached(persistedKey)
 
 	if !submittedUnchanged {
-		return false
+		return nil
 	}
 
-	existingSpec, ok := existing.Object["spec"]
-	if !ok {
-		return false
+	for _, existing := range existingList {
+		existingSpec, ok := existing.Object["spec"]
+		if !ok {
+			continue
+		}
+
+		persistedCachedSpec, ok := persistedCached.Object["spec"]
+		if !ok {
+			continue
+		}
+
+		sameSame := reflect.DeepEqual(existingSpec, persistedCachedSpec)
+		if sameSame {
+			return existing
+		} else {
+			continue
+		}
 	}
 
-	persistedCachedSpec, ok := persistedCached.Object["spec"]
-	if !ok {
-		return false
-	}
-
-	return reflect.DeepEqual(existingSpec, persistedCachedSpec)
+	return nil
 }
 
 func getKey(obj *unstructured.Unstructured, prefix string) string {
+	// todo: probably should hash object for key
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
-	name := obj.GetName()
+	var name string
+	if obj.GetName() == "" {
+		name = obj.GetGenerateName()
+	} else {
+		name = obj.GetName()
+	}
 	ns := obj.GetNamespace()
 	return fmt.Sprintf("%s:%s:%s:%s", prefix, ns, kind, name)
 }

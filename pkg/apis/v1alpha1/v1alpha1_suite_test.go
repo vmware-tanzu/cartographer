@@ -19,9 +19,22 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestV1alpha1(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "V1alpha1 Suite")
+}
+
+// Test Helpers
+
+type ArbitraryObject struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              ArbitrarySpec
+}
+
+type ArbitrarySpec struct {
+	SomeKey string `json:"someKey"`
 }

@@ -125,7 +125,7 @@ var _ = Describe("MapFunctions", func() {
 						clientObjects = []client.Object{workload}
 					})
 
-					It("returns an empty list of requests", func() {
+					It("returns a list of requests that includes the workload", func() {
 						expected := []reconcile.Request{
 							{
 								types.NamespacedName{
@@ -162,6 +162,201 @@ var _ = Describe("MapFunctions", func() {
 					firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 					Expect(firstArg).To(BeNil())
 					Expect(secondArg).To(Equal("cluster supply chain to workload requests: cast to ClusterSupplyChain failed"))
+				})
+			})
+		})
+	})
+
+	Describe("RunTemplateToPipelineRequests", func() {
+		var (
+			clientObjects     []client.Object
+			mapper            *registrar.Mapper
+			fakeClientBuilder *fake.ClientBuilder
+			scheme            *runtime.Scheme
+			fakeLogger        *registrarfakes.FakeLogger
+			runTemplate       client.Object
+			result            []reconcile.Request
+		)
+
+		BeforeEach(func() {
+			scheme = runtime.NewScheme()
+			fakeClientBuilder = fake.NewClientBuilder()
+			fakeLogger = &registrarfakes.FakeLogger{}
+
+			runTemplate = &v1alpha1.RunTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "match",
+					Namespace: "match",
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			fakeClientBuilder.
+				WithScheme(scheme).
+				WithObjects(clientObjects...)
+
+			fakeClient := fakeClientBuilder.Build()
+
+			mapper = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			result = mapper.RunTemplateToPipelineRequests(runTemplate)
+		})
+
+		Context("client.List returns an error", func() {
+			// By using a scheme without v1alpha1, the client will error when handed our Objects
+			It("logs an error to the client", func() {
+				Expect(result).To(BeEmpty())
+
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(firstArg).NotTo(BeNil())
+				Expect(secondArg).To(Equal("run template to pipeline requests: client list"))
+			})
+		})
+
+		Context("client does not return errors", func() {
+			BeforeEach(func() {
+				// By including the scheme, the client will not error when handed our Objects
+				err := v1alpha1.AddToScheme(scheme)
+				Expect(err).ToNot(HaveOccurred())
+			})
+			Context("but there exist no pipelines", func() {
+				It("returns an empty list of requests", func() {
+					Expect(result).To(BeEmpty())
+				})
+			})
+			Context("and there are pipelines", func() {
+				var pipeline *v1alpha1.Pipeline
+				BeforeEach(func() {
+					pipeline = &v1alpha1.Pipeline{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "my-pipeline",
+							Namespace: "my-namespace",
+						},
+						TypeMeta: metav1.TypeMeta{},
+					}
+				})
+
+				Context("a pipeline matches the runTemplate", func() {
+					Context("with a templateRef that specifies a namespace", func() {
+						BeforeEach(func() {
+							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+								Name:      "match",
+								Namespace: "match",
+							}
+							clientObjects = []client.Object{pipeline}
+						})
+
+						It("returns a list of requests with the pipeline present", func() {
+							expected := []reconcile.Request{
+								{
+									types.NamespacedName{
+										Namespace: "my-namespace",
+										Name:      "my-pipeline",
+									},
+								},
+							}
+
+							Expect(result).To(Equal(expected))
+						})
+					})
+
+					Context("with a templateRef that specifies a namespace", func() {
+						BeforeEach(func() {
+							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+								Name: "match",
+							}
+							pipeline.Namespace = "match"
+							clientObjects = []client.Object{pipeline}
+						})
+
+						It("returns a list of requests with the pipeline present", func() {
+							expected := []reconcile.Request{
+								{
+									types.NamespacedName{
+										Namespace: "match",
+										Name:      "my-pipeline",
+									},
+								},
+							}
+
+							Expect(result).To(Equal(expected))
+						})
+					})
+				})
+				Context("no pipeline matches the runTemplate", func() {
+					Context("because the name in the templateRef is different", func() {
+						BeforeEach(func() {
+							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+								Name: "non-existent-name",
+							}
+							clientObjects = []client.Object{pipeline}
+						})
+
+						It("returns an empty list of requests", func() {
+							Expect(result).To(BeEmpty())
+						})
+					})
+
+					Context("because the namespace in the templateRef is different", func() {
+						BeforeEach(func() {
+							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+								Name:      "match",
+								Namespace: "some-namespace",
+							}
+							clientObjects = []client.Object{pipeline}
+						})
+
+						It("returns an empty list of requests", func() {
+							Expect(result).To(BeEmpty())
+						})
+					})
+
+					Context("because the templateRef does not specify a namespace and the pipeline is in a different namespace from the runTemplate", func() {
+						BeforeEach(func() {
+							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+								Name: "match",
+							}
+							clientObjects = []client.Object{pipeline}
+						})
+
+						It("returns an empty list of requests", func() {
+							Expect(result).To(BeEmpty())
+						})
+					})
+
+					Context("because the templateRef is the wrong Kind", func() {
+						BeforeEach(func() {
+							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+								Name:      "match",
+								Namespace: "match",
+								Kind:      "some-kind",
+							}
+							clientObjects = []client.Object{pipeline}
+						})
+
+						It("returns an empty list of requests", func() {
+							Expect(result).To(BeEmpty())
+						})
+					})
+				})
+			})
+
+			Context("when function is passed an object that is not a supplyChain", func() {
+				BeforeEach(func() {
+					runTemplate = &v1alpha1.Workload{}
+				})
+				It("logs a helpful error", func() {
+					Expect(result).To(BeEmpty())
+
+					Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+					firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
+					Expect(firstArg).To(BeNil())
+					Expect(secondArg).To(Equal("run template to pipeline requests: cast to run template failed"))
 				})
 			})
 		})
