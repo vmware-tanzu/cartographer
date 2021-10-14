@@ -58,6 +58,7 @@ spec:
                         kind:
                           enum:
                           - ClusterSourceTemplate
+                          - ClusterDeploymentTemplate
                           - ClusterTemplate
                           type: string
                         name:

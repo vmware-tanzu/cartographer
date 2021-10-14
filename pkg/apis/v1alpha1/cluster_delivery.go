@@ -58,7 +58,7 @@ type ClusterDeliveryResource struct {
 }
 
 type DeliveryClusterTemplateReference struct {
-	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterTemplate
+	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
