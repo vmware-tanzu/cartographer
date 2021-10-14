@@ -38,7 +38,7 @@ type ClusterDeploymentTemplate struct {
 type ClusterDeploymentTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterTemplate `json:"items"`
+	Items           []ClusterDeploymentTemplate `json:"items"`
 }
 
 func init() {

@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package deliverable_test
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"testing"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type Params map[string]apiextensionsv1.JSON
-
-func ParamsBuilder(defaultParams v1alpha1.DefaultParams, componentParams []v1alpha1.Param) Params {
-	newParams := Params{}
-	for _, param := range defaultParams {
-		newParams[param.Name] = param.DefaultValue
-	}
-
-	for key := range newParams {
-		for _, override := range componentParams {
-			if key == override.Name {
-				newParams[key] = override.Value
-			}
-		}
-	}
-	return newParams
+func TestWorkload(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Deliverable Suite")
 }

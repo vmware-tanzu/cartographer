@@ -45,6 +45,7 @@ type ClusterDelivery struct {
 
 type ClusterDeliverySpec struct {
 	Resources []ClusterDeliveryResource `json:"resources"`
+	Selector  map[string]string         `json:"selector"`
 }
 
 type ClusterDeliveryStatus struct {
@@ -55,6 +56,9 @@ type ClusterDeliveryStatus struct {
 type ClusterDeliveryResource struct {
 	Name        string                           `json:"name"`
 	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
+	Params      []Param                          `json:"params,omitempty"`
+	Sources     []ResourceReference              `json:"sources,omitempty"`
+	Configs     []ResourceReference              `json:"configs,omitempty"`
 }
 
 type DeliveryClusterTemplateReference struct {

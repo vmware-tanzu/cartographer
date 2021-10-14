@@ -20,7 +20,6 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -69,8 +68,8 @@ type WorkloadServiceClaimReference struct {
 }
 
 type WorkloadSpec struct {
-	Params []WorkloadParam `json:"params,omitempty"`
-	Source *WorkloadSource `json:"source,omitempty"`
+	Params []Param `json:"params,omitempty"`
+	Source *Source `json:"source,omitempty"`
 	// Image is a pre-built image in a registry. It is an alternative to defining source
 	// code.
 	Image         *string                      `json:"image,omitempty"`
@@ -79,40 +78,10 @@ type WorkloadSpec struct {
 	Resources     *corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-type WorkloadSource struct {
-	Git *WorkloadGit `json:"git,omitempty"`
-	// Image is an OCI image is a registry that contains source code
-	Image   *string `json:"image,omitempty"`
-	Subpath *string `json:"subPath,omitempty"`
-}
-
-type WorkloadGit struct {
-	URL *string         `json:"url,omitempty"`
-	Ref *WorkloadGitRef `json:"ref,omitempty"`
-}
-
-type WorkloadGitRef struct {
-	Branch *string `json:"branch,omitempty"`
-	Tag    *string `json:"tag,omitempty"`
-	Commit *string `json:"commit,omitempty"`
-}
-
-type WorkloadParam struct {
-	Name  string               `json:"name"`
-	Value apiextensionsv1.JSON `json:"value"`
-}
-
-type WorkloadSupplyChainReference struct {
-	Kind       string `json:"kind,omitempty"`
-	Namespace  string `json:"namespace,omitempty"`
-	Name       string `json:"name,omitempty"`
-	APIVersion string `json:"apiVersion,omitempty"`
-}
-
 type WorkloadStatus struct {
-	ObservedGeneration int64                        `json:"observedGeneration,omitempty"`
-	Conditions         []metav1.Condition           `json:"conditions,omitempty"`
-	SupplyChainRef     WorkloadSupplyChainReference `json:"supplyChainRef,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	SupplyChainRef     OwnerReference     `json:"supplyChainRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

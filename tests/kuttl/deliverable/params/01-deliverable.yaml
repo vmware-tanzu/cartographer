@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestSuite
-startControlPlane: true
-testDirs:
-  - tests/kuttl/pipeline-service
-  - tests/kuttl/supply-chain
-  - tests/kuttl/deliverable
-crdDir: config/crd/bases
-manifestDirs:
-  - tests/resources/crds
-commands:
-  - command: build/cartographer
-    background: true
-timeout: 10
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: my-app---params
+  labels:
+    app.tanzu.vmware.com/deliverable-type: web--params
+spec:
+  params:
+    - name: spooky
+      value: ghosts
+  source:
+    git:
+      url: https://github.com/ekcasey/hello-world-ops
+      ref:
+        branch: prod

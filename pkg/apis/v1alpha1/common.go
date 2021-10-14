@@ -28,6 +28,41 @@ type DefaultParam struct {
 	DefaultValue apiextensionsv1.JSON `json:"default"`
 }
 
+type Param struct {
+	Name  string               `json:"name"`
+	Value apiextensionsv1.JSON `json:"value"`
+}
+
+type ResourceReference struct {
+	Name     string `json:"name"`
+	Resource string `json:"resource"`
+}
+
+type Source struct {
+	Git *GitSource `json:"git,omitempty"`
+	// Image is an OCI image is a registry that contains source code
+	Image   *string `json:"image,omitempty"`
+	Subpath *string `json:"subPath,omitempty"`
+}
+
+type GitSource struct {
+	URL *string `json:"url,omitempty"`
+	Ref *GitRef `json:"ref,omitempty"`
+}
+
+type GitRef struct {
+	Branch *string `json:"branch,omitempty"`
+	Tag    *string `json:"tag,omitempty"`
+	Commit *string `json:"commit,omitempty"`
+}
+
+type OwnerReference struct {
+	Kind       string `json:"kind,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	Name       string `json:"name,omitempty"`
+	APIVersion string `json:"apiVersion,omitempty"`
+}
+
 func GetAPITemplate(templateKind string) (client.Object, error) {
 	var template client.Object
 
@@ -40,6 +75,8 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 		template = &ClusterConfigTemplate{}
 	case "ClusterTemplate":
 		template = &ClusterTemplate{}
+	case "ClusterDeploymentTemplate":
+		template = &ClusterDeploymentTemplate{}
 	default:
 		return nil, fmt.Errorf("component does not have valid kind: %s", templateKind)
 	}

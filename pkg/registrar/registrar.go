@@ -32,10 +32,12 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/delivery"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
 	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -66,6 +68,10 @@ func RegisterControllers(mgr manager.Manager) error {
 
 	if err := registerDeliveryController(mgr); err != nil {
 		return fmt.Errorf("register delivery controller: %w", err)
+	}
+
+	if err := registerDeliverableController(mgr); err != nil {
+		return fmt.Errorf("register deliverable controller: %w", err)
 	}
 
 	if err := registerPipelineServiceController(mgr); err != nil {
@@ -140,6 +146,38 @@ func registerDeliveryController(mgr manager.Manager) error {
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.ClusterDelivery{}},
 		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
+
+	return nil
+}
+
+func registerDeliverableController(mgr manager.Manager) error {
+	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring()))
+
+	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{
+		Reconciler: deliverable.NewReconciler(repo, conditions.NewConditionManager, realizerdeliverable.NewRealizer()),
+	})
+	if err != nil {
+		return fmt.Errorf("controller new: %w", err)
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.Deliverable{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
+
+	mapper := Mapper{
+		Client: mgr.GetClient(),
+		Logger: mgr.GetLogger().WithName("deliverable"),
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.ClusterDelivery{}},
+		handler.EnqueueRequestsFromMapFunc(mapper.ClusterDeliveryToDeliverableRequests),
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)
 	}

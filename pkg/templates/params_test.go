@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("OverrideDefaultParams", func() {
 	Describe("ParamsBuilder", func() {
-		It("makes Params using v1alpha.DefaultParams and overrides them with v1alpha.SupplyChainParam values", func() {
+		It("makes Params using v1alpha.DefaultParams and overrides them with v1alpha.Param values", func() {
 			defaultParams := v1alpha1.DefaultParams{
 				{
 					Name: "foo",
@@ -40,7 +40,7 @@ var _ = Describe("OverrideDefaultParams", func() {
 					},
 				},
 			}
-			componentParams := []v1alpha1.SupplyChainParam{
+			componentParams := []v1alpha1.Param{
 				{
 					Name: "fizz",
 					Value: apiextensionsv1.JSON{

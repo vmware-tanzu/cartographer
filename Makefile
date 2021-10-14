@@ -81,6 +81,10 @@ test-kuttl-pipeline-service: build test-gen-manifests
 test-kuttl-supply-chain: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/supply-chain --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/supply-chain; fi
 
+.PHONY: test-kuttl-deliverable
+test-kuttl-deliverable: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/deliverable --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/deliverable; fi
+
 
 .PHONY: list-kuttl
 list-kuttl:

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supply_chain_test
+package delivery_test
 
 import (
 	"bufio"
@@ -42,7 +42,7 @@ type LogLine struct {
 	Namespace string  `json:"namespace"`
 }
 
-var _ = Describe("WorkloadReconciler", func() {
+var _ = Describe("DeliverableReconciler", func() {
 	var templateBytes = func() []byte {
 		configMap := &corev1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -60,15 +60,15 @@ var _ = Describe("WorkloadReconciler", func() {
 		return templateBytes
 	}
 
-	var newClusterSupplyChain = func(name string, selector map[string]string) *v1alpha1.ClusterSupplyChain {
-		return &v1alpha1.ClusterSupplyChain{
+	var newClusterDelivery = func(name string, selector map[string]string) *v1alpha1.ClusterDelivery {
+		return &v1alpha1.ClusterDelivery{
 			TypeMeta: v1.TypeMeta{},
 			ObjectMeta: v1.ObjectMeta{
 				Name: name,
 			},
-			Spec: v1alpha1.SupplyChainSpec{
-				Components: []v1alpha1.SupplyChainComponent{},
-				Selector:   selector,
+			Spec: v1alpha1.ClusterDeliverySpec{
+				Resources: []v1alpha1.ClusterDeliveryResource{},
+				Selector:  selector,
 			},
 		}
 	}
@@ -76,21 +76,21 @@ var _ = Describe("WorkloadReconciler", func() {
 	var reconcileAgain = func() {
 		time.Sleep(1 * time.Second) //metav1.Time unmarshals with 1 second accuracy so this sleep avoids a race condition
 
-		workload := &v1alpha1.Workload{}
-		err := c.Get(context.Background(), client.ObjectKey{Name: "workload-bob", Namespace: testNS}, workload)
+		deliverable := &v1alpha1.Deliverable{}
+		err := c.Get(context.Background(), client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
 		Expect(err).NotTo(HaveOccurred())
 
-		workload.Spec.Params = []v1alpha1.Param{{Name: "foo", Value: apiextensionsv1.JSON{
+		deliverable.Spec.Params = []v1alpha1.Param{{Name: "foo", Value: apiextensionsv1.JSON{
 			Raw: []byte(`"definitelybar"`),
 		}}}
-		err = c.Update(context.Background(), workload)
+		err = c.Update(context.Background(), deliverable)
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
-			workload := &v1alpha1.Workload{}
-			err := c.Get(context.Background(), client.ObjectKey{Name: "workload-bob", Namespace: testNS}, workload)
+			deliverable := &v1alpha1.Deliverable{}
+			err := c.Get(context.Background(), client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
 			Expect(err).NotTo(HaveOccurred())
-			return workload.Status.ObservedGeneration == workload.Generation
+			return deliverable.Status.ObservedGeneration == deliverable.Generation
 		}).Should(BeTrue())
 	}
 
@@ -109,22 +109,22 @@ var _ = Describe("WorkloadReconciler", func() {
 		}
 	})
 
-	Context("Has the source template and workload installed", func() {
+	Context("Has the source template and deliverable installed", func() {
 		BeforeEach(func() {
-			workload := &v1alpha1.Workload{
+			deliverable := &v1alpha1.Deliverable{
 				TypeMeta: v1.TypeMeta{},
 				ObjectMeta: v1.ObjectMeta{
-					Name:      "workload-bob",
+					Name:      "deliverable-bob",
 					Namespace: testNS,
 					Labels: map[string]string{
 						"name": "webapp",
 					},
 				},
-				Spec: v1alpha1.WorkloadSpec{},
+				Spec: v1alpha1.DeliverableSpec{},
 			}
 
-			cleanups = append(cleanups, workload)
-			err := c.Create(ctx, workload, &client.CreateOptions{})
+			cleanups = append(cleanups, deliverable)
+			err := c.Create(ctx, deliverable, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -132,20 +132,20 @@ var _ = Describe("WorkloadReconciler", func() {
 			var lastConditions []v1.Condition
 
 			Eventually(func() bool {
-				workload := &v1alpha1.Workload{}
-				err := c.Get(context.Background(), client.ObjectKey{Name: "workload-bob", Namespace: testNS}, workload)
+				deliverable := &v1alpha1.Deliverable{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
 				Expect(err).NotTo(HaveOccurred())
-				lastConditions = workload.Status.Conditions
-				return workload.Status.ObservedGeneration == workload.Generation
+				lastConditions = deliverable.Status.Conditions
+				return deliverable.Status.ObservedGeneration == deliverable.Generation
 			}, 5*time.Second).Should(BeTrue())
 
 			reconcileAgain()
 
-			workload := &v1alpha1.Workload{}
-			err := c.Get(ctx, client.ObjectKey{Name: "workload-bob", Namespace: testNS}, workload)
+			deliverable := &v1alpha1.Deliverable{}
+			err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(workload.Status.Conditions).To(Equal(lastConditions))
+			Expect(deliverable.Status.Conditions).To(Equal(lastConditions))
 		})
 
 		Context("when reconciliation will end in an unknown status", func() {
@@ -167,32 +167,32 @@ var _ = Describe("WorkloadReconciler", func() {
 				err := c.Create(ctx, template, &client.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
-				supplyChain := newClusterSupplyChain("supplychain-bob", map[string]string{"name": "webapp"})
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				delivery := newClusterDelivery("delivery-bob", map[string]string{"name": "webapp"})
+				delivery.Spec.Resources = []v1alpha1.ClusterDeliveryResource{
 					{
-						Name: "fred-component",
-						TemplateRef: v1alpha1.ClusterTemplateReference{
+						Name: "fred-resource",
+						TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "proper-template-bob",
 						},
 					},
 				}
-				cleanups = append(cleanups, supplyChain)
+				cleanups = append(cleanups, delivery)
 
-				err = c.Create(ctx, supplyChain, &client.CreateOptions{})
+				err = c.Create(ctx, delivery, &client.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("does not error if the reconciliation ends in an unknown status", func() {
 				Eventually(func() []v1.Condition {
-					obj := &v1alpha1.Workload{}
-					err := c.Get(ctx, client.ObjectKey{Name: "workload-bob", Namespace: testNS}, obj)
+					obj := &v1alpha1.Deliverable{}
+					err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, obj)
 					Expect(err).NotTo(HaveOccurred())
 
 					return obj.Status.Conditions
 				}, 5*time.Second).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal("ComponentsSubmitted"),
+						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("MissingValueAtPath"),
 						"Status": Equal(v1.ConditionStatus("Unknown")),
 					}),
@@ -202,21 +202,21 @@ var _ = Describe("WorkloadReconciler", func() {
 						"Status": Equal(v1.ConditionStatus("Unknown")),
 					}),
 				))
-				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for component"))
+				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))
 			})
 		})
 
-		It("shortcuts backoff when a supply chain is provided", func() {
-			By("expecting a supply chain")
+		It("shortcuts backoff when a delivery is provided", func() {
+			By("expecting a delivery")
 			Eventually(func() []v1.Condition {
-				obj := &v1alpha1.Workload{}
-				err := c.Get(ctx, client.ObjectKey{Name: "workload-bob", Namespace: testNS}, obj)
+				obj := &v1alpha1.Deliverable{}
+				err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, obj)
 				Expect(err).NotTo(HaveOccurred())
 
 				return obj.Status.Conditions
 			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("SupplyChainReady"),
-				"Reason": Equal("SupplyChainNotFound"),
+				"Type":   Equal("DeliveryReady"),
+				"Reason": Equal("DeliveryNotFound"),
 				"Status": Equal(v1.ConditionStatus("False")),
 			})))
 
@@ -234,7 +234,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				if err != nil {
 					return 0
 				}
-				if logLine.Message != "Reconciler error" || logLine.Namespace != testNS || logLine.Name != "workload-bob" {
+				if logLine.Message != "Reconciler error" || logLine.Namespace != testNS || logLine.Name != "deliverable-bob" {
 					return 0
 				}
 
@@ -246,16 +246,16 @@ var _ = Describe("WorkloadReconciler", func() {
 				return logLine.Timestamp - previousSeconds
 			}, 2500*time.Millisecond).Should(BeNumerically(">", 1.0))
 
-			By("accepting a supply chain")
-			supplyChain := newClusterSupplyChain("supplychain-bob", map[string]string{"name": "webapp"})
-			cleanups = append(cleanups, supplyChain)
+			By("accepting a delivery")
+			delivery := newClusterDelivery("delivery-bob", map[string]string{"name": "webapp"})
+			cleanups = append(cleanups, delivery)
 
-			err := c.Create(ctx, supplyChain, &client.CreateOptions{})
+			err := c.Create(ctx, delivery, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			obj := &v1alpha1.ClusterSupplyChain{}
+			obj := &v1alpha1.ClusterDelivery{}
 			Eventually(func() ([]v1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, obj)
+				err = c.Get(ctx, client.ObjectKey{Name: "delivery-bob"}, obj)
 				return obj.Status.Conditions, err
 			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("Ready"),
@@ -265,7 +265,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 			By("reconcile in less than a second")
 			Eventually(func() ([]v1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, obj)
+				err = c.Get(ctx, client.ObjectKey{Name: "delivery-bob"}, obj)
 				return obj.Status.Conditions, err
 			}, 500*time.Millisecond).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("Ready"),

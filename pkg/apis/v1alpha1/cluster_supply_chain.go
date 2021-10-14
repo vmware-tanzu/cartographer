@@ -21,7 +21,6 @@ package v1alpha1
 import (
 	"fmt"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -154,15 +153,10 @@ type SupplyChainSpec struct {
 	Selector   map[string]string      `json:"selector"`
 }
 
-type SupplyChainParam struct {
-	Name  string               `json:"name"`
-	Value apiextensionsv1.JSON `json:"value"`
-}
-
 type SupplyChainComponent struct {
 	Name        string                   `json:"name"`
 	TemplateRef ClusterTemplateReference `json:"templateRef"`
-	Params      []SupplyChainParam       `json:"params,omitempty"`
+	Params      []Param                  `json:"params,omitempty"`
 	Sources     []ComponentReference     `json:"sources,omitempty"`
 	Images      []ComponentReference     `json:"images,omitempty"`
 	Configs     []ComponentReference     `json:"configs,omitempty"`
@@ -175,6 +169,7 @@ type ClusterTemplateReference struct {
 	Name string `json:"name"`
 }
 
+//TODO Delete and use ResourceReference in common.go when renaming component to resource (#236)
 type ComponentReference struct {
 	Name      string `json:"name"`
 	Component string `json:"component"`

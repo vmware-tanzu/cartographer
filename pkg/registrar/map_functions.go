@@ -68,6 +68,38 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 
 }
 
+func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object) []reconcile.Request {
+	var err error
+
+	delivery, ok := object.(*v1alpha1.ClusterDelivery)
+	if !ok {
+		mapper.Logger.Error(nil, "cluster delivery to deliverable requests: cast to ClusterDelivery failed")
+		return nil
+	}
+
+	list := &v1alpha1.DeliverableList{}
+
+	err = mapper.Client.List(context.TODO(), list,
+		client.InNamespace(delivery.Namespace),
+		client.MatchingLabels(delivery.Spec.Selector))
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "cluster delivery to deliverable requests: client list")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, deliverable := range list.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      deliverable.Name,
+				Namespace: deliverable.Namespace,
+			},
+		})
+	}
+
+	return requests
+}
+
 func (mapper *Mapper) RunTemplateToPipelineRequests(object client.Object) []reconcile.Request {
 	var err error
 
