@@ -28,5 +28,5 @@ jobs:
         uses: garg3133/welcome-new-contributors@v1.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          issue-message: 'Hello @contributor-name! Welcome to the Cartographer community and thank you for opening your first issue, we appreciate your contributions'
-          pr-message: 'Hello @contributor-name!, thanks for opening your first Pull Request. Someone will review it soon. Thank you for committing to make Cartographer better'
+          issue-message: 'Hello @contributor_name! Welcome to the Cartographer community and thank you for opening your first issue, we appreciate your contributions'
+          pr-message: 'Hello @contributor_name!, thanks for opening your first Pull Request. Someone will review it soon. Thank you for committing to make Cartographer better'
