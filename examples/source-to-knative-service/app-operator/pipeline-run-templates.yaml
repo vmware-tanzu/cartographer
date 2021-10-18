@@ -59,7 +59,7 @@ spec:
             name: $(pipeline.spec.inputs.input_config_map_name)$
         - name: ssh-directory
           secret:
-            secretName: ssh-key-secret
+            secretName: git-ssh-secret
       params:
         - name: GIT_USER_NAME
           value: $(pipeline.spec.inputs.git_username)$
@@ -80,7 +80,7 @@ spec:
               export GIT_SSH_VARIANT="$(pipeline.spec.inputs.git_ssh_variant)$"
             fi
             git init
-            git remote add origin $(pipeline.spec.inputs.git_ssh_name)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.github_storage_repository)$
+            git remote add origin $(pipeline.spec.inputs.git_ssh_name)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_repository)$
             git pull origin $(pipeline.spec.inputs.branch)$
             git checkout $(pipeline.spec.inputs.branch)$
             export INPUT_PATH=$(workspaces.input.path)

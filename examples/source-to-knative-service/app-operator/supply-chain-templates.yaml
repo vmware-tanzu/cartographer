@@ -193,17 +193,17 @@ metadata:
 spec:
   params:
     - name: git_username
-      default: hi
+      default: Waciuma Wanjohi
     - name: git_user_email
-      default: hi@example.com
+      default: lwanjohi@vmware.com
     - name: commit_message
       default: "Update repo based on supply chain run"
-    - name: github_storage_repository
-      default: 2222/hi/my-repo.git
+    - name: git_repository
+      default: waciumawanjohi/test-tekton-git-cli.git
     - name: git_ssh_name
-      default: ssh://git
+      default: git
     - name: git_server
-      default: localhost
+      default: github.com
     - name: git_ssh_command
       default: "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
     - name: branch
