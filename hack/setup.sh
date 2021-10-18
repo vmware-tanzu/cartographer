@@ -87,7 +87,7 @@ main() {
 
 install_cartographer_package() {
         log "build cartographer release and installing it"
-        env REGISTRY="$REGISTRY" RELEASE_VERSION="$RELEASE_VERSION" ./hack/release.sh
+        env REGISTRY="$REGISTRY" RELEASE_VERSION="$RELEASE_VERSION" DOCKER_CONFIG="$DOCKER_CONFIG" ./hack/release.sh
 
         ytt --ignore-unknown-comments \
                 --data-value registry="$REGISTRY" \
@@ -137,9 +137,10 @@ start_registry() {
         password: admin
         "
 
-        DOCKER_USERNAME=admin \
+        env DOCKER_USERNAME=admin \
                 DOCKER_PASSWORD=admin \
-                DOCKER_REGISTRY=$REGISTRY \
+                DOCKER_REGISTRY="$REGISTRY" \
+                DOCKER_CONFIG="$DOCKER_CONFIG" \
                 "$DIR/docker-login.sh"
 
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
