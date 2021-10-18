@@ -65,6 +65,9 @@ var _ = BeforeSuite(func() {
 
 	// start kube-apiserver and etcd
 	testEnv = &envtest.Environment{
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
+		},
 		CRDDirectoryPaths:        []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
 	}

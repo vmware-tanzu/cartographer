@@ -19,7 +19,10 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -74,6 +77,30 @@ type ClusterDeliveryList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterDelivery `json:"items"`
+}
+
+func (c *ClusterDelivery) ValidateCreate() error {
+	return validateNewState(c)
+}
+
+func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
+	return validateNewState(c)
+}
+
+func (c *ClusterDelivery) ValidateDelete() error {
+	return nil
+}
+
+func validateNewState(c *ClusterDelivery) error {
+	names := map[string]bool{}
+
+	for idx, resource := range c.Spec.Resources {
+		if names[resource.Name] {
+			return fmt.Errorf("spec.resources[%d].name \"%s\" cannot appear twice", idx, resource.Name)
+		}
+		names[resource.Name] = true
+	}
+	return nil
 }
 
 func init() {
