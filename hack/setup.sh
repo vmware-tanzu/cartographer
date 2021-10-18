@@ -313,7 +313,7 @@ setup_example() {
                 --data-value git_writer.server="$GIT_WRITER_SERVER" \
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
                 --data-value git_writer.base64_encoded_ssh_key=$(lpass show --notes gitlab-example-writer-token | base64) \
-                --data-value git_writer.base64_encoded_known_hosts=$(echo "gitlab.eng.vmware.com,10.182.40.99 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIW3CobFtjtaGAbNvW1w7Z1+nOV131I2GQ4T/v6elt8caUxo+NK8w4R0ywLc5FiIa3RQ6CuyHfkO6cnJGQm3n3Q=" | base64) |
+                --data-value git_writer.base64_encoded_known_hosts=$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64) |
                 kapp deploy --yes -a example -f-
 }
 
