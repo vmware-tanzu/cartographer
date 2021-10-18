@@ -192,23 +192,23 @@ metadata:
   name: git-writer
 spec:
   params:
-    - name: git_username
-      default: Waciuma Wanjohi
-    - name: git_user_email
-      default: lwanjohi@vmware.com
-    - name: commit_message
-      default: "Update repo based on supply chain run"
-    - name: git_repository
-      default: waciumawanjohi/test-tekton-git-cli.git
-    - name: git_ssh_name
-      default: git
-    - name: git_server
-      default: github.com
-    - name: git_ssh_command
-      default: "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-    - name: branch
-      default: master
-    - name: git_ssh_variant
+    - name: git_writer_username
+      default: Example
+    - name: git_writer_user_email
+      default: email@example.com
+    - name: git_writer_commit_message
+      default: #@ data.values.git_writer.message
+    - name: git_writer_ssh_user
+      default: #@ data.values.git_writer.ssh_user
+    - name: git_writer_server
+      default: #@ data.values.git_writer.server
+    - name: git_writer_repository
+      default: #@ data.values.git_writer.repository
+    - name: git_writer_branch
+      default: main
+    - name: git_writer_skip_host_checking
+      default: true
+    - name: git_writer_ssh_variant
       default: ssh
   template:
     apiVersion: carto.run/v1alpha1
@@ -222,12 +222,13 @@ spec:
       inputs:
         input_config_map_name: $(workload.metadata.name)$
         input_config_map_field: manifest.yaml
-        github_storage_repository: $(params.github_storage_repository)$
-        commit_message: $(params.commit_message)$
-        git_username: $(params.git_username)$
-        git_user_email: $(params.git_user_email)$
-        git_ssh_command: $(params.git_ssh_command)$
-        git_ssh_name: $(params.git_ssh_name)$
-        git_server: $(params.git_server)$
-        branch: $(params.branch)$
-        git_ssh_variant: $(params.git_ssh_variant)$
+
+        git_username: $(params.git_writer_username)$
+        git_user_email: $(params.git_writer_user_email)$
+        commit_message: $(params.git_writer_commit_message)$
+        git_ssh_user: $(params.git_writer_ssh_user)$
+        git_server: $(params.git_writer_server)$
+        git_repository: $(params.git_writer_repository)$
+        branch: $(params.git_writer_branch)$
+        skip_host_checking: $(params.git_writer_skip_host_checking)$
+        git_ssh_variant: $(params.git_writer_ssh_variant)$

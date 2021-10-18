@@ -24,6 +24,11 @@ readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
+readonly GIT_WRITER_SSH_USER=${GIT_WRITER_SSH_USER:-"git"}
+readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-"gitlab.eng.vmware.com"}
+readonly GIT_WRITER_PROJECT=${GIT_WRITER_PROJECT:-"supply-chain-choreographer"}
+readonly GIT_WRITER_REPOSITORY=${GIT_WRITER_REPOSITORY:-"git-writer-example"}
+
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG="/tmp/cartographer-docker"
 
@@ -295,39 +300,58 @@ install_tekton_git_cli_task() {
 }
 
 setup_example() {
+        echo $RANDOM | base64 > hack/git_message
+
         ytt --ignore-unknown-comments \
                 -f "$DIR/../examples/source-to-knative-service" \
                 --data-value registry.server="$REGISTRY" \
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-" \
-                --data-value base64_encoded_ssh_key=$(lpass show --notes waciumawanjohi-test-tekton-git-cli-ssh-key) \
-                --data-value base64_encoded_github_host="Z2l0aHViLmNvbSwxNDAuODIuMTEzLjQgc3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBQkl3QUFBUUVBcTJBN2hSR21kbm05dFVEYk85SURTd0JLNlRiUWErUFhZUENQeTZyYlRyVHR3N1BIa2NjS3JwcDB5VmhwNUhkRUljS3I2cExsVkRCZk9MWDlRVXN5Q09WMHd6ZmpJSk5sR0VZc2RsTEppekhoYm4ybVVqdlNBSFFxWkVUWVA4MWVGekxRTm5QSHQ0RVZWVWg3VmZERVNVODRLZXptRDVRbFdwWExtdlUzMS95TWYrU2U4eGhIVHZLU0NaSUZJbVd3b0c2bWJVb1dmOW56cElvYVNqQit3ZXFxVVVtcGFhYXNYVmFsNzJKK1VYMkIrMlJQVzNSY1QwZU96UWdxbEpMM1JLclRKdmRzakUzSkVBdkdxM2xHSFNaWHkyOEczc2t1YTJTbVZpL3c0eUNFNmdiT0RxblRXbGc3K3dDNjA0eWRHWEE4VkppUzVhcDQzSlhpVUZGQWFRPT0K" |
+                --data-value git_writer.message="$(cat hack/git_message)" \
+                --data-value git_writer.ssh_user="$GIT_WRITER_SSH_USER" \
+                --data-value git_writer.server="$GIT_WRITER_SERVER" \
+                --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
+                --data-value git_writer.base64_encoded_ssh_key=$(lpass show --notes gitlab-example-writer-token | base64) |
                 kapp deploy --yes -a example -f-
 }
 
 teardown_example() {
         kapp delete --yes -a example
+        rm hack/git_message
 }
 
 test_example() {
         log "testing"
 
-        for i in {15..1}; do
-                echo "- attempt $i"
+        export EXPECTED_GIT_MESSAGE="$(cat hack/git_message)"
+        export GIT_SSH_KEY="$(lpass show --notes gitlab-example-writer-token)"
 
-                local deployed_pods
-                deployed_pods=$(kubectl get pods \
-                        -l 'serving.knative.dev/configuration=dev' \
-                        -o name)
+        pushd $(mktemp -d)
+              lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 -
+              git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
+              pushd "$GIT_WRITER_REPOSITORY"
+                    for i in {15..1}; do
+                            echo "- attempt $i"
 
-                if [[ -n "$deployed_pods" ]]; then
-                        log 'SUCCEEDED! sweet'
-                        exit 0
-                fi
+                            local deployed_pods
+                            deployed_pods=$(kubectl get pods \
+                                    -l 'serving.knative.dev/configuration=dev' \
+                                    -o name)
 
-                sleep "$i"
-        done
+                            lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 -
+                            git pull
+                            MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
+
+                            if [[ -n "$deployed_pods" && "$EXPECTED_GIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
+                                    log 'SUCCEEDED! sweet'
+                                    exit 0
+                            fi
+
+                            sleep "$i"
+                    done
+              popd
+        popd
 
         log 'FAILED :('
         exit 1

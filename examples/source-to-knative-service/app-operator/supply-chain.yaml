@@ -22,10 +22,13 @@ spec:
 
   #
   #
-  #   source-provider <--[src]-- image-builder <--[img]--- config-provider      deployer
-  #     GitRepository               Image                    ConfigMap     <----- App
+  #   source-provider <--[src]-- image-builder <--[img]--- config-provider
+  #     GitRepository               Image                    ConfigMap
   #
-  #
+  #                                                                                           deployer
+  #                                                                        <--[configmap]---    App
+  #                                                                                          git-writer
+  #                                                                        <--[configmap]--- Git Commit
   components:
     - name: source-provider
       templateRef:

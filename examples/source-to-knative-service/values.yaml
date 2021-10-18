@@ -19,5 +19,9 @@ registry:
   server: https://index.docker.io/v1/
   username: projectcartographer
   password: a-very-hard-to-guess-password
-base64_encoded_ssh_key: a-key
-base64_encoded_github_host: a-host
+git_writer:
+  message: "Update app configuration"
+  ssh_user: git
+  server: github.com
+  repository: example/example.git
+  base64_encoded_ssh_key: a-key
