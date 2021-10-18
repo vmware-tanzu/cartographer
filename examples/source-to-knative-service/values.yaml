@@ -25,3 +25,4 @@ git_writer:
   server: github.com
   repository: example/example.git
   base64_encoded_ssh_key: a-key
+  base64_encoded_known_hosts: a-host

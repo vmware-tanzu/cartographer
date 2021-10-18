@@ -207,7 +207,7 @@ spec:
     - name: git_writer_branch
       default: main
     - name: git_writer_skip_host_checking
-      default: true
+      default: false
     - name: git_writer_ssh_variant
       default: ssh
   template:
