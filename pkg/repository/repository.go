@@ -58,25 +58,21 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 }
 
 func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
-	unstructuredList, err := r.ListUnstructured(obj)
+	persistedName := r.rc.GetPersistedObjectName(obj)
+	existingUnstructured, err := r.GetUnstructured(obj, persistedName)
 	if err != nil {
 		return err
 	}
 
-	cacheHit := r.rc.UnchangedSinceCached(obj, unstructuredList)
+	cacheHit := r.rc.UnchangedSinceCached(obj, existingUnstructured)
 	if cacheHit != nil {
 		r.rc.Refresh(obj.DeepCopy())
 		*obj = *cacheHit
 		return nil
 	}
 
-	var outdatedObject *unstructured.Unstructured
-	if allowUpdate {
-		outdatedObject = getOutdatedUnstructuredByName(obj, unstructuredList)
-	}
-
-	if outdatedObject != nil {
-		return r.patchUnstructured(outdatedObject, obj)
+	if existingUnstructured != nil {
+		return r.patchUnstructured(existingUnstructured, obj)
 	} else {
 		return r.createUnstructured(obj)
 	}
@@ -89,6 +85,21 @@ func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates
 		}
 	}
 	return nil
+}
+
+func (r *repository) GetUnstructured(obj *unstructured.Unstructured, persistedName string) (*unstructured.Unstructured, error) {
+	existingUnstructured := unstructured.Unstructured{}
+	existingUnstructured.SetGroupVersionKind(obj.GroupVersionKind())
+
+	err := r.cl.Get(context.TODO(), client.ObjectKey{
+		Name:      persistedName,
+		Namespace: obj.GetNamespace(),
+	}, &existingUnstructured)
+	if err != nil && !api_errors.IsNotFound(err) {
+		return nil, fmt.Errorf("get unstructured: %w", err)
+	}
+
+	return &existingUnstructured, err
 }
 
 func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
