@@ -300,7 +300,7 @@ install_tekton_git_cli_task() {
 }
 
 setup_example() {
-        echo $RANDOM | base64 > hack/git_message
+        echo "Some peturbation: $(echo $RANDOM | base64)" > hack/git_message
 
         ytt --ignore-unknown-comments \
                 -f "$DIR/../examples/source-to-knative-service" \
@@ -328,7 +328,7 @@ test_example() {
         export GIT_SSH_KEY="$(lpass show --notes gitlab-example-writer-token)"
 
         pushd $(mktemp -d)
-              lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 -
+              lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
               git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
               pushd "$GIT_WRITER_REPOSITORY"
                     for i in {15..1}; do
@@ -339,7 +339,7 @@ test_example() {
                                     -l 'serving.knative.dev/configuration=dev' \
                                     -o name)
 
-                            lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 -
+                            lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
                             git pull
                             MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
 
