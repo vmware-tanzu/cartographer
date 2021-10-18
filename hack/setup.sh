@@ -303,7 +303,7 @@ setup_example() {
         echo "Some peturbation: $(echo $RANDOM | base64)" > hack/git_message
 
         ytt --ignore-unknown-comments \
-                -f "$DIR/../examples/source-to-knative-service" \
+                -f "$DIR/../examples/source-to-gitops" \
                 --data-value registry.server="$REGISTRY" \
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
@@ -314,11 +314,20 @@ setup_example() {
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
                 --data-value git_writer.base64_encoded_ssh_key=$(lpass show --notes gitlab-example-writer-token | base64) \
                 --data-value git_writer.base64_encoded_known_hosts=$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64) |
-                kapp deploy --yes -a example -f-
+                kapp deploy --yes -a example-supply -f-
+
+        ytt --ignore-unknown-comments \
+                -f "$DIR/../examples/gitops-to-app" \
+                --data-value git_writer.server="$GIT_WRITER_SERVER" \
+                --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY" \
+                --data-value git_writer.base64_encoded_ssh_key=$(lpass show --notes gitlab-example-writer-token | base64) \
+                --data-value git_writer.base64_encoded_known_hosts=$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64) |
+                kapp deploy --yes -a example-deliver -f-
 }
 
 teardown_example() {
-        kapp delete --yes -a example
+        kapp delete --yes -a example-supply
+        kapp delete --yes -a example-deliver
         rm hack/git_message
 }
 

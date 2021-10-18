@@ -1,0 +1,77 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#@ load("@ytt:data", "data")
+---
+
+#
+#
+# `source` instantiates a GitRepository object, responsible for keeping track
+# of commits made to a git repository, making them available as blobs to
+# further components in the supply chain.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: gitops-source
+spec:
+  urlPath: .status.artifact.url
+  revisionPath: .status.artifact.revision
+
+  template:
+    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    kind: GitRepository
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      interval: 1m
+      url: $(workload.spec.source.git.url)$
+      ref: $(workload.spec.source.git.ref)$
+      secretRef:
+        name: gitops-ssh-secret
+
+---
+#
+#
+# `app-deploy` instantiates a `App` which applies configuration from a ConfigMap.
+#
+# The use of `App` here is important because of how `knative` updates the
+# knative service under the hood to include some extra annotations that _can't_
+# be mutated once applied by knative's controller. As `kapp` is able to be
+# configured to not patch certain features (something `cartographer` can't
+# yet), we're able to bridge that gap with the use of `kapp-ctrl/App`.
+#
+# This template does not directly accept inputs but instead looks for a ConfigMap with name matching that of the Workload.
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: app-deploy
+spec:
+  template:
+    apiVersion: kappctrl.k14s.io/v1alpha1
+    kind: App
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      serviceAccountName: default
+      fetch:
+        - git:
+            url: $(source.url)$
+            ref: $(source.revision)$
+      template:
+        - ytt: {}
+      deploy:
+        - kapp: {}

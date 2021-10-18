@@ -22,13 +22,9 @@ spec:
 
   #
   #
-  #   source-provider <--[src]-- image-builder <--[img]--- config-provider
-  #     GitRepository               Image                    ConfigMap
+  #   source-provider <--[src]-- image-builder <--[img]--- config-provider                    git-writer
+  #     GitRepository               Image                    ConfigMap      <--[configmap]--- Git Commit
   #
-  #                                                                                           deployer
-  #                                                                        <--[configmap]---    App
-  #                                                                                          git-writer
-  #                                                                        <--[configmap]--- Git Commit
   components:
     - name: source-provider
       templateRef:
@@ -58,11 +54,6 @@ spec:
       images:
         - component: image-builder
           name: image
-
-    - name: deployer
-      templateRef:
-        kind: ClusterTemplate
-        name: app-deploy
 
     - name: git-writer
       templateRef:

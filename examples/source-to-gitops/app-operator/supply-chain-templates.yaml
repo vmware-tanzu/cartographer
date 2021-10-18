@@ -153,39 +153,9 @@ spec:
 ---
 #
 #
-# `app-deploy` instantiates a `App` which applies configuration from a ConfigMap.
+# `git-writer` takes the ConfigMap and writes it to git.
 #
-# The use of `App` here is important because of how `knative` updates the
-# knative service under the hood to include some extra annotations that _can't_
-# be mutated once applied by knative's controller. As `kapp` is able to be
-# configured to not patch certain features (something `cartographer` can't
-# yet), we're able to bridge that gap with the use of `kapp-ctrl/App`.
-#
-# This template does not directly accept inputs but instead looks for a ConfigMap with name matching that of the Workload.
-#
-apiVersion: carto.run/v1alpha1
-kind: ClusterTemplate
-metadata:
-  name: app-deploy
-spec:
-  template:
-    apiVersion: kappctrl.k14s.io/v1alpha1
-    kind: App
-    metadata:
-      name: $(workload.metadata.name)$
-    spec:
-      serviceAccountName: default
-      fetch:
-        - inline:
-            pathsFrom:
-              - configMapRef:
-                  name: $(workload.metadata.name)$
-      template:
-        - ytt: {}
-      deploy:
-        - kapp: {}
 
----
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
