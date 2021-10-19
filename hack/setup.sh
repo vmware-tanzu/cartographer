@@ -353,6 +353,9 @@ test_example() {
                             MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
 
                             if [[ -n "$deployed_pods" && "$EXPECTED_GIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
+                                    echo "cleaning up git repo..."
+                                    git reset --hard "$(git log --reverse --pretty=format:"%h" | head -1)"
+                                    git push --force
                                     log 'SUCCEEDED! sweet'
                                     exit 0
                             fi
