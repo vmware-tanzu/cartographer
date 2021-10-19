@@ -56,7 +56,7 @@ type GitRef struct {
 	Commit *string `json:"commit,omitempty"`
 }
 
-type OwnerReference struct {
+type ObjectReference struct {
 	Kind       string `json:"kind,omitempty"`
 	Namespace  string `json:"namespace,omitempty"`
 	Name       string `json:"name,omitempty"`

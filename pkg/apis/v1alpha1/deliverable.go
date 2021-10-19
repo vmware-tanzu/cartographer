@@ -59,7 +59,7 @@ type DeliverableSpec struct {
 type DeliverableStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	DeliveryRef        OwnerReference     `json:"deliveryRef,omitempty"`
+	DeliveryRef        ObjectReference    `json:"deliveryRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

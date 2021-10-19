@@ -38,6 +38,7 @@ type Reconciler struct {
 	conditionManager        conditions.ConditionManager
 	conditionManagerBuilder conditions.ConditionManagerBuilder
 	realizer                realizer.Realizer
+	logger                  logr.Logger
 }
 
 func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizer.Realizer) *Reconciler {
@@ -49,12 +50,10 @@ func NewReconciler(repo repository.Repository, conditionManagerBuilder condition
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx).
+	r.logger = logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
-	ctx = logr.NewContext(ctx, logger)
-	logger.Info("started")
-
-	reconcileCtx := logr.NewContext(ctx, logger)
+	r.logger.Info("started")
+	defer r.logger.Info("finished")
 
 	deliverable, err := r.repo.GetDeliverable(req.Name, req.Namespace)
 	if err != nil || deliverable == nil {
@@ -69,12 +68,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	delivery, err := r.getDeliveriesForDeliverable(deliverable)
 	if err != nil {
-		return r.completeReconciliation(reconcileCtx, deliverable, err)
+		return r.completeReconciliation(deliverable, err)
 	}
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.repo.GetScheme())
 	if err != nil {
-		return r.completeReconciliation(reconcileCtx, deliverable, fmt.Errorf("get object gvk: %w", err))
+		return r.completeReconciliation(deliverable, fmt.Errorf("get object gvk: %w", err))
 	}
 
 	deliverable.Status.DeliveryRef.Kind = deliveryGVK.Kind
@@ -83,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	err = r.checkDeliveryReadiness(delivery)
 	if err != nil {
 		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
-		return r.completeReconciliation(reconcileCtx, deliverable, err)
+		return r.completeReconciliation(deliverable, err)
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
@@ -103,17 +102,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 		}
 
-		return r.completeReconciliation(reconcileCtx, deliverable, err)
+		return r.completeReconciliation(deliverable, err)
 	}
 
 	r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 
-	return r.completeReconciliation(reconcileCtx, deliverable, nil)
+	return r.completeReconciliation(deliverable, nil)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx)
-
+func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
@@ -122,15 +119,12 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1
 		deliverable.Status.ObservedGeneration = deliverable.Generation
 		updateErr = r.repo.StatusUpdate(deliverable)
 		if updateErr != nil {
-			logger.Error(updateErr, "update error")
+			r.logger.Error(updateErr, "update error")
 			if err == nil {
-				logger.Info("finished")
 				return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
 			}
 		}
 	}
-
-	logger.Info("finished")
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -167,15 +161,17 @@ func (r *Reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverab
 	}
 
 	deliveries, err := r.repo.GetDeliveriesForDeliverable(deliverable)
-	if err != nil || len(deliveries) == 0 {
+	if err != nil {
 		r.conditionManager.AddPositive(DeliveryNotFoundCondition(deliverable.Labels))
+		return nil, fmt.Errorf("get delivery by label: %w", err)
+	}
 
-		if err != nil {
-			return nil, fmt.Errorf("get delivery by label: %w", err)
-		} else {
-			return nil, fmt.Errorf("no delivery found where full selector is satisfied by labels: %v", deliverable.Labels)
-		}
-	} else if len(deliveries) > 1 {
+	if len(deliveries) == 0 {
+		r.conditionManager.AddPositive(DeliveryNotFoundCondition(deliverable.Labels))
+		return nil, fmt.Errorf("no delivery found where full selector is satisfied by labels: %v", deliverable.Labels)
+	}
+
+	if len(deliveries) > 1 {
 		r.conditionManager.AddPositive(TooManyDeliveryMatchesCondition())
 		return nil, fmt.Errorf("too many deliveries match the deliverable selector label")
 	}
