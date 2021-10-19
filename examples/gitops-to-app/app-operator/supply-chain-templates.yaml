@@ -68,9 +68,8 @@ spec:
     spec:
       serviceAccountName: default
       fetch:
-        - git:
+        - http:
             url: $(source.url)$
-            ref: $(source.revision)$
       template:
         - ytt: {}
       deploy:
