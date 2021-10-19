@@ -22,9 +22,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -442,6 +444,102 @@ spec:
 				})
 			})
 		})
+
+		Context("GetDeliveryClusterTemplate", func() {
+			Context("when the template reference kind is not in our gvk", func() {
+				It("returns a helpful error", func() {
+					reference := v1alpha1.DeliveryClusterTemplateReference{
+						Kind: "some-unsupported-kind",
+					}
+					_, err := repo.GetDeliveryClusterTemplate(reference)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get api template:"))
+				})
+			})
+
+			Context("when the client returns an error on the get", func() {
+				BeforeEach(func() {
+					cl.GetReturns(errors.New("some bad get error"))
+				})
+				It("returns a helpful error", func() {
+					reference := v1alpha1.DeliveryClusterTemplateReference{
+						Kind: "ClusterImageTemplate",
+						Name: "image-template",
+					}
+					_, err := repo.GetDeliveryClusterTemplate(reference)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get:"))
+				})
+			})
+		})
+
+		Describe("GetClusterDelivery", func() {
+			Context("api errors on get", func() {
+				var apiError error
+				BeforeEach(func() {
+					apiError = errors.New("my error")
+					cl.GetReturns(apiError)
+				})
+				It("returns the error", func() {
+					_, err := repo.GetDelivery("my-delivery")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(apiError.Error()))
+				})
+			})
+
+			Context("no matching cluster delivery", func() {
+				var apiError error
+				BeforeEach(func() {
+					apiError = kerrors.NewNotFound(
+						schema.GroupResource{
+							Group:    "carto.io/v1alpha1",
+							Resource: "ClusterDelivery",
+						},
+						"my-delivery",
+					)
+					cl.GetReturns(apiError)
+				})
+				It("returns a nil result without error", func() {
+					delivery, err := repo.GetDelivery("my-delivery")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(delivery).To(BeNil())
+				})
+			})
+
+			Context("one matching delivery", func() {
+				var apiDelivery *v1alpha1.ClusterDelivery
+
+				BeforeEach(func() {
+					apiDelivery = &v1alpha1.ClusterDelivery{}
+					//nolint:staticcheck,ineffassign
+					cl.GetStub = func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+						obj = apiDelivery
+						return nil
+					}
+				})
+
+				It("asks for the delivery by name", func() {
+					_, err := repo.GetDelivery("my-delivery")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(cl.GetCallCount()).To(Equal(1))
+					_, key, _ := cl.GetArgsForCall(0)
+					Expect(key).To(Equal(client.ObjectKey{
+						Name:      "my-delivery",
+						Namespace: "",
+					}))
+				})
+
+				It("returns the delivery without error", func() {
+					delivery, err := repo.GetDelivery("my-delivery")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(delivery).To(Equal(apiDelivery))
+				})
+			})
+
+		})
+
 	})
 
 	Describe("tests using apiMachinery fake client", func() {
@@ -481,6 +579,27 @@ spec:
 					Name: "some-name",
 				}
 				template, err := repo.GetClusterTemplate(templateRef)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(template.GetName()).To(Equal("some-name"))
+			})
+		})
+
+		Context("GetDeliveryClusterTemplate", func() {
+			BeforeEach(func() {
+				template := &v1alpha1.ClusterSourceTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-name",
+					},
+				}
+				clientObjects = []client.Object{template}
+			})
+
+			It("gets the template successfully", func() {
+				templateRef := v1alpha1.DeliveryClusterTemplateReference{
+					Kind: "ClusterSourceTemplate",
+					Name: "some-name",
+				}
+				template, err := repo.GetDeliveryClusterTemplate(templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})

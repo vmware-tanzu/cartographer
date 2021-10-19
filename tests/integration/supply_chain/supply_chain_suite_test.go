@@ -16,9 +16,7 @@ package supply_chain_test
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +28,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -40,9 +37,10 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
+	"github.com/vmware-tanzu/cartographer/tests/helpers"
 )
 
-func TestWebhookIntegration(t *testing.T) {
+func TestSupplyChainIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Supply Chain Integration Suite")
 }
@@ -84,7 +82,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// get a kubeconfig
-	kubeConfigFile, err := generateConfigFile(testEnv)
+	kubeConfigFile, err := helpers.GenerateConfigFile(testEnv)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = os.Setenv("KUBECONFIG", kubeConfigFile)
@@ -135,7 +133,7 @@ var _ = BeforeSuite(func() {
 
 var _ = BeforeEach(func() {
 	testNS = names.SimpleNameGenerator.GenerateName("testns-")
-	err := ensureNamespace(testNS, c)
+	err := helpers.EnsureNamespace(testNS, c)
 	Expect(err).ToNot(HaveOccurred())
 })
 
@@ -159,46 +157,3 @@ var _ = AfterSuite(func() {
 
 	gexec.CleanupBuildArtifacts()
 })
-
-func generateConfigFile(env *envtest.Environment) (string, error) {
-	user, err := env.ControlPlane.AddUser(envtest.User{
-		Name:   "envtest-admin",
-		Groups: []string{"system:masters"},
-	}, nil)
-	if err != nil {
-		return "", fmt.Errorf("add user: %w", err)
-	}
-
-	kubeconfigFile, err := ioutil.TempFile("", "cartographer-integration-test-kubeconfig-")
-	if err != nil {
-		return "", fmt.Errorf("tempfile: %w", err)
-	}
-
-	kubeConfig, err := user.KubeConfig()
-	if err != nil {
-		return "", fmt.Errorf("kubeconfig: %w", err)
-	}
-
-	if _, err := kubeconfigFile.Write(kubeConfig); err != nil {
-		return "", fmt.Errorf("write kubeconfig: %w", err)
-	}
-
-	return kubeconfigFile.Name(), nil
-}
-
-func ensureNamespace(namespace string, client client.Client) error {
-	ns := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Namespace",
-			APIVersion: "v1",
-		},
-	}
-	err := client.Create(context.TODO(), &ns)
-	if errors.IsAlreadyExists(err) {
-		return nil
-	}
-	return err
-}

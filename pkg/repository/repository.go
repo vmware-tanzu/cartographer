@@ -35,6 +35,7 @@ import (
 type Repository interface {
 	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
+	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error)
 	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.RunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
@@ -43,6 +44,7 @@ type Repository interface {
 	GetScheme() *runtime.Scheme
 	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error)
 	ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 }
 
 type repository struct {
@@ -55,6 +57,26 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 		rc: repoCache,
 		cl: client,
 	}
+}
+
+func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error) {
+	delivery := &v1alpha1.ClusterDelivery{}
+
+	key := client.ObjectKey{
+		Name: name,
+	}
+
+	err := r.cl.Get(context.TODO(), key, delivery)
+
+	if err != nil && !api_errors.IsNotFound(err) {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
+	if api_errors.IsNotFound(err) {
+		return nil, nil
+	}
+
+	return delivery, nil
 }
 
 func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
@@ -133,6 +155,27 @@ func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (
 	return template, nil
 }
 
+func (r *repository) GetDeliveryClusterTemplate(ref v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error) {
+	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("get api template: %w", err)
+	}
+
+	err = r.cl.Get(context.TODO(), client.ObjectKey{
+		Name: ref.Name,
+	}, apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("new model from api: %w", err)
+	}
+
+	return template, nil
+}
+
 func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.RunTemplate, error) {
 
 	runTemplate := &v1alpha1.RunTemplate{}
@@ -165,6 +208,7 @@ func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
 
 func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
 	submitted := obj.DeepCopy()
+	// FIXME: I'm untested. What am I for? Patch doesn't block on RV's (is this a historical artifact of .Update?)
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.cl.Patch(context.TODO(), obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)

@@ -92,7 +92,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	statusUpdateError := r.repository.StatusUpdate(pipeline)
 	if statusUpdateError != nil {
-		logger.Info("finished")
 		return ctrl.Result{}, fmt.Errorf("update pipeline status: %w", statusUpdateError)
 	}
 

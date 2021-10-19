@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pipeline_service_test
+package delivery_test
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,12 +38,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
-	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
-func TestPipelineIntegration(t *testing.T) {
+func TestDeliveryIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Pipeline Service Integration Suite")
+	RunSpecs(t, "Delivery Integration Suite")
 }
 
 var (
@@ -65,13 +65,7 @@ var _ = BeforeSuite(func() {
 
 	// start kube-apiserver and etcd
 	testEnv = &envtest.Environment{
-		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
-		},
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "config", "crd", "bases"),
-			filepath.Join("..", "..", "resources", "crds"),
-		},
+		CRDDirectoryPaths:        []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
 	}
 
@@ -114,7 +108,7 @@ var _ = BeforeSuite(func() {
 	// Can take a long time to start serving
 	// FIXME: use a real health check, not log line detection
 
-	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("serving webhook server"))
+	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("Starting Controller"))
 	time.Sleep(200 * time.Millisecond)
 
 	// --- create client
@@ -125,7 +119,7 @@ var _ = BeforeSuite(func() {
 	err = corev1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = resources.AddToScheme(scheme)
+	err = batchv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	c, err = client.New(apiConfig, client.Options{
