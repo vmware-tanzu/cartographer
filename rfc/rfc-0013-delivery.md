@@ -315,7 +315,7 @@ spec:
     - name: integration-tester
       templateRef:
         kind: ClusterDeliveryTemplate
-        name: tekton-testing-pipeline
+        name: tekton-integration-tests
       deployment:
         resource: deployer
     - name: performance-tester
