@@ -14,9 +14,9 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: RunTemplate
+kind: ClusterRunTemplate
 metadata:
-  name: my-run-template-inputs
+  name: my-run-template-driven-by-supply-chain
 spec:
   template:
     apiVersion: test.run/v1alpha1

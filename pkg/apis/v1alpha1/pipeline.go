@@ -73,8 +73,7 @@ type ResourceType struct {
 type TemplateReference struct {
 	Kind string `json:"kind,omitempty"`
 	// +kubebuilder:validation:MinLength=1
-	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
+	Name string `json:"name"`
 }
 
 // +kubebuilder:object:root=true

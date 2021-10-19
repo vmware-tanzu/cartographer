@@ -20,7 +20,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-// -- RunTemplate conditions
+// -- ClusterRunTemplate conditions
 
 func RunTemplateReadyCondition() *metav1.Condition {
 	return &metav1.Condition{

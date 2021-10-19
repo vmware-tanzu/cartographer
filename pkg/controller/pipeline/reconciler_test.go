@@ -85,9 +85,8 @@ var _ = Describe("Reconcile", func() {
 				},
 				Spec: v1alpha1.PipelineSpec{
 					RunTemplateRef: v1alpha1.TemplateReference{
-						Kind:      "RunTemplateRef",
-						Name:      "my-run-template",
-						Namespace: "ns1",
+						Kind: "RunTemplateRef",
+						Name: "my-run-template",
 					},
 				},
 			}, nil)

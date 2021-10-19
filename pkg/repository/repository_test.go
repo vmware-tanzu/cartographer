@@ -608,40 +608,26 @@ spec:
 		Context("GetRunTemplate", func() {
 			BeforeEach(func() {
 				clientObjects = []client.Object{
-					&v1alpha1.RunTemplate{
+					&v1alpha1.ClusterRunTemplate{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "first-template",
-							Namespace: "ns1",
+							Name: "first-template",
 						},
 					},
-					&v1alpha1.RunTemplate{
+					&v1alpha1.ClusterRunTemplate{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "second-template",
-							Namespace: "ns2",
+							Name: "second-template",
 						},
 					}}
 			})
 
 			It("gets the template successfully", func() {
 				templateRef := v1alpha1.TemplateReference{
-					Kind:      "RunTemplate",
-					Name:      "second-template",
-					Namespace: "ns2",
+					Kind: "ClusterRunTemplate",
+					Name: "second-template",
 				}
 				template, err := repo.GetRunTemplate(templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("second-template"))
-			})
-
-			It("finds nothing with a mismatched namespace", func() {
-				templateRef := v1alpha1.TemplateReference{
-					Kind:      "RunTemplate",
-					Name:      "second-template",
-					Namespace: "ns1",
-				}
-				_, err := repo.GetRunTemplate(templateRef)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("not found"))
 			})
 		})
 

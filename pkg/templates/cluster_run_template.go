@@ -28,14 +28,14 @@ import (
 
 type Outputs map[string]apiextensionsv1.JSON
 
-type RunTemplate interface {
+type ClusterRunTemplate interface {
 	GetName() string
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, error)
 }
 
 type runTemplate struct {
-	template *v1alpha1.RunTemplate
+	template *v1alpha1.ClusterRunTemplate
 }
 
 func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, error) {
@@ -130,7 +130,7 @@ func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedO
 	return objectErr, provisionalOutputs
 }
 
-func NewRunTemplateModel(template *v1alpha1.RunTemplate) RunTemplate {
+func NewRunTemplateModel(template *v1alpha1.ClusterRunTemplate) ClusterRunTemplate {
 	return &runTemplate{template: template}
 }
 

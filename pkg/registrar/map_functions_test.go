@@ -183,7 +183,7 @@ var _ = Describe("MapFunctions", func() {
 			fakeClientBuilder = fake.NewClientBuilder()
 			fakeLogger = &registrarfakes.FakeLogger{}
 
-			runTemplate = &v1alpha1.RunTemplate{
+			runTemplate = &v1alpha1.ClusterRunTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "match",
 					Namespace: "match",
@@ -245,8 +245,7 @@ var _ = Describe("MapFunctions", func() {
 					Context("with a templateRef that specifies a namespace", func() {
 						BeforeEach(func() {
 							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
-								Name:      "match",
-								Namespace: "match",
+								Name: "match",
 							}
 							clientObjects = []client.Object{pipeline}
 						})
@@ -302,39 +301,11 @@ var _ = Describe("MapFunctions", func() {
 						})
 					})
 
-					Context("because the namespace in the templateRef is different", func() {
-						BeforeEach(func() {
-							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
-								Name:      "match",
-								Namespace: "some-namespace",
-							}
-							clientObjects = []client.Object{pipeline}
-						})
-
-						It("returns an empty list of requests", func() {
-							Expect(result).To(BeEmpty())
-						})
-					})
-
-					Context("because the templateRef does not specify a namespace and the pipeline is in a different namespace from the runTemplate", func() {
-						BeforeEach(func() {
-							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
-								Name: "match",
-							}
-							clientObjects = []client.Object{pipeline}
-						})
-
-						It("returns an empty list of requests", func() {
-							Expect(result).To(BeEmpty())
-						})
-					})
-
 					Context("because the templateRef is the wrong Kind", func() {
 						BeforeEach(func() {
 							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
-								Name:      "match",
-								Namespace: "match",
-								Kind:      "some-kind",
+								Name: "match",
+								Kind: "some-kind",
 							}
 							clientObjects = []client.Object{pipeline}
 						})

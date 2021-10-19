@@ -56,12 +56,12 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 		return *testStatusCondition, err
 	}
 
-	Describe("when a RunTemplate that produces a Resource leverages a Pipeline field", func() {
+	Describe("when a ClusterRunTemplate that produces a Resource leverages a Pipeline field", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
 				---
 				apiVersion: carto.run/v1alpha1
-				kind: RunTemplate
+				kind: ClusterRunTemplate
 				metadata:
 				  namespace: %s
 				  name: my-run-template
@@ -113,7 +113,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
-					    kind: RunTemplate
+					    kind: ClusterRunTemplate
 					  inputs:
 					    key: val
 					`,
@@ -180,7 +180,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 				})
 			})
 
-			Context("and the RunTemplate object is updated", func() {
+			Context("and the ClusterRunTemplate object is updated", func() {
 				It("creates a second object alongside the first", func() {
 					resourceList := &v1.ResourceQuotaList{}
 
@@ -236,7 +236,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  runTemplateRef: 
 					    name: my-run-template-does-not-match
 					    namespace: %s
-					    kind: RunTemplate
+					    kind: ClusterRunTemplate
 					`,
 					testNS, testNS)
 
@@ -264,12 +264,12 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 		})
 	})
 
-	Describe("A RunTemplate that selects for outputs that are eventually available", func() {
+	Describe("A ClusterRunTemplate that selects for outputs that are eventually available", func() {
 		BeforeEach(func() {
 			runTemplateYaml := HereYamlF(`
 				---
 				apiVersion: carto.run/v1alpha1
-				kind: RunTemplate
+				kind: ClusterRunTemplate
 				metadata:
 				  namespace: %s
 				  name: my-run-template
@@ -306,7 +306,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
-					    kind: RunTemplate
+					    kind: ClusterRunTemplate
 					`,
 				testNS, testNS)
 
@@ -431,7 +431,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
-					    kind: RunTemplate
+					    kind: ClusterRunTemplate
 					`,
 				testNS, testNS)
 
@@ -445,7 +445,7 @@ var _ = Describe("Stamping a resource on Pipeline Creation", func() {
 			runTemplateYaml := HereYamlF(`
 				---
 				apiVersion: carto.run/v1alpha1
-				kind: RunTemplate
+				kind: ClusterRunTemplate
 				metadata:
 				  namespace: %s
 				  name: my-run-template

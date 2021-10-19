@@ -467,7 +467,7 @@ spec:
 PipelineRun - Tests
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: RunTemplate
+kind: ClusterRunTemplate
 metadata:
   name: default-tekton-source-provider
 spec:

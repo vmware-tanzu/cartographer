@@ -71,7 +71,7 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 func (mapper *Mapper) RunTemplateToPipelineRequests(object client.Object) []reconcile.Request {
 	var err error
 
-	runTemplate, ok := object.(*v1alpha1.RunTemplate)
+	runTemplate, ok := object.(*v1alpha1.ClusterRunTemplate)
 	if !ok {
 		mapper.Logger.Error(nil, "run template to pipeline requests: cast to run template failed")
 		return nil
@@ -87,7 +87,8 @@ func (mapper *Mapper) RunTemplateToPipelineRequests(object client.Object) []reco
 
 	var requests []reconcile.Request
 	for _, pipeline := range list.Items {
-		if runTemplateRefMatch(pipeline.Spec.RunTemplateRef, pipeline.Namespace, runTemplate) {
+
+		if runTemplateRefMatch(pipeline.Spec.RunTemplateRef, runTemplate) {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      pipeline.Name,
@@ -100,19 +101,10 @@ func (mapper *Mapper) RunTemplateToPipelineRequests(object client.Object) []reco
 	return requests
 }
 
-func runTemplateRefMatch(ref v1alpha1.TemplateReference, pipelineNamespace string, runTemplate *v1alpha1.RunTemplate) bool {
+func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.ClusterRunTemplate) bool {
 	if ref.Name != runTemplate.Name {
 		return false
 	}
 
-	if ref.Namespace != runTemplate.Namespace {
-		if ref.Namespace != "" {
-			return false
-		}
-		if pipelineNamespace != runTemplate.Namespace {
-			return false
-		}
-	}
-
-	return ref.Kind == "RunTemplate" || ref.Kind == ""
+	return ref.Kind == "ClusterRunTemplate" || ref.Kind == ""
 }

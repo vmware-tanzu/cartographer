@@ -175,7 +175,7 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 	}
 
 	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.RunTemplate{}},
+		&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
 		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToPipelineRequests),
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)

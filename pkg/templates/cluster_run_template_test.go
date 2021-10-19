@@ -27,16 +27,16 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("RunTemplate", func() {
+var _ = Describe("ClusterRunTemplate", func() {
 	Describe("GetOutput", func() {
 		var (
-			apiTemplate                                                         *v1alpha1.RunTemplate
+			apiTemplate                                                         *v1alpha1.ClusterRunTemplate
 			firstStampedObject, secondStampedObject, unconditionedStampedObject *unstructured.Unstructured
 			stampedObjects                                                      []*unstructured.Unstructured
 		)
 
 		BeforeEach(func() {
-			apiTemplate = &v1alpha1.RunTemplate{}
+			apiTemplate = &v1alpha1.ClusterRunTemplate{}
 
 			firstStampedObject = &unstructured.Unstructured{}
 			firstStampedObjectManifest := utils.HereYamlF(`
