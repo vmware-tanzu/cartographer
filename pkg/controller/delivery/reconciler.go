@@ -26,7 +26,6 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 

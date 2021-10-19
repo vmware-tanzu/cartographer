@@ -17,18 +17,18 @@ package helpers
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func EnsureNamespace(namespace string, client client.Client) error {
-	ns := v1.Namespace{
-		ObjectMeta: v12.ObjectMeta{
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
-		TypeMeta: v12.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
 			APIVersion: "v1",
 		},

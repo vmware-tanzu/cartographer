@@ -53,8 +53,8 @@ var _ = Describe("Deliveries", func() {
 			      resources:
 			        - name: my-first-resource
 					  templateRef:
-						kind: ClusterSourceTemplate
-						name: my-source-template
+				        kind: ClusterSourceTemplate
+				        name: my-source-template
 			`)
 
 			delivery = &unstructured.Unstructured{}
@@ -71,22 +71,22 @@ var _ = Describe("Deliveries", func() {
 		Context("the referenced resource exists", func() {
 			BeforeEach(func() {
 				clusterSourceTemplateYaml := utils.HereYaml(`
-                  ---
-				  apiVersion: carto.run/v1alpha1
-				  kind: ClusterSourceTemplate
-				  metadata:
-				    name: my-source-template
-				  spec:
-                    urlPath: .spec.value.foo
-                    revisionPath: .spec.value.foo
-			        template:
-			          apiVersion: test.run/v1alpha1
-                      kind: Test
-                      metadata:
-                        name: test-deliverable-source
-                      spec:
-                        value:
-				  		  foo: bar
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: ClusterSourceTemplate
+					metadata:
+					  name: my-source-template
+					spec:
+					  urlPath: .spec.value.foo
+					  revisionPath: .spec.value.foo
+					  template:
+					    apiVersion: test.run/v1alpha1
+					    kind: Test
+					    metadata:
+					      name: test-deliverable-source
+					    spec:
+					      value:
+					        foo: bar
 			    `)
 
 				clusterSourceTemplate := &unstructured.Unstructured{}

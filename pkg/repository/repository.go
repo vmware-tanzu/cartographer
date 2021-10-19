@@ -67,11 +67,16 @@ func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 	}
 
 	err := r.cl.Get(context.TODO(), key, delivery)
-	if err != nil && api_errors.IsNotFound(err) {
+
+	if err != nil && !api_errors.IsNotFound(err) {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
+	if api_errors.IsNotFound(err) {
 		return nil, nil
 	}
 
-	return delivery, err
+	return delivery, nil
 }
 
 func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {

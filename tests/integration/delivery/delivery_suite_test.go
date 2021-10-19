@@ -35,10 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/vmware-tanzu/cartographer/tests/helpers"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
+	"github.com/vmware-tanzu/cartographer/tests/helpers"
 )
 
 func TestDeliveryIntegration(t *testing.T) {

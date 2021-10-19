@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -483,14 +483,14 @@ spec:
 				It("returns the error", func() {
 					_, err := repo.GetDelivery("my-delivery")
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(Equal(apiError))
+					Expect(err.Error()).To(ContainSubstring(apiError.Error()))
 				})
 			})
 
 			Context("no matching cluster delivery", func() {
 				var apiError error
 				BeforeEach(func() {
-					apiError = apierrors.NewNotFound(
+					apiError = kerrors.NewNotFound(
 						schema.GroupResource{
 							Group:    "carto.io/v1alpha1",
 							Resource: "ClusterDelivery",
