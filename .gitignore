@@ -14,4 +14,4 @@ kubeconfig
 
 hack/gitea-key
 hack/gitea-key.pub
-hack/git_message
+hack/git_entropy

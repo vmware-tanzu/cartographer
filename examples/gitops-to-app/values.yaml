@@ -15,6 +15,8 @@
 #@data/values
 ---
 git_writer:
-  message: "Update app configuration"
   server: github.com
   repository: example/example
+  branch: main
+  base64_encoded_ssh_key: a-key
+  base64_encoded_known_hosts: a-host

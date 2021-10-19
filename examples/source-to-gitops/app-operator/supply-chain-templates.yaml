@@ -175,7 +175,7 @@ spec:
     - name: git_writer_repository
       default: #@ data.values.git_writer.repository
     - name: git_writer_branch
-      default: main
+      default: #@ data.values.git_writer.branch
     - name: git_writer_skip_host_checking
       default: false
     - name: git_writer_ssh_variant

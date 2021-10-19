@@ -71,6 +71,7 @@ spec:
           value: |
             export CONFIG_MAP_FIELD=$(pipeline.spec.inputs.input_config_map_field)$
             export COMMIT_MESSAGE="$(pipeline.spec.inputs.commit_message)$"
+            export BRANCH="$(pipeline.spec.inputs.branch)$"
             if [[ -n "$(pipeline.spec.inputs.skip_host_checking)$" && "$(pipeline.spec.inputs.skip_host_checking)$" = true ]]
             then
               export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
@@ -81,10 +82,11 @@ spec:
             fi
             git init
             git remote add origin $(pipeline.spec.inputs.git_ssh_user)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_repository)$
-            git pull origin $(pipeline.spec.inputs.branch)$
-            git checkout $(pipeline.spec.inputs.branch)$
+            git pull origin "`git remote show origin | grep "HEAD branch" | sed 's/.*: //'`"
+            git branch "$BRANCH" || true
+            git checkout "$BRANCH"
             export INPUT_PATH=$(workspaces.input.path)
             cp "$INPUT_PATH"/"$CONFIG_MAP_FIELD" .
             git add .
             git commit --allow-empty -m "$COMMIT_MESSAGE"
-            git push
+            git push --set-upstream origin "$BRANCH"

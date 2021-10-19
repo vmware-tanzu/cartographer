@@ -300,7 +300,8 @@ install_tekton_git_cli_task() {
 }
 
 setup_example() {
-        echo "Some peturbation: $(echo $RANDOM | base64)" > hack/git_message
+        touch hack/git_entropy
+        echo $RANDOM | base64 > hack/git_entropy
 
         ytt --ignore-unknown-comments \
                 -f "$DIR/../examples/source-to-gitops" \
@@ -308,10 +309,11 @@ setup_example() {
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-" \
-                --data-value git_writer.message="$(cat hack/git_message)" \
+                --data-value git_writer.message="Some peturbation: $(cat hack/git_entropy)" \
                 --data-value git_writer.ssh_user="$GIT_WRITER_SSH_USER" \
                 --data-value git_writer.server="$GIT_WRITER_SERVER" \
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
+                --data-value git_writer.branch="$(cat hack/git_entropy)" \
                 --data-value git_writer.base64_encoded_ssh_key="$(lpass show --notes gitlab-example-writer-token | base64)" \
                 --data-value git_writer.base64_encoded_known_hosts="$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64)" |
                 kapp deploy --yes -a example-supply -f-
@@ -320,6 +322,7 @@ setup_example() {
                 -f "$DIR/../examples/gitops-to-app" \
                 --data-value git_writer.server="$GIT_WRITER_SERVER" \
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY" \
+                --data-value git_writer.branch="$(cat hack/git_entropy)" \
                 --data-value git_writer.base64_encoded_ssh_key="$(lpass show --notes gitlab-example-writer-token | base64)" \
                 --data-value git_writer.base64_encoded_known_hosts="$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64)" |
                 kapp deploy --yes -a example-deliver -f-
@@ -328,19 +331,22 @@ setup_example() {
 teardown_example() {
         kapp delete --yes -a example-supply
         kapp delete --yes -a example-deliver
-        rm hack/git_message
+        rm hack/git_entropy
 }
 
 test_example() {
         log "testing"
 
-        EXPECTED_GIT_MESSAGE="$(cat hack/git_message)"
+        GIT_ENTROPY="$(cat hack/git_entropy)"
+        BRANCH="$GIT_ENTROPY"
+
+        EXPECTED_GIT_MESSAGE="Some peturbation: $GIT_ENTROPY"
 
         pushd "$(mktemp -d)"
               lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
               git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
               pushd "$GIT_WRITER_REPOSITORY"
-                    for i in {15..1}; do
+                    for i in {20..1}; do
                             echo "- attempt $i"
 
                             local deployed_pods
@@ -349,13 +355,13 @@ test_example() {
                                     -o name)
 
                             lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
-                            git pull
+                            git pull > /dev/null 2> /dev/null
+                            git checkout "$BRANCH" > /dev/null 2> /dev/null || continue
                             MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
 
                             if [[ -n "$deployed_pods" && "$EXPECTED_GIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
-                                    echo "cleaning up git repo..."
-                                    git reset --hard "$(git log --reverse --pretty=format:"%h" | head -1)"
-                                    git push --force
+                                    echo "looks good; cleaning up git repo..."
+                                    git push -d origin "$BRANCH"
                                     log 'SUCCEEDED! sweet'
                                     exit 0
                             fi

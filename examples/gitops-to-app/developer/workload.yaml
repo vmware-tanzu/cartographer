@@ -25,4 +25,4 @@ spec:
     git:
       url: #@ "ssh://git@" + data.values.git_writer.server + "/" + data.values.git_writer.repository
       ref:
-        branch: main
+        branch: #@ data.values.git_writer.branch
