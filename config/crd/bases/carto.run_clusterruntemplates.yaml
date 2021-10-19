@@ -20,15 +20,15 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: runtemplates.carto.run
+  name: clusterruntemplates.carto.run
 spec:
   group: carto.run
   names:
-    kind: RunTemplate
-    listKind: RunTemplateList
-    plural: runtemplates
-    singular: runtemplate
-  scope: Namespaced
+    kind: ClusterRunTemplate
+    listKind: ClusterRunTemplateList
+    plural: clusterruntemplates
+    singular: clusterruntemplate
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:

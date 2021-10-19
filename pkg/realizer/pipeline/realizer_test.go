@@ -58,15 +58,14 @@ var _ = Describe("Realizer", func() {
 		pipeline = &v1alpha1.Pipeline{
 			Spec: v1alpha1.PipelineSpec{
 				RunTemplateRef: v1alpha1.TemplateReference{
-					Kind:      "RunTemplate",
-					Name:      "my-template",
-					Namespace: "some-ns",
+					Kind: "ClusterRunTemplate",
+					Name: "my-template",
 				},
 			},
 		}
 	})
 
-	Context("with a valid RunTemplate", func() {
+	Context("with a valid ClusterRunTemplate", func() {
 		BeforeEach(func() {
 			testObj := resources.Test{
 				TypeMeta: metav1.TypeMeta{
@@ -93,8 +92,8 @@ var _ = Describe("Realizer", func() {
 			dbytes, err := json.Marshal(testObj)
 			Expect(err).ToNot(HaveOccurred())
 
-			var templateAPI = &v1alpha1.RunTemplate{
-				Spec: v1alpha1.RunTemplateSpec{
+			var templateAPI = &v1alpha1.ClusterRunTemplate{
+				Spec: v1alpha1.ClusterRunTemplateSpec{
 					Outputs: map[string]string{
 						"myout": "spec.foo",
 					},
@@ -122,7 +121,7 @@ var _ = Describe("Realizer", func() {
 			Expect(repository.GetRunTemplateCallCount()).To(Equal(1))
 			Expect(repository.GetRunTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
 				Fields{
-					"Kind": Equal("RunTemplate"),
+					"Kind": Equal("ClusterRunTemplate"),
 					"Name": Equal("my-template"),
 				},
 			))
@@ -364,8 +363,8 @@ var _ = Describe("Realizer", func() {
 
 	Context("with unsatisfied output paths", func() {
 		BeforeEach(func() {
-			templateAPI := &v1alpha1.RunTemplate{
-				Spec: v1alpha1.RunTemplateSpec{
+			templateAPI := &v1alpha1.ClusterRunTemplate{
+				Spec: v1alpha1.ClusterRunTemplateSpec{
 					Outputs: map[string]string{
 						"myout": "data.hasnot",
 					},
@@ -418,10 +417,10 @@ var _ = Describe("Realizer", func() {
 
 	})
 
-	Context("with an invalid RunTemplate", func() {
+	Context("with an invalid ClusterRunTemplate", func() {
 		BeforeEach(func() {
-			templateAPI := &v1alpha1.RunTemplate{
-				Spec: v1alpha1.RunTemplateSpec{
+			templateAPI := &v1alpha1.ClusterRunTemplate{
+				Spec: v1alpha1.ClusterRunTemplateSpec{
 					Template: runtime.RawExtension{},
 				},
 			}
@@ -451,16 +450,15 @@ var _ = Describe("Realizer", func() {
 
 	})
 
-	Context("the RunTemplate cannot be fetched", func() {
+	Context("the ClusterRunTemplate cannot be fetched", func() {
 		BeforeEach(func() {
 			repository.GetRunTemplateReturns(nil, errors.New("Errol mcErrorFace"))
 
 			pipeline = &v1alpha1.Pipeline{
 				Spec: v1alpha1.PipelineSpec{
 					RunTemplateRef: v1alpha1.TemplateReference{
-						Kind:      "RunTemplate",
-						Name:      "my-template",
-						Namespace: "some-ns",
+						Kind: "ClusterRunTemplate",
+						Name: "my-template",
 					},
 				},
 			}
@@ -469,11 +467,11 @@ var _ = Describe("Realizer", func() {
 		It("logs the error", func() {
 			_, _, _ = rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
-			Expect(out).To(Say(`"msg":"could not get RunTemplate 'my-template'"`))
+			Expect(out).To(Say(`"msg":"could not get ClusterRunTemplate 'my-template'"`))
 			Expect(out).To(Say(`"error":"Errol mcErrorFace"`))
 		})
 
-		It("return the condition for a missing RunTemplate", func() {
+		It("return the condition for a missing ClusterRunTemplate", func() {
 			condition, _, _ := rlzr.Realize(context.TODO(), pipeline, logger, repository)
 
 			Expect(*condition).To(
@@ -481,7 +479,7 @@ var _ = Describe("Realizer", func() {
 					"Type":    Equal("RunTemplateReady"),
 					"Status":  Equal(metav1.ConditionFalse),
 					"Reason":  Equal("RunTemplateNotFound"),
-					"Message": Equal("could not get RunTemplate 'my-template': Errol mcErrorFace"),
+					"Message": Equal("could not get ClusterRunTemplate 'my-template': Errol mcErrorFace"),
 				}),
 			)
 		})

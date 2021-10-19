@@ -53,7 +53,7 @@ spec:
         my-label: this-is-it
     spec:
       runTemplateRef:
-        name: my-run-template-inputs
+        name: my-run-template-driven-by-supply-chain
 
       inputs:
         source-url: $(source.url)$

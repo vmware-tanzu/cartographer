@@ -73,11 +73,11 @@ var _ = Describe("Registrar", func() {
 					"ClusterDelivery",
 					"ClusterDeploymentTemplate",
 					"ClusterImageTemplate",
+					"ClusterRunTemplate",
 					"ClusterSourceTemplate",
 					"ClusterSupplyChain",
 					"ClusterTemplate",
 					"Pipeline",
-					"RunTemplate",
 					"Workload",
 				}
 

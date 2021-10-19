@@ -78,17 +78,17 @@ type FakeRepository struct {
 		result1 *v1alpha1.Pipeline
 		result2 error
 	}
-	GetRunTemplateStub        func(v1alpha1.TemplateReference) (templates.RunTemplate, error)
+	GetRunTemplateStub        func(v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)
 	getRunTemplateMutex       sync.RWMutex
 	getRunTemplateArgsForCall []struct {
 		arg1 v1alpha1.TemplateReference
 	}
 	getRunTemplateReturns struct {
-		result1 templates.RunTemplate
+		result1 templates.ClusterRunTemplate
 		result2 error
 	}
 	getRunTemplateReturnsOnCall map[int]struct {
-		result1 templates.RunTemplate
+		result1 templates.ClusterRunTemplate
 		result2 error
 	}
 	GetSchemeStub        func() *runtime.Scheme
@@ -488,7 +488,7 @@ func (fake *FakeRepository) GetPipelineReturnsOnCall(i int, result1 *v1alpha1.Pi
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetRunTemplate(arg1 v1alpha1.TemplateReference) (templates.RunTemplate, error) {
+func (fake *FakeRepository) GetRunTemplate(arg1 v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error) {
 	fake.getRunTemplateMutex.Lock()
 	ret, specificReturn := fake.getRunTemplateReturnsOnCall[len(fake.getRunTemplateArgsForCall)]
 	fake.getRunTemplateArgsForCall = append(fake.getRunTemplateArgsForCall, struct {
@@ -513,7 +513,7 @@ func (fake *FakeRepository) GetRunTemplateCallCount() int {
 	return len(fake.getRunTemplateArgsForCall)
 }
 
-func (fake *FakeRepository) GetRunTemplateCalls(stub func(v1alpha1.TemplateReference) (templates.RunTemplate, error)) {
+func (fake *FakeRepository) GetRunTemplateCalls(stub func(v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)) {
 	fake.getRunTemplateMutex.Lock()
 	defer fake.getRunTemplateMutex.Unlock()
 	fake.GetRunTemplateStub = stub
@@ -526,28 +526,28 @@ func (fake *FakeRepository) GetRunTemplateArgsForCall(i int) v1alpha1.TemplateRe
 	return argsForCall.arg1
 }
 
-func (fake *FakeRepository) GetRunTemplateReturns(result1 templates.RunTemplate, result2 error) {
+func (fake *FakeRepository) GetRunTemplateReturns(result1 templates.ClusterRunTemplate, result2 error) {
 	fake.getRunTemplateMutex.Lock()
 	defer fake.getRunTemplateMutex.Unlock()
 	fake.GetRunTemplateStub = nil
 	fake.getRunTemplateReturns = struct {
-		result1 templates.RunTemplate
+		result1 templates.ClusterRunTemplate
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetRunTemplateReturnsOnCall(i int, result1 templates.RunTemplate, result2 error) {
+func (fake *FakeRepository) GetRunTemplateReturnsOnCall(i int, result1 templates.ClusterRunTemplate, result2 error) {
 	fake.getRunTemplateMutex.Lock()
 	defer fake.getRunTemplateMutex.Unlock()
 	fake.GetRunTemplateStub = nil
 	if fake.getRunTemplateReturnsOnCall == nil {
 		fake.getRunTemplateReturnsOnCall = make(map[int]struct {
-			result1 templates.RunTemplate
+			result1 templates.ClusterRunTemplate
 			result2 error
 		})
 	}
 	fake.getRunTemplateReturnsOnCall[i] = struct {
-		result1 templates.RunTemplate
+		result1 templates.ClusterRunTemplate
 		result2 error
 	}{result1, result2}
 }

@@ -36,7 +36,7 @@ type Repository interface {
 	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
 	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error)
-	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.RunTemplate, error)
+	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
@@ -176,13 +176,11 @@ func (r *repository) GetDeliveryClusterTemplate(ref v1alpha1.DeliveryClusterTemp
 	return template, nil
 }
 
-func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.RunTemplate, error) {
-
-	runTemplate := &v1alpha1.RunTemplate{}
+func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error) {
+	runTemplate := &v1alpha1.ClusterRunTemplate{}
 
 	err := r.cl.Get(context.TODO(), client.ObjectKey{
-		Name:      ref.Name,
-		Namespace: ref.Namespace,
+		Name: ref.Name,
 	}, runTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)

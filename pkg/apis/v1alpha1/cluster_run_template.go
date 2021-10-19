@@ -24,14 +24,15 @@ import (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
-type RunTemplate struct {
+type ClusterRunTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              RunTemplateSpec `json:"spec"`
+	Spec              ClusterRunTemplateSpec `json:"spec"`
 }
 
-type RunTemplateSpec struct {
+type ClusterRunTemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
 	Outputs  map[string]string    `json:"outputs,omitempty"`
@@ -39,15 +40,15 @@ type RunTemplateSpec struct {
 
 // +kubebuilder:object:root=true
 
-type RunTemplateList struct {
+type ClusterRunTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []RunTemplate `json:"items"`
+	Items           []ClusterRunTemplate `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(
-		&RunTemplate{},
-		&RunTemplateList{},
+		&ClusterRunTemplate{},
+		&ClusterRunTemplateList{},
 	)
 }

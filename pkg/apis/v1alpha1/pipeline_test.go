@@ -68,13 +68,5 @@ var _ = Describe("Pipeline", func() {
 			Expect(jsonValue).To(ContainSubstring("kind"))
 			Expect(jsonValue).To(ContainSubstring("omitempty"))
 		})
-
-		It("requires a namespace", func() {
-			namespaceField, found := templateReferenceType.FieldByName("Namespace")
-			Expect(found).To(BeTrue())
-			jsonValue := namespaceField.Tag.Get("json")
-			Expect(jsonValue).To(ContainSubstring("namespace"))
-			Expect(jsonValue).To(ContainSubstring("omitempty"))
-		})
 	})
 })

@@ -47,24 +47,19 @@ type TemplatingContext struct {
 }
 
 func (p *pipelineRealizer) Realize(ctx context.Context, pipeline *v1alpha1.Pipeline, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
-	pipeline.Spec.RunTemplateRef.Kind = "RunTemplate"
-	if pipeline.Spec.RunTemplateRef.Namespace == "" {
-		pipeline.Spec.RunTemplateRef.Namespace = pipeline.Namespace
-	}
+	pipeline.Spec.RunTemplateRef.Kind = "ClusterRunTemplate"
 	template, err := repository.GetRunTemplate(pipeline.Spec.RunTemplateRef)
 
 	if err != nil {
-		errorMessage := fmt.Sprintf("could not get RunTemplate '%s'", pipeline.Spec.RunTemplateRef.Name)
+		errorMessage := fmt.Sprintf("could not get ClusterRunTemplate '%s'", pipeline.Spec.RunTemplateRef.Name)
 		logger.Error(err, errorMessage)
 
 		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
 	}
 
 	labels := map[string]string{
-		"carto.run/pipeline-name":          pipeline.Name,
-		"carto.run/pipeline-namespace":     pipeline.Namespace,
-		"carto.run/run-template-name":      template.GetName(),
-		"carto.run/run-template-namespace": pipeline.Spec.RunTemplateRef.Namespace,
+		"carto.run/pipeline-name":     pipeline.Name,
+		"carto.run/run-template-name": template.GetName(),
 	}
 
 	selected, err := resolveSelector(pipeline.Spec.Selector, repository)

@@ -14,6 +14,6 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: RunTemplate
+kind: ClusterRunTemplate
 metadata:
   name: my-run-template
