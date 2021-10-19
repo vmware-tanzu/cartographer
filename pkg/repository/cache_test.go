@@ -27,12 +27,14 @@ var _ = Describe("Cache", func() {
 	var (
 		cache                repository.RepoCache
 		fakeExpiringCache    *repositoryfakes.FakeExpiringCache
+		fakeLogger           *repositoryfakes.FakeLogger
 		submitted, persisted *unstructured.Unstructured
 	)
 
 	BeforeEach(func() {
 		fakeExpiringCache = &repositoryfakes.FakeExpiringCache{}
-		cache = repository.NewCache(fakeExpiringCache)
+		fakeLogger = &repositoryfakes.FakeLogger{}
+		cache = repository.NewCache(fakeExpiringCache, fakeLogger)
 
 		objKind := "the-kind"
 		objName := "its-name"
