@@ -41,6 +41,8 @@ func NewModelFromAPI(template client.Object) (Template, error) {
 		return NewClusterImageTemplateModel(v, eval.EvaluatorBuilder()), nil
 	case *v1alpha1.ClusterConfigTemplate:
 		return NewClusterConfigTemplateModel(v, eval.EvaluatorBuilder()), nil
+	case *v1alpha1.ClusterDeploymentTemplate:
+		return NewClusterDeploymentTemplateModel(v, eval.EvaluatorBuilder()), nil
 	case *v1alpha1.ClusterTemplate:
 		return NewClusterTemplateModel(v), nil
 	}

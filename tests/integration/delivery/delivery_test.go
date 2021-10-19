@@ -50,6 +50,8 @@ var _ = Describe("Deliveries", func() {
 				metadata:
 				  name: my-delivery
 				spec:
+				  selector:
+					"some-key": "some-value"
 			      resources:
 			        - name: my-first-resource
 					  templateRef:

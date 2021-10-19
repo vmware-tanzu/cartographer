@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package deliverable_test
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -36,43 +36,43 @@ import (
 var _ = Describe("Resource", func() {
 
 	var (
-		component       v1alpha1.SupplyChainComponent
-		workload        v1alpha1.Workload
-		outputs         realizer.Outputs
-		supplyChainName string
-		fakeRepo        repositoryfakes.FakeRepository
-		r               realizer.ComponentRealizer
+		resource     v1alpha1.ClusterDeliveryResource
+		deliverable  v1alpha1.Deliverable
+		outputs      realizer.Outputs
+		deliveryName string
+		fakeRepo     repositoryfakes.FakeRepository
+		r            realizer.ResourceRealizer
 	)
 
 	BeforeEach(func() {
-		component = v1alpha1.SupplyChainComponent{
-			Name: "component-1",
-			TemplateRef: v1alpha1.ClusterTemplateReference{
-				Kind: "ClusterImageTemplate",
-				Name: "image-template-1",
+		resource = v1alpha1.ClusterDeliveryResource{
+			Name: "resource-1",
+			TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+				Kind: "ClusterSourceTemplate",
+				Name: "source-template-1",
 			},
 		}
 
-		supplyChainName = "supply-chain-name"
+		deliveryName = "delivery-name"
 
 		outputs = realizer.NewOutputs()
 
 		fakeRepo = repositoryfakes.FakeRepository{}
-		workload = v1alpha1.Workload{}
-		r = realizer.NewComponentRealizer(&workload, &fakeRepo)
+		deliverable = v1alpha1.Deliverable{}
+		r = realizer.NewResourceRealizer(&deliverable, &fakeRepo)
 	})
 
 	Describe("Do", func() {
-		When("passed a workload with outputs", func() {
+		When("passed a deliverable with outputs", func() {
 			BeforeEach(func() {
-				component.Sources = []v1alpha1.ComponentReference{
+				resource.Sources = []v1alpha1.ResourceReference{
 					{
-						Name:      "source-provider",
-						Component: "previous-component",
+						Name:     "source-provider",
+						Resource: "previous-resource",
 					},
 				}
 
-				outputs.AddOutput("previous-component", &templates.Output{Source: &templates.Source{
+				outputs.AddOutput("previous-resource", &templates.Output{Source: &templates.Source{
 					URL:      "some-url",
 					Revision: "some-revision",
 				}})
@@ -95,30 +95,31 @@ var _ = Describe("Resource", func() {
 				dbytes, err := json.Marshal(configMap)
 				Expect(err).ToNot(HaveOccurred())
 
-				templateAPI := &v1alpha1.ClusterImageTemplate{
+				templateAPI := &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "ClusterImageTemplate",
+						Kind:       "ClusterSourceTemplate",
 						APIVersion: "carto.run/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "image-template-1",
+						Name:      "source-template-1",
 						Namespace: "some-namespace",
 					},
-					Spec: v1alpha1.ImageTemplateSpec{
+					Spec: v1alpha1.SourceTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
 							Template: &runtime.RawExtension{Raw: dbytes},
 						},
-						ImagePath: "data.some_other_info",
+						URLPath:      "data.player_current_lives",
+						RevisionPath: "data.some_other_info",
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
+				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object and returns the outputs", func() {
-				out, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				out, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
 				stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
@@ -139,61 +140,62 @@ var _ = Describe("Resource", func() {
 					},
 				}))
 				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/cluster-supply-chain-name": "supply-chain-name",
-					"carto.run/component-name":            "component-1",
-					"carto.run/cluster-template-name":     "image-template-1",
-					"carto.run/workload-name":             "",
-					"carto.run/workload-namespace":        "",
-					"carto.run/template-kind":             "ClusterImageTemplate",
+					"carto.run/cluster-delivery-name": "delivery-name",
+					"carto.run/resource-name":         "resource-1",
+					"carto.run/cluster-template-name": "source-template-1",
+					"carto.run/deliverable-name":      "",
+					"carto.run/deliverable-namespace": "",
+					"carto.run/template-kind":         "ClusterSourceTemplate",
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 
-				Expect(out.Image).To(Equal("some-revision"))
+				Expect(out.Source.Revision).To(Equal("some-revision"))
+				Expect(out.Source.URL).To(Equal("some-url"))
 			})
 		})
 
 		When("unable to get the template ref from repo", func() {
 			BeforeEach(func() {
-				fakeRepo.GetClusterTemplateReturns(nil, errors.New("bad template"))
+				fakeRepo.GetDeliveryClusterTemplateReturns(nil, errors.New("bad template"))
 			})
 
-			It("returns GetClusterTemplateError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+			It("returns GetDeliveryClusterTemplateError", func() {
+				_, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
+				Expect(err.Error()).To(ContainSubstring("unable to get template 'source-template-1'"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetClusterTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetDeliveryClusterTemplateError"))
 			})
 		})
 
 		When("unable to Stamp a new template", func() {
 			BeforeEach(func() {
-				templateAPI := &v1alpha1.ClusterImageTemplate{
+				templateAPI := &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "ClusterImageTemplate",
+						Kind:       "ClusterSourceTemplate",
 						APIVersion: "carto.run/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "image-template-1",
+						Name:      "source-template-1",
 						Namespace: "some-namespace",
 					},
-					Spec: v1alpha1.ImageTemplateSpec{
+					Spec: v1alpha1.SourceTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
 							Template: &runtime.RawExtension{},
 						},
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
+				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
 			})
 
 			It("returns StampError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to stamp object for component 'component-1'"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
+				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource 'resource-1'"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.StampError"))
 			})
 		})
 
@@ -217,46 +219,46 @@ var _ = Describe("Resource", func() {
 				dbytes, err := json.Marshal(configMap)
 				Expect(err).ToNot(HaveOccurred())
 
-				templateAPI := &v1alpha1.ClusterImageTemplate{
+				templateAPI := &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "ClusterImageTemplate",
+						Kind:       "ClusterSourceTemplate",
 						APIVersion: "carto.run/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "image-template-1",
 						Namespace: "some-namespace",
 					},
-					Spec: v1alpha1.ImageTemplateSpec{
+					Spec: v1alpha1.SourceTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
 							Template: &runtime.RawExtension{Raw: dbytes},
 						},
-						ImagePath: "data.does-not-exist",
+						URLPath: "data.does-not-exist",
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
+				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.RetrieveOutputError"))
 			})
 		})
 
 		When("unable to EnsureObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
-				component.Sources = []v1alpha1.ComponentReference{
+				resource.Sources = []v1alpha1.ResourceReference{
 					{
-						Name:      "source-provider",
-						Component: "previous-component",
+						Name:     "source-provider",
+						Resource: "previous-resource",
 					},
 				}
 
-				outputs.AddOutput("previous-component", &templates.Output{Source: &templates.Source{
+				outputs.AddOutput("previous-resource", &templates.Output{Source: &templates.Source{
 					URL:      "some-url",
 					Revision: "some-revision",
 				}})
@@ -279,33 +281,33 @@ var _ = Describe("Resource", func() {
 				dbytes, err := json.Marshal(configMap)
 				Expect(err).ToNot(HaveOccurred())
 
-				templateAPI := &v1alpha1.ClusterImageTemplate{
+				templateAPI := &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "ClusterImageTemplate",
+						Kind:       "ClusterSourceTemplate",
 						APIVersion: "carto.run/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "image-template-1",
+						Name:      "source-template-1",
 						Namespace: "some-namespace",
 					},
-					Spec: v1alpha1.ImageTemplateSpec{
+					Spec: v1alpha1.SourceTemplateSpec{
 						TemplateSpec: v1alpha1.TemplateSpec{
 							Template: &runtime.RawExtension{Raw: dbytes},
 						},
-						ImagePath: "data.some_other_info",
+						URLPath: "data.some_other_info",
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
+				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				_, err := r.Do(context.TODO(), &component, supplyChainName, outputs)
+				_, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.ApplyStampedObjectError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.ApplyStampedObjectError"))
 			})
 		})
 	})

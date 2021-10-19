@@ -167,6 +167,143 @@ var _ = Describe("MapFunctions", func() {
 		})
 	})
 
+	Describe("ClusterDeliveryToDeliverableRequests", func() {
+		var (
+			clientObjects     []client.Object
+			mapper            *registrar.Mapper
+			fakeClientBuilder *fake.ClientBuilder
+			scheme            *runtime.Scheme
+			fakeLogger        *registrarfakes.FakeLogger
+			clusterDelivery   client.Object
+			result            []reconcile.Request
+		)
+
+		BeforeEach(func() {
+			scheme = runtime.NewScheme()
+			fakeClientBuilder = fake.NewClientBuilder()
+			fakeLogger = &registrarfakes.FakeLogger{}
+
+			clusterDelivery = &v1alpha1.ClusterDelivery{
+				Spec: v1alpha1.ClusterDeliverySpec{
+					Selector: map[string]string{
+						"myLabel": "myLabelsValue",
+					},
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			fakeClientBuilder.
+				WithScheme(scheme).
+				WithObjects(clientObjects...)
+
+			fakeClient := fakeClientBuilder.Build()
+
+			mapper = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			result = mapper.ClusterDeliveryToDeliverableRequests(clusterDelivery)
+		})
+
+		Context("client.List returns an error", func() {
+			// By using a scheme without v1alpha1, the client will error when handed our Objects
+			It("logs an error to the client", func() {
+				Expect(result).To(BeEmpty())
+
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(firstArg).NotTo(BeNil())
+				Expect(secondArg).To(Equal("cluster delivery to deliverable requests: client list"))
+			})
+		})
+
+		Context("client does not return errors", func() {
+			BeforeEach(func() {
+				// By including the scheme, the client will not error when handed our Objects
+				err := v1alpha1.AddToScheme(scheme)
+				Expect(err).ToNot(HaveOccurred())
+			})
+			Context("no deliverables", func() {
+				BeforeEach(func() {
+					clusterDelivery = &v1alpha1.ClusterDelivery{
+						Spec: v1alpha1.ClusterDeliverySpec{
+							Selector: map[string]string{
+								"myLabel": "myLabelsValue",
+							},
+						},
+					}
+				})
+				It("returns an empty list of requests", func() {
+					Expect(result).To(BeEmpty())
+				})
+			})
+			Context("deliverables", func() {
+				var deliverable *v1alpha1.Deliverable
+				BeforeEach(func() {
+					deliverable = &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "first-deliverable",
+							Namespace: "first-namespace",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deliverable",
+							APIVersion: "carto.run/v1alpha1",
+						},
+					}
+				})
+
+				Context("delivery with one matching deliverable", func() {
+					BeforeEach(func() {
+						deliverable.Labels = map[string]string{
+							"myLabel": "myLabelsValue",
+						}
+						clientObjects = []client.Object{deliverable}
+					})
+
+					It("returns a list of requests that includes the deliverable", func() {
+						expected := []reconcile.Request{
+							{
+								types.NamespacedName{
+									Namespace: "first-namespace",
+									Name:      "first-deliverable",
+								},
+							},
+						}
+
+						Expect(result).To(Equal(expected))
+					})
+				})
+				Context("delivery without matching deliverable", func() {
+					BeforeEach(func() {
+						deliverable.Labels = map[string]string{
+							"myLabel": "otherLabel",
+						}
+						clientObjects = []client.Object{deliverable}
+					})
+					It("returns an empty list of requests", func() {
+						Expect(result).To(BeEmpty())
+					})
+				})
+			})
+
+			Context("when function is passed an object that is not a supplyChain", func() {
+				BeforeEach(func() {
+					clusterDelivery = &v1alpha1.Workload{}
+				})
+				It("logs a helpful error", func() {
+					Expect(result).To(BeEmpty())
+
+					Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+					firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
+					Expect(firstArg).To(BeNil())
+					Expect(secondArg).To(Equal("cluster delivery to deliverable requests: cast to ClusterDelivery failed"))
+				})
+			})
+		})
+	})
+
 	Describe("RunTemplateToPipelineRequests", func() {
 		var (
 			clientObjects     []client.Object

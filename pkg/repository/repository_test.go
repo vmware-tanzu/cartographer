@@ -657,6 +657,32 @@ spec:
 			})
 		})
 
+		Context("GetDeliverable", func() {
+			BeforeEach(func() {
+				deliverable := &v1alpha1.Deliverable{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "deliverable-name",
+						Namespace: "deliverable-namespace",
+					},
+				}
+				clientObjects = []client.Object{deliverable}
+			})
+
+			It("gets the deliverable successfully", func() {
+				workload, err := repo.GetDeliverable("deliverable-name", "deliverable-namespace")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(workload.GetName()).To(Equal("deliverable-name"))
+			})
+
+			Context("deliverable doesnt exist", func() {
+				It("returns an error", func() {
+					_, err := repo.GetDeliverable("deliverable-that-does-not-exist-name", "deliverable-namespace")
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("get:"))
+				})
+			})
+		})
+
 		Context("GetPipeline", func() {
 			BeforeEach(func() {
 				pipeline := &v1alpha1.Pipeline{

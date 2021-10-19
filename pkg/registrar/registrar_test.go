@@ -58,7 +58,7 @@ var _ = Describe("Registrar", func() {
 					Group:   "carto.run",
 					Version: "v1alpha1",
 				}
-				Expect(len(scheme.KnownTypes(gv))).To(Equal(27))
+				Expect(len(scheme.KnownTypes(gv))).To(Equal(29))
 				// If this test fails, it may indicate that new types should be added to the test below
 			})
 
@@ -77,6 +77,7 @@ var _ = Describe("Registrar", func() {
 					"ClusterSourceTemplate",
 					"ClusterSupplyChain",
 					"ClusterTemplate",
+					"Deliverable",
 					"Pipeline",
 					"Workload",
 				}

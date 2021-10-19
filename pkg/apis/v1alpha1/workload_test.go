@@ -77,7 +77,7 @@ var _ = Describe("Workload", func() {
 
 	Describe("Workload Source", func() {
 		var (
-			workloadSource     v1alpha1.WorkloadSource
+			workloadSource     v1alpha1.Source
 			workloadSourceType reflect.Type
 		)
 
@@ -112,7 +112,7 @@ var _ = Describe("Workload", func() {
 
 	Describe("Workload Git", func() {
 		var (
-			workloadGit     v1alpha1.WorkloadGit
+			workloadGit     v1alpha1.GitSource
 			workloadGitType reflect.Type
 		)
 
@@ -139,7 +139,7 @@ var _ = Describe("Workload", func() {
 
 	Describe("Workload Git Ref", func() {
 		var (
-			workloadGitRef     v1alpha1.WorkloadGitRef
+			workloadGitRef     v1alpha1.GitRef
 			workloadGitRefType reflect.Type
 		)
 
@@ -174,7 +174,7 @@ var _ = Describe("Workload", func() {
 
 	Describe("Workload Param", func() {
 		var (
-			workloadParam     v1alpha1.WorkloadParam
+			workloadParam     v1alpha1.Param
 			workloadParamType reflect.Type
 		)
 

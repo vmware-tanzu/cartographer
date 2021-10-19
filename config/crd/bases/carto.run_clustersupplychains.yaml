@@ -53,6 +53,8 @@ spec:
                   properties:
                     configs:
                       items:
+                        description: TODO Delete and use ResourceReference in common.go
+                          when renaming component to resource (#236)
                         properties:
                           component:
                             type: string
@@ -65,6 +67,8 @@ spec:
                       type: array
                     images:
                       items:
+                        description: TODO Delete and use ResourceReference in common.go
+                          when renaming component to resource (#236)
                         properties:
                           component:
                             type: string
@@ -91,6 +95,8 @@ spec:
                       type: array
                     sources:
                       items:
+                        description: TODO Delete and use ResourceReference in common.go
+                          when renaming component to resource (#236)
                         properties:
                           component:
                             type: string

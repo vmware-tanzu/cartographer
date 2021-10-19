@@ -38,7 +38,9 @@ type Repository interface {
 	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error)
 	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
+	GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
+	GetDeliverable(name string, namespace string) (*v1alpha1.Deliverable, error)
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
@@ -135,35 +137,20 @@ func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstru
 }
 
 func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
-	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
-	if err != nil {
-		return nil, fmt.Errorf("get api template: %w", err)
-	}
-
-	err = r.cl.Get(context.TODO(), client.ObjectKey{
-		Name: ref.Name,
-	}, apiTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
-	}
-
-	template, err := templates.NewModelFromAPI(apiTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("new model from api: %w", err)
-	}
-
-	return template, nil
+	return r.getTemplate(ref.Name, ref.Kind)
 }
 
 func (r *repository) GetDeliveryClusterTemplate(ref v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error) {
-	apiTemplate, err := v1alpha1.GetAPITemplate(ref.Kind)
+	return r.getTemplate(ref.Name, ref.Kind)
+}
+
+func (r *repository) getTemplate(name string, kind string) (templates.Template, error) {
+	apiTemplate, err := v1alpha1.GetAPITemplate(kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
 	}
 
-	err = r.cl.Get(context.TODO(), client.ObjectKey{
-		Name: ref.Name,
-	}, apiTemplate)
+	err = r.getObject(name, "", apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
@@ -224,7 +211,7 @@ func (r *repository) GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]
 
 	var clusterSupplyChains []v1alpha1.ClusterSupplyChain
 	for _, supplyChain := range list.Items {
-		if supplyChainSelectorMatchesWorkloadLabels(supplyChain.Spec.Selector, workload.Labels) {
+		if selectorMatchesLabels(supplyChain.Spec.Selector, workload.Labels) {
 			clusterSupplyChains = append(clusterSupplyChains, supplyChain)
 		}
 	}
@@ -232,33 +219,59 @@ func (r *repository) GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]
 	return clusterSupplyChains, nil
 }
 
-func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workload, error) {
-	workload := v1alpha1.Workload{}
+func (r *repository) GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error) {
+	list := &v1alpha1.ClusterDeliveryList{}
+	if err := r.cl.List(context.TODO(), list); err != nil {
+		return nil, fmt.Errorf("list deliveries: %w", err)
+	}
 
+	var clusterDeliveries []v1alpha1.ClusterDelivery
+	for _, delivery := range list.Items {
+		if selectorMatchesLabels(delivery.Spec.Selector, deliverable.Labels) {
+			clusterDeliveries = append(clusterDeliveries, delivery)
+		}
+	}
+
+	return clusterDeliveries, nil
+}
+
+func (r *repository) getObject(name string, namespace string, obj client.Object) error {
 	err := r.cl.Get(context.TODO(),
 		client.ObjectKey{
 			Name:      name,
 			Namespace: namespace,
 		},
-		&workload,
+		obj,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		return fmt.Errorf("get: %w", err)
 	}
 
+	return nil
+}
+
+func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workload, error) {
+	workload := v1alpha1.Workload{}
+	err := r.getObject(name, namespace, &workload)
+	if err != nil {
+		return nil, err
+	}
 	return &workload, nil
+}
+
+func (r *repository) GetDeliverable(name string, namespace string) (*v1alpha1.Deliverable, error) {
+	deliverable := v1alpha1.Deliverable{}
+	err := r.getObject(name, namespace, &deliverable)
+	if err != nil {
+		return nil, err
+	}
+	return &deliverable, nil
 }
 
 func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error) {
 	pipeline := &v1alpha1.Pipeline{}
 
-	err := r.cl.Get(context.TODO(),
-		client.ObjectKey{
-			Name:      name,
-			Namespace: namespace,
-		},
-		pipeline,
-	)
+	err := r.getObject(name, namespace, pipeline)
 
 	if err != nil {
 		return nil, fmt.Errorf("get-pipeline: %w", err)
@@ -267,7 +280,7 @@ func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipel
 	return pipeline, nil
 }
 
-func supplyChainSelectorMatchesWorkloadLabels(selector map[string]string, labels map[string]string) bool {
+func selectorMatchesLabels(selector map[string]string, labels map[string]string) bool {
 	for key, value := range selector {
 		if labels[key] != value {
 			return false
@@ -280,12 +293,7 @@ func supplyChainSelectorMatchesWorkloadLabels(selector map[string]string, labels
 func (r *repository) GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error) {
 	supplyChain := v1alpha1.ClusterSupplyChain{}
 
-	err := r.cl.Get(context.TODO(),
-		client.ObjectKey{
-			Name: name,
-		},
-		&supplyChain,
-	)
+	err := r.getObject(name, "", &supplyChain)
 	if err != nil && !api_errors.IsNotFound(err) {
 		return nil, fmt.Errorf("get: %w", err)
 	}

@@ -20,15 +20,15 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: clusterdeliveries.carto.run
+  name: deliverables.carto.run
 spec:
   group: carto.run
   names:
-    kind: ClusterDelivery
-    listKind: ClusterDeliveryList
-    plural: clusterdeliveries
-    singular: clusterdelivery
-  scope: Cluster
+    kind: Deliverable
+    listKind: DeliverableList
+    plural: deliverables
+    singular: deliverable
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
@@ -48,74 +48,41 @@ spec:
             type: object
           spec:
             properties:
-              resources:
+              params:
                 items:
                   properties:
-                    configs:
-                      items:
-                        properties:
-                          name:
-                            type: string
-                          resource:
-                            type: string
-                        required:
-                        - name
-                        - resource
-                        type: object
-                      type: array
                     name:
                       type: string
-                    params:
-                      items:
-                        properties:
-                          name:
-                            type: string
-                          value:
-                            x-kubernetes-preserve-unknown-fields: true
-                        required:
-                        - name
-                        - value
-                        type: object
-                      type: array
-                    sources:
-                      items:
-                        properties:
-                          name:
-                            type: string
-                          resource:
-                            type: string
-                        required:
-                        - name
-                        - resource
-                        type: object
-                      type: array
-                    templateRef:
-                      properties:
-                        kind:
-                          enum:
-                          - ClusterSourceTemplate
-                          - ClusterDeploymentTemplate
-                          - ClusterTemplate
-                          type: string
-                        name:
-                          minLength: 1
-                          type: string
-                      required:
-                      - kind
-                      - name
-                      type: object
+                    value:
+                      x-kubernetes-preserve-unknown-fields: true
                   required:
                   - name
-                  - templateRef
+                  - value
                   type: object
                 type: array
-              selector:
-                additionalProperties:
-                  type: string
+              source:
+                properties:
+                  git:
+                    properties:
+                      ref:
+                        properties:
+                          branch:
+                            type: string
+                          commit:
+                            type: string
+                          tag:
+                            type: string
+                        type: object
+                      url:
+                        type: string
+                    type: object
+                  image:
+                    description: Image is an OCI image is a registry that contains
+                      source code
+                    type: string
+                  subPath:
+                    type: string
                 type: object
-            required:
-            - resources
-            - selector
             type: object
           status:
             properties:
@@ -188,6 +155,17 @@ spec:
                   - type
                   type: object
                 type: array
+              deliveryRef:
+                properties:
+                  apiVersion:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
               observedGeneration:
                 format: int64
                 type: integer
