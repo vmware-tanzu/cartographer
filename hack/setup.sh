@@ -345,7 +345,9 @@ test_example() {
         EXPECTED_GIT_MESSAGE="Some peturbation: $GIT_ENTROPY"
 
         pushd "$(mktemp -d)"
+              echo 'ssh-add -t 10 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null'
               ssh-add -t 10 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null
+              echo 'git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"'
               git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
               echo "looking for branch $BRANCH"
               pushd "$GIT_WRITER_REPOSITORY"
