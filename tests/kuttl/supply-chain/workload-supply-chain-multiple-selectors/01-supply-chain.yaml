@@ -20,7 +20,7 @@ spec:
   selector:
     integration-test: "workload-supply-chain-multiple-selectors"
     integration-test2: "workload-supply-chain-multiple-selectors"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate

@@ -34,8 +34,8 @@ var _ = Describe("SupplyChainReconciler", func() {
 				Name: name,
 			},
 			Spec: v1alpha1.SupplyChainSpec{
-				Components: []v1alpha1.SupplyChainComponent{},
-				Selector:   selector,
+				Resources: []v1alpha1.SupplyChainResource{},
+				Selector:  selector,
 			},
 		}
 	}

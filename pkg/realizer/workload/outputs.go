@@ -29,8 +29,8 @@ func (o Outputs) AddOutput(name string, output *templates.Output) {
 	o[name] = output
 }
 
-func (o Outputs) getComponentSource(componentName string) *templates.Source {
-	output := o[componentName]
+func (o Outputs) getResourceSource(resourceName string) *templates.Source {
+	output := o[resourceName]
 	if output == nil {
 		return nil
 	}
@@ -38,31 +38,31 @@ func (o Outputs) getComponentSource(componentName string) *templates.Source {
 	return output.Source
 }
 
-func (o Outputs) getComponentImage(componentName string) templates.Image {
-	output := o[componentName]
+func (o Outputs) getResourceImage(resourceName string) templates.Image {
+	output := o[resourceName]
 	if output == nil {
 		return nil
 	}
 	return output.Image
 }
 
-func (o Outputs) getComponentConfig(componentName string) templates.Config {
-	output := o[componentName]
+func (o Outputs) getResourceConfig(resourceName string) templates.Config {
+	output := o[resourceName]
 	if output == nil {
 		return nil
 	}
 	return output.Config
 }
 
-func (o Outputs) GenerateInputs(component *v1alpha1.SupplyChainComponent) *templates.Inputs {
+func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templates.Inputs {
 	inputs := &templates.Inputs{
 		Sources: map[string]templates.SourceInput{},
 		Images:  map[string]templates.ImageInput{},
 		Configs: map[string]templates.ConfigInput{},
 	}
 
-	for _, referenceSource := range component.Sources {
-		source := o.getComponentSource(referenceSource.Component)
+	for _, referenceSource := range resource.Sources {
+		source := o.getResourceSource(referenceSource.Resource)
 		if source != nil {
 			inputs.Sources[referenceSource.Name] = templates.SourceInput{
 				URL:      source.URL,
@@ -72,8 +72,8 @@ func (o Outputs) GenerateInputs(component *v1alpha1.SupplyChainComponent) *templ
 		}
 	}
 
-	for _, referenceImage := range component.Images {
-		image := o.getComponentImage(referenceImage.Component)
+	for _, referenceImage := range resource.Images {
+		image := o.getResourceImage(referenceImage.Resource)
 		if image != nil {
 			inputs.Images[referenceImage.Name] = templates.ImageInput{
 				Image: image,
@@ -82,8 +82,8 @@ func (o Outputs) GenerateInputs(component *v1alpha1.SupplyChainComponent) *templ
 		}
 	}
 
-	for _, referenceConfig := range component.Configs {
-		config := o.getComponentConfig(referenceConfig.Component)
+	for _, referenceConfig := range resource.Configs {
+		config := o.getResourceConfig(referenceConfig.Resource)
 		if config != nil {
 			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
 				Config: config,

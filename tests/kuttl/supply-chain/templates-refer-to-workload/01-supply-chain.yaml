@@ -19,7 +19,7 @@ metadata:
 spec:
   selector:
     integration-test: "templates-refer-to-workload"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate

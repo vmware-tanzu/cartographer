@@ -67,8 +67,8 @@ var _ = Describe("WorkloadReconciler", func() {
 				Name: name,
 			},
 			Spec: v1alpha1.SupplyChainSpec{
-				Components: []v1alpha1.SupplyChainComponent{},
-				Selector:   selector,
+				Resources: []v1alpha1.SupplyChainResource{},
+				Selector:  selector,
 			},
 		}
 	}
@@ -168,9 +168,9 @@ var _ = Describe("WorkloadReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				supplyChain := newClusterSupplyChain("supplychain-bob", map[string]string{"name": "webapp"})
-				supplyChain.Spec.Components = []v1alpha1.SupplyChainComponent{
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
-						Name: "fred-component",
+						Name: "fred-resource",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "proper-template-bob",
@@ -192,7 +192,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					return obj.Status.Conditions
 				}, 5*time.Second).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal("ComponentsSubmitted"),
+						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("MissingValueAtPath"),
 						"Status": Equal(v1.ConditionStatus("Unknown")),
 					}),
@@ -202,7 +202,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						"Status": Equal(v1.ConditionStatus("Unknown")),
 					}),
 				))
-				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for component"))
+				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))
 			})
 		})
 

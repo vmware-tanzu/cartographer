@@ -40,7 +40,7 @@ var _ = Describe("OverrideDefaultParams", func() {
 					},
 				},
 			}
-			componentParams := []v1alpha1.Param{
+			resourceParams := []v1alpha1.Param{
 				{
 					Name: "fizz",
 					Value: apiextensionsv1.JSON{
@@ -48,7 +48,7 @@ var _ = Describe("OverrideDefaultParams", func() {
 					},
 				},
 			}
-			params := templates.ParamsBuilder(defaultParams, componentParams)
+			params := templates.ParamsBuilder(defaultParams, resourceParams)
 
 			Expect(params).To(HaveLen(2))
 			Expect(params["foo"].Raw).To(Equal([]byte("bar")))

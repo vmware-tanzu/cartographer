@@ -10,12 +10,12 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-type FakeComponentRealizer struct {
-	DoStub        func(context.Context, *v1alpha1.SupplyChainComponent, string, workload.Outputs) (*templates.Output, error)
+type FakeResourceRealizer struct {
+	DoStub        func(context.Context, *v1alpha1.SupplyChainResource, string, workload.Outputs) (*templates.Output, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.SupplyChainComponent
+		arg2 *v1alpha1.SupplyChainResource
 		arg3 string
 		arg4 workload.Outputs
 	}
@@ -31,12 +31,12 @@ type FakeComponentRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeComponentRealizer) Do(arg1 context.Context, arg2 *v1alpha1.SupplyChainComponent, arg3 string, arg4 workload.Outputs) (*templates.Output, error) {
+func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 *v1alpha1.SupplyChainResource, arg3 string, arg4 workload.Outputs) (*templates.Output, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.SupplyChainComponent
+		arg2 *v1alpha1.SupplyChainResource
 		arg3 string
 		arg4 workload.Outputs
 	}{arg1, arg2, arg3, arg4})
@@ -53,26 +53,26 @@ func (fake *FakeComponentRealizer) Do(arg1 context.Context, arg2 *v1alpha1.Suppl
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeComponentRealizer) DoCallCount() int {
+func (fake *FakeResourceRealizer) DoCallCount() int {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeComponentRealizer) DoCalls(stub func(context.Context, *v1alpha1.SupplyChainComponent, string, workload.Outputs) (*templates.Output, error)) {
+func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, *v1alpha1.SupplyChainResource, string, workload.Outputs) (*templates.Output, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
 }
 
-func (fake *FakeComponentRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.SupplyChainComponent, string, workload.Outputs) {
+func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.SupplyChainResource, string, workload.Outputs) {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	argsForCall := fake.doArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *FakeComponentRealizer) DoReturns(result1 *templates.Output, result2 error) {
+func (fake *FakeResourceRealizer) DoReturns(result1 *templates.Output, result2 error) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = nil
@@ -82,7 +82,7 @@ func (fake *FakeComponentRealizer) DoReturns(result1 *templates.Output, result2 
 	}{result1, result2}
 }
 
-func (fake *FakeComponentRealizer) DoReturnsOnCall(i int, result1 *templates.Output, result2 error) {
+func (fake *FakeResourceRealizer) DoReturnsOnCall(i int, result1 *templates.Output, result2 error) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = nil
@@ -98,7 +98,7 @@ func (fake *FakeComponentRealizer) DoReturnsOnCall(i int, result1 *templates.Out
 	}{result1, result2}
 }
 
-func (fake *FakeComponentRealizer) Invocations() map[string][][]interface{} {
+func (fake *FakeResourceRealizer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.doMutex.RLock()
@@ -110,7 +110,7 @@ func (fake *FakeComponentRealizer) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeComponentRealizer) recordInvocation(key string, args []interface{}) {
+func (fake *FakeResourceRealizer) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -122,4 +122,4 @@ func (fake *FakeComponentRealizer) recordInvocation(key string, args []interface
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ workload.ComponentRealizer = new(FakeComponentRealizer)
+var _ workload.ResourceRealizer = new(FakeResourceRealizer)

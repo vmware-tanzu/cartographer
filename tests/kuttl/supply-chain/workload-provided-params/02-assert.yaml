@@ -33,9 +33,9 @@ status:
     - type: SupplyChainReady
       status: "True"
       reason: Ready
-    - type: ComponentsSubmitted
+    - type: ResourcesSubmitted
       status: "True"
-      reason: ComponentSubmissionComplete
+      reason: ResourceSubmissionComplete
     - type: Ready
       status: "True"
       reason: Ready

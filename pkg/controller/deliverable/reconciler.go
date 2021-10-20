@@ -96,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ComponentName(), typedErr.JsonPathExpression()))
+			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
 			err = nil
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))

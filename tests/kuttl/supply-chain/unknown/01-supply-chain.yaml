@@ -19,7 +19,7 @@ metadata:
 spec:
   selector:
     type: "webapp-unknown"
-  components:
+  resources:
     - name: image-provider
       templateRef:
         kind: ClusterImageTemplate

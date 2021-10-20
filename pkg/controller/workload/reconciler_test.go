@@ -213,9 +213,9 @@ var _ = Describe("Reconciler", func() {
 				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.SupplyChainReadyCondition()))
 			})
 
-			It("calls the condition manager to report the components have been submitted", func() {
+			It("calls the condition manager to report the resources have been submitted", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ComponentsSubmittedCondition()))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourcesSubmittedCondition()))
 			})
 
 			Context("but getting the object GVK fails", func() {
@@ -286,8 +286,8 @@ var _ = Describe("Reconciler", func() {
 					var stampError realizer.StampError
 					BeforeEach(func() {
 						stampError = realizer.StampError{
-							Err:       errors.New("some error"),
-							Component: &v1alpha1.SupplyChainComponent{Name: "some-name"},
+							Err:      errors.New("some error"),
+							Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
 						}
 						rlzr.RealizeReturns(stampError)
 					})
@@ -329,14 +329,14 @@ var _ = Describe("Reconciler", func() {
 					BeforeEach(func() {
 						jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 						retrieveError = realizer.NewRetrieveOutputError(
-							&v1alpha1.SupplyChainComponent{Name: "some-component"},
+							&v1alpha1.SupplyChainResource{Name: "some-resource"},
 							&jsonPathError)
 						rlzr.RealizeReturns(retrieveError)
 					})
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.MissingValueAtPathCondition("some-component", "this.wont.find.anything")))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
 					})
 
 					It("returns the error", func() {
@@ -355,7 +355,7 @@ var _ = Describe("Reconciler", func() {
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.UnknownComponentErrorCondition(realizerError)))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.UnknownResourceErrorCondition(realizerError)))
 					})
 
 					It("returns the error", func() {

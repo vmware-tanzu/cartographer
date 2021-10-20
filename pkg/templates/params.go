@@ -22,14 +22,14 @@ import (
 
 type Params map[string]apiextensionsv1.JSON
 
-func ParamsBuilder(defaultParams v1alpha1.DefaultParams, componentParams []v1alpha1.Param) Params {
+func ParamsBuilder(defaultParams v1alpha1.DefaultParams, resourceParams []v1alpha1.Param) Params {
 	newParams := Params{}
 	for _, param := range defaultParams {
 		newParams[param.Name] = param.DefaultValue
 	}
 
 	for key := range newParams {
-		for _, override := range componentParams {
+		for _, override := range resourceParams {
 			if key == override.Name {
 				newParams[key] = override.Value
 			}

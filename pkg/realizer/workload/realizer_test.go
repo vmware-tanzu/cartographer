@@ -30,59 +30,59 @@ import (
 
 var _ = Describe("Realize", func() {
 	var (
-		componentRealizer *workloadfakes.FakeComponentRealizer
-		supplyChain       *v1alpha1.ClusterSupplyChain
-		component1        v1alpha1.SupplyChainComponent
-		component2        v1alpha1.SupplyChainComponent
-		rlzr              realizer.Realizer
+		resourceRealizer *workloadfakes.FakeResourceRealizer
+		supplyChain      *v1alpha1.ClusterSupplyChain
+		resource1        v1alpha1.SupplyChainResource
+		resource2        v1alpha1.SupplyChainResource
+		rlzr             realizer.Realizer
 	)
 	BeforeEach(func() {
 		rlzr = realizer.NewRealizer()
 
-		componentRealizer = &workloadfakes.FakeComponentRealizer{}
-		component1 = v1alpha1.SupplyChainComponent{
-			Name: "component1",
+		resourceRealizer = &workloadfakes.FakeResourceRealizer{}
+		resource1 = v1alpha1.SupplyChainResource{
+			Name: "resource1",
 		}
-		component2 = v1alpha1.SupplyChainComponent{
-			Name: "component2",
+		resource2 = v1alpha1.SupplyChainResource{
+			Name: "resource2",
 		}
 		supplyChain = &v1alpha1.ClusterSupplyChain{
 			ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
 			Spec: v1alpha1.SupplyChainSpec{
-				Components: []v1alpha1.SupplyChainComponent{component1, component2},
+				Resources: []v1alpha1.SupplyChainResource{resource1, resource2},
 			},
 		}
 	})
 
-	It("realizes each component in supply chain order, accumulating output for each subsequent component", func() {
-		outputFromFirstComponent := &templates.Output{Image: "whatever"}
+	It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
+		outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-		var executedComponentOrder []string
+		var executedResourceOrder []string
 
-		componentRealizer.DoCalls(func(ctx context.Context, component *v1alpha1.SupplyChainComponent, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
-			executedComponentOrder = append(executedComponentOrder, component.Name)
+		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
+			executedResourceOrder = append(executedResourceOrder, resource.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
-			if component.Name == "component1" {
+			if resource.Name == "resource1" {
 				Expect(outputs).To(Equal(realizer.NewOutputs()))
-				return outputFromFirstComponent, nil
+				return outputFromFirstResource, nil
 			}
 
-			if component.Name == "component2" {
-				expectedSecondComponentOutputs := realizer.NewOutputs()
-				expectedSecondComponentOutputs.AddOutput("component1", outputFromFirstComponent)
-				Expect(outputs).To(Equal(expectedSecondComponentOutputs))
+			if resource.Name == "resource2" {
+				expectedSecondResourceOutputs := realizer.NewOutputs()
+				expectedSecondResourceOutputs.AddOutput("resource1", outputFromFirstResource)
+				Expect(outputs).To(Equal(expectedSecondResourceOutputs))
 			}
 
 			return &templates.Output{}, nil
 		})
 
-		Expect(rlzr.Realize(context.TODO(), componentRealizer, supplyChain)).To(Succeed())
+		Expect(rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)).To(Succeed())
 
-		Expect(executedComponentOrder).To(Equal([]string{"component1", "component2"}))
+		Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
 	})
 
-	It("returns any error encountered realizing a component", func() {
-		componentRealizer.DoReturns(nil, errors.New("realizing is hard"))
-		Expect(rlzr.Realize(context.TODO(), componentRealizer, supplyChain)).To(MatchError("realizing is hard"))
+	It("returns any error encountered realizing a resource", func() {
+		resourceRealizer.DoReturns(nil, errors.New("realizing is hard"))
+		Expect(rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)).To(MatchError("realizing is hard"))
 	})
 })

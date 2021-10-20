@@ -21,7 +21,7 @@ status:
     - type: SupplyChainReady
       status: "True"
       reason: Ready
-    - type: ComponentsSubmitted
+    - type: ResourcesSubmitted
       status: "False"
       reason: "TemplateRejectedByAPIServer"
     - type: Ready

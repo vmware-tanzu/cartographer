@@ -26,7 +26,7 @@ spec:
   #     GitRepository               Image                    App
   #
   #
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
@@ -37,7 +37,7 @@ spec:
         kind: ClusterImageTemplate
         name: image
       sources:
-        - component: source-provider
+        - resource: source-provider
           name: source
 
     - name: deployer
@@ -45,5 +45,5 @@ spec:
         kind: ClusterTemplate
         name: app-deploy
       images:
-        - component: image-builder
+        - resource: image-builder
           name: image
