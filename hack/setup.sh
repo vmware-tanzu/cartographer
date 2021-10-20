@@ -83,7 +83,7 @@ main() {
 
                 teardown)
                         delete_containers
-                        delete_gitea_keys
+                        delete_generated_repository_keys
                         ;;
 
                 *)
@@ -384,7 +384,7 @@ delete_containers() {
         docker-compose -f hack/docker-compose.yaml down -v
 }
 
-delete_gitea_keys() {
+delete_generated_repository_keys() {
         rm hack/gitea-key.pub hack/gitea-key
 }
 
