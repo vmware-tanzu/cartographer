@@ -15,7 +15,7 @@
 ---
 
 apiVersion: carto.run/v1alpha1
-kind: RunTemplate
+kind: ClusterRunTemplate
 metadata:
   name: testing
 spec:
@@ -39,7 +39,7 @@ spec:
 ---
 
 apiVersion: carto.run/v1alpha1
-kind: RunTemplate
+kind: ClusterRunTemplate
 metadata:
   name: git-writer
 spec:
