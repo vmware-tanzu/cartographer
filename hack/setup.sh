@@ -53,7 +53,7 @@ main() {
                 case $command in
                 cluster)
                         start_registry
-                        start_repository
+#                        start_repository
                         start_local_cluster
                         install_cert_manager
                         install_kapp_controller
@@ -83,7 +83,7 @@ main() {
 
                 teardown)
                         delete_containers
-                        delete_generated_repository_keys
+#                        delete_generated_repository_keys
                         ;;
 
                 *)
