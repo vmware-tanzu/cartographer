@@ -54,4 +54,6 @@ jobs:
         run: make test
 
       - name: run e2e example
+        env:
+          GIT_WRITER_SSH_TOKEN: ${{ secrets.GIT_WRITER_SSH_TOKEN }}
         run: ./hack/setup.sh cluster cartographer example-dependencies example
