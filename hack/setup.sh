@@ -28,6 +28,7 @@ readonly GIT_WRITER_SSH_USER=${GIT_WRITER_SSH_USER:-"git"}
 readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-"gitlab.eng.vmware.com"}
 readonly GIT_WRITER_PROJECT=${GIT_WRITER_PROJECT:-"supply-chain-choreographer"}
 readonly GIT_WRITER_REPOSITORY=${GIT_WRITER_REPOSITORY:-"git-writer-example"}
+readonly GIT_WRITER_SSH_TOKEN=${GIT_WRITER_SSH_TOKEN:-"$(lpass show --notes gitlab-example-writer-token)"}
 
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG="/tmp/cartographer-docker"
@@ -314,7 +315,7 @@ setup_example() {
                 --data-value git_writer.server="$GIT_WRITER_SERVER" \
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
                 --data-value git_writer.branch="$(cat hack/git_entropy)" \
-                --data-value git_writer.base64_encoded_ssh_key="$(lpass show --notes gitlab-example-writer-token | base64)" \
+                --data-value git_writer.base64_encoded_ssh_key="$(echo "$GIT_WRITER_SSH_TOKEN" | base64)" \
                 --data-value git_writer.base64_encoded_known_hosts="$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64)" |
                 kapp deploy --yes -a example-supply -f-
 
@@ -323,7 +324,7 @@ setup_example() {
                 --data-value git_writer.server="$GIT_WRITER_SERVER" \
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY" \
                 --data-value git_writer.branch="$(cat hack/git_entropy)" \
-                --data-value git_writer.base64_encoded_ssh_key="$(lpass show --notes gitlab-example-writer-token | base64)" \
+                --data-value git_writer.base64_encoded_ssh_key="$(echo "$GIT_WRITER_SSH_TOKEN" | base64)" \
                 --data-value git_writer.base64_encoded_known_hosts="$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64)" |
                 kapp deploy --yes -a example-deliver -f-
 }
@@ -343,7 +344,7 @@ test_example() {
         EXPECTED_GIT_MESSAGE="Some peturbation: $GIT_ENTROPY"
 
         pushd "$(mktemp -d)"
-              lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
+              ssh-add -t 10 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null
               git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
               echo "looking for branch $BRANCH"
               pushd "$GIT_WRITER_REPOSITORY"
@@ -355,7 +356,7 @@ test_example() {
                                     -l 'serving.knative.dev/configuration=dev' \
                                     -o name)
 
-                            lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
+                            ssh-add -t 10 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null
                             git pull > /dev/null 2> /dev/null
                             git checkout "$BRANCH" > /dev/null 2> /dev/null || continue
                             MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
