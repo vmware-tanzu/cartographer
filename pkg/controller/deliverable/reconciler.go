@@ -111,18 +111,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
-	var changed bool
-	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
+	deliverable.Status.Conditions = r.conditionManager.Finalize()
 
-	var updateErr error
-	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) {
-		deliverable.Status.ObservedGeneration = deliverable.Generation
-		updateErr = r.repo.StatusUpdate(deliverable)
-		if updateErr != nil {
-			r.logger.Error(updateErr, "update error")
-			if err == nil {
-				return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
-			}
+	deliverable.Status.ObservedGeneration = deliverable.Generation
+	updateErr := r.repo.StatusUpdate(deliverable)
+	if updateErr != nil {
+		r.logger.Error(updateErr, "update error")
+		if err == nil {
+			return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
 		}
 	}
 

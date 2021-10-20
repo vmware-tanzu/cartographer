@@ -77,19 +77,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
 	logger := logr.FromContext(ctx)
 
-	var changed bool
-	supplyChain.Status.Conditions, changed = r.conditionManager.Finalize()
+	supplyChain.Status.Conditions = r.conditionManager.Finalize()
 
-	var updateErr error
-	if changed || (supplyChain.Status.ObservedGeneration != supplyChain.Generation) {
-		supplyChain.Status.ObservedGeneration = supplyChain.Generation
-		updateErr = r.repo.StatusUpdate(supplyChain)
-		if updateErr != nil {
-			logger.Error(updateErr, "update error")
-			if err == nil {
-				logger.Info("finished")
-				return ctrl.Result{}, fmt.Errorf("update supply-chain status: %w", updateErr)
-			}
+	supplyChain.Status.ObservedGeneration = supplyChain.Generation
+	updateErr := r.repo.StatusUpdate(supplyChain)
+	if updateErr != nil {
+		logger.Error(updateErr, "update error")
+		if err == nil {
+			logger.Info("finished")
+			return ctrl.Result{}, fmt.Errorf("update supply-chain status: %w", updateErr)
 		}
 	}
 

@@ -86,8 +86,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.PipelineReady, pipeline.Status.Conditions)
 	conditionManager.AddPositive(*condition)
-	//TODO: deal with changed (story #84)
-	pipeline.Status.Conditions, _ = conditionManager.Finalize()
+
+	pipeline.Status.Conditions = conditionManager.Finalize()
 	pipeline.Status.Outputs = outputs
 
 	statusUpdateError := r.repository.StatusUpdate(pipeline)

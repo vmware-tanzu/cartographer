@@ -54,8 +54,7 @@ type ConditionManager interface {
 
 	// Finalize	returns all conditions
 	// not idempotent! subsequent finalizes will keep adding Parent conditions
-	// The changed result represents whether the conditions have changed enough to warrant an update to the APIServer
-	Finalize() (conditions []metav1.Condition, changed bool)
+	Finalize() (conditions []metav1.Condition)
 
 	// IsSuccessful can be called any time. Start's off true, but an
 	// add of an unsuccessful condition (Positive-False or Negative-True)
@@ -68,7 +67,6 @@ type conditionManager struct {
 	conditions         []metav1.Condition
 	topLevelType       string
 	status             metav1.ConditionStatus
-	changed            bool
 	reason, message    string
 }
 
@@ -101,22 +99,14 @@ func (c *conditionManager) Add(condition metav1.Condition, polarity Polarity) {
 		}
 	}
 
-	isNewCondition := true
-
 	for _, previousCondition := range c.previousConditions {
 		if previousCondition.Type == condition.Type {
-			isNewCondition = false
 			lastTransitionTime := condition.LastTransitionTime
 			condition.LastTransitionTime = previousCondition.LastTransitionTime
 			if !reflect.DeepEqual(previousCondition, condition) {
 				condition.LastTransitionTime = lastTransitionTime
-				c.changed = true
 			}
 		}
-	}
-
-	if isNewCondition {
-		c.changed = true
 	}
 
 	c.conditions = append(c.conditions, condition)
@@ -134,7 +124,7 @@ func (c *conditionManager) AddNegative(condition metav1.Condition) {
 	c.Add(condition, Negative)
 }
 
-func (c *conditionManager) Finalize() ([]metav1.Condition, bool) {
+func (c *conditionManager) Finalize() []metav1.Condition {
 	if len(c.conditions) == 0 {
 		c.status = metav1.ConditionFalse
 		return []metav1.Condition{{
@@ -142,7 +132,7 @@ func (c *conditionManager) Finalize() ([]metav1.Condition, bool) {
 			Status:             "Unknown",
 			Reason:             "Unknown",
 			LastTransitionTime: metav1.Now(),
-		}}, true
+		}}
 	}
 
 	if c.status == metav1.ConditionTrue {
@@ -159,5 +149,5 @@ func (c *conditionManager) Finalize() ([]metav1.Condition, bool) {
 		},
 	)
 
-	return c.conditions, c.changed
+	return c.conditions
 }

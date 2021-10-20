@@ -114,19 +114,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
 	logger := logr.FromContext(ctx)
 
-	var changed bool
-	workload.Status.Conditions, changed = r.conditionManager.Finalize()
+	workload.Status.Conditions = r.conditionManager.Finalize()
 
-	var updateErr error
-	if changed || (workload.Status.ObservedGeneration != workload.Generation) {
-		workload.Status.ObservedGeneration = workload.Generation
-		updateErr = r.repo.StatusUpdate(workload)
-		if updateErr != nil {
-			logger.Error(updateErr, "update error")
-			if err == nil {
-				logger.Info("finished")
-				return ctrl.Result{}, fmt.Errorf("update workload status: %w", updateErr)
-			}
+	workload.Status.ObservedGeneration = workload.Generation
+	updateErr := r.repo.StatusUpdate(workload)
+	if updateErr != nil {
+		logger.Error(updateErr, "update error")
+		if err == nil {
+			logger.Info("finished")
+			return ctrl.Result{}, fmt.Errorf("update workload status: %w", updateErr)
 		}
 	}
 

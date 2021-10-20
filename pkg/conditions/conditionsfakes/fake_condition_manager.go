@@ -25,17 +25,15 @@ type FakeConditionManager struct {
 	addPositiveArgsForCall []struct {
 		arg1 v1.Condition
 	}
-	FinalizeStub        func() ([]v1.Condition, bool)
+	FinalizeStub        func() []v1.Condition
 	finalizeMutex       sync.RWMutex
 	finalizeArgsForCall []struct {
 	}
 	finalizeReturns struct {
 		result1 []v1.Condition
-		result2 bool
 	}
 	finalizeReturnsOnCall map[int]struct {
 		result1 []v1.Condition
-		result2 bool
 	}
 	IsSuccessfulStub        func() bool
 	isSuccessfulMutex       sync.RWMutex
@@ -148,7 +146,7 @@ func (fake *FakeConditionManager) AddPositiveArgsForCall(i int) v1.Condition {
 	return argsForCall.arg1
 }
 
-func (fake *FakeConditionManager) Finalize() ([]v1.Condition, bool) {
+func (fake *FakeConditionManager) Finalize() []v1.Condition {
 	fake.finalizeMutex.Lock()
 	ret, specificReturn := fake.finalizeReturnsOnCall[len(fake.finalizeArgsForCall)]
 	fake.finalizeArgsForCall = append(fake.finalizeArgsForCall, struct {
@@ -161,9 +159,9 @@ func (fake *FakeConditionManager) Finalize() ([]v1.Condition, bool) {
 		return stub()
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
 func (fake *FakeConditionManager) FinalizeCallCount() int {
@@ -172,36 +170,33 @@ func (fake *FakeConditionManager) FinalizeCallCount() int {
 	return len(fake.finalizeArgsForCall)
 }
 
-func (fake *FakeConditionManager) FinalizeCalls(stub func() ([]v1.Condition, bool)) {
+func (fake *FakeConditionManager) FinalizeCalls(stub func() []v1.Condition) {
 	fake.finalizeMutex.Lock()
 	defer fake.finalizeMutex.Unlock()
 	fake.FinalizeStub = stub
 }
 
-func (fake *FakeConditionManager) FinalizeReturns(result1 []v1.Condition, result2 bool) {
+func (fake *FakeConditionManager) FinalizeReturns(result1 []v1.Condition) {
 	fake.finalizeMutex.Lock()
 	defer fake.finalizeMutex.Unlock()
 	fake.FinalizeStub = nil
 	fake.finalizeReturns = struct {
 		result1 []v1.Condition
-		result2 bool
-	}{result1, result2}
+	}{result1}
 }
 
-func (fake *FakeConditionManager) FinalizeReturnsOnCall(i int, result1 []v1.Condition, result2 bool) {
+func (fake *FakeConditionManager) FinalizeReturnsOnCall(i int, result1 []v1.Condition) {
 	fake.finalizeMutex.Lock()
 	defer fake.finalizeMutex.Unlock()
 	fake.FinalizeStub = nil
 	if fake.finalizeReturnsOnCall == nil {
 		fake.finalizeReturnsOnCall = make(map[int]struct {
 			result1 []v1.Condition
-			result2 bool
 		})
 	}
 	fake.finalizeReturnsOnCall[i] = struct {
 		result1 []v1.Condition
-		result2 bool
-	}{result1, result2}
+	}{result1}
 }
 
 func (fake *FakeConditionManager) IsSuccessful() bool {

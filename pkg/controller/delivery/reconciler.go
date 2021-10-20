@@ -86,7 +86,7 @@ func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error
 }
 
 func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, reconcileError error) (ctrl.Result, error) {
-	delivery.Status.Conditions, _ = r.conditionManager.Finalize()
+	delivery.Status.Conditions = r.conditionManager.Finalize()
 
 	delivery.Status.ObservedGeneration = delivery.Generation
 	err := r.repo.StatusUpdate(delivery)

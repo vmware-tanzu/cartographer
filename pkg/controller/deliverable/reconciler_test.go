@@ -149,7 +149,7 @@ var _ = Describe("Reconciler", func() {
 				},
 			}
 
-			conditionManager.FinalizeReturns(someConditions, true)
+			conditionManager.FinalizeReturns(someConditions)
 
 			_, _ = reconciler.Reconcile(ctx, req)
 

@@ -31,10 +31,9 @@ var _ = Describe("conditionManager", func() {
 		})
 
 		It("returns a top level unknown", func() {
-			result, changed := manager.Finalize()
+			result := manager.Finalize()
 
 			Expect(manager.IsSuccessful()).To(BeFalse())
-			Expect(changed).To(BeTrue())
 			Expect(result).To(HaveLen(1))
 			Expect(result).To(ContainElement(MatchFields(IgnoreExtras,
 				Fields{
@@ -64,10 +63,9 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns the conditions and a successful parent", func() {
-				result, changed := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeTrue())
-				Expect(changed).To(BeTrue())
 				Expect(result).To(HaveLen(3))
 				Expect(result).To(ContainElements(
 					MatchFields(IgnoreExtras,
@@ -112,11 +110,9 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns the conditions and a failing parent", func() {
-				result, changed := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeFalse())
-				Expect(changed).To(BeTrue())
-
 				Expect(result).To(HaveLen(3))
 				Expect(result).To(ContainElements(
 					MatchFields(IgnoreExtras,
@@ -163,10 +159,9 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns the conditions and a successful parent", func() {
-				result, changed := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeTrue())
-				Expect(changed).To(BeTrue())
 				Expect(result).To(HaveLen(3))
 				Expect(result).To(ContainElements(
 					MatchFields(IgnoreExtras,
@@ -211,10 +206,9 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns the conditions and a failing parent", func() {
-				result, changed := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeFalse())
-				Expect(changed).To(BeTrue())
 				Expect(result).To(HaveLen(3))
 				Expect(result).To(ContainElements(
 					MatchFields(IgnoreExtras,
@@ -279,7 +273,7 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns a parent in a bad state", func() {
-				result, _ := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeFalse())
 				Expect(result).To(ContainElement(
@@ -293,7 +287,7 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("sets the parent reason and message to the last added bad condition", func() {
-				result, _ := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(result).To(ContainElement(
 					MatchFields(IgnoreExtras,
@@ -334,7 +328,7 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns a parent in an unknown state", func() {
-				result, _ := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeTrue())
 				Expect(result).To(ContainElement(
@@ -375,7 +369,7 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("returns a parent in a good state", func() {
-				result, _ := manager.Finalize()
+				result := manager.Finalize()
 
 				Expect(manager.IsSuccessful()).To(BeTrue())
 				Expect(result).To(ContainElement(
@@ -402,10 +396,9 @@ var _ = Describe("conditionManager", func() {
 		})
 
 		It("returns the conditions and a failing parent", func() {
-			result, changed := manager.Finalize()
+			result := manager.Finalize()
 
 			Expect(manager.IsSuccessful()).To(BeFalse())
-			Expect(changed).To(BeTrue())
 			Expect(result).To(HaveLen(2))
 			Expect(result).To(ContainElements(
 				MatchFields(IgnoreExtras,
@@ -438,10 +431,7 @@ var _ = Describe("conditionManager", func() {
 				Status: metav1.ConditionTrue,
 			}
 			manager.AddPositive(goodnessCondition)
-			var changed bool
-			firstConditions, changed = manager.Finalize()
-			Expect(changed).To(BeTrue())
-
+			firstConditions = manager.Finalize()
 		})
 
 		Context("when one of our conditions has changed", func() {
@@ -452,8 +442,7 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("does not affect other conditions", func() {
-				newConditions, changed := manager.Finalize()
-				Expect(changed).To(BeTrue())
+				newConditions := manager.Finalize()
 
 				Expect(newConditions).To(ConsistOf(
 					Not(Equal(firstConditions[0])),
@@ -469,8 +458,7 @@ var _ = Describe("conditionManager", func() {
 			})
 
 			It("nothing is changed", func() {
-				newConditions, changed := manager.Finalize()
-				Expect(changed).To(BeFalse())
+				newConditions := manager.Finalize()
 
 				Expect(newConditions).To(ConsistOf(
 					Equal(firstConditions[0]),

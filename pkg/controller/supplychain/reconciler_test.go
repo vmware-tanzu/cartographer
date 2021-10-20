@@ -74,7 +74,7 @@ var _ = Describe("Reconciler", func() {
 				Reason:             "Because I'm",
 				Message:            "Clap Along If you Feel",
 			}}
-			conditionManager.FinalizeReturns(expectedConditions, true)
+			conditionManager.FinalizeReturns(expectedConditions)
 
 			repo = &repositoryfakes.FakeRepository{}
 
