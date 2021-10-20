@@ -69,6 +69,7 @@ spec:
           value: /root
         - name: GIT_SCRIPT
           value: |
+            echo $(pipeline.spec.inputs.data)$
             export CONFIG_MAP_FIELD=$(pipeline.spec.inputs.input_config_map_field)$
             export COMMIT_MESSAGE="$(pipeline.spec.inputs.commit_message)$"
             export BRANCH="$(pipeline.spec.inputs.branch)$"
@@ -83,7 +84,7 @@ spec:
             git init
             git remote add origin $(pipeline.spec.inputs.git_ssh_user)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_repository)$
             git pull origin "`git remote show origin | grep "HEAD branch" | sed 's/.*: //'`"
-            git branch "$BRANCH" || true
+            git pull origin "$BRANCH" || git branch "$BRANCH"
             git checkout "$BRANCH"
             export INPUT_PATH=$(workspaces.input.path)
             cp "$INPUT_PATH"/"$CONFIG_MAP_FIELD" .

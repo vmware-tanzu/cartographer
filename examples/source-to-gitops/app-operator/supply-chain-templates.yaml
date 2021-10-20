@@ -111,10 +111,12 @@ spec:
 #
 #
 apiVersion: carto.run/v1alpha1
-kind: ClusterTemplate
+kind: ClusterConfigTemplate
 metadata:
   name: app-config
 spec:
+  configPath: .data
+
   ytt: |
     #@ load("@ytt:data", "data")
     apiVersion: v1
@@ -202,3 +204,4 @@ spec:
         branch: $(params.git_writer_branch)$
         skip_host_checking: $(params.git_writer_skip_host_checking)$
         git_ssh_variant: $(params.git_writer_ssh_variant)$
+        data: $(config)$

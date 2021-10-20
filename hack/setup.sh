@@ -345,6 +345,7 @@ test_example() {
         pushd "$(mktemp -d)"
               lpass show --notes gitlab-example-writer-token | /usr/bin/ssh-add -t 10 - 2> /dev/null
               git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
+              echo "looking for branch $BRANCH"
               pushd "$GIT_WRITER_REPOSITORY"
                     for i in {20..1}; do
                             echo "- attempt $i"
