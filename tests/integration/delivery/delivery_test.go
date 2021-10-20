@@ -170,4 +170,39 @@ var _ = Describe("Deliveries", func() {
 			})
 		})
 	})
+
+	Describe("I cannot define identical resource names", func() {
+		It("rejects the delivery with an error", func() {
+			deliveryYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterDelivery
+				metadata:
+				  name: my-delivery
+				spec:
+				  selector:
+					foo: bar
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+						kind: ClusterSourceTemplate
+						name: my-source-template
+			        - name: my-first-resource
+					  templateRef:
+						kind: ClusterSourceTemplate
+						name: my-other-template
+			`)
+
+			delivery = &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(deliveryYaml), delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, delivery, &client.CreateOptions{})
+			Expect(err).To(HaveOccurred())
+
+			cleanups = append(cleanups, delivery)
+
+			Expect(err).To(MatchError(ContainSubstring(`spec.resources[1].name "my-first-resource" cannot appear twice`)))
+		})
+	})
 })
