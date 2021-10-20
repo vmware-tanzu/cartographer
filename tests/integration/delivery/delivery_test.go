@@ -221,10 +221,10 @@ var _ = Describe("Deliveries", func() {
 				  name: my-delivery
 				spec:
 				  selector:
-					"some-key": "some-value"
-			      resources:
-			        - name: my-first-resource
-					  templateRef:
+				    "some-key": "some-value"
+				  resources:
+				    - name: my-first-resource
+				      templateRef:
 				        kind: ClusterSourceTemplate
 				        name: my-source-template
 			`)
