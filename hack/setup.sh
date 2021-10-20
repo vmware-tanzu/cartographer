@@ -29,6 +29,7 @@ readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-"gitlab.eng.vmware.com"}
 readonly GIT_WRITER_PROJECT=${GIT_WRITER_PROJECT:-"supply-chain-choreographer"}
 readonly GIT_WRITER_REPOSITORY=${GIT_WRITER_REPOSITORY:-"git-writer-example"}
 readonly GIT_WRITER_SSH_TOKEN=${GIT_WRITER_SSH_TOKEN:-"$(lpass show --notes gitlab-example-writer-token)"}
+readonly GIT_WRITER_SERVER_PUBLIC_TOKEN=${GIT_WRITER_SERVER_PUBLIC_TOKEN:-"$(ssh-keyscan -H "$GIT_WRITER_SERVER")"}
 
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG="/tmp/cartographer-docker"
@@ -316,7 +317,7 @@ setup_example() {
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
                 --data-value git_writer.branch="$(cat hack/git_entropy)" \
                 --data-value git_writer.base64_encoded_ssh_key="$(echo "$GIT_WRITER_SSH_TOKEN" | base64)" \
-                --data-value git_writer.base64_encoded_known_hosts="$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64)" |
+                --data-value git_writer.base64_encoded_known_hosts="$(echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" | base64)" |
                 kapp deploy --yes -a example-supply -f-
 
         ytt --ignore-unknown-comments \
@@ -325,7 +326,7 @@ setup_example() {
                 --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY" \
                 --data-value git_writer.branch="$(cat hack/git_entropy)" \
                 --data-value git_writer.base64_encoded_ssh_key="$(echo "$GIT_WRITER_SSH_TOKEN" | base64)" \
-                --data-value git_writer.base64_encoded_known_hosts="$(ssh-keyscan -H "$GIT_WRITER_SERVER" | base64)" |
+                --data-value git_writer.base64_encoded_known_hosts="$(echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" | base64)" |
                 kapp deploy --yes -a example-deliver -f-
 }
 

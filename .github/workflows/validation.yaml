@@ -56,4 +56,5 @@ jobs:
       - name: run e2e example
         env:
           GIT_WRITER_SSH_TOKEN: ${{ secrets.GIT_WRITER_SSH_TOKEN }}
+          GIT_WRITER_SERVER_PUBLIC_TOKEN: ${{ secrets.GIT_WRITER_SERVER_PUBLIC_TOKEN }}
         run: ./hack/setup.sh cluster cartographer example-dependencies example
