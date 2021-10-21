@@ -73,8 +73,11 @@ main() {
                         ;;
 
                 example)
-                        setup_example
-                        test_example
+                        setup_source_to_gitops
+                        test_source_to_gitops
+                        setup_gitops_to_app
+                        test_gitops_to_app
+                        clean_up_git_repo
                         ;;
 
                 teardown-example)
@@ -301,7 +304,9 @@ install_tekton_git_cli_task() {
   kapp deploy --yes -a tekton-git-cli -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
 }
 
-setup_example() {
+setup_source_to_gitops() {
+        log "setting up source to gitops"
+
         touch hack/git_entropy
         echo $RANDOM | base64 > hack/git_entropy
 
@@ -319,6 +324,10 @@ setup_example() {
                 --data-value git_writer.base64_encoded_ssh_key="$(echo "$GIT_WRITER_SSH_TOKEN" | base64)" \
                 --data-value git_writer.base64_encoded_known_hosts="$(echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" | base64)" |
                 kapp deploy --yes -a example-supply -f-
+}
+
+setup_gitops_to_app() {
+        log "setting up gitops to app"
 
         ytt --ignore-unknown-comments \
                 -f "$DIR/../examples/gitops-to-app" \
@@ -336,13 +345,15 @@ teardown_example() {
         rm hack/git_entropy
 }
 
-test_example() {
-        log "testing"
+test_source_to_gitops() {
+        log "testing source-to-gitops"
 
         GIT_ENTROPY="$(cat hack/git_entropy)"
         BRANCH="$GIT_ENTROPY"
 
         EXPECTED_GIT_MESSAGE="Some peturbation: $GIT_ENTROPY"
+
+        SUCCESS=false
 
         pushd "$(mktemp -d)"
               ssh-add -t 1000 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null || {
@@ -357,20 +368,18 @@ test_example() {
                     for i in {20..1}; do
                             echo "- attempt $i"
 
-                            local deployed_pods
-                            deployed_pods=$(kubectl get pods \
-                                    -l 'serving.knative.dev/configuration=dev' \
-                                    -o name)
+                            git fetch --all --prune
+                            if [[ ! "$(git branch --show-current)" = "$BRANCH" ]]; then
+                                  git checkout "$BRANCH" > /dev/null 2> /dev/null || sleep "$i" && continue
+                            fi
 
-                            git pull > /dev/null 2> /dev/null
-                            git checkout "$BRANCH" > /dev/null 2> /dev/null || continue
+                            git pull #> /dev/null 2> /dev/null
                             MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
 
-                            if [[ -n "$deployed_pods" && "$EXPECTED_GIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
-                                    echo "looks good; cleaning up git repo..."
-                                    git push -d origin "$BRANCH"
-                                    log 'SUCCEEDED! sweet'
-                                    exit 0
+                            if [[ "$EXPECTED_GIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
+                                    log 'gitops worked! sweet'
+                                    SUCCESS=true
+                                    break
                             fi
 
                             sleep "$i"
@@ -378,8 +387,51 @@ test_example() {
               popd
         popd
 
+        if [[ "$SUCCESS" = true ]]; then
+              return 0
+        else
+              log 'FAILED :('
+              exit 1
+        fi
+}
+
+test_gitops_to_app() {
+        log "testing gitops to app"
+
+        for i in {15..1}; do
+                echo "- attempt $i"
+
+                local deployed_pods
+                deployed_pods=$(kubectl get pods \
+                        -l 'serving.knative.dev/configuration=dev' \
+                        -o name)
+
+                if [[ -n "$deployed_pods" ]]; then
+                        log 'app deployed! sweet'
+                        return 0
+                fi
+
+                sleep "$i"
+        done
+
         log 'FAILED :('
         exit 1
+}
+
+clean_up_git_repo() {
+      log "cleaning up git repo"
+
+      BRANCH="$(cat hack/git_entropy)"
+
+      pushd "$(mktemp -d)"
+            git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
+            pushd "$GIT_WRITER_REPOSITORY"
+                  git push -d origin "$BRANCH"
+            popd
+      popd
+
+      log "done"
+      exit 0
 }
 
 delete_containers() {
