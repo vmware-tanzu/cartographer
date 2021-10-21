@@ -26,15 +26,13 @@ import (
 var _ = Describe("Cache", func() {
 	var (
 		cache                repository.RepoCache
-		fakeExpiringCache    *repositoryfakes.FakeExpiringCache
 		fakeLogger           *repositoryfakes.FakeLogger
 		submitted, persisted *unstructured.Unstructured
 	)
 
 	BeforeEach(func() {
-		fakeExpiringCache = &repositoryfakes.FakeExpiringCache{}
 		fakeLogger = &repositoryfakes.FakeLogger{}
-		cache = repository.NewCache(fakeExpiringCache, fakeLogger)
+		cache = repository.NewCache(fakeLogger)
 
 		objKind := "the-kind"
 		objName := "its-name"
@@ -51,135 +49,25 @@ var _ = Describe("Cache", func() {
 		persisted.SetNamespace(objNamespace + "-ignored-submitted-one-is-used")
 	})
 
-	Describe("Set", func() {
-		It("stores the submitted and persisted values paired in the cache", func() {
-			cache.Set(submitted, persisted)
-
-			Expect(fakeExpiringCache.SetCallCount()).To(Equal(2))
-
-			submittedKey, submittedValue, submittedExpiryDuration := fakeExpiringCache.SetArgsForCall(0)
-			Expect(submittedKey).To(Equal("submitted:its-ns:the-kind:its-name"))
-			Expect(submittedValue).To(Equal(*submitted))
-			Expect(submittedExpiryDuration).To(Equal(repository.CacheExpiryDuration))
-			persistedKey, persistedValue, persistedExpiryDuration := fakeExpiringCache.SetArgsForCall(1)
-			Expect(persistedKey).To(Equal("persisted:its-ns:the-kind:its-name"))
-			Expect(persistedValue).To(Equal(*persisted))
-			Expect(persistedExpiryDuration).To(Equal(repository.CacheExpiryDuration))
-		})
-
-		Context("constructs a key using generateName", func() {
-			BeforeEach(func() {
-				submitted.SetName("")
-				submitted.SetGenerateName("some-generated-")
-			})
-
-			It("stores the submitted and persisted values paired in the cache", func() {
-				cache.Set(submitted, persisted)
-
-				Expect(fakeExpiringCache.SetCallCount()).To(Equal(2))
-
-				submittedKey, _, _ := fakeExpiringCache.SetArgsForCall(0)
-				Expect(submittedKey).To(Equal("submitted:its-ns:the-kind:some-generated-"))
-				persistedKey, _, _ := fakeExpiringCache.SetArgsForCall(1)
-				Expect(persistedKey).To(Equal("persisted:its-ns:the-kind:some-generated-"))
-			})
-		})
-	})
-
-	Describe("functions that rely on the state of the cache", func() {
-		var (
-			submittedObjInCache, persistedObjInCache     interface{}
-			submittedFoundInCache, persistedFoundInCache bool
-		)
-
-		BeforeEach(func() {
-			fakeExpiringCache.GetCalls(func(key interface{}) (interface{}, bool) {
-				if key == "submitted:its-ns:the-kind:its-name" {
-					return submittedObjInCache, submittedFoundInCache
-				}
-				if key == "persisted:its-ns:the-kind:its-name" {
-					return persistedObjInCache, persistedFoundInCache
-				}
-				panic("unexpected key")
-			})
-		})
-
-		Describe("Refresh", func() {
-			Context("when submitted and persisted exist in the cache", func() {
-				BeforeEach(func() {
-					persistedObjInCache = *persisted
-					persistedFoundInCache = true
-					submittedObjInCache = *submitted
-					submittedFoundInCache = true
-				})
-
-				It("re-sets the entries in the cache with the expiry duration", func() {
-					cache.Refresh(submitted)
-
-					submittedKey, submittedValue, submittedExpiryDuration := fakeExpiringCache.SetArgsForCall(0)
-					Expect(submittedKey).To(Equal("submitted:its-ns:the-kind:its-name"))
-					Expect(submittedValue).To(Equal(*submitted))
-					Expect(submittedExpiryDuration).To(Equal(repository.CacheExpiryDuration))
-					persistedKey, persistedValue, persistedExpiryDuration := fakeExpiringCache.SetArgsForCall(1)
-					Expect(persistedKey).To(Equal("persisted:its-ns:the-kind:its-name"))
-					Expect(persistedValue).To(Equal(*persisted))
-					Expect(persistedExpiryDuration).To(Equal(repository.CacheExpiryDuration))
-				})
-			})
-
-			Context("when the submitted obj is not in the cache", func() {
-				BeforeEach(func() {
-					persistedObjInCache = *persisted
-					persistedFoundInCache = true
-					submittedObjInCache = nil
-					submittedFoundInCache = false
-				})
-
-				It("makes no changes to the cache", func() {
-					cache.Refresh(submitted)
-					Expect(fakeExpiringCache.SetCallCount()).To(Equal(0))
-				})
-			})
-
-			Context("when the submitted obj is not in the cache", func() {
-				BeforeEach(func() {
-					persistedObjInCache = nil
-					persistedFoundInCache = false
-					submittedObjInCache = *submitted
-					submittedFoundInCache = true
-				})
-
-				It("makes no changes to the cache", func() {
-					cache.Refresh(submitted)
-					Expect(fakeExpiringCache.SetCallCount()).To(Equal(0))
-				})
-			})
-		})
-
-		Describe("UnchangedSinceCached", func() {
+	Describe("UnchangedSinceCached", func() {
+		Context("when the submitted object has a name", func() {
 			var existingObjsOnAPIServer []*unstructured.Unstructured
 
 			BeforeEach(func() {
-				persistedObjInCache = *persisted
-				persistedFoundInCache = true
-				submittedObjInCache = *submitted
-				submittedFoundInCache = true
-
 				existingObjsOnAPIServer = append(existingObjsOnAPIServer, persisted.DeepCopy())
 			})
 
 			Context("when the submitted object is not present in the cache", func() {
-				BeforeEach(func() {
-					submittedObjInCache = nil
-					submittedFoundInCache = false
-				})
-
 				It("is false", func() {
 					Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 				})
 			})
 
 			Context("when the submitted object differs from the cached submitted object", func() {
+				BeforeEach(func() {
+					cache.Set(submitted, persisted)
+				})
+
 				It("is false", func() {
 					newSubmission := submitted.DeepCopy()
 					newSubmission.SetLabels(map[string]string{"now-with": "funky-labels"})
@@ -188,6 +76,10 @@ var _ = Describe("Cache", func() {
 			})
 
 			Context("when the submitted object is the same as the cached submitted object", func() {
+				BeforeEach(func() {
+					cache.Set(submitted, persisted)
+				})
+
 				Context("when the existing object has no spec", func() {
 					It("is false", func() {
 						Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
@@ -200,25 +92,8 @@ var _ = Describe("Cache", func() {
 					})
 
 					Context("when the persisted object has no spec", func() {
-						It("is false", func() {
-							Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
-						})
-					})
-
-					Context("when the persisted object is not present", func() {
 						BeforeEach(func() {
-							persistedObjInCache = nil
-							persistedFoundInCache = false
-						})
-
-						It("is false", func() {
-							Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
-						})
-					})
-
-					Context("when the persisted object is somehow not an unstructured object", func() {
-						BeforeEach(func() {
-							persistedObjInCache = "this is a string, not an unstructured"
+							cache.Set(submitted, persisted)
 						})
 
 						It("is false", func() {
@@ -230,6 +105,7 @@ var _ = Describe("Cache", func() {
 						Context("when the existing object spec is the same as the cached submitted object spec", func() {
 							BeforeEach(func() {
 								persisted.UnstructuredContent()["spec"] = existingObjsOnAPIServer[0].UnstructuredContent()["spec"]
+								cache.Set(submitted, persisted)
 							})
 
 							It("is true", func() {
@@ -240,6 +116,7 @@ var _ = Describe("Cache", func() {
 						Context("when the existing object spec differs from the cached submitted object spec", func() {
 							BeforeEach(func() {
 								persisted.UnstructuredContent()["spec"] = map[string]interface{}{"oh-wait": "this-spec-is-different"}
+								cache.Set(submitted, persisted)
 							})
 
 							It("is false", func() {
@@ -248,6 +125,29 @@ var _ = Describe("Cache", func() {
 						})
 					})
 				})
+			})
+		})
+
+		Context("when the submitted object has no name", func() {
+			var existingObjsOnAPIServer []*unstructured.Unstructured
+
+			BeforeEach(func() {
+				submitted.SetName("")
+				submitted.SetGenerateName("this-is-generate-name-")
+				submitted.UnstructuredContent()["spec"] = map[string]interface{}{"ooo": "a-spec"}
+
+				persisted.SetName("this-is-generate-name-abcdef")
+				persisted.SetGenerateName("")
+				persisted.UnstructuredContent()["spec"] = submitted.UnstructuredContent()["spec"]
+
+				cache.Set(submitted, persisted)
+				existingObjsOnAPIServer = append(existingObjsOnAPIServer, persisted.DeepCopy())
+			})
+
+			It("the cache matches against the generateName instead", func() {
+				Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
+				submitted.SetGenerateName("another-generate-name-")
+				Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
 			})
 		})
 	})

@@ -39,12 +39,14 @@ import (
 
 var _ = Describe("repository", func() {
 	var (
-		repo  repository.Repository
-		cache *repositoryfakes.FakeRepoCache
+		repo   repository.Repository
+		cache  *repositoryfakes.FakeRepoCache
+		logger *repositoryfakes.FakeLogger
 	)
 
 	BeforeEach(func() {
 		cache = &repositoryfakes.FakeRepoCache{}
+		logger = &repositoryfakes.FakeLogger{}
 	})
 
 	Describe("tests using counterfeiter client", func() {
@@ -52,7 +54,7 @@ var _ = Describe("repository", func() {
 
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
-			repo = repository.NewRepository(cl, cache)
+			repo = repository.NewRepository(cl, cache, logger)
 		})
 
 		Context("EnsureObjectExistsOnCluster", func() {
@@ -225,14 +227,6 @@ spec:
 					It("does not write to the submitted or persisted cache", func() {
 						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(0))
-					})
-
-					It("refreshes the cache entry", func() {
-						originalStampedObj := stampedObj.DeepCopy()
-
-						Expect(repo.EnsureObjectExistsOnCluster(stampedObj, true)).To(Succeed())
-						Expect(cache.RefreshCallCount()).To(Equal(1))
-						Expect(cache.RefreshArgsForCall(0)).To(Equal(originalStampedObj))
 					})
 
 					It("populates the object passed into the function with the object in apiServer", func() {
@@ -560,7 +554,7 @@ spec:
 			fakeClientBuilder = fake.NewClientBuilder().WithScheme(scheme).WithObjects(clientObjects...)
 			cl = fakeClientBuilder.Build()
 
-			repo = repository.NewRepository(cl, cache)
+			repo = repository.NewRepository(cl, cache, logger)
 		})
 
 		Context("GetClusterTemplate", func() {
