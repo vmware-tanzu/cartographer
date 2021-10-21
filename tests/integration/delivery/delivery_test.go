@@ -205,4 +205,69 @@ var _ = Describe("Deliveries", func() {
 			Expect(err).To(MatchError(ContainSubstring(`spec.resources[1].name "my-first-resource" cannot appear twice`)))
 		})
 	})
+
+	Describe("I can expect ClusterDelivery to not keep updating it's status", func() {
+
+		var (
+			lastConditions []metav1.Condition
+		)
+
+		BeforeEach(func() {
+			deliveryYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterDelivery
+				metadata:
+				  name: my-delivery
+				spec:
+				  selector:
+				    "some-key": "some-value"
+				  resources:
+				    - name: my-first-resource
+				      templateRef:
+				        kind: ClusterSourceTemplate
+				        name: my-source-template
+			`)
+
+			delivery = &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(deliveryYaml), delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, delivery, &client.CreateOptions{})
+			cleanups = append(cleanups, delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() bool {
+				persistedDelivery := &v1alpha1.ClusterDelivery{}
+				err := c.Get(ctx, client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
+				Expect(err).NotTo(HaveOccurred())
+				lastConditions = persistedDelivery.Status.Conditions
+
+				return persistedDelivery.Status.ObservedGeneration == persistedDelivery.Generation
+			}, 5*time.Second).Should(BeTrue())
+		})
+
+		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
+			time.Sleep(1 * time.Second) //metav1.Time unmarshals with 1 second accuracy so this sleep avoids a race condition
+
+			persistedDelivery := &v1alpha1.ClusterDelivery{}
+			err := c.Get(context.Background(), client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			persistedDelivery.Spec.Selector = map[string]string{"some-key": "blah"}
+			err = c.Update(context.Background(), persistedDelivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() int64 {
+				persistedDelivery = &v1alpha1.ClusterDelivery{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
+				Expect(err).NotTo(HaveOccurred())
+				return persistedDelivery.Status.ObservedGeneration
+			}).Should(Equal(persistedDelivery.Generation))
+
+			err = c.Get(context.Background(), client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(persistedDelivery.Status.Conditions).To(Equal(lastConditions))
+		})
+	})
 })
