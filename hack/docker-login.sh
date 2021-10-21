@@ -18,7 +18,7 @@ set -o pipefail
 set -o nounset
 
 readonly DOCKER_REGISTRY=${DOCKER_REGISTRY:-"https://index.docker.io/v1/"}
-readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"$(realpath ~/.docker)"}
+readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
 readonly DOCKER_USERNAME="${DOCKER_USERNAME}"
 readonly DOCKER_PASSWORD="${DOCKER_PASSWORD}"
 
