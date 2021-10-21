@@ -215,6 +215,10 @@ spec:
                       - templateRef
                       type: object
                   type: object
+                  oneOf:
+                    - required: ["deployment"]
+                    - required: ["source"]
+                    - required: ["terminal"]
                 type: array
               selector:
                 additionalProperties:
