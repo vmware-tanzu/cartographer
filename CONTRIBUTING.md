@@ -202,7 +202,7 @@ Although `2` is automated, it's still possible to do the procedure manually.
 1. Check the previous release - https://github.com/vmware-tanzu/cartographer/releases
 2. Create a tag for the new release
 ```bash
-git tag v0.0.x # or v0.0.x-rcn
+git tag v0.0.x # or v0.0.x-rc.n
 git push origin <tag-name>
 ```
 3. Ensure workflow has kicked off - https://github.com/vmware-tanzu/cartographer/actions
