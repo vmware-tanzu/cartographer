@@ -345,7 +345,7 @@ test_example() {
         EXPECTED_GIT_MESSAGE="Some peturbation: $GIT_ENTROPY"
 
         pushd "$(mktemp -d)"
-              ssh-add -t 10 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null || {
+              ssh-add -t 1000 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null || {
                 mkdir -p ~/.ssh
                 echo "$GIT_WRITER_SSH_TOKEN" >> ~/.ssh/id_rsa
                 echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" >> ~/.ssh/known_hosts
@@ -362,7 +362,6 @@ test_example() {
                                     -l 'serving.knative.dev/configuration=dev' \
                                     -o name)
 
-                            ssh-add -t 10 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null
                             git pull > /dev/null 2> /dev/null
                             git checkout "$BRANCH" > /dev/null 2> /dev/null || continue
                             MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
