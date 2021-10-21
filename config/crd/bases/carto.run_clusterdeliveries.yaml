@@ -51,62 +51,169 @@ spec:
               resources:
                 items:
                   properties:
-                    configs:
-                      items:
-                        properties:
-                          name:
-                            type: string
-                          resource:
-                            type: string
-                        required:
-                        - name
-                        - resource
-                        type: object
-                      type: array
-                    name:
-                      type: string
-                    params:
-                      items:
-                        properties:
-                          name:
-                            type: string
-                          value:
-                            x-kubernetes-preserve-unknown-fields: true
-                        required:
-                        - name
-                        - value
-                        type: object
-                      type: array
-                    sources:
-                      items:
-                        properties:
-                          name:
-                            type: string
-                          resource:
-                            type: string
-                        required:
-                        - name
-                        - resource
-                        type: object
-                      type: array
-                    templateRef:
+                    deployment:
                       properties:
-                        kind:
-                          enum:
-                          - ClusterSourceTemplate
-                          - ClusterDeploymentTemplate
-                          - ClusterTemplate
-                          type: string
                         name:
-                          minLength: 1
                           type: string
+                        params:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              value:
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        sources:
+                          properties:
+                            name:
+                              type: string
+                            resource:
+                              type: string
+                          required:
+                          - name
+                          - resource
+                          type: object
+                        templateRef:
+                          properties:
+                            kind:
+                              enum:
+                              - ClusterSourceTemplate
+                              - ClusterDeploymentTemplate
+                              - ClusterTemplate
+                              type: string
+                            name:
+                              minLength: 1
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
                       required:
-                      - kind
                       - name
+                      - templateRef
                       type: object
-                  required:
-                  - name
-                  - templateRef
+                    source:
+                      properties:
+                        configs:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              resource:
+                                type: string
+                            required:
+                            - name
+                            - resource
+                            type: object
+                          type: array
+                        name:
+                          type: string
+                        params:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              value:
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        sources:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              resource:
+                                type: string
+                            required:
+                            - name
+                            - resource
+                            type: object
+                          type: array
+                        templateRef:
+                          properties:
+                            kind:
+                              enum:
+                              - ClusterSourceTemplate
+                              - ClusterDeploymentTemplate
+                              - ClusterTemplate
+                              type: string
+                            name:
+                              minLength: 1
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
+                      required:
+                      - name
+                      - templateRef
+                      type: object
+                    terminal:
+                      properties:
+                        configs:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              resource:
+                                type: string
+                            required:
+                            - name
+                            - resource
+                            type: object
+                          type: array
+                        name:
+                          type: string
+                        params:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              value:
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        sources:
+                          items:
+                            properties:
+                              name:
+                                type: string
+                              resource:
+                                type: string
+                            required:
+                            - name
+                            - resource
+                            type: object
+                          type: array
+                        templateRef:
+                          properties:
+                            kind:
+                              enum:
+                              - ClusterSourceTemplate
+                              - ClusterDeploymentTemplate
+                              - ClusterTemplate
+                              type: string
+                            name:
+                              minLength: 1
+                              type: string
+                          required:
+                          - kind
+                          - name
+                          type: object
+                      required:
+                      - name
+                      - templateRef
+                      type: object
                   type: object
                 type: array
               selector:

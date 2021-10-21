@@ -47,8 +47,8 @@ type ClusterDelivery struct {
 }
 
 type ClusterDeliverySpec struct {
-	Resources []ClusterDeliveryResource `json:"resources"`
-	Selector  map[string]string         `json:"selector"`
+	Resources []ClusterDeliveryResourceSelector `json:"resources"`
+	Selector  map[string]string                 `json:"selector"`
 }
 
 type ClusterDeliveryStatus struct {
@@ -56,12 +56,33 @@ type ClusterDeliveryStatus struct {
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
-type ClusterDeliveryResource struct {
+type ClusterDeliveryResourceSelector struct {
+	Source     ClusterDeliverySource     `json:"source,omitempty"`
+	Terminal   ClusterDeliveryTerminal   `json:"terminal,omitempty"`
+	Deployment ClusterDeliveryDeployment `json:"deployment,omitempty"`
+}
+
+type ClusterDeliverySource struct {
 	Name        string                           `json:"name"`
 	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
 	Params      []Param                          `json:"params,omitempty"`
 	Sources     []ResourceReference              `json:"sources,omitempty"`
 	Configs     []ResourceReference              `json:"configs,omitempty"`
+}
+
+type ClusterDeliveryTerminal struct {
+	Name        string                           `json:"name"`
+	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
+	Params      []Param                          `json:"params,omitempty"`
+	Sources     []ResourceReference              `json:"sources,omitempty"`
+	Configs     []ResourceReference              `json:"configs,omitempty"`
+}
+
+type ClusterDeliveryDeployment struct {
+	Name        string                           `json:"name"`
+	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
+	Params      []Param                          `json:"params,omitempty"`
+	Source      ResourceReference                `json:"sources,omitempty"`
 }
 
 type DeliveryClusterTemplateReference struct {
