@@ -50,14 +50,16 @@ type Repository interface {
 }
 
 type repository struct {
-	rc RepoCache
-	cl client.Client
+	rc     RepoCache
+	cl     client.Client
+	logger Logger
 }
 
-func NewRepository(client client.Client, repoCache RepoCache) Repository {
+func NewRepository(client client.Client, repoCache RepoCache, logger Logger) Repository {
 	return &repository{
-		rc: repoCache,
-		cl: client,
+		rc:     repoCache,
+		cl:     client,
+		logger: logger,
 	}
 }
 
@@ -83,13 +85,13 @@ func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 
 func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
 	unstructuredList, err := r.ListUnstructured(obj)
+	r.logger.Info("considering objects from apiserver: %+v", unstructuredList)
 	if err != nil {
 		return err
 	}
 
 	cacheHit := r.rc.UnchangedSinceCached(obj, unstructuredList)
 	if cacheHit != nil {
-		r.rc.Refresh(obj.DeepCopy())
 		*obj = *cacheHit
 		return nil
 	}
@@ -100,8 +102,10 @@ func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured,
 	}
 
 	if outdatedObject != nil {
+		r.logger.Info("patching object %s (ns %s kind %s)", obj.GetName(), obj.GetNamespace(), obj.GetKind())
 		return r.patchUnstructured(outdatedObject, obj)
 	} else {
+		r.logger.Info("creating object %s (ns %s kind %s)", obj.GetName(), obj.GetNamespace(), obj.GetKind())
 		return r.createUnstructured(obj)
 	}
 }

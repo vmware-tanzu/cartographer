@@ -17,108 +17,89 @@ package repository
 import (
 	"fmt"
 	"reflect"
-	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const submittedCachePrefix = "submitted"
-const persistedCachePrefix = "persisted"
-const CacheExpiryDuration = 1 * time.Hour
-
 //counterfeiter:generate . Logger
 type Logger interface {
-	Error(err error, msg string, keysAndValues ...interface{})
 	Info(msg string, keysAndValues ...interface{})
-}
-
-//counterfeiter:generate . ExpiringCache
-type ExpiringCache interface {
-	Get(key interface{}) (val interface{}, ok bool)
-	Set(key interface{}, val interface{}, ttl time.Duration)
 }
 
 //counterfeiter:generate . RepoCache
 type RepoCache interface {
 	Set(submitted, persisted *unstructured.Unstructured)
 	UnchangedSinceCached(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
-	Refresh(submitted *unstructured.Unstructured)
 }
 
-func NewCache(c ExpiringCache, l Logger) RepoCache {
+func NewCache(l Logger) RepoCache {
 	return &cache{
-		ec:     c,
-		logger: l,
+		logger:         l,
+		submittedCache: make(map[string]unstructured.Unstructured),
+		persistedCache: make(map[string]unstructured.Unstructured),
 	}
 }
 
 type cache struct {
-	ec     ExpiringCache
-	logger Logger
+	logger         Logger
+	submittedCache map[string]unstructured.Unstructured
+	persistedCache map[string]unstructured.Unstructured
 }
 
 func (c *cache) Set(submitted, persisted *unstructured.Unstructured) {
-	submittedKey := getKey(submitted, submittedCachePrefix)
-	persistedKey := getKey(submitted, persistedCachePrefix)
-	c.ec.Set(submittedKey, *submitted, CacheExpiryDuration)
-	c.ec.Set(persistedKey, *persisted, CacheExpiryDuration)
-}
-
-func (c *cache) Refresh(submitted *unstructured.Unstructured) {
-	submittedKey := getKey(submitted, submittedCachePrefix)
-	persistedKey := getKey(submitted, persistedCachePrefix)
-	if submittedCached, ok := c.ec.Get(submittedKey); ok {
-		if persistedCached, ok := c.ec.Get(persistedKey); ok {
-			c.ec.Set(submittedKey, submittedCached, CacheExpiryDuration)
-			c.ec.Set(persistedKey, persistedCached, CacheExpiryDuration)
-		}
-	}
+	key := getKey(submitted)
+	c.submittedCache[key] = *submitted
+	c.persistedCache[key] = *persisted
 }
 
 func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
-	submittedKey := getKey(submitted, submittedCachePrefix)
-	persistedKey := getKey(submitted, persistedCachePrefix)
-	submittedCached, ok := c.ec.Get(submittedKey)
-	submittedUnchanged := ok && reflect.DeepEqual(submittedCached, *submitted)
+	key := getKey(submitted)
+	c.logger.Info("key: %s checking for changes since cached for key: %s", key)
+	submittedCached, submittedFoundInCache := c.submittedCache[key]
+	submittedUnchanged := submittedFoundInCache && reflect.DeepEqual(submittedCached, *submitted)
 
-	persistedCached := c.getPersistedCached(persistedKey)
+	persistedCached := c.getPersistedCached(key)
 
-	if !submittedUnchanged {
-		if submittedCached != nil {
-			c.logger.Info("miss: submitted object in cache is different from submitted object")
+	if submittedUnchanged {
+		c.logger.Info("key: %s no changes since last submission, checking existing objects on apiserver", key)
+	} else {
+		if submittedFoundInCache {
+			c.logger.Info("key: %s miss: submitted object in cache is different from submitted object", key)
 		} else {
-			c.logger.Info("miss: object not in cache")
+			c.logger.Info("key: %s miss: object not in cache", key)
 		}
 		return nil
 	}
 
 	for _, existing := range existingList {
+		c.logger.Info("key: %s considering object: %s", key, existing.GetName())
 		existingSpec, ok := existing.Object["spec"]
 		if !ok {
-			c.logger.Info("miss: object on apiserver has no spec")
+			c.logger.Info("key: %s object on apiserver has no spec", key)
 			continue
 		}
 
 		persistedCachedSpec, ok := persistedCached.Object["spec"]
 		if !ok {
-			c.logger.Info("miss: persisted object in cache has no spec")
+			c.logger.Info("key: %s persisted object in cache has no spec", key)
 			continue
 		}
 
 		sameSame := reflect.DeepEqual(existingSpec, persistedCachedSpec)
 		if sameSame {
-			c.logger.Info("hit: persisted object in cache matches spec on apiserver")
+			c.logger.Info("key: %s hit: persisted object in cache matches spec on apiserver", key)
 			return existing
 		} else {
-			c.logger.Info("miss: persisted object in cache DOES NOT match spec on apiserver")
+			c.logger.Info("key: %s persisted object in cache DOES NOT match spec on apiserver", key)
 			continue
 		}
 	}
 
+	c.logger.Info("key: %s miss: no matching existing object on apiserver", key)
 	return nil
 }
 
-func getKey(obj *unstructured.Unstructured, prefix string) string {
+func getKey(obj *unstructured.Unstructured) string {
 	// todo: probably should hash object for key
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
 	var name string
@@ -128,21 +109,10 @@ func getKey(obj *unstructured.Unstructured, prefix string) string {
 		name = obj.GetName()
 	}
 	ns := obj.GetNamespace()
-	return fmt.Sprintf("%s:%s:%s:%s", prefix, ns, kind, name)
+	return fmt.Sprintf("%s:%s:%s", ns, kind, name)
 }
 
-func (c *cache) getPersistedCached(persistedKey string) *unstructured.Unstructured {
-	var persistedCached unstructured.Unstructured
-
-	persistedCachedUntyped, ok := c.ec.Get(persistedKey)
-	if !ok {
-		persistedCachedUntyped = unstructured.Unstructured{}
-	}
-
-	persistedCached, ok = persistedCachedUntyped.(unstructured.Unstructured)
-	if !ok {
-		persistedCached = unstructured.Unstructured{}
-	}
-
-	return &persistedCached
+func (c *cache) getPersistedCached(key string) *unstructured.Unstructured {
+	persisted := c.persistedCache[key]
+	return &persisted
 }

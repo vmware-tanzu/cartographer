@@ -22,7 +22,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/cache"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	pkgcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
@@ -82,7 +81,11 @@ func RegisterControllers(mgr manager.Manager) error {
 }
 
 func registerWorkloadController(mgr manager.Manager) error {
-	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring(), mgr.GetLogger().WithName("workload-repo-cache")))
+	repo := repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
+		mgr.GetLogger().WithName("workload-repo"),
+	)
 
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
 		Reconciler: workload.NewReconciler(repo, conditions.NewConditionManager, realizerworkload.NewRealizer()),
@@ -114,7 +117,11 @@ func registerWorkloadController(mgr manager.Manager) error {
 }
 
 func registerSupplyChainController(mgr manager.Manager) error {
-	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring(), mgr.GetLogger().WithName("supply-chain-repo-cache")))
+	repo := repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("supply-chain-repo-cache")),
+		mgr.GetLogger().WithName("supply-chain-repo"),
+	)
 
 	ctrl, err := pkgcontroller.New("supply-chain", mgr, pkgcontroller.Options{
 		Reconciler: supplychain.NewReconciler(repo, conditions.NewConditionManager),
@@ -134,7 +141,11 @@ func registerSupplyChainController(mgr manager.Manager) error {
 }
 
 func registerDeliveryController(mgr manager.Manager) error {
-	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring(), mgr.GetLogger().WithName("delivery-repo-cache")))
+	repo := repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("delivery-repo-cache")),
+		mgr.GetLogger().WithName("delivery-repo"),
+	)
 
 	ctrl, err := pkgcontroller.New("delivery", mgr, pkgcontroller.Options{
 		Reconciler: delivery.NewReconciler(repo),
@@ -154,7 +165,11 @@ func registerDeliveryController(mgr manager.Manager) error {
 }
 
 func registerDeliverableController(mgr manager.Manager) error {
-	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring(), mgr.GetLogger().WithName("deliverable-repo-cache")))
+	repo := repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),
+		mgr.GetLogger().WithName("deliverable-repo"),
+	)
 
 	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{
 		Reconciler: deliverable.NewReconciler(repo, conditions.NewConditionManager, realizerdeliverable.NewRealizer()),
@@ -186,7 +201,11 @@ func registerDeliverableController(mgr manager.Manager) error {
 }
 
 func registerPipelineServiceController(mgr manager.Manager) error {
-	repo := repository.NewRepository(mgr.GetClient(), repository.NewCache(cache.NewExpiring(), mgr.GetLogger().WithName("pipeline-repo-cache")))
+	repo := repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("pipeline-repo-cache")),
+		mgr.GetLogger().WithName("pipeline-repo"),
+	)
 
 	reconciler := pipeline.NewReconciler(repo, realizerpipeline.NewRealizer())
 	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
