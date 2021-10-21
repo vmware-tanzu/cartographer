@@ -41,24 +41,24 @@ func (e ApplyStampedObjectError) Error() string {
 }
 
 type StampError struct {
-	Err       error
-	Component *v1alpha1.SupplyChainComponent
+	Err      error
+	Resource *v1alpha1.SupplyChainResource
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object for component '%s': %w", e.Component.Name, e.Err).Error()
+	return fmt.Errorf("unable to stamp object for resource '%s': %w", e.Resource.Name, e.Err).Error()
 }
 
-func NewRetrieveOutputError(component *v1alpha1.SupplyChainComponent, err error) RetrieveOutputError {
+func NewRetrieveOutputError(resource *v1alpha1.SupplyChainResource, err error) RetrieveOutputError {
 	return RetrieveOutputError{
-		Err:       err,
-		component: component,
+		Err:      err,
+		resource: resource,
 	}
 }
 
 type RetrieveOutputError struct {
-	Err       error
-	component *v1alpha1.SupplyChainComponent
+	Err      error
+	resource *v1alpha1.SupplyChainResource
 }
 
 type JsonPathErrorContext interface {
@@ -66,11 +66,11 @@ type JsonPathErrorContext interface {
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for component '%s': %w", e.component.Name, e.Err).Error()
+	return fmt.Errorf("unable to retrieve outputs from stamped object for resource '%s': %w", e.resource.Name, e.Err).Error()
 }
 
-func (e RetrieveOutputError) ComponentName() string {
-	return e.component.Name
+func (e RetrieveOutputError) ResourceName() string {
+	return e.resource.Name
 }
 
 func (e RetrieveOutputError) JsonPathExpression() string {

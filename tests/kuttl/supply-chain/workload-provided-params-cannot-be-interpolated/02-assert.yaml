@@ -21,7 +21,7 @@ status:
     - type: SupplyChainReady
       status: "True"
       reason: Ready
-    - type: ComponentsSubmitted
+    - type: ResourcesSubmitted
       status: "Unknown"
       reason: MissingValueAtPath
     - type: Ready
@@ -41,7 +41,7 @@ status:
     - type: SupplyChainReady
       status: "True"
       reason: Ready
-    - type: ComponentsSubmitted
+    - type: ResourcesSubmitted
       status: "False"
       reason: TemplateStampFailure
     - type: Ready

@@ -24,7 +24,7 @@ spec:
   #
   #   source-provider <--[src]--   deployer
   #     GitRepository               App
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
@@ -35,5 +35,5 @@ spec:
         kind: ClusterTemplate
         name: app-deploy
       sources:
-        - component: source-provider
+        - resource: source-provider
           name: source

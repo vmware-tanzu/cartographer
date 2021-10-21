@@ -99,7 +99,7 @@ var _ = Describe("Templates", func() {
 				apiTemplate = &v1alpha1.Workload{}
 			})
 
-			ItReturnsAHelpfulError("component does not match a known template")
+			ItReturnsAHelpfulError("resource does not match a known template")
 		})
 	})
 })

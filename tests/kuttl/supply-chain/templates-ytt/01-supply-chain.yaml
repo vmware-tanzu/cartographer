@@ -16,41 +16,41 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---consume-output-of-components
+  name: responsible-ops---consume-output-of-resources
 spec:
   selector:
-    integration-test: "templates-consume-output-of-components"
-  components:
+    integration-test: "templates-consume-output-of-resources"
+  resources:
     - name: source-provider-first
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-first---consume-output-of-components
+        name: example-first---consume-output-of-resources
 
     - name: source-provider-second
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-second---consume-output-of-components
+        name: example-second---consume-output-of-resources
 
     - name: built-image-provider
       templateRef:
         kind: ClusterImageTemplate
-        name: example-image---consume-output-of-components
+        name: example-image---consume-output-of-resources
       sources:
-        - component: source-provider-second
+        - resource: source-provider-second
           name: solo-source-provider
 
     - name: config
       templateRef:
         kind: ClusterConfigTemplate
-        name: example-config---consume-output-of-components
+        name: example-config---consume-output-of-resources
       images:
-        - component: built-image-provider
+        - resource: built-image-provider
           name: solo-image-provider
 
     - name: config
       templateRef:
         kind: ClusterTemplate
-        name: example-config---consume-output-of-components
+        name: example-config---consume-output-of-resources
       configs:
-        - component: config
+        - resource: config
           name: solo-config-provider

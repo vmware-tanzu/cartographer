@@ -73,7 +73,7 @@ kapp deploy --yes -a kpack \
 ```
 
 - [source-controller], for providing the ability to find new commits to a git
-  repository and making it internally available to other components
+  repository and making it internally available to other resources
 
 ```bash
 kubectl create namespace gitops-toolkit
@@ -305,7 +305,7 @@ With the goal of creating a software supply chain like mentioned above
 
 ```
 
-let's go step by step adding the components to form that supply chain.
+let's go step by step adding the resources to form that supply chain.
 
 
 ### Building container images out of source code
@@ -480,12 +480,12 @@ spec:
 
 ### Passing the commits discovered from GitRepository to Image
 
-So at this point, we have two Kubernetes components that could very well work
+So at this point, we have two Kubernetes resources that could very well work
 together:
 
-- `fluxcd/GitRepository`, providing that source information to other components
+- `fluxcd/GitRepository`, providing that source information to other resources
 - `kpack/Image`, consuming source information, and then making `image`
-  information available to further components
+  information available to further resources
 
 
 ```
@@ -526,7 +526,7 @@ how a GitRepository object should be managed by writing a ClusterSourceTemplate
 #
 # `source` instantiates a GitRepository object, responsible for keeping track
 # of commits made to a git repository, making them available as blobs to
-# further components in the supply chain.
+# further resources in the supply chain.
 #
 #
 apiVersion: carto.run/v1alpha1
@@ -537,7 +537,7 @@ spec:
 
   # because we're implementing a `Cluster___Source___Template`, we must specify
   # how to grab information about the source code that should be promoted to
-  # further components.
+  # further resources.
   #
   # `*Path` fields expect a `jsonpath` query expression to run over the object
   # that has been templatized and submitted to kubernetes.
@@ -560,7 +560,7 @@ spec:
 ```
 
 and with a `ClusterImageTemplate`, how a `kpack/Image` should be managed as it
-can expose image information to other components in the supply chain:
+can expose image information to other resources in the supply chain:
 
 ```yaml
 #
@@ -602,7 +602,7 @@ those two, that is, the dependency that `kpack/Image`, as described by a
 ClusterImageTemplate, has on a source, `fluxcd/GitRepository`, as describe by a
 ClusterSourceTemplate.
 
-This definition of the link between the components (and developer Workload
+This definition of the link between the resources (and developer Workload
 objects) is described by a ClusterSupplyChain:
 
 
@@ -615,34 +615,34 @@ spec:
     app.tanzu.vmware.com/workload-type: web
 
   
-  # declare the set of components that form the software supply chain that
+  # declare the set of resources that form the software supply chain that
   # we are building.
   #
-  components:
+  resources:
     #
     - name: source-provider
-      # declare that for this supply chain, a source-provider component is
+      # declare that for this supply chain, a source-provider resource is
       # defined by the `ClusterSourceTemplate/source` object, making the source
-      # information it exposes available to further components in the chain.
+      # information it exposes available to further resources in the chain.
       #
       templateRef:
         name: source
         kind: ClusterSourceTemplate
 
     - name: image-builder
-      # declare that for this supply chain, an image-builder component is
+      # declare that for this supply chain, an image-builder resource is
       # defined by the `ClusterImageTemplate/image` object, making the image
-      #information it exposes available to further components in the chain.
+      #information it exposes available to further resources in the chain.
       #
       templateRef:
         name: image
         kind: ClusterImageTemplate
       # express that `image-builder` requires source (`{url, revision}`)
-      # information from the `source-provider` component, effectively making
+      # information from the `source-provider` resource, effectively making
       # that available to the template via `$(sources[0].)$` interpolation.
       #
       sources:
-        - component: source-provider
+        - resource: source-provider
           name: source
 ```
 
@@ -666,7 +666,7 @@ spec:
 ### Continuously deploying the image built by kpack
 
 Having wrapped `kpack/Image` as a `ClusterImageTemplate`, we can add another
-component to supply chain, one that would actually deploy that code that has
+resources to supply chain, one that would actually deploy that code that has
 been built.
 
 In the simplest form, we could do that with a Kubernetes Deployment object,
@@ -743,7 +743,7 @@ In order to make this happen, we'd then engage in the very same activity is
 before:
 
 - wrap the definition of `apps/Deployment` as a `ClusterTemplate` object,
-- add a component in the supplychain that make use of such `ClusterTemplate`
+- add a resource in the supplychain that make use of such `ClusterTemplate`
   taking image information as input
 
 ```
@@ -762,7 +762,7 @@ spec:
   #
   # note that we don't specify anything like `urlPath` or `imagePath` - that's
   # because `ClusterTemplate` objects don't output any information to further
-  # components (unlike `ClusterSourceTemplate` which outputs `source`
+  # resources (unlike `ClusterSourceTemplate` which outputs `source`
   # information).
   #
   template:
@@ -786,7 +786,7 @@ spec:
 ```
 
 Having the template created, all it takes then is to update the supplychain to
-have that extra component:
+have that extra resource:
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -803,7 +803,7 @@ spec:
   #     GitRepository               Image                     App
   #
   #
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
@@ -814,7 +814,7 @@ spec:
         kind: ClusterImageTemplate
         name: image
       sources:
-        - component: source-provider
+        - resource: source-provider
           name: source
 
     - name: deployer
@@ -822,7 +822,7 @@ spec:
         kind: ClusterTemplate
         name: app-deploy
       images:
-        - component: image-builder
+        - resource: image-builder
           name: image
 ```
 

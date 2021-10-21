@@ -10,11 +10,11 @@ import (
 )
 
 type FakeRealizer struct {
-	RealizeStub        func(context.Context, workload.ComponentRealizer, *v1alpha1.ClusterSupplyChain) error
+	RealizeStub        func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) error
 	realizeMutex       sync.RWMutex
 	realizeArgsForCall []struct {
 		arg1 context.Context
-		arg2 workload.ComponentRealizer
+		arg2 workload.ResourceRealizer
 		arg3 *v1alpha1.ClusterSupplyChain
 	}
 	realizeReturns struct {
@@ -27,12 +27,12 @@ type FakeRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ComponentRealizer, arg3 *v1alpha1.ClusterSupplyChain) error {
+func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRealizer, arg3 *v1alpha1.ClusterSupplyChain) error {
 	fake.realizeMutex.Lock()
 	ret, specificReturn := fake.realizeReturnsOnCall[len(fake.realizeArgsForCall)]
 	fake.realizeArgsForCall = append(fake.realizeArgsForCall, struct {
 		arg1 context.Context
-		arg2 workload.ComponentRealizer
+		arg2 workload.ResourceRealizer
 		arg3 *v1alpha1.ClusterSupplyChain
 	}{arg1, arg2, arg3})
 	stub := fake.RealizeStub
@@ -54,13 +54,13 @@ func (fake *FakeRealizer) RealizeCallCount() int {
 	return len(fake.realizeArgsForCall)
 }
 
-func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, workload.ComponentRealizer, *v1alpha1.ClusterSupplyChain) error) {
+func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) error) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = stub
 }
 
-func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, workload.ComponentRealizer, *v1alpha1.ClusterSupplyChain) {
+func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) {
 	fake.realizeMutex.RLock()
 	defer fake.realizeMutex.RUnlock()
 	argsForCall := fake.realizeArgsForCall[i]

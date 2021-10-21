@@ -13,7 +13,7 @@ A path to production is a way of codifying an application’s value stream map a
 
 ![A Simple Path to Production](/img/posts/announcing-carto/path-to-prod.png)
 
-Although Kubernetes has a rich ecosystem of APIs and tools to do the work, managing the communication paths between these components can still be a big pain. 
+Although Kubernetes has a rich ecosystem of APIs and tools to do the work, managing the communication paths between these resources can still be a big pain.
 
 This is why we’ve created and open-sourced Cartographer, a tightly scoped tool that can [_choreograph_](https://tanzu.vmware.com/developer/guides/supply-chain-choreography/) events within the Kubernetes ecosystem. Instead of building an entirely new platform to hide this complexity and offer convenience, we are building on top of Kubernetes primitives to enable automation and encourage composability. You’ll find Cartographer on [GitHub](https://github.com/vmware-tanzu/cartographer).  
 
@@ -32,14 +32,14 @@ Cartographer separates controls between a user responsible for defining a Supply
 
 Cartographer allows users to define all of the steps that an application must go through to create an image and Kubernetes configuration. Users achieve this with the [**_Supply Chain_**](https://cartographer.sh/docs/latest/reference#clustersupplychain) abstraction. 
 
-The supply chain consists of components that are specified via Templates. Each template acts as a wrapper for existing Kubernetes resources and allows them to be used with Cartographer. Cartographer supply chain templates include: 
+The supply chain consists of resources that are specified via Templates. Each template acts as a wrapper for existing Kubernetes resources and allows them to be used with Cartographer. Cartographer supply chain templates include: 
 
 - [**_Source Template_**](https://cartographer.sh/docs/latest/reference#clustersourcetemplate)
 - [**_Image Template_**](https://cartographer.sh/docs/latest/reference#clusterimagetemplate)
 - [**_Config Template_**](https://cartographer.sh/docs/latest/reference#clusterconfigtemplate)
 - [**_Generic Template_**](https://cartographer.sh/docs/latest/reference#clustertemplate)
 
-Unlike many other existing Kubernetes native workflow tools, Cartographer does not “run” any of the objects themselves. Instead, it monitors the execution of each component and templates the following component in the supply chain after a given component has completed execution and updated its status. 
+Unlike many other existing Kubernetes native workflow tools, Cartographer does not “run” any of the objects themselves. Instead, it monitors the execution of each resource and templates the following resource in the supply chain after a given resource has completed execution and updated its status. 
 
 The supply chain may also be extended to include integrations to existing CI/CD pipelines by using the Pipeline Service (which is part of Cartographer Core). The Pipeline Service acts as a wrapper for existing CI and CD tooling (with support for Tekton, and with plans to support more providers in the future) and provides a declarative way for pipelines to be run inside of Cartographer. 
 

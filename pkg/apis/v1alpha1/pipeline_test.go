@@ -35,9 +35,9 @@ var _ = Describe("Pipeline", func() {
 		})
 
 		It("requires runTemplate", func() {
-			componentsField, found := pipelineSpecType.FieldByName("RunTemplateRef")
+			resourcesField, found := pipelineSpecType.FieldByName("RunTemplateRef")
 			Expect(found).To(BeTrue())
-			jsonValue := componentsField.Tag.Get("json")
+			jsonValue := resourcesField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("runTemplate"))
 			Expect(jsonValue).NotTo(ContainSubstring("omitempty"))
 		})

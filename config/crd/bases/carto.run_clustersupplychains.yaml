@@ -48,35 +48,31 @@ spec:
             type: object
           spec:
             properties:
-              components:
+              resources:
                 items:
                   properties:
                     configs:
                       items:
-                        description: TODO Delete and use ResourceReference in common.go
-                          when renaming component to resource (#236)
                         properties:
-                          component:
-                            type: string
                           name:
                             type: string
+                          resource:
+                            type: string
                         required:
-                        - component
                         - name
+                        - resource
                         type: object
                       type: array
                     images:
                       items:
-                        description: TODO Delete and use ResourceReference in common.go
-                          when renaming component to resource (#236)
                         properties:
-                          component:
-                            type: string
                           name:
                             type: string
+                          resource:
+                            type: string
                         required:
-                        - component
                         - name
+                        - resource
                         type: object
                       type: array
                     name:
@@ -95,16 +91,14 @@ spec:
                       type: array
                     sources:
                       items:
-                        description: TODO Delete and use ResourceReference in common.go
-                          when renaming component to resource (#236)
                         properties:
-                          component:
-                            type: string
                           name:
                             type: string
+                          resource:
+                            type: string
                         required:
-                        - component
                         - name
+                        - resource
                         type: object
                       type: array
                     templateRef:
@@ -133,7 +127,7 @@ spec:
                   type: string
                 type: object
             required:
-            - components
+            - resources
             - selector
             type: object
           status:

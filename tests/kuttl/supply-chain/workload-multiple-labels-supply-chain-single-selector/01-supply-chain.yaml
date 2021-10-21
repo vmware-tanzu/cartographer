@@ -19,7 +19,7 @@ metadata:
 spec:
   selector:
     integration-test: "wl-many-labels-sc-1-selector"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate

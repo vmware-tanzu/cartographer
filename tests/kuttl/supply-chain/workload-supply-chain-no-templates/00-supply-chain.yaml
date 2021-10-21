@@ -19,7 +19,7 @@ metadata:
 spec:
   selector:
     integration-test: "workload-supply-chain-no-templates"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
