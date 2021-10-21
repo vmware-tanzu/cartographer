@@ -25,10 +25,10 @@ readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
 readonly GIT_WRITER_SSH_USER=${GIT_WRITER_SSH_USER:-"git"}
-readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-"gitlab.eng.vmware.com"}
-readonly GIT_WRITER_PROJECT=${GIT_WRITER_PROJECT:-"supply-chain-choreographer"}
-readonly GIT_WRITER_REPOSITORY=${GIT_WRITER_REPOSITORY:-"git-writer-example"}
-readonly GIT_WRITER_SSH_TOKEN=${GIT_WRITER_SSH_TOKEN:-"$(lpass show --notes gitlab-example-writer-token)"}
+readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-"github.com"}
+readonly GIT_WRITER_PROJECT=${GIT_WRITER_PROJECT:-"waciumawanjohi"}
+readonly GIT_WRITER_REPOSITORY=${GIT_WRITER_REPOSITORY:-"test-tekton-git-cli"}
+readonly GIT_WRITER_SSH_TOKEN=${GIT_WRITER_SSH_TOKEN:-"$(lpass show --notes waciumawanjohi-test-tekton-git-cli-ssh-key)"}
 readonly GIT_WRITER_SERVER_PUBLIC_TOKEN=${GIT_WRITER_SERVER_PUBLIC_TOKEN:-"$(ssh-keyscan -H "$GIT_WRITER_SERVER")"}
 
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
