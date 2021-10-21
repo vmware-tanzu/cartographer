@@ -349,6 +349,7 @@ test_example() {
                 mkdir -p ~/.ssh
                 echo "$GIT_WRITER_SSH_TOKEN" >> ~/.ssh/id_rsa
                 echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" >> ~/.ssh/known_hosts
+                chmod 600 ~/.ssh/id_rsa
               }
               git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
               echo "looking for branch $BRANCH"
