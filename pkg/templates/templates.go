@@ -46,5 +46,5 @@ func NewModelFromAPI(template client.Object) (Template, error) {
 	case *v1alpha1.ClusterTemplate:
 		return NewClusterTemplateModel(v), nil
 	}
-	return nil, fmt.Errorf("component does not match a known template")
+	return nil, fmt.Errorf("resource does not match a known template")
 }

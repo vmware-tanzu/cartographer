@@ -19,7 +19,7 @@
 #
 # `source` instantiates a GitRepository object, responsible for keeping track
 # of commits made to a git repository, making them available as blobs to
-# further components in the supply chain.
+# further resources in the supply chain.
 #
 #
 apiVersion: carto.run/v1alpha1

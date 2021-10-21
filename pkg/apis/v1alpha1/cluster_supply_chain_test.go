@@ -38,11 +38,11 @@ var _ = Describe("ClusterSupplyChain", func() {
 			supplyChainSpecType = reflect.TypeOf(supplyChainSpec)
 		})
 
-		It("requires components", func() {
-			componentsField, found := supplyChainSpecType.FieldByName("Components")
+		It("requires resources", func() {
+			resourcesField, found := supplyChainSpecType.FieldByName("Resources")
 			Expect(found).To(BeTrue())
-			jsonValue := componentsField.Tag.Get("json")
-			Expect(jsonValue).To(ContainSubstring("components"))
+			jsonValue := resourcesField.Tag.Get("json")
+			Expect(jsonValue).To(ContainSubstring("resources"))
 			Expect(jsonValue).NotTo(ContainSubstring("omitempty"))
 		})
 
@@ -55,18 +55,18 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 	})
 
-	Describe("SupplyChainComponent", func() {
+	Describe("SupplyChainResource", func() {
 		var (
-			supplyChainComponent     v1alpha1.SupplyChainComponent
-			supplyChainComponentType reflect.Type
+			supplyChainResource     v1alpha1.SupplyChainResource
+			supplyChainResourceType reflect.Type
 		)
 
 		BeforeEach(func() {
-			supplyChainComponentType = reflect.TypeOf(supplyChainComponent)
+			supplyChainResourceType = reflect.TypeOf(supplyChainResource)
 		})
 
 		It("requires a name", func() {
-			nameField, found := supplyChainComponentType.FieldByName("Name")
+			nameField, found := supplyChainResourceType.FieldByName("Name")
 			Expect(found).To(BeTrue())
 			jsonValue := nameField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("name"))
@@ -74,7 +74,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 
 		It("requires a templateRef", func() {
-			templateRefField, found := supplyChainComponentType.FieldByName("TemplateRef")
+			templateRefField, found := supplyChainResourceType.FieldByName("TemplateRef")
 			Expect(found).To(BeTrue())
 			jsonValue := templateRefField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("templateRef"))
@@ -82,7 +82,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 
 		It("allows but does not require param", func() {
-			paramField, found := supplyChainComponentType.FieldByName("Params")
+			paramField, found := supplyChainResourceType.FieldByName("Params")
 			Expect(found).To(BeTrue())
 			jsonValue := paramField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("params"))
@@ -90,7 +90,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 
 		It("does not require sources", func() {
-			sourcesField, found := supplyChainComponentType.FieldByName("Sources")
+			sourcesField, found := supplyChainResourceType.FieldByName("Sources")
 			Expect(found).To(BeTrue())
 			jsonValue := sourcesField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("sources"))
@@ -98,7 +98,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 
 		It("does not require images", func() {
-			imagesField, found := supplyChainComponentType.FieldByName("Images")
+			imagesField, found := supplyChainResourceType.FieldByName("Images")
 			Expect(found).To(BeTrue())
 			jsonValue := imagesField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("images"))
@@ -106,7 +106,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 
 		It("does not require configs", func() {
-			configsField, found := supplyChainComponentType.FieldByName("Configs")
+			configsField, found := supplyChainResourceType.FieldByName("Configs")
 			Expect(found).To(BeTrue())
 			jsonValue := configsField.Tag.Get("json")
 			Expect(jsonValue).To(ContainSubstring("configs"))
@@ -125,7 +125,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
 									Name: "source-provider",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -150,7 +150,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 				})
 			})
 
-			Context("Supply chain with a component reference that does not exist", func() {
+			Context("Supply chain with a resource reference that does not exist", func() {
 				var supplyChain *v1alpha1.ClusterSupplyChain
 
 				BeforeEach(func() {
@@ -160,24 +160,24 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
-									Name: "some-component",
+									Name: "some-resource",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterSourceTemplate",
 										Name: "some-template",
 									},
 								},
 								{
-									Name: "other-component",
+									Name: "other-resource",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
 										Kind: "ClusterTemplate",
 										Name: "some-other-template",
 									},
-									Sources: []v1alpha1.ComponentReference{
+									Sources: []v1alpha1.ResourceReference{
 										{
-											Name:      "some-source",
-											Component: "some-nonexistent-component",
+											Name:     "some-source",
+											Resource: "some-nonexistent-resource",
 										},
 									},
 								},
@@ -188,21 +188,21 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 				It("returns an error", func() {
 					Expect(supplyChain.ValidateCreate()).To(MatchError(
-						"invalid sources for component 'other-component': 'some-source' is provided by unknown component 'some-nonexistent-component'",
+						"invalid sources for resource 'other-resource': 'some-source' is provided by unknown resource 'some-nonexistent-resource'",
 					))
 				})
 			})
 
-			Context("Two components with the same name", func() {
-				var supplyChainWithDuplicateComponentNames *v1alpha1.ClusterSupplyChain
+			Context("Two resources with the same name", func() {
+				var supplyChainWithDuplicateResourceNames *v1alpha1.ClusterSupplyChain
 				BeforeEach(func() {
-					supplyChainWithDuplicateComponentNames = &v1alpha1.ClusterSupplyChain{
+					supplyChainWithDuplicateResourceNames = &v1alpha1.ClusterSupplyChain{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "responsible-ops---default-params",
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
 									Name: "source-provider",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -224,13 +224,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 				})
 
 				It("rejects the Resource", func() {
-					err := supplyChainWithDuplicateComponentNames.ValidateCreate()
+					err := supplyChainWithDuplicateResourceNames.ValidateCreate()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("duplicate component name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
+					Expect(err.Error()).To(Equal("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
 				})
 			})
 
-			Describe("Template inputs must reference a component with a matching type", func() {
+			Describe("Template inputs must reference a resource with a matching type", func() {
 				var supplyChain *v1alpha1.ClusterSupplyChain
 				var consumerToProviderMapping = map[string]string{
 					"Source": "ClusterSourceTemplate",
@@ -244,7 +244,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
 									Name: "input-provider",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -264,21 +264,21 @@ var _ = Describe("ClusterSupplyChain", func() {
 					}
 				})
 				DescribeTable("template input does not match template type",
-					func(firstComponentKind string, inputReferenceType string, happy bool) {
-						supplyChain.Spec.Components[0].TemplateRef.Kind = firstComponentKind
+					func(firstResourceKind string, inputReferenceType string, happy bool) {
+						supplyChain.Spec.Resources[0].TemplateRef.Kind = firstResourceKind
 
-						reference := v1alpha1.ComponentReference{
-							Name:      "input-name",
-							Component: "input-provider",
+						reference := v1alpha1.ResourceReference{
+							Name:     "input-name",
+							Resource: "input-provider",
 						}
 
 						switch inputReferenceType {
 						case "Source":
-							supplyChain.Spec.Components[1].Sources = []v1alpha1.ComponentReference{reference}
+							supplyChain.Spec.Resources[1].Sources = []v1alpha1.ResourceReference{reference}
 						case "Image":
-							supplyChain.Spec.Components[1].Images = []v1alpha1.ComponentReference{reference}
+							supplyChain.Spec.Resources[1].Images = []v1alpha1.ResourceReference{reference}
 						case "Config":
-							supplyChain.Spec.Components[1].Configs = []v1alpha1.ComponentReference{reference}
+							supplyChain.Spec.Resources[1].Configs = []v1alpha1.ResourceReference{reference}
 						}
 
 						err := supplyChain.ValidateCreate()
@@ -288,7 +288,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 						} else {
 							Expect(err).To(HaveOccurred())
 							Expect(err).To(MatchError(fmt.Sprintf(
-								"invalid %ss for component 'input-consumer': component 'input-provider' providing 'input-name' must reference a %s",
+								"invalid %ss for resource 'input-consumer': resource 'input-provider' providing 'input-name' must reference a %s",
 								strings.ToLower(inputReferenceType),
 								consumerToProviderMapping[inputReferenceType]),
 							))
@@ -322,7 +322,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
 									Name: "source-provider",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -347,16 +347,16 @@ var _ = Describe("ClusterSupplyChain", func() {
 				})
 			})
 
-			Context("Two components with the same name", func() {
-				var supplyChainWithDuplicateComponentNames *v1alpha1.ClusterSupplyChain
+			Context("Two resources with the same name", func() {
+				var supplyChainWithDuplicateResourceNames *v1alpha1.ClusterSupplyChain
 				BeforeEach(func() {
-					supplyChainWithDuplicateComponentNames = &v1alpha1.ClusterSupplyChain{
+					supplyChainWithDuplicateResourceNames = &v1alpha1.ClusterSupplyChain{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "responsible-ops---default-params",
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
 									Name: "source-provider",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -378,13 +378,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 				})
 
 				It("rejects the Resource", func() {
-					err := supplyChainWithDuplicateComponentNames.ValidateUpdate(oldSupplyChain)
+					err := supplyChainWithDuplicateResourceNames.ValidateUpdate(oldSupplyChain)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("duplicate component name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
+					Expect(err.Error()).To(Equal("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
 				})
 			})
 
-			Context("Template inputs do not reference a component with a matching type", func() {
+			Context("Template inputs do not reference a resource with a matching type", func() {
 				var invalidSupplyChain *v1alpha1.ClusterSupplyChain
 				BeforeEach(func() {
 					invalidSupplyChain = &v1alpha1.ClusterSupplyChain{
@@ -393,7 +393,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 							Namespace: "default",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Components: []v1alpha1.SupplyChainComponent{
+							Resources: []v1alpha1.SupplyChainResource{
 								{
 									Name: "image-provider",
 									TemplateRef: v1alpha1.ClusterTemplateReference{
@@ -407,10 +407,10 @@ var _ = Describe("ClusterSupplyChain", func() {
 										Kind: "ClusterTemplate",
 										Name: "consuming-template",
 									},
-									Sources: []v1alpha1.ComponentReference{
+									Sources: []v1alpha1.ResourceReference{
 										{
-											Name:      "source-name",
-											Component: "image-provider",
+											Name:     "source-name",
+											Resource: "image-provider",
 										},
 									},
 								},
@@ -422,7 +422,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 				It("validates on update as well", func() {
 					err := invalidSupplyChain.ValidateUpdate(&v1alpha1.ClusterSupplyChain{})
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("invalid sources for component 'input-consumer': component 'image-provider' providing 'source-name' must reference a ClusterSourceTemplate"))
+					Expect(err.Error()).To(Equal("invalid sources for resource 'input-consumer': resource 'image-provider' providing 'source-name' must reference a ClusterSourceTemplate"))
 				})
 			})
 		})

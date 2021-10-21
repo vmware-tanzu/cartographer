@@ -19,7 +19,7 @@ metadata:
 spec:
   selector:
     integration-test: "workload-multiple-supply-chains-single-label"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
@@ -34,7 +34,7 @@ metadata:
 spec:
   selector:
     integration-test: "workload-multiple-supply-chains-single-label"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate

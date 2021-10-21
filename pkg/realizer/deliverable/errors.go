@@ -69,7 +69,7 @@ func (e RetrieveOutputError) Error() string {
 	return fmt.Errorf("unable to retrieve outputs from stamped object for resource '%s': %w", e.resource.Name, e.Err).Error()
 }
 
-func (e RetrieveOutputError) ComponentName() string {
+func (e RetrieveOutputError) ResourceName() string {
 	return e.resource.Name
 }
 

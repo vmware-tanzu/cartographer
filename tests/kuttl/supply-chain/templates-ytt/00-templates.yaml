@@ -16,7 +16,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: example-first---consume-output-of-components
+  name: example-first---consume-output-of-resources
 spec:
   ytt: |
     apiVersion: v1
@@ -33,7 +33,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: example-second---consume-output-of-components
+  name: example-second---consume-output-of-resources
 spec:
   ytt: |
     apiVersion: v1
@@ -50,7 +50,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterImageTemplate
 metadata:
-  name: example-image---consume-output-of-components
+  name: example-image---consume-output-of-resources
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -68,7 +68,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterConfigTemplate
 metadata:
-  name: example-config---consume-output-of-components
+  name: example-config---consume-output-of-resources
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -85,7 +85,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: example-config---consume-output-of-components
+  name: example-config---consume-output-of-resources
 spec:
   ytt: |
     #@ load("@ytt:data", "data")

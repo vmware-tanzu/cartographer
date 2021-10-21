@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	err = r.realizer.Realize(ctx, realizer.NewComponentRealizer(workload, r.repo), supplyChain)
+	err = r.realizer.Realize(ctx, realizer.NewResourceRealizer(workload, r.repo), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetClusterTemplateError:
@@ -97,16 +97,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ComponentName(), typedErr.JsonPathExpression()))
+			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
 			err = nil
 		default:
-			r.conditionManager.AddPositive(UnknownComponentErrorCondition(typedErr))
+			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 		}
 
 		return r.completeReconciliation(reconcileCtx, workload, err)
 	}
 
-	r.conditionManager.AddPositive(ComponentsSubmittedCondition())
+	r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 
 	return r.completeReconciliation(reconcileCtx, workload, nil)
 }

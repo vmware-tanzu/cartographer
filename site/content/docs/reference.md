@@ -121,11 +121,11 @@ _ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
 
 ### ClusterSupplyChain
 
-With a `ClusterSupplyChain`, app operators describe which "shape of applications" they deal with (via `spec.selector`), and what series of components are responsible for creating an artifact that delivers it (via `spec.components`).
+With a `ClusterSupplyChain`, app operators describe which "shape of applications" they deal with (via `spec.selector`), and what series of resources are responsible for creating an artifact that delivers it (via `spec.resources`).
 
-Those `Workload`s that match `spec.selector` then go through the components specified in `spec.components`.
+Those `Workload`s that match `spec.selector` then go through the resources specified in `spec.resources`.
 
-A component can emit values, which the supply chain can make available to other components. 
+A resource can emit values, which the supply chain can make available to other resources. 
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -140,16 +140,16 @@ spec:
     app.tanzu.vmware.com/workload-type: web
 
 
-  # set of components that will take care of bringing the application to a
+  # set of resources that will take care of bringing the application to a
   # deliverable state. (required, at least 1)
   #
-  components:
-    # name of the component to be referenced by further components in the chain.
+  resources:
+    # name of the resource to be referenced by further resources in the chain.
     # (required, unique)
     #
     - name: source-provider
       # object reference to a template object that instructs how to
-      # instantiate and keep the component up to date. (required)
+      # instantiate and keep the resource up to date. (required)
       #
       templateRef:
         kind: ClusterSourceTemplate
@@ -160,7 +160,7 @@ spec:
         kind: ClusterImageTemplate
         name: kpack-battery
 
-      # a set of components that provide source information, that is, url and
+      # a set of resources that provide source information, that is, url and
       # revision.
       # 
       # in a template, these can be consumed as: 
@@ -175,9 +175,9 @@ spec:
       #
       # (optional)
       sources:
-        # name of the component to provide the source information. (required)
+        # name of the resource to provide the source information. (required)
         #
-        - component: source-provider
+        - resource: source-provider
           # name to be referenced in the template via a query over the list of
           # sources (for instance, `$(sources.provider.url)`.
           #
@@ -185,7 +185,7 @@ spec:
           #
           name: provider
 
-      # (optional) set of components that provide image information.
+      # (optional) set of resources that provide image information.
       #
       # in a template, these can be consumed as:
       #
@@ -197,7 +197,7 @@ spec:
       #
       images: []
 
-      # (optional) set of components that provide kubernetes configuration,
+      # (optional) set of resources that provide kubernetes configuration,
       # for instance, podTemplateSpecs.
       # in a template, these can be consumed as:
       #
@@ -236,7 +236,7 @@ _ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/clu
 
 `ClusterSourceTemplate` indicates how the supply chain could instantiate an object responsible for providing source code.
 
-The `ClusterSourceTemplate` requires definition of a `urlPath` and `revisionPath`. `ClusterSourceTemplate` will update its status to emit `url` and `revision` values, which are reflections of the values at the path on the created objects. The supply chain may make these values available to other components.
+The `ClusterSourceTemplate` requires definition of a `urlPath` and `revisionPath`. `ClusterSourceTemplate` will update its status to emit `url` and `revision` values, which are reflections of the values at the path on the created objects. The supply chain may make these values available to other resources.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -250,7 +250,7 @@ spec:
       # name of the parameter (required, unique in this list)
       #
     - name: git-implementation
-      # default value if not specified in the component that references 
+      # default value if not specified in the resource that references 
       # this templateClusterSupplyChain (required)
       #
       default: libgit2
@@ -297,7 +297,7 @@ _ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/
 
 `ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container images, for instance, one that takes source code, builds a container image out of it.
 
-The `ClusterImageTemplate` requires definition of an `imagePath`. `ClusterImageTemplate` will update its status to emit an `image` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other components.
+The `ClusterImageTemplate` requires definition of an `imagePath`. `ClusterImageTemplate` will update its status to emit an `image` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other resources.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -338,16 +338,16 @@ _ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/c
 
 ### ClusterConfigTemplate
 
-Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further components in the chain.
+Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further resources in the chain.
 
-The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfigTemplate` will update its status to emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other components.
+The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfigTemplate` will update its status to emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other resources.
 
 _ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
 
-A `ClusterTemplate` instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor components.
+A `ClusterTemplate` instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor resources.
 
 The `ClusterTemplate` does not emit values to the supply chain.
 

@@ -23,10 +23,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-func TemplatesNotFoundCondition(componentNames []string) metav1.Condition {
+func TemplatesNotFoundCondition(resourceNames []string) metav1.Condition {
 	message := fmt.Sprintf(
-		"Did not find the template of the component(s) '%s'",
-		strings.Join(componentNames, "', '"),
+		"Did not find the template of the resource(s) '%s'",
+		strings.Join(resourceNames, "', '"),
 	)
 
 	return metav1.Condition{

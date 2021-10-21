@@ -19,7 +19,7 @@ metadata:
 spec:
   selector:
     integration-test: "default-params"
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
