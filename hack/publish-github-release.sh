@@ -33,13 +33,14 @@ main() {
 submit_release_to_github() {
         local version=v$1
 
-        local release_notes_basename
-        release_notes_basename="$(basename $RELEASE_NOTES_FILE)"
-
         gh release create $version \
                 --draft \
                 --notes-file $RELEASE_NOTES_FILE \
-                "$(find $ASSETS_DIR -type f ! -name $release_notes_basename)"
+                ./release/package/package.yaml \
+                ./release/package/package-install.yaml \
+                ./release/package/package-metadata.yaml \
+                ./release/bundle.tar \
+                ./release/cartographer.yaml
 }
 
 git_current_version() {
