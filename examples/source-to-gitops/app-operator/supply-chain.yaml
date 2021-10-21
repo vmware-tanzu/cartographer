@@ -25,7 +25,7 @@ spec:
   #   source-provider <--[src]-- image-builder <--[img]--- config-provider                    git-writer
   #     GitRepository               Image                    ConfigMap      <--[configmap]--- Git Commit
   #
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
@@ -36,7 +36,7 @@ spec:
         kind: ClusterSourceTemplate
         name: tests
       sources:
-        - component: source-provider
+        - resource: source-provider
           name: source
 
     - name: image-builder
@@ -44,7 +44,7 @@ spec:
         kind: ClusterImageTemplate
         name: image
       sources:
-        - component: source-provider
+        - resource: source-provider
           name: source-tester
 
     - name: config-provider
@@ -52,7 +52,7 @@ spec:
         kind: ClusterConfigTemplate
         name: app-config
       images:
-        - component: image-builder
+        - resource: image-builder
           name: image
 
     - name: git-writer
@@ -60,5 +60,5 @@ spec:
         kind: ClusterTemplate
         name: git-writer
       configs:
-        - component: config-provider
+        - resource: config-provider
           name: data
