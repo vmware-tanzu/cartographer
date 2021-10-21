@@ -187,16 +187,25 @@ ensure that the commits of Branch A are easily readable when reading Branch B's 
 
 A release of Cartographer consists of:
 
-1. a tagget commit in the Git history
+1. a tagged commit in the Git history
 2. a GitHub release aiming at that tag making available a few assets that make
    Cartographer installable in a cluster
 
-While the second step is manual (someone needs to `git tag` and then `git
+While the first step is manual (someone needs to `git tag` and then `git
 push`), the second isn't: the [release.yaml](.github/workflows/release.yaml)
 GitHub workflow takes care of preparing the assets and pushing to GitHub all
 the necessary bits.
 
 Although `2` is automated, it's still possible to do the procedure manually.
+
+### Automatic release
+1. Check the previous release - https://github.com/vmware-tanzu/cartographer/releases
+2. Create a tag for the new release
+```bash
+git tag v0.0.x # or v0.0.x-rcn
+git push origin <tag-name>
+```
+3. Ensure workflow has kicked off - https://github.com/vmware-tanzu/cartographer/actions
 
 
 ### Manually building and pushing release assets to GitHub
