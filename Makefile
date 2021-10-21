@@ -1,5 +1,5 @@
 .PHONY: build
-build: gen-objects gen-manifests
+build:
 	go build -o build/cartographer ./cmd/cartographer
 
 .PHONY: run
