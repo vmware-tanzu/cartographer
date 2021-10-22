@@ -17,6 +17,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	api_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -85,7 +86,13 @@ func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 
 func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
 	unstructuredList, err := r.ListUnstructured(obj)
-	r.logger.Info("considering objects from apiserver: %+v", unstructuredList)
+
+	var names []string
+	for _, considered := range unstructuredList {
+		names = append(names, considered.GetName())
+	}
+	r.logger.Info("considering objects from apiserver", "consideredList", strings.Join(names, ", "))
+
 	if err != nil {
 		return err
 	}
@@ -102,10 +109,10 @@ func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured,
 	}
 
 	if outdatedObject != nil {
-		r.logger.Info("patching object %s (ns %s kind %s)", obj.GetName(), obj.GetNamespace(), obj.GetKind())
+		r.logger.Info("patching object", "name", obj.GetName(), "namespace", obj.GetNamespace(), "kind", obj.GetKind())
 		return r.patchUnstructured(outdatedObject, obj)
 	} else {
-		r.logger.Info("creating object %s (ns %s kind %s)", obj.GetName(), obj.GetNamespace(), obj.GetKind())
+		r.logger.Info("creating object", "name", obj.GetName(), "namespace", obj.GetNamespace(), "kind", obj.GetKind())
 		return r.createUnstructured(obj)
 	}
 }
