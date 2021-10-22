@@ -31,7 +31,7 @@ main() {
 }
 
 submit_release_to_github() {
-        local version=v$1
+        local version=$1
 
         gh release create $version \
                 --draft \
