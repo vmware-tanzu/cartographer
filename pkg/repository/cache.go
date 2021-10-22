@@ -54,48 +54,48 @@ func (c *cache) Set(submitted, persisted *unstructured.Unstructured) {
 
 func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
 	key := getKey(submitted)
-	c.logger.Info("key: %s checking for changes since cached for key: %s", key)
+	c.logger.Info("checking for changes since cached", "key", key)
 	submittedCached, submittedFoundInCache := c.submittedCache[key]
 	submittedUnchanged := submittedFoundInCache && reflect.DeepEqual(submittedCached, *submitted)
 
 	persistedCached := c.getPersistedCached(key)
 
 	if submittedUnchanged {
-		c.logger.Info("key: %s no changes since last submission, checking existing objects on apiserver", key)
+		c.logger.Info("no changes since last submission, checking existing objects on apiserver", "key", key)
 	} else {
 		if submittedFoundInCache {
-			c.logger.Info("key: %s miss: submitted object in cache is different from submitted object", key)
+			c.logger.Info("miss: submitted object in cache is different from submitted object", "key", key)
 		} else {
-			c.logger.Info("key: %s miss: object not in cache", key)
+			c.logger.Info("miss: object not in cache", "key", key)
 		}
 		return nil
 	}
 
 	for _, existing := range existingList {
-		c.logger.Info("key: %s considering object: %s", key, existing.GetName())
+		c.logger.Info("considering object", "key", key, "existingName", existing.GetName())
 		existingSpec, ok := existing.Object["spec"]
 		if !ok {
-			c.logger.Info("key: %s object on apiserver has no spec", key)
+			c.logger.Info("object on apiserver has no spec", "key", key)
 			continue
 		}
 
 		persistedCachedSpec, ok := persistedCached.Object["spec"]
 		if !ok {
-			c.logger.Info("key: %s persisted object in cache has no spec", key)
+			c.logger.Info("persisted object in cache has no spec", "key", key)
 			continue
 		}
 
 		sameSame := reflect.DeepEqual(existingSpec, persistedCachedSpec)
 		if sameSame {
-			c.logger.Info("key: %s hit: persisted object in cache matches spec on apiserver", key)
+			c.logger.Info("hit: persisted object in cache matches spec on apiserver", "key", key)
 			return existing
 		} else {
-			c.logger.Info("key: %s persisted object in cache DOES NOT match spec on apiserver", key)
+			c.logger.Info("miss: persisted object in cache DOES NOT match spec on apiserver", "key", key)
 			continue
 		}
 	}
 
-	c.logger.Info("key: %s miss: no matching existing object on apiserver", key)
+	c.logger.Info("miss: no matching existing object on apiserver", "key", key)
 	return nil
 }
 
