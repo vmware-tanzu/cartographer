@@ -100,15 +100,11 @@ var _ = Describe("JsonPath", func() {
 
 		Context("when evaluate returns a list of no items", func() {
 			BeforeEach(func() {
-				evaluate.Returns([]interface{}{"some error"}, nil)
+				evaluate.Returns([]interface{}{}, nil)
 				result, err = evaluator.EvaluateJsonPath(path, obj)
 			})
 
-			ItDoesNotReturnAnError()
-
-			It("returns that single item", func() {
-				Expect(result).To(Equal("some error"))
-			})
+			ItReturnsAHelpfulError("jsonpath returned empty list")
 		})
 
 		Context("when evaluate returns a list with a single item", func() {
