@@ -52,6 +52,10 @@ func (e Evaluator) EvaluateJsonPath(path string, obj interface{}) (interface{}, 
 		return "", fmt.Errorf("too many results for the query: %s", path)
 	}
 
+	if len(interfaceList) == 0 {
+		return "", fmt.Errorf("jsonpath returned empty list: %s", path)
+	}
+
 	return interfaceList[0], nil
 }
 
