@@ -84,10 +84,12 @@ kubectl create clusterrolebinding gitops-toolkit-admin \
   --clusterrole=cluster-admin \
   --serviceaccount=gitops-toolkit:default
 
+SOURCE_CONTROLLER_VERSION=0.17.0
+
 kapp deploy --yes -a gitops-toolkit \
   --into-ns gitops-toolkit \
-  -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.crds.yaml \
-  -f https://github.com/fluxcd/source-controller/releases/download/v0.15.4/source-controller.deployment.yaml
+  -f https://github.com/fluxcd/source-controller/releases/download/v$SOURCE_CONTROLLER_VERSION/source-controller.crds.yaml \
+  -f https://github.com/fluxcd/source-controller/releases/download/v$SOURCE_CONTROLLER_VERSION/source-controller.deployment.yaml
 ```
 
 - [kapp-controller], for providing us with the ability of deploying multiple
