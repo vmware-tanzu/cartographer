@@ -66,7 +66,7 @@ In this example, we leverage the following dependencies:
   images using buildpacks
 
 ```bash
-KPACK_VERSION=0.4.0
+KPACK_VERSION=0.4.1
 
 kapp deploy --yes -a kpack \
 	-f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
