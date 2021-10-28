@@ -84,7 +84,7 @@ kubectl create clusterrolebinding gitops-toolkit-admin \
   --clusterrole=cluster-admin \
   --serviceaccount=gitops-toolkit:default
 
-SOURCE_CONTROLLER_VERSION=0.16.1
+SOURCE_CONTROLLER_VERSION=0.17.0
 
 kapp deploy --yes -a gitops-toolkit \
   --into-ns gitops-toolkit \
