@@ -297,7 +297,7 @@ In case you don't (i.e., you see _"packageinstalls.packaging.carvel.dev" not
 found_), proceed with installing it.
 
 ```bash
-KAPP_CONTROLLER_VERSION=0.27.0
+KAPP_CONTROLLER_VERSION=0.29.0
 
 kapp deploy --yes -a kapp-controller \
   -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml
