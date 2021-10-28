@@ -111,9 +111,11 @@ kapp deploy --yes -a kapp-controller \
 - [knative-serving], for being the runtime of the application we want to deploy.
 
 ```bash
+KNATIVE_SERVING_VERSION=0.26.0
+
 kapp deploy --yes -a knative-serving \
-  -f https://github.com/knative/serving/releases/download/v0.25.0/serving-crds.yaml \
-  -f https://github.com/knative/serving/releases/download/v0.25.0/serving-core.yaml
+  -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml \
+  -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml
 ```
 
 4. Authorization to push images to a container image registry
