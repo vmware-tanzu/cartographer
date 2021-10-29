@@ -22,9 +22,8 @@ spec:
 
   #
   #
-  #   source-provider <--[src]-- image-builder <--[img]--- deployer
-  #     GitRepository               Image                    App
-  #
+  #   source-provider <--[src]-- image-builder <--[img]--- config-provider                    git-writer
+  #     GitRepository               Image                    ConfigMap      <--[configmap]--- Git Commit
   #
   resources:
     - name: source-provider
@@ -32,18 +31,34 @@ spec:
         kind: ClusterSourceTemplate
         name: source
 
+    - name: source-tester
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: tests
+      sources:
+        - resource: source-provider
+          name: source
+
     - name: image-builder
       templateRef:
         kind: ClusterImageTemplate
         name: image
       sources:
         - resource: source-provider
-          name: source
+          name: source-tester
 
-    - name: deployer
+    - name: config-provider
       templateRef:
-        kind: ClusterTemplate
-        name: app-deploy
+        kind: ClusterConfigTemplate
+        name: app-config
       images:
         - resource: image-builder
           name: image
+
+    - name: git-writer
+      templateRef:
+        kind: ClusterTemplate
+        name: git-writer
+      configs:
+        - resource: config-provider
+          name: data

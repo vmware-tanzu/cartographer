@@ -11,3 +11,8 @@ coverage.*
 
 kubeconfig
 /release
+
+hack/gitea-key
+hack/gitea-key.pub
+hack/git_entropy
+hack/gitea-server-public-key
