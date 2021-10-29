@@ -118,6 +118,16 @@ kapp deploy --yes -a knative-serving \
   -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml
 ```
 
+- [tekton], for running pipelines.
+```bash
+kapp deploy --yes -a tekton https://storage.googleapis.com/tekton-releases/pipeline/v0.28.0/release.yaml
+```
+
+- [tekton git-cli task], for writing to a git repo
+```bash
+kapp deploy --yes -a tekton-git-cli https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
+```
+
 4. Authorization to push images to a container image registry
 
 As mentioned before, in this example we make use of `kpack` to build container
@@ -188,14 +198,15 @@ incrementally owns more objects. For instance, we can see that using the plugin
 ```console
 $ kubectl tree workload dev
 NAMESPACE  NAME                                   READY  REASON               AGE
-default    Workload/dev                           True   Ready                6m4s
-default    ├─GitRepository/dev                    True   GitOperationSucceed  6m4s
-default    ├─Image/dev                            True                        6m2s
-default    │ ├─Build/dev-build-1-5dxn9            -                           5m54s
-default    │ │ └─Pod/dev-build-1-5dxn9-build-pod  False  PodCompleted         5m53s
-default    │ ├─PersistentVolumeClaim/dev-cache    -                           6m2s
-default    │ └─SourceResolver/dev-source          True                        6m2s
-default    └─App/dev                              -                           52s
+default    Workload/dev                           True   Ready                62s
+default    ├─App/dev                              -                           7s
+default    ├─ConfigMap/dev                        -                           7s
+default    ├─GitRepository/dev                    True   GitOperationSucceed  62s
+default    └─Image/dev                            True                        57s
+default      ├─Build/dev-build-1-hr649            -                           57s
+default      │ └─Pod/dev-build-1-hr649-build-pod  False  PodCompleted         56s
+default      ├─PersistentVolumeClaim/dev-cache    -                           57s
+default      └─SourceResolver/dev-source          True                        57s
 ```
 
 ps.: [octant](https://github.com/vmware-tanzu/octant) is another tool that
@@ -225,7 +236,7 @@ dev    http://dev.default.example.com   dev-00001       dev-00001     Unknown   
 Because we haven't installed and configured an ingress controller, we can't
 just hit that URL, but we can still verify that we have our application up and
 running by making use of port-forwarding, first by finding the deployment
-corresponding to the current revion (`dev-00001`)
+corresponding to the current revision (`dev-00001`)
 
 ```bash
 kubectl get deployment

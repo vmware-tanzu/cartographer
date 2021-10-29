@@ -1,0 +1,100 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata:
+  name: testing
+spec:
+  completion:
+    succeeded: {key: 'status.conditions.#(type=="Succeeded").status', value: "True"}
+    failed:    {key: 'status.conditions.#(type=="Succeeded").status', value: "False"}
+
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: $(pipeline.metadata.name)$-
+    spec:
+      pipelineRef: {name: testing}
+      params:
+        - name: source-url
+          value: $(pipeline.spec.inputs.url)$
+        - name: source-revision
+          value: $(pipeline.spec.inputs.revision)$
+
+---
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata:
+  name: git-writer
+spec:
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      generateName: $(pipeline.metadata.name)$-
+    spec:
+      taskRef:
+        name: git-cli
+      workspaces:
+        - name: source
+          emptyDir: { }
+        - name: input
+          configmap:
+            name: $(pipeline.spec.inputs.input_config_map_name)$
+        - name: ssh-directory
+          secret:
+            secretName: git-ssh-secret
+      params:
+        - name: GIT_USER_NAME
+          value: $(pipeline.spec.inputs.git_username)$
+        - name: GIT_USER_EMAIL
+          value: $(pipeline.spec.inputs.git_user_email)$
+        - name: USER_HOME
+          value: /root
+        - name: GIT_SCRIPT
+          value: |
+            echo $(pipeline.spec.inputs.data)$
+            export CONFIG_MAP_FIELD=$(pipeline.spec.inputs.input_config_map_field)$
+            export COMMIT_MESSAGE="$(pipeline.spec.inputs.commit_message)$"
+            export BRANCH="$(pipeline.spec.inputs.branch)$"
+            if [[ -n "$(pipeline.spec.inputs.skip_host_checking)$" && "$(pipeline.spec.inputs.skip_host_checking)$" = true ]]
+            then
+              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+            fi
+            if [[ -n "$(pipeline.spec.inputs.git_ssh_variant)$" ]]
+            then
+              export GIT_SSH_VARIANT="$(pipeline.spec.inputs.git_ssh_variant)$"
+            fi
+            git init
+            if [[ -n "$(pipeline.spec.inputs.git_server_port)$" ]]; then
+              git remote add origin $(pipeline.spec.inputs.git_ssh_user)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_server_port)$/$(pipeline.spec.inputs.git_repository)$
+            else
+              git remote add origin $(pipeline.spec.inputs.git_ssh_user)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_repository)$
+            fi
+            # TODO remove the fetch and branch
+            git fetch
+            git branch
+            git pull origin "`git remote show origin | grep "HEAD branch" | sed 's/.*: //'`"
+            git pull origin "$BRANCH" || git branch "$BRANCH"
+            git checkout "$BRANCH"
+            export INPUT_PATH=$(workspaces.input.path)
+            cp "$INPUT_PATH"/"$CONFIG_MAP_FIELD" .
+            git add .
+            git commit --allow-empty -m "$COMMIT_MESSAGE"
+            git push --set-upstream origin "$BRANCH"

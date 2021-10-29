@@ -1,0 +1,209 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#@ load("@ytt:data", "data")
+---
+
+#
+#
+# `source` instantiates a GitRepository object, responsible for keeping track
+# of commits made to a git repository, making them available as blobs to
+# further resources in the supply chain.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source
+spec:
+  urlPath: .status.artifact.url
+  revisionPath: .status.artifact.revision
+
+  template:
+    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    kind: GitRepository
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      interval: 1m
+      url: $(workload.spec.source.git.url)$
+      ref: $(workload.spec.source.git.ref)$
+      gitImplementation: libgit2
+      ignore: ""
+---
+
+#
+#
+# `source-tester` uses a tekton Pipeline to validate the source.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: tests
+spec:
+  urlPath: spec.inputs.url
+  revisionPath: spec.inputs.revision
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      runTemplateRef:
+        kind: RunTemplate
+        name: testing
+
+      inputs:
+        url: $(source.url)$
+        revision: $(source.revision)$
+
+---
+#
+#
+# `image` instantiates an `Image` object, responsible for ensuring that
+# there's a container image built and pushed to a container image registry
+# whenever there's either new source code, or its image builder gets an update.
+#
+# This template expects a single source as input.
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: image
+spec:
+  imagePath: .status.latestImage
+
+  template:
+    apiVersion: kpack.io/v1alpha1
+    kind: Image
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      tag: #@ data.values.image_prefix + "$(workload.metadata.name)$"
+      serviceAccount: service-account
+      builder:
+        kind: ClusterBuilder
+        name: go-builder
+      source:
+        blob:
+          url: $(source.url)$
+
+---
+#
+#
+# `app-config` instantiates a `ConfigMap` containing Kubernetes configuration for a knative `Service`. This example uses
+# ytt instead of a simple template for more complex templating.
+#
+# This template expects a single image as input.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterConfigTemplate
+metadata:
+  name: app-config
+spec:
+  configPath: .data
+
+  ytt: |
+    #@ load("@ytt:data", "data")
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: #@ data.values.workload.metadata.name
+    data:
+      #@yaml/text-templated-strings
+      manifest.yaml: |
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        metadata:
+          name: (@= data.values.workload.metadata.name @)
+          labels:
+            (@- if hasattr(data.values.workload.metadata, "labels"): @)
+            (@- if hasattr(data.values.workload.metadata.labels, "app.kubernetes.io/part-of"): @)
+            app.kubernetes.io/part-of: (@= data.values.workload.metadata.labels["app.kubernetes.io/part-of"] @)
+            (@ end -@)
+            (@ end -@)
+            carto.run/workload-name: (@= data.values.workload.metadata.name @)
+            app.kubernetes.io/component: run
+        spec:
+          template:
+            metadata:
+              annotations:
+                autoscaling.knative.dev/minScale: "1"
+            spec:
+              containers:
+                - name: workload
+                  image: (@= data.values.image @)
+                  securityContext:
+                    runAsUser: 1000
+              imagePullSecrets:
+                - name: registry-credentials
+---
+#
+#
+# `git-writer` takes the ConfigMap and writes it to git.
+#
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: git-writer
+spec:
+  params:
+    - name: git_writer_username
+      default: #@ data.values.git_writer.username
+    - name: git_writer_user_email
+      default: #@ data.values.git_writer.user_email
+    - name: git_writer_commit_message
+      default: #@ data.values.git_writer.message
+    - name: git_writer_ssh_user
+      default: #@ data.values.git_writer.ssh_user
+    - name: git_writer_server
+      default: #@ data.values.git_writer.server
+    - name: git_writer_port
+      default: #@ data.values.git_writer.port
+    - name: git_writer_repository
+      default: #@ data.values.git_writer.repository
+    - name: git_writer_branch
+      default: #@ data.values.git_writer.branch
+    - name: git_writer_skip_host_checking
+      default: false
+    - name: git_writer_ssh_variant
+      default: ssh
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Pipeline
+    metadata:
+      name: $(workload.metadata.name)$-git-writer
+    spec:
+      runTemplateRef:
+        name: git-writer
+
+      inputs:
+        input_config_map_name: $(workload.metadata.name)$
+        input_config_map_field: manifest.yaml
+
+        git_username: $(params.git_writer_username)$
+        git_user_email: $(params.git_writer_user_email)$
+        commit_message: $(params.git_writer_commit_message)$
+        git_ssh_user: $(params.git_writer_ssh_user)$
+        git_server: $(params.git_writer_server)$
+        git_server_port: $(params.git_writer_port)$
+        git_repository: $(params.git_writer_repository)$
+        branch: $(params.git_writer_branch)$
+        skip_host_checking: $(params.git_writer_skip_host_checking)$
+        git_ssh_variant: $(params.git_writer_ssh_variant)$
+        data: $(config)$

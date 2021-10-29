@@ -16,12 +16,12 @@ The issue can be tracked [here](https://github.com/vmware-tanzu/cartographer/iss
 Detailed documentation for Cartographer can be found in the `site` folder of this repository:
 
 * [About Cartographer](site/content/docs/about.md): Details the design and philosophy of Cartographer
-* [Examples](examples/source-to-knative-service/README.md): Contains an example of using Cartographer to create a supply chain that takes a repository, creates an image and deploys it to a cluster
+* [Examples](examples/source-to-gitops/README.md): Contains an example of using Cartographer to create a supply chain that takes a repository, creates an image and deploys it to a cluster
 * [Spec Reference](site/content/docs/reference.md): Detailed descriptions of the CRD Specs for Cartographer
 
 ## Getting Started
 
-An example of using Cartographer to define a Supply Chain that pulls code from a repository, builds an image for the code and deploys it to the same cluster can be found in the [examples folder of this repository](examples/source-to-knative-service/README.md)
+An example of using Cartographer to define a Supply Chain that pulls code from a repository, builds an image for the code and deploys it to the same cluster can be found in the [examples folder of this repository](examples/source-to-gitops/README.md)
 
 
 ## Installation
