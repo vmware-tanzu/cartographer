@@ -13,11 +13,11 @@ require (
 	github.com/valyala/fasttemplate v1.2.1
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
 	golang.org/x/text v0.3.7 // indirect
-	k8s.io/api v0.22.2
+	k8s.io/api v0.22.3
 	k8s.io/apiextensions-apiserver v0.22.2
-	k8s.io/apimachinery v0.22.2
-	k8s.io/apiserver v0.22.2
-	k8s.io/client-go v0.22.2
+	k8s.io/apimachinery v0.22.3
+	k8s.io/apiserver v0.22.3
+	k8s.io/client-go v0.22.3
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
 	sigs.k8s.io/cluster-api v0.4.4
 	sigs.k8s.io/controller-runtime v0.10.2
@@ -195,7 +195,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	honnef.co/go/tools v0.2.1 // indirect
-	k8s.io/component-base v0.22.2 // indirect
+	k8s.io/component-base v0.22.3 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
 	mvdan.cc/gofumpt v0.1.1 // indirect
