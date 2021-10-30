@@ -1,0 +1,74 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: git-writer
+spec:
+  params:
+    - name: GIT_SERVER
+      description: Server address
+      type: string
+      default: "github.com"
+    - name: GIT_PORT
+      description: Port
+      type: string
+      default: "22"
+    - name: GIT_REPO
+      description: The repository path
+      type: string
+      default: "example/example"
+    - name: GIT_BRANCH
+      description: The git branch to read and write
+      type: string
+      default: "main"
+    - name: GIT_USER_EMAIL
+      description: User email address
+      type: string
+      default: "example@example.com"
+    - name: GIT_USER_NAME
+      description: User name
+      type: string
+      default: "Example"
+    - name: FILES
+      description: The files to write to in json format
+      type: string
+      default: |
+        {
+          "README.md": "# Readme"
+        }
+    - name: GIT_MESSAGE
+      description: Message for the git commit
+      type: string
+      default: "New Commit"
+  steps:
+    - name: git-clone-and-push
+      image: alpine/git:v2.26.2
+      securityContext:
+        runAsUser: 0
+      workingDir: /root
+      script: |
+        #!/usr/bin/env ash
+
+        set -x
+
+        apk add --no-cache python3 py3-pip jq
+        pip3 install yq
+
+        if [ -d /tekton/home/.ssh ] ; then
+          ln -s $(credentials.path)/.ssh /root/.ssh
+        fi
+
+        git clone ssh://git@$(params.GIT_SERVER):$(params.GIT_PORT)/$(params.GIT_REPO) ./repo
+        cd repo
+        git pull origin $(params.GIT_BRANCH) || git branch $(params.GIT_BRANCH)
+        git checkout $(params.GIT_BRANCH)
+
+        git config user.email $(params.GIT_USER_EMAIL)
+        git config user.name $(params.GIT_USER_NAME)
+
+        echo -e "$(params.FILES)" > files.json
+        cat files.json
+
+        eval "$(cat files.json | yq -r 'to_entries | .[] | @sh "mkdir -p $(dirname \(.key)) && echo \(.value) > \(.key) && git add \(.key)"')"
+
+        git commit -m "$(params.GIT_MESSAGE)"
+        git push --set-upstream origin $(params.GIT_BRANCH)

@@ -37,7 +37,6 @@ spec:
           value: $(pipeline.spec.inputs.revision)$
 
 ---
-
 apiVersion: carto.run/v1alpha1
 kind: ClusterRunTemplate
 metadata:
@@ -49,52 +48,23 @@ spec:
     metadata:
       generateName: $(pipeline.metadata.name)$-
     spec:
+      serviceAccountName: $(pipeline.spec.inputs.serviceAccount)$
       taskRef:
-        name: git-cli
-      workspaces:
-        - name: source
-          emptyDir: { }
-        - name: input
-          configmap:
-            name: $(pipeline.spec.inputs.input_config_map_name)$
-        - name: ssh-directory
-          secret:
-            secretName: git-ssh-secret
+        name: git-writer
       params:
-        - name: GIT_USER_NAME
-          value: $(pipeline.spec.inputs.git_username)$
+        - name: FILES
+          value: $(pipeline.spec.inputs.files)$
+        - name: GIT_SERVER
+          value: $(pipeline.spec.inputs.git_server)$
+        - name: GIT_PORT
+          value: $(pipeline.spec.inputs.git_port)$
+        - name: GIT_REPO
+          value: $(pipeline.spec.inputs.git_repo)$
+        - name: GIT_BRANCH
+          value: $(pipeline.spec.inputs.git_branch)$
         - name: GIT_USER_EMAIL
           value: $(pipeline.spec.inputs.git_user_email)$
-        - name: USER_HOME
-          value: /root
-        - name: GIT_SCRIPT
-          value: |
-            echo $(pipeline.spec.inputs.data)$
-            export CONFIG_MAP_FIELD=$(pipeline.spec.inputs.input_config_map_field)$
-            export COMMIT_MESSAGE="$(pipeline.spec.inputs.commit_message)$"
-            export BRANCH="$(pipeline.spec.inputs.branch)$"
-            if [[ -n "$(pipeline.spec.inputs.skip_host_checking)$" && "$(pipeline.spec.inputs.skip_host_checking)$" = true ]]
-            then
-              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-            fi
-            if [[ -n "$(pipeline.spec.inputs.git_ssh_variant)$" ]]
-            then
-              export GIT_SSH_VARIANT="$(pipeline.spec.inputs.git_ssh_variant)$"
-            fi
-            git init
-            if [[ -n "$(pipeline.spec.inputs.git_server_port)$" ]]; then
-              git remote add origin $(pipeline.spec.inputs.git_ssh_user)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_server_port)$/$(pipeline.spec.inputs.git_repository)$
-            else
-              git remote add origin $(pipeline.spec.inputs.git_ssh_user)$@$(pipeline.spec.inputs.git_server)$:$(pipeline.spec.inputs.git_repository)$
-            fi
-            # TODO remove the fetch and branch
-            git fetch
-            git branch
-            git pull origin "`git remote show origin | grep "HEAD branch" | sed 's/.*: //'`"
-            git pull origin "$BRANCH" || git branch "$BRANCH"
-            git checkout "$BRANCH"
-            export INPUT_PATH=$(workspaces.input.path)
-            cp "$INPUT_PATH"/"$CONFIG_MAP_FIELD" .
-            git add .
-            git commit --allow-empty -m "$COMMIT_MESSAGE"
-            git push --set-upstream origin "$BRANCH"
+        - name: GIT_USER_NAME
+          value: $(pipeline.spec.inputs.git_user_name)$
+        - name: GIT_MESSAGE
+          value: $(pipeline.spec.inputs.git_message)$

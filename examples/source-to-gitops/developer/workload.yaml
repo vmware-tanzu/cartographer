@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#@ load("@ytt:data", "data")
+
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
@@ -20,6 +22,21 @@ metadata:
     app.tanzu.vmware.com/workload-type: web
     app.kubernetes.io/part-of: hello-world
 spec:
+  params:
+    - name: git_writer_server
+      value: #@ data.values.git_writer.server
+    - name: git_writer_port
+      value: #@ data.values.git_writer.port
+    - name: git_writer_repository
+      value: #@ data.values.git_writer.repository
+    - name: git_writer_branch
+      value: #@ data.values.git_writer.branch
+    - name: git_writer_user_email
+      value: #@ data.values.git_writer.user_email
+    - name: git_writer_user_name
+      value: #@ data.values.git_writer.username
+    - name: git_writer_message
+      value: #@ data.values.git_writer.message
   source:
     git:
       url: https://github.com/kontinue/hello-world
