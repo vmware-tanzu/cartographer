@@ -17,6 +17,7 @@ kind: Workload
 metadata:
   name: petclinic
 spec:
+  serviceAccountName: my-service-account
   params:
     - name: waciuma-com/number
       value: 20

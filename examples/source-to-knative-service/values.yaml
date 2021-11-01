@@ -14,6 +14,7 @@
 
 #@data/values
 ---
+service_account_name: workload-service-account
 image_prefix: projectcartographer/demo-
 registry:
   server: https://index.docker.io/v1/

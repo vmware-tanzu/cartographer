@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/external"
@@ -53,6 +54,9 @@ func AddToScheme(scheme *runtime.Scheme) error {
 		return fmt.Errorf("cartographer v1alpha1 add to scheme: %w", err)
 	}
 
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("core corev1 add to scheme: %w", err)
+	}
 	return nil
 }
 
@@ -89,6 +93,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	reconciler := &workload.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
+		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerworkload.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
 		Realizer:                realizerworkload.NewRealizer(),
 	}
 

@@ -19,6 +19,7 @@ metadata:
   labels:
     integration-test: "templates-refer-to-workload"
 spec:
+  serviceAccountName: my-service-account
   params:
     - name: waciuma-com/quality
       value: beta

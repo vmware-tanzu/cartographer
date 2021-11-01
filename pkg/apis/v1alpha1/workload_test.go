@@ -34,6 +34,14 @@ var _ = Describe("Workload", func() {
 			workloadSpecType = reflect.TypeOf(workloadSpec)
 		})
 
+		It("allows but does not require service account name", func() {
+			metadataField, found := workloadSpecType.FieldByName("ServiceAccountName")
+			Expect(found).To(BeTrue())
+			jsonValue := metadataField.Tag.Get("json")
+			Expect(jsonValue).To(ContainSubstring("serviceAccountName"))
+			Expect(jsonValue).To(ContainSubstring("omitempty"))
+		})
+
 		It("allows but does not require params", func() {
 			metadataField, found := workloadSpecType.FieldByName("Params")
 			Expect(found).To(BeTrue())
