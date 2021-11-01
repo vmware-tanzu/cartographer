@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,7 +49,10 @@ type Repository interface {
 	ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
+	GetServiceAccountSecret(serviceAccountName, ns string) (*corev1.Secret, error)
 }
+
+type RepositoryBuilder func(client client.Client, repoCache RepoCache, logger Logger) Repository
 
 type repository struct {
 	rc     RepoCache
@@ -61,6 +66,45 @@ func NewRepository(client client.Client, repoCache RepoCache, logger Logger) Rep
 		cl:     client,
 		logger: logger,
 	}
+}
+
+func (r *repository) GetServiceAccountSecret(serviceAccountName, ns string) (*corev1.Secret, error) {
+	serviceAccount := &corev1.ServiceAccount{}
+
+	key := client.ObjectKey{
+		Name:      serviceAccountName,
+		Namespace: ns,
+	}
+
+	err := r.cl.Get(context.TODO(), key, serviceAccount)
+
+	if err != nil {
+		return nil, fmt.Errorf("getting service account: %w", err)
+	}
+
+	if len(serviceAccount.Secrets) == 0 {
+		return nil, fmt.Errorf("service account '%s' does not have any secrets", serviceAccountName)
+	}
+
+	for _, secretRef := range serviceAccount.Secrets {
+		secret := &corev1.Secret{}
+
+		secretKey := client.ObjectKey{
+			Name:      secretRef.Name,
+			Namespace: ns,
+		}
+
+		err = r.cl.Get(context.TODO(), secretKey, secret)
+		if err != nil {
+			return nil, fmt.Errorf("getting service account secret: %w", err)
+		}
+
+		if secret.Type == corev1.SecretTypeServiceAccountToken {
+			return secret, nil
+		}
+	}
+
+	return nil, fmt.Errorf("service account '%s' does not have any token secrets", serviceAccountName)
 }
 
 func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error) {

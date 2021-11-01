@@ -20,6 +20,7 @@ metadata:
     integration-test: "wl-many-labels-sc-1-selector"
     integration-test2: "wl-many-labels-sc-1-selector"
 spec:
+  serviceAccountName: my-service-account
   params:
     - name: waciuma-com/quality
       value: beta

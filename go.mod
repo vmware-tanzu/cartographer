@@ -27,6 +27,8 @@ require (
 
 require go.uber.org/zap v1.19.1
 
+require github.com/ghodss/yaml v1.0.0
+
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
 	cloud.google.com/go v0.93.3 // indirect

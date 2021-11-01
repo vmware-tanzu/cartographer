@@ -19,6 +19,7 @@ metadata:
   labels:
     type: "webapp-unknown"
 spec:
+  serviceAccountName: my-service-account
   params:
     - name: some-param
       value: some-value

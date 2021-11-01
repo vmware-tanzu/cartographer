@@ -62,10 +62,11 @@ type WorkloadSpec struct {
 	Source *Source `json:"source,omitempty"`
 	// Image is a pre-built image in a registry. It is an alternative to defining source
 	// code.
-	Image         *string                      `json:"image,omitempty"`
-	ServiceClaims []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
-	Env           []corev1.EnvVar              `json:"env,omitempty"`
-	Resources     *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Image              *string                      `json:"image,omitempty"`
+	ServiceClaims      []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
+	Env                []corev1.EnvVar              `json:"env,omitempty"`
+	Resources          *corev1.ResourceRequirements `json:"resources,omitempty"`
+	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
 }
 
 type WorkloadStatus struct {

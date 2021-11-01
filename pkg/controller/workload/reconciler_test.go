@@ -18,11 +18,13 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +33,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -46,16 +50,21 @@ import (
 
 var _ = Describe("Reconciler", func() {
 	var (
-		out              *Buffer
-		reconciler       workload.Reconciler
-		ctx              context.Context
-		req              ctrl.Request
-		repo             *repositoryfakes.FakeRepository
-		conditionManager *conditionsfakes.FakeConditionManager
-		rlzr             *workloadfakes.FakeRealizer
-		wl               *v1alpha1.Workload
-		workloadLabels   map[string]string
-		dynamicTracker   *trackerfakes.FakeDynamicTracker
+		out                          *Buffer
+		reconciler                   workload.Reconciler
+		ctx                          context.Context
+		req                          ctrl.Request
+		repo                         *repositoryfakes.FakeRepository
+		conditionManager             *conditionsfakes.FakeConditionManager
+		rlzr                         *workloadfakes.FakeRealizer
+		wl                           *v1alpha1.Workload
+		workloadLabels               map[string]string
+		dynamicTracker               *trackerfakes.FakeDynamicTracker
+		builtResourceRealizer        *workloadfakes.FakeResourceRealizer
+		resourceRealizerSecret       *corev1.Secret
+		serviceAccountSecret         *corev1.Secret
+		serviceAccountName           string
+		resourceRealizerBuilderError error
 	)
 
 	BeforeEach(func() {
@@ -80,9 +89,22 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
+		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
+
+		resourceRealizerBuilderError = nil
+		resourceRealizerBuilder := func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (realizer.ResourceRealizer, error) {
+			if resourceRealizerBuilderError != nil {
+				return nil, resourceRealizerBuilderError
+			}
+			resourceRealizerSecret = secret
+			builtResourceRealizer = &workloadfakes.FakeResourceRealizer{}
+			return builtResourceRealizer, nil
+		}
+
 		reconciler = workload.Reconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
+			ResourceRealizerBuilder: resourceRealizerBuilder,
 			Realizer:                rlzr,
 			DynamicTracker:          dynamicTracker,
 		}
@@ -93,10 +115,15 @@ var _ = Describe("Reconciler", func() {
 
 		workloadLabels = map[string]string{"some-key": "some-val"}
 
+		serviceAccountName = "alternate-service-account-name"
+
 		wl = &v1alpha1.Workload{
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 1,
 				Labels:     workloadLabels,
+			},
+			Spec: v1alpha1.WorkloadSpec{
+				ServiceAccountName: serviceAccountName,
 			},
 		}
 		repo.GetWorkloadReturns(wl, nil)
@@ -212,6 +239,20 @@ var _ = Describe("Reconciler", func() {
 				Kind:    "NiceToSeeYou",
 			})
 			rlzr.RealizeReturns([]*unstructured.Unstructured{stampedObject1, stampedObject2}, nil)
+		})
+
+		It("uses the service account specified by the workload for realizing resources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountName).To(Equal(serviceAccountName))
+			Expect(serviceAccountNS).To(Equal("my-namespace"))
+			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
 		It("sets the SupplyChainRef", func() {
@@ -442,6 +483,40 @@ var _ = Describe("Reconciler", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 
 				Expect(err.Error()).To(ContainSubstring("could not watch"))
+			})
+		})
+
+		Context("but the repo returns an error when requesting the service account secret", func() {
+			var repoError error
+			BeforeEach(func() {
+				repoError = errors.New("some error")
+				repo.GetServiceAccountSecretReturns(nil, repoError)
+			})
+
+			It("calls the condition manager to add a service account secret not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ServiceAccountSecretNotFoundCondition(repoError)))
+			})
+
+			It("does not return an error", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("but the resource realizer builder fails", func() {
+			BeforeEach(func() {
+				resourceRealizerBuilderError = errors.New("some error")
+			})
+
+			It("calls the condition manager to add a service account secret not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
+			})
+
+			It("does not return an error", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

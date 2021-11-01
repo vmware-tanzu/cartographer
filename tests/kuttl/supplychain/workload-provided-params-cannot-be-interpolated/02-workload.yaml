@@ -19,7 +19,8 @@ metadata:
   name: petclinic-broken-path
   labels:
     integration-test: "broken-path"
-spec: {}
+spec:
+  serviceAccountName: my-service-account
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -28,4 +29,5 @@ metadata:
   name: petclinic-broken-tag
   labels:
     integration-test: "broken-tag"
-spec: {}
+spec:
+  serviceAccountName: my-service-account

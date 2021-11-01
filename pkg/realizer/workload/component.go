@@ -18,6 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -32,20 +37,70 @@ type ResourceRealizer interface {
 	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
 }
 
-type resourceRealizer struct {
-	workload *v1alpha1.Workload
-	repo     repository.Repository
+type ClientBuilder func(secret *corev1.Secret) (client.Client, error)
+
+func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
+	return func(secret *corev1.Secret) (client.Client, error) {
+		config, err := AddBearerToken(secret, restConfig)
+		if err != nil {
+			return nil, fmt.Errorf("adding bearer token: %w", err)
+		}
+
+		cl, err := client.New(config, client.Options{})
+		if err != nil {
+			return nil, fmt.Errorf("creating client: %w", err)
+		}
+
+		return cl, nil
+	}
 }
 
-func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository) ResourceRealizer {
-	return &resourceRealizer{
-		workload: workload,
-		repo:     repo,
+func AddBearerToken(secret *corev1.Secret, restConfig *rest.Config) (*rest.Config, error) {
+	tokenBytes, found := secret.Data[corev1.ServiceAccountTokenKey]
+	if !found {
+		return nil, fmt.Errorf("couldn't find service account token value")
+	}
+
+	newConfig := *restConfig
+	newConfig.BearerToken = string(tokenBytes)
+	newConfig.BearerTokenFile = ""
+
+	return &newConfig, nil
+}
+
+type resourceRealizer struct {
+	workload     *v1alpha1.Workload
+	systemRepo   repository.Repository
+	workloadRepo repository.Repository
+}
+
+type ResourceRealizerBuilder func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error)
+
+//counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+	return func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error) {
+		workloadClient, err := clientBuilder(secret)
+		if err != nil {
+			return nil, fmt.Errorf("can't build client: %w", err)
+		}
+
+		logger := logr.FromContext(ctx)
+
+		workloadRepo := repositoryBuilder(workloadClient,
+			cache,
+			logger.WithName("workload-stamping-repo"),
+		)
+
+		return &resourceRealizer{
+			workload:     workload,
+			systemRepo:   systemRepo,
+			workloadRepo: workloadRepo,
+		}, nil
 	}
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	apiTemplate, err := r.repo.GetClusterTemplate(ctx, resource.TemplateRef)
+	apiTemplate, err := r.systemRepo.GetClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetClusterTemplateError{
 			Err:         err,
@@ -96,7 +151,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
+	err = r.workloadRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
