@@ -33,11 +33,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/delivery"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/pipeline"
+	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
 	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
-	realizerpipeline "github.com/vmware-tanzu/cartographer/pkg/realizer/pipeline"
+	realizerrunnable "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
@@ -73,8 +73,8 @@ func RegisterControllers(mgr manager.Manager) error {
 		return fmt.Errorf("register deliverable controller: %w", err)
 	}
 
-	if err := registerPipelineServiceController(mgr); err != nil {
-		return fmt.Errorf("register pipeline-service controller: %w", err)
+	if err := registerRunnableServiceController(mgr); err != nil {
+		return fmt.Errorf("register runnable-service controller: %w", err)
 	}
 
 	return nil
@@ -200,19 +200,19 @@ func registerDeliverableController(mgr manager.Manager) error {
 	return nil
 }
 
-func registerPipelineServiceController(mgr manager.Manager) error {
+func registerRunnableServiceController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
-		repository.NewCache(mgr.GetLogger().WithName("pipeline-repo-cache")),
-		mgr.GetLogger().WithName("pipeline-repo"),
+		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
+		mgr.GetLogger().WithName("runnable-repo"),
 	)
 
-	reconciler := pipeline.NewReconciler(repo, realizerpipeline.NewRealizer())
-	ctrl, err := pkgcontroller.New("pipeline-service", mgr, pkgcontroller.Options{
+	reconciler := runnable.NewReconciler(repo, realizerrunnable.NewRealizer())
+	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
 	})
 	if err != nil {
-		return fmt.Errorf("controller new pipeline-service: %w", err)
+		return fmt.Errorf("controller new runnable-service: %w", err)
 	}
 
 	reconciler.AddTracking(&external.ObjectTracker{
@@ -220,20 +220,20 @@ func registerPipelineServiceController(mgr manager.Manager) error {
 	})
 
 	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.Pipeline{}},
+		&source.Kind{Type: &v1alpha1.Runnable{}},
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
-		return fmt.Errorf("watch [pipeline-service]: %w", err)
+		return fmt.Errorf("watch [runnable-service]: %w", err)
 	}
 
 	mapper := Mapper{
 		Client: mgr.GetClient(),
-		Logger: mgr.GetLogger().WithName("pipeline"),
+		Logger: mgr.GetLogger().WithName("runnable"),
 	}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToPipelineRequests),
+		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToRunnableRequests),
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)
 	}

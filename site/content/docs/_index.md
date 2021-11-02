@@ -29,10 +29,19 @@ Cartographer does not “run” any of the objects themselves. Instead, it monit
 each resource and templates the following resource in the supply chain after a given resource has
 completed execution and updated its status.
 
-The supply chain may also be extended to include integrations to existing CI and CD pipelines by using the Pipeline Service (which is part of Cartographer Core). The Pipeline Service acts as a wrapper for existing CI and CD tooling (with support for Tekton, and with plans to support more providers in the future) and provides a declarative way for pipelines to be run inside of Cartographer.
+The supply chain may also be extended to include integrations to existing CI/CD pipelines by using the Runnable CRD 
+(which is part of Cartographer). The Runnable CRD acts as a wrapper for CRDs that are immutable (meaning that instead 
+of updating an object, a new object would be created). There are a number of CI/CD CRDs that follow this pattern, 
+including Tekton. The Runnable CRD provides a declarative way for pipelines to be run inside of Cartographer.
 
-While the supply chain is operator facing, Cartographer also provides an abstraction for developers called workloads ([Spec Reference](reference.md#workload)). Workloads allow developers to create application specifications such as the location of their repository, environment variables and service claims.
+While the supply chain is operator facing, Cartographer also provides an abstraction for developers called workloads 
+([Spec Reference](reference.md#workload)). Workloads allow developers to create application specifications such as the 
+location of their repository, environment variables and service claims.
 
-By design, supply chains can be reused by many workloads. This allows an operator to specify the steps in the path to production a single time, and for developers to specify their applications independently but for each to use the same path to production. The intent is that developers are able to focus on providing value for their users and can reach production quickly and easily, while providing peace of mind for app operators, who are ensured that each application has passed through the steps of the path to production that they’ve defined.
+By design, supply chains can be reused by many workloads. This allows an operator to specify the steps in the path to 
+production a single time, and for developers to specify their applications independently but for each to use the same 
+path to production. The intent is that developers are able to focus on providing value for their users and can reach 
+production quickly and easily, while providing peace of mind for app operators, who are ensured that each application 
+has passed through the steps of the path to production that they’ve defined.
 
 ![Cartographer High Level Diagram](img/ownership-flow.png)

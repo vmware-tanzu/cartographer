@@ -12,17 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestSuite
-startControlPlane: true
-testDirs:
-  - tests/kuttl/runnable
-  - tests/kuttl/supplychain
-  - tests/kuttl/delivery
-crdDir: config/crd/bases
-manifestDirs:
-  - tests/resources/crds
-commands:
-  - command: build/cartographer
-    background: true
-timeout: 10
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata:
+  name: my-run-template-inputs
+spec:
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      generateName: my-stamped-resource-inputs-
+    spec:
+      value:
+        object: $(runnable.spec.inputs.some-object)$
+        list: $(runnable.spec.inputs.some-list)$
+        string: $(runnable.spec.inputs.some-string)$
+        int: $(runnable.spec.inputs.some-int)$

@@ -9,11 +9,6 @@ import (
 )
 
 type FakeRepoCache struct {
-	RefreshStub        func(*unstructured.Unstructured)
-	refreshMutex       sync.RWMutex
-	refreshArgsForCall []struct {
-		arg1 *unstructured.Unstructured
-	}
 	SetStub        func(*unstructured.Unstructured, *unstructured.Unstructured)
 	setMutex       sync.RWMutex
 	setArgsForCall []struct {
@@ -34,38 +29,6 @@ type FakeRepoCache struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeRepoCache) Refresh(arg1 *unstructured.Unstructured) {
-	fake.refreshMutex.Lock()
-	fake.refreshArgsForCall = append(fake.refreshArgsForCall, struct {
-		arg1 *unstructured.Unstructured
-	}{arg1})
-	stub := fake.RefreshStub
-	fake.recordInvocation("Refresh", []interface{}{arg1})
-	fake.refreshMutex.Unlock()
-	if stub != nil {
-		fake.RefreshStub(arg1)
-	}
-}
-
-func (fake *FakeRepoCache) RefreshCallCount() int {
-	fake.refreshMutex.RLock()
-	defer fake.refreshMutex.RUnlock()
-	return len(fake.refreshArgsForCall)
-}
-
-func (fake *FakeRepoCache) RefreshCalls(stub func(*unstructured.Unstructured)) {
-	fake.refreshMutex.Lock()
-	defer fake.refreshMutex.Unlock()
-	fake.RefreshStub = stub
-}
-
-func (fake *FakeRepoCache) RefreshArgsForCall(i int) *unstructured.Unstructured {
-	fake.refreshMutex.RLock()
-	defer fake.refreshMutex.RUnlock()
-	argsForCall := fake.refreshArgsForCall[i]
-	return argsForCall.arg1
 }
 
 func (fake *FakeRepoCache) Set(arg1 *unstructured.Unstructured, arg2 *unstructured.Unstructured) {
@@ -171,8 +134,6 @@ func (fake *FakeRepoCache) UnchangedSinceCachedReturnsOnCall(i int, result1 *uns
 func (fake *FakeRepoCache) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.refreshMutex.RLock()
-	defer fake.refreshMutex.RUnlock()
 	fake.setMutex.RLock()
 	defer fake.setMutex.RUnlock()
 	fake.unchangedSinceCachedMutex.RLock()

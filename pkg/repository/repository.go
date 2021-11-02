@@ -45,7 +45,7 @@ type Repository interface {
 	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(object client.Object) error
 	GetScheme() *runtime.Scheme
-	GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error)
+	GetRunnable(name string, namespace string) (*v1alpha1.Runnable, error)
 	ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
 	GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 }
@@ -279,16 +279,16 @@ func (r *repository) GetDeliverable(name string, namespace string) (*v1alpha1.De
 	return &deliverable, nil
 }
 
-func (r *repository) GetPipeline(name string, namespace string) (*v1alpha1.Pipeline, error) {
-	pipeline := &v1alpha1.Pipeline{}
+func (r *repository) GetRunnable(name string, namespace string) (*v1alpha1.Runnable, error) {
+	runnable := &v1alpha1.Runnable{}
 
-	err := r.getObject(name, namespace, pipeline)
+	err := r.getObject(name, namespace, runnable)
 
 	if err != nil {
-		return nil, fmt.Errorf("get-pipeline: %w", err)
+		return nil, fmt.Errorf("get-runnable: %w", err)
 	}
 
-	return pipeline, nil
+	return runnable, nil
 }
 
 func selectorMatchesLabels(selector map[string]string, labels map[string]string) bool {

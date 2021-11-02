@@ -12,17 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestSuite
-startControlPlane: true
-testDirs:
-  - tests/kuttl/runnable
-  - tests/kuttl/supplychain
-  - tests/kuttl/delivery
-crdDir: config/crd/bases
-manifestDirs:
-  - tests/resources/crds
-commands:
-  - command: build/cartographer
-    background: true
-timeout: 10
+---
+apiVersion: carto.run/v1alpha1
+kind: Runnable
+metadata:
+  name: runnable---runnables-by-label-selector
+  labels:
+    my-label: this-is-it
+spec:
+  runTemplateRef:
+    name: run-template---runnables-by-label-selector
+
+  selector:
+    resource:
+      apiVersion: test.run/v1alpha1
+      kind: Test
+    matchingLabels:
+      runnables.carto.run/group: dev---runnables-by-label-selector
+
+  inputs:
+    source-url: its-a-source-url
+    source-revision: its-a-revision

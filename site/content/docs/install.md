@@ -89,7 +89,7 @@ Namespace            Name                              Kind
 ^                    clustersupplychains.carto.run     CustomResourceDefinition
 ^                    clustersupplychainvalidator       ValidatingWebhookConfiguration
 ^                    clustertemplates.carto.run        CustomResourceDefinition
-^                    pipelines.carto.run               CustomResourceDefinition
+^                    runnables.carto.run               CustomResourceDefinition
 ^                    runtemplates.carto.run            CustomResourceDefinition
 ^                    workloads.carto.run               CustomResourceDefinition
 
