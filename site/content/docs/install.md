@@ -336,8 +336,10 @@ In case you don't (i.e., you see _"secretexports.secretgen.carvel.dev" not
 found_), proceed with installing it.
 
 ```bash
+SECRETGEN_CONTROLLER_VERSION=0.6.0
+
 kapp deploy --yes -a secretgen-controller \
-  -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.5.0/release.yml
+  -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v$SECRETGEN_CONTROLLER_VERSION/release.yml
 ```
 ```console
 Target cluster 'https://127.0.0.1:45829' (nodes: cartographer-control-plane)
