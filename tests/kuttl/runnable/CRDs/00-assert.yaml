@@ -11,18 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+---
 
-apiVersion: kuttl.dev/v1beta1
-kind: TestSuite
-startControlPlane: true
-testDirs:
-  - tests/kuttl/runnable
-  - tests/kuttl/supplychain
-  - tests/kuttl/delivery
-crdDir: config/crd/bases
-manifestDirs:
-  - tests/resources/crds
-commands:
-  - command: build/cartographer
-    background: true
-timeout: 10
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: runnables.carto.run
+spec:
+  scope: Namespaced
+
+---
+
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterruntemplates.carto.run
+spec:
+  scope: Cluster

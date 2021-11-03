@@ -100,31 +100,31 @@ func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object)
 	return requests
 }
 
-func (mapper *Mapper) RunTemplateToPipelineRequests(object client.Object) []reconcile.Request {
+func (mapper *Mapper) RunTemplateToRunnableRequests(object client.Object) []reconcile.Request {
 	var err error
 
 	runTemplate, ok := object.(*v1alpha1.ClusterRunTemplate)
 	if !ok {
-		mapper.Logger.Error(nil, "run template to pipeline requests: cast to run template failed")
+		mapper.Logger.Error(nil, "run template to runnable requests: cast to run template failed")
 		return nil
 	}
 
-	list := &v1alpha1.PipelineList{}
+	list := &v1alpha1.RunnableList{}
 
 	err = mapper.Client.List(context.TODO(), list)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "run template to pipeline requests: client list")
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "run template to runnable requests: client list")
 		return nil
 	}
 
 	var requests []reconcile.Request
-	for _, pipeline := range list.Items {
+	for _, runnable := range list.Items {
 
-		if runTemplateRefMatch(pipeline.Spec.RunTemplateRef, runTemplate) {
+		if runTemplateRefMatch(runnable.Spec.RunTemplateRef, runTemplate) {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      pipeline.Name,
-					Namespace: pipeline.Namespace,
+					Name:      runnable.Name,
+					Namespace: runnable.Namespace,
 				},
 			})
 		}

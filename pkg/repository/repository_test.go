@@ -677,28 +677,28 @@ spec:
 			})
 		})
 
-		Context("GetPipeline", func() {
+		Context("GetRunnable", func() {
 			BeforeEach(func() {
-				pipeline := &v1alpha1.Pipeline{
+				runnable := &v1alpha1.Runnable{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pipeline-name",
-						Namespace: "pipeline-namespace",
+						Name:      "runnable-name",
+						Namespace: "runnable-namespace",
 					},
 				}
-				clientObjects = []client.Object{pipeline}
+				clientObjects = []client.Object{runnable}
 			})
 
-			It("gets the pipeline successfully", func() {
-				pipeline, err := repo.GetPipeline("pipeline-name", "pipeline-namespace")
+			It("gets the runnable successfully", func() {
+				runnable, err := repo.GetRunnable("runnable-name", "runnable-namespace")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(pipeline.GetName()).To(Equal("pipeline-name"))
+				Expect(runnable.GetName()).To(Equal("runnable-name"))
 			})
 
-			Context("pipeline doesnt exist", func() {
+			Context("runnable doesnt exist", func() {
 				It("returns an error", func() {
-					_, err := repo.GetPipeline("pipeline-that-does-not-exist-name", "pipeline-namespace")
+					_, err := repo.GetRunnable("runnable-that-does-not-exist-name", "runnable-namespace")
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get-pipeline:"))
+					Expect(err.Error()).To(ContainSubstring("get-runnable:"))
 				})
 			})
 		})

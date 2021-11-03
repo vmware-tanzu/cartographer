@@ -304,7 +304,7 @@ var _ = Describe("MapFunctions", func() {
 		})
 	})
 
-	Describe("RunTemplateToPipelineRequests", func() {
+	Describe("RunTemplateToRunnableRequests", func() {
 		var (
 			clientObjects     []client.Object
 			mapper            *registrar.Mapper
@@ -340,7 +340,7 @@ var _ = Describe("MapFunctions", func() {
 				Logger: fakeLogger,
 			}
 
-			result = mapper.RunTemplateToPipelineRequests(runTemplate)
+			result = mapper.RunTemplateToRunnableRequests(runTemplate)
 		})
 
 		Context("client.List returns an error", func() {
@@ -351,7 +351,7 @@ var _ = Describe("MapFunctions", func() {
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
 				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 				Expect(firstArg).NotTo(BeNil())
-				Expect(secondArg).To(Equal("run template to pipeline requests: client list"))
+				Expect(secondArg).To(Equal("run template to runnable requests: client list"))
 			})
 		})
 
@@ -361,38 +361,38 @@ var _ = Describe("MapFunctions", func() {
 				err := v1alpha1.AddToScheme(scheme)
 				Expect(err).ToNot(HaveOccurred())
 			})
-			Context("but there exist no pipelines", func() {
+			Context("but there exist no runnables", func() {
 				It("returns an empty list of requests", func() {
 					Expect(result).To(BeEmpty())
 				})
 			})
-			Context("and there are pipelines", func() {
-				var pipeline *v1alpha1.Pipeline
+			Context("and there are runnables", func() {
+				var runnable *v1alpha1.Runnable
 				BeforeEach(func() {
-					pipeline = &v1alpha1.Pipeline{
+					runnable = &v1alpha1.Runnable{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "my-pipeline",
+							Name:      "my-runnable",
 							Namespace: "my-namespace",
 						},
 						TypeMeta: metav1.TypeMeta{},
 					}
 				})
 
-				Context("a pipeline matches the runTemplate", func() {
+				Context("a runnable matches the runTemplate", func() {
 					Context("with a templateRef that specifies a namespace", func() {
 						BeforeEach(func() {
-							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+							runnable.Spec.RunTemplateRef = v1alpha1.TemplateReference{
 								Name: "match",
 							}
-							clientObjects = []client.Object{pipeline}
+							clientObjects = []client.Object{runnable}
 						})
 
-						It("returns a list of requests with the pipeline present", func() {
+						It("returns a list of requests with the runnable present", func() {
 							expected := []reconcile.Request{
 								{
 									types.NamespacedName{
 										Namespace: "my-namespace",
-										Name:      "my-pipeline",
+										Name:      "my-runnable",
 									},
 								},
 							}
@@ -403,19 +403,19 @@ var _ = Describe("MapFunctions", func() {
 
 					Context("with a templateRef that specifies a namespace", func() {
 						BeforeEach(func() {
-							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+							runnable.Spec.RunTemplateRef = v1alpha1.TemplateReference{
 								Name: "match",
 							}
-							pipeline.Namespace = "match"
-							clientObjects = []client.Object{pipeline}
+							runnable.Namespace = "match"
+							clientObjects = []client.Object{runnable}
 						})
 
-						It("returns a list of requests with the pipeline present", func() {
+						It("returns a list of requests with the runnable present", func() {
 							expected := []reconcile.Request{
 								{
 									types.NamespacedName{
 										Namespace: "match",
-										Name:      "my-pipeline",
+										Name:      "my-runnable",
 									},
 								},
 							}
@@ -424,13 +424,13 @@ var _ = Describe("MapFunctions", func() {
 						})
 					})
 				})
-				Context("no pipeline matches the runTemplate", func() {
+				Context("no runnable matches the runTemplate", func() {
 					Context("because the name in the templateRef is different", func() {
 						BeforeEach(func() {
-							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+							runnable.Spec.RunTemplateRef = v1alpha1.TemplateReference{
 								Name: "non-existent-name",
 							}
-							clientObjects = []client.Object{pipeline}
+							clientObjects = []client.Object{runnable}
 						})
 
 						It("returns an empty list of requests", func() {
@@ -440,11 +440,11 @@ var _ = Describe("MapFunctions", func() {
 
 					Context("because the templateRef is the wrong Kind", func() {
 						BeforeEach(func() {
-							pipeline.Spec.RunTemplateRef = v1alpha1.TemplateReference{
+							runnable.Spec.RunTemplateRef = v1alpha1.TemplateReference{
 								Name: "match",
 								Kind: "some-kind",
 							}
-							clientObjects = []client.Object{pipeline}
+							clientObjects = []client.Object{runnable}
 						})
 
 						It("returns an empty list of requests", func() {
@@ -464,7 +464,7 @@ var _ = Describe("MapFunctions", func() {
 					Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
 					firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 					Expect(firstArg).To(BeNil())
-					Expect(secondArg).To(Equal("run template to pipeline requests: cast to run template failed"))
+					Expect(secondArg).To(Equal("run template to runnable requests: cast to run template failed"))
 				})
 			})
 		})

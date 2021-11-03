@@ -73,17 +73,17 @@ test-integration: test-gen-manifests test-gen-objects
 test-kuttl: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test --test $$(basename $(focus)); else kubectl kuttl test; fi
 
-.PHONY: test-kuttl-pipeline-service
-test-kuttl-pipeline-service: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/pipeline-service --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/pipeline-service; fi
+.PHONY: test-kuttl-runnable
+test-kuttl-runnable: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/runnable --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/runnable; fi
 
-.PHONY: test-kuttl-supply-chain
-test-kuttl-supply-chain: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/supply-chain --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/supply-chain; fi
+.PHONY: test-kuttl-supplychain
+test-kuttl-supplychain: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/supplychain --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/supplychain; fi
 
-.PHONY: test-kuttl-deliverable
-test-kuttl-deliverable: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/deliverable --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/deliverable; fi
+.PHONY: test-kuttl-delivery
+test-kuttl-delivery: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/delivery --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/delivery; fi
 
 
 .PHONY: list-kuttl
