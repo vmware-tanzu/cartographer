@@ -23,6 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -64,7 +65,15 @@ type ClusterDeliveryResource struct {
 	Configs     []ResourceReference              `json:"configs,omitempty"`
 }
 
+// ValidDeliveryTemplates THIS MUST MATCH DeliveryClusterTemplateReference Kind Enum
+var ValidDeliveryTemplates = []client.Object{
+	&ClusterSourceTemplate{},
+	&ClusterDeploymentTemplate{},
+	&ClusterTemplate{},
+}
+
 type DeliveryClusterTemplateReference struct {
+	// Kind THIS MUST MATCH ValidDeliveryTemplates
 	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1

@@ -650,4 +650,179 @@ var _ = Describe("MapFunctions", func() {
 		})
 	})
 
+	Describe("TemplateToDeliveryRequests", func() {
+
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		Context("the template kind can be found", func() {
+			BeforeEach(func() {
+				fakeLogger = &registrarfakes.FakeLogger{}
+				fakeClient = &registrarfakes.FakeClient{}
+
+				m = &registrar.Mapper{
+					Client: fakeClient,
+					Logger: fakeLogger,
+				}
+
+				scheme := runtime.NewScheme()
+				err := v1alpha1.AddToScheme(scheme)
+				Expect(err).NotTo(HaveOccurred())
+
+				fakeClient.SchemeReturns(scheme)
+			})
+
+			Context("client.list does not return errors", func() {
+
+				Context("there are no Deliveries", func() {
+					BeforeEach(func() {
+						existingList := v1alpha1.ClusterDeliveryList{
+							Items: []v1alpha1.ClusterDelivery{},
+						}
+
+						fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+							listVal := reflect.ValueOf(list)
+							existingVal := reflect.ValueOf(existingList)
+
+							reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+							return nil
+						}
+					})
+
+					It("returns an empty request list", func() {
+						t := &v1alpha1.ClusterTemplate{}
+						reqs := m.TemplateToDeliveryRequests(t)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+				Context("there are multiple deliveries", func() {
+					BeforeEach(func() {
+						existingDelivery1 := &v1alpha1.ClusterDelivery{
+							Spec: v1alpha1.ClusterDeliverySpec{
+								Resources: []v1alpha1.ClusterDeliveryResource{
+									{
+										TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+											Kind: "ClusterTemplate",
+											Name: "my-template-foo",
+										},
+									},
+								},
+							},
+						}
+						existingDelivery2 := &v1alpha1.ClusterDelivery{
+							ObjectMeta: metav1.ObjectMeta{Name: "good-delivery"},
+							Spec: v1alpha1.ClusterDeliverySpec{
+								Resources: []v1alpha1.ClusterDeliveryResource{
+									{
+										TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+											Kind: "ClusterTemplate",
+											Name: "my-template",
+										},
+									},
+								},
+							},
+						}
+						existingList := v1alpha1.ClusterDeliveryList{
+							Items: []v1alpha1.ClusterDelivery{*existingDelivery1, *existingDelivery2},
+						}
+
+						fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+							listVal := reflect.ValueOf(list)
+							existingVal := reflect.ValueOf(existingList)
+
+							reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+							return nil
+						}
+					})
+
+					Describe("The template refers to some deliveries", func() {
+						It("returns requests for only the matching deliveries", func() {
+							t := &v1alpha1.ClusterTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "my-template",
+								},
+							}
+							reqs := m.TemplateToDeliveryRequests(t)
+
+							Expect(reqs).To(HaveLen(1))
+							Expect(reqs[0].Name).To(Equal("good-delivery"))
+						})
+					})
+
+					Describe("The template does not reference a delivery", func() {
+						It("returns an empty request list", func() {
+							t := &v1alpha1.ClusterTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "my-template-bar",
+								},
+							}
+							reqs := m.TemplateToDeliveryRequests(t)
+
+							Expect(reqs).To(HaveLen(0))
+						})
+					})
+
+				})
+			})
+
+			Context("client.list errors", func() {
+				var (
+					listErr error
+				)
+				BeforeEach(func() {
+					listErr = fmt.Errorf("some error")
+
+					fakeClient.ListReturns(listErr)
+				})
+
+				It("returns the error", func() {
+					t := &v1alpha1.ClusterTemplate{}
+					reqs := m.TemplateToDeliveryRequests(t)
+
+					Expect(reqs).To(HaveLen(0))
+					Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+					err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+					Expect(err).To(Equal(listErr))
+					Expect(msg).To(Equal("template to delivery requests"))
+				})
+			})
+		})
+
+		Context("the template kind cannot be found", func() {
+			BeforeEach(func() {
+				fakeLogger = &registrarfakes.FakeLogger{}
+				fakeClient = &registrarfakes.FakeClient{}
+
+				m = &registrar.Mapper{
+					Client: fakeClient,
+					Logger: fakeLogger,
+				}
+
+				// empty scheme causes the error
+				fakeClient.SchemeReturns(&runtime.Scheme{})
+			})
+
+			It("returns an error", func() {
+				t := &v1alpha1.ClusterTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-template",
+					},
+				}
+				reqs := m.TemplateToDeliveryRequests(t)
+
+				Expect(reqs).To(HaveLen(0))
+
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(ContainSubstring("missing apiVersion or kind: my-template")))
+				Expect(msg).To(Equal("could not get GVK for template: my-template"))
+			})
+		})
+	})
 })

@@ -17,10 +17,9 @@ package delivery
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -28,8 +27,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
-
-const reconcileInterval = 5 * time.Second
 
 type Reconciler struct {
 	repo             repository.Repository
@@ -67,23 +64,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 }
 
 func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error {
-	var missing []string
+	var (
+		err               error
+		resourcesNotFound []string
+	)
+
 	for _, resource := range delivery.Spec.Resources {
-		_, err := r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
-		// FIXME: should be checking if err IsNotFound
+		_, err = r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
 		if err != nil {
-			missing = append(missing, resource.Name)
-			r.logger.Error(err, "retrieving cluster template")
+			if !kerrors.IsNotFound(err) {
+				return err
+			}
+
+			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
 	}
 
-	if len(missing) == 0 {
-		r.conditionManager.AddPositive(TemplatesFoundCondition())
-		return nil
+	if len(resourcesNotFound) > 0 {
+		r.conditionManager.AddPositive(TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
-		r.conditionManager.AddPositive(TemplatesNotFoundCondition(missing))
-		return fmt.Errorf("encountered errors fetching resources: %s", strings.Join(missing, ", "))
+		r.conditionManager.AddPositive(TemplatesFoundCondition())
 	}
+
+	return nil
 }
 
 func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, reconcileError error) (ctrl.Result, error) {
@@ -99,5 +102,5 @@ func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, 
 		return ctrl.Result{}, reconcileError
 	}
 
-	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
+	return ctrl.Result{}, nil
 }

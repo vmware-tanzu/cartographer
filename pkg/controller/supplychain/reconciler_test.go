@@ -40,244 +40,201 @@ import (
 )
 
 var _ = Describe("Reconciler", func() {
-	Describe("Reconcile", func() {
-		var (
-			out                *Buffer
-			reconciler         *supplychain.Reconciler
-			ctx                context.Context
-			req                ctrl.Request
-			conditionManager   *conditionsfakes.FakeConditionManager
-			repo               *repositoryfakes.FakeRepository
-			sc                 *v1alpha1.ClusterSupplyChain
-			expectedConditions []metav1.Condition
-		)
+	var (
+		out                *Buffer
+		reconciler         *supplychain.Reconciler
+		ctx                context.Context
+		req                ctrl.Request
+		conditionManager   *conditionsfakes.FakeConditionManager
+		repo               *repositoryfakes.FakeRepository
+		sc                 *v1alpha1.ClusterSupplyChain
+		expectedConditions []metav1.Condition
+	)
 
-		BeforeEach(func() {
-			out = NewBuffer()
-			logger := zap.New(zap.WriteTo(out))
-			ctx = logr.NewContext(context.Background(), logger)
+	BeforeEach(func() {
+		out = NewBuffer()
+		logger := zap.New(zap.WriteTo(out))
+		ctx = logr.NewContext(context.Background(), logger)
 
-			conditionManager = &conditionsfakes.FakeConditionManager{}
+		conditionManager = &conditionsfakes.FakeConditionManager{}
 
-			fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
-				return conditionManager
-			}
+		fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
+			return conditionManager
+		}
 
-			conditionManager.IsSuccessfulReturns(true)
+		conditionManager.IsSuccessfulReturns(true)
 
-			expectedConditions = []metav1.Condition{{
-				Type:               "Happy",
-				Status:             "True",
-				ObservedGeneration: 1,
-				LastTransitionTime: metav1.Time{},
-				Reason:             "Because I'm",
-				Message:            "Clap Along If you Feel",
-			}}
-			conditionManager.FinalizeReturns(expectedConditions, true)
+		expectedConditions = []metav1.Condition{{
+			Type:               "Happy",
+			Status:             "True",
+			ObservedGeneration: 1,
+			LastTransitionTime: metav1.Time{},
+			Reason:             "Because I'm",
+			Message:            "Clap Along If you Feel",
+		}}
+		conditionManager.FinalizeReturns(expectedConditions, true)
 
-			repo = &repositoryfakes.FakeRepository{}
+		repo = &repositoryfakes.FakeRepository{}
 
-			sc = &v1alpha1.ClusterSupplyChain{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 1,
-				},
-				Spec: v1alpha1.SupplyChainSpec{
-					Resources: []v1alpha1.SupplyChainResource{
-						{
-							Name: "first name",
-							TemplateRef: v1alpha1.ClusterTemplateReference{
-								Kind: "some-kind",
-								Name: "some-name",
-							},
-						},
-						{
-							Name: "second name",
-							TemplateRef: v1alpha1.ClusterTemplateReference{
-								Kind: "another-kind",
-								Name: "another-name",
-							},
+		sc = &v1alpha1.ClusterSupplyChain{
+			ObjectMeta: metav1.ObjectMeta{
+				Generation: 1,
+			},
+			Spec: v1alpha1.SupplyChainSpec{
+				Resources: []v1alpha1.SupplyChainResource{
+					{
+						Name: "first name",
+						TemplateRef: v1alpha1.ClusterTemplateReference{
+							Kind: "some-kind",
+							Name: "some-name",
 						},
 					},
-					Selector: map[string]string{},
+					{
+						Name: "second name",
+						TemplateRef: v1alpha1.ClusterTemplateReference{
+							Kind: "another-kind",
+							Name: "another-name",
+						},
+					},
 				},
-			}
+				Selector: map[string]string{},
+			},
+		}
 
-			repo.GetSupplyChainReturns(sc, nil)
+		repo.GetSupplyChainReturns(sc, nil)
 
-			scheme := runtime.NewScheme()
-			err := registrar.AddToScheme(scheme)
-			Expect(err).NotTo(HaveOccurred())
-			repo.GetSchemeReturns(scheme)
+		scheme := runtime.NewScheme()
+		err := registrar.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		repo.GetSchemeReturns(scheme)
 
-			reconciler = supplychain.NewReconciler(repo, fakeConditionManagerBuilder)
+		reconciler = supplychain.NewReconciler(repo, fakeConditionManagerBuilder)
 
-			req = ctrl.Request{
-				NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
-			}
+		req = ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
+		}
+	})
+
+	It("logs that it's begun", func() {
+		_, _ = reconciler.Reconcile(ctx, req)
+
+		Expect(out).To(Say(`"msg":"started"`))
+		Expect(out).To(Say(`"name":"my-supply-chain"`))
+		Expect(out).To(Say(`"namespace":"my-namespace"`))
+	})
+
+	It("logs that it's finished", func() {
+		_, _ = reconciler.Reconcile(ctx, req)
+
+		Expect(out).To(Say(`"msg":"finished"`))
+		Expect(out).To(Say(`"name":"my-supply-chain"`))
+		Expect(out).To(Say(`"namespace":"my-namespace"`))
+	})
+
+	It("updates the status of the supply chain", func() {
+		_, _ = reconciler.Reconcile(ctx, req)
+
+		Expect(repo.StatusUpdateCallCount()).To(Equal(1))
+	})
+
+	It("updates the status.observedGeneration to equal metadata.generation", func() {
+		_, _ = reconciler.Reconcile(ctx, req)
+
+		updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
+
+		Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
+			"Status": MatchFields(IgnoreExtras, Fields{
+				"ObservedGeneration": BeEquivalentTo(1),
+			}),
+		}))
+	})
+
+	It("updates the conditions based on the output of the conditionManager", func() {
+		_, _ = reconciler.Reconcile(ctx, req)
+
+		updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
+
+		Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
+			"Status": MatchFields(IgnoreExtras, Fields{
+				"Conditions": Equal(expectedConditions),
+			}),
+		}))
+	})
+
+	It("adds a positive templates found condition", func() {
+		_, _ = reconciler.Reconcile(ctx, req)
+
+		Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesFoundCondition()))
+	})
+
+	It("does not return an error", func() {
+		_, err := reconciler.Reconcile(ctx, req)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Context("get cluster template fails", func() {
+		BeforeEach(func() {
+			repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 		})
 
-		It("logs that it's begun", func() {
+		It("returns an error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+			Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
+		})
+
+		It("does not requeue", func() {
+			result, _ := reconciler.Reconcile(ctx, req)
+
+			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
+		})
+	})
+
+	Context("cannot find cluster template", func() {
+		BeforeEach(func() {
+			repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
+			repo.GetClusterTemplateReturnsOnCall(1, nil, kerrors.NewNotFound(schema.GroupResource{}, ""))
+		})
+
+		It("adds a positive templates NOT found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
+		})
+	})
 
-			Expect(out).To(Say(`"msg":"started"`))
-			Expect(out).To(Say(`"name":"my-supply-chain"`))
-			Expect(out).To(Say(`"namespace":"my-namespace"`))
+	Context("when the update fails", func() {
+		BeforeEach(func() {
+			repo.StatusUpdateReturns(errors.New("updating is hard"))
 		})
 
-		It("logs that it's finished", func() {
+		It("logs the update error", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-
-			Expect(out).To(Say(`"msg":"finished"`))
-			Expect(out).To(Say(`"name":"my-supply-chain"`))
-			Expect(out).To(Say(`"namespace":"my-namespace"`))
+			Expect(out).To(Say("update error"))
+			Expect(out).To(Say("updating is hard"))
 		})
 
-		It("updates the status of the supply chain", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-
-			Expect(repo.StatusUpdateCallCount()).To(Equal(1))
-		})
-
-		It("updates the status.observedGeneration to equal metadata.generation", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-
-			updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
-
-			Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
-				"Status": MatchFields(IgnoreExtras, Fields{
-					"ObservedGeneration": BeEquivalentTo(1),
-				}),
-			}))
-		})
-
-		It("updates the conditions based on the output of the conditionManager", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-
-			updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
-
-			Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
-				"Status": MatchFields(IgnoreExtras, Fields{
-					"Conditions": Equal(expectedConditions),
-				}),
-			}))
-		})
-
-		It("adds a positive templates found condition", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesFoundCondition()))
-		})
-
-		It("does not return an error", func() {
+		It("returns an error", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("update supply-chain status")))
+			Expect(err).To(MatchError(ContainSubstring("updating is hard")))
 		})
 
-		Context("get cluster template fails", func() {
-			BeforeEach(func() {
-				repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
-			})
+		It("does not requeue", func() {
+			result, _ := reconciler.Reconcile(ctx, req)
 
-			It("returns an error", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
-			})
-
-			It("does not requeue", func() {
-				result, _ := reconciler.Reconcile(ctx, req)
-
-				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-			})
+			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 		})
 
-		Context("cannot find cluster template", func() {
+		Context("when there has been a reconciliation error", func() {
 			BeforeEach(func() {
-				repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
-				repo.GetClusterTemplateReturnsOnCall(1, nil, kerrors.NewNotFound(schema.GroupResource{}, ""))
-			})
-
-			It("adds a positive templates NOT found condition", func() {
-				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
-			})
-		})
-
-		Context("when the update fails", func() {
-			BeforeEach(func() {
-				repo.StatusUpdateReturns(errors.New("updating is hard"))
-			})
-
-			It("logs the update error", func() {
-				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(out).To(Say("update error"))
-				Expect(out).To(Say("updating is hard"))
+				repo.GetClusterTemplateReturns(nil, errors.New("some error"))
 			})
 
 			It("returns an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 
-				Expect(err).To(MatchError(ContainSubstring("update supply-chain status")))
-				Expect(err).To(MatchError(ContainSubstring("updating is hard")))
-			})
-
-			It("does not requeue", func() {
-				result, _ := reconciler.Reconcile(ctx, req)
-
-				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-			})
-
-			Context("when there has been a reconciliation error", func() {
-				BeforeEach(func() {
-					repo.GetClusterTemplateReturns(nil, errors.New("some error"))
-				})
-
-				It("returns an error", func() {
-					_, err := reconciler.Reconcile(ctx, req)
-
-					Expect(err).To(MatchError(ContainSubstring("some error")))
-				})
-
-				It("does not requeue", func() {
-					result, _ := reconciler.Reconcile(ctx, req)
-
-					Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-				})
-			})
-		})
-
-		Context("when the supply chain has been deleted from the apiServer", func() {
-			BeforeEach(func() {
-				repo.GetSupplyChainReturns(nil, kerrors.NewNotFound(schema.GroupResource{
-					Group:    "carto.run",
-					Resource: "ClusterSupplyChain",
-				}, "my-supply-chain"))
-			})
-
-			It("does not return an error", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("does not requeue", func() {
-				result, _ := reconciler.Reconcile(ctx, req)
-
-				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-			})
-		})
-
-		Context("when the client errors", func() {
-			BeforeEach(func() {
-				repo.GetSupplyChainReturns(nil, errors.New("some error"))
-			})
-
-			It("returns a helpful error", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("get supplyChain: "))
-				Expect(err.Error()).To(ContainSubstring("some error"))
+				Expect(err).To(MatchError(ContainSubstring("some error")))
 			})
 
 			It("does not requeue", func() {
@@ -287,4 +244,46 @@ var _ = Describe("Reconciler", func() {
 			})
 		})
 	})
+
+	Context("when the supply chain has been deleted from the apiServer", func() {
+		BeforeEach(func() {
+			repo.GetSupplyChainReturns(nil, kerrors.NewNotFound(schema.GroupResource{
+				Group:    "carto.run",
+				Resource: "ClusterSupplyChain",
+			}, "my-supply-chain"))
+		})
+
+		It("does not return an error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("does not requeue", func() {
+			result, _ := reconciler.Reconcile(ctx, req)
+
+			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
+		})
+	})
+
+	Context("when the client errors", func() {
+		BeforeEach(func() {
+			repo.GetSupplyChainReturns(nil, errors.New("some error"))
+		})
+
+		It("returns a helpful error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("get supplyChain: "))
+			Expect(err.Error()).To(ContainSubstring("some error"))
+		})
+
+		It("does not requeue", func() {
+			result, _ := reconciler.Reconcile(ctx, req)
+
+			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
+		})
+	})
+
 })

@@ -198,6 +198,46 @@ func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []re
 	return requests
 }
 
+func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []reconcile.Request {
+
+	templateName := template.GetName()
+
+	err := mapper.addGVK(template)
+	if err != nil {
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
+		return nil
+	}
+
+	list := &v1alpha1.ClusterDeliveryList{}
+
+	err = mapper.Client.List(
+		context.TODO(),
+		list,
+	)
+
+	if err != nil {
+		mapper.Logger.Error(err, "template to delivery requests")
+		return nil
+	}
+
+	templateKind := template.GetObjectKind().GroupVersionKind().Kind
+
+	var requests []reconcile.Request
+	for _, sc := range list.Items {
+		for _, res := range sc.Spec.Resources {
+			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: sc.Name,
+					},
+				})
+			}
+		}
+	}
+
+	return requests
+}
+
 func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.ClusterRunTemplate) bool {
 	if ref.Name != runTemplate.Name {
 		return false
