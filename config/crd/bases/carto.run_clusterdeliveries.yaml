@@ -92,7 +92,6 @@ spec:
                     templateRef:
                       properties:
                         kind:
-                          description: Kind THIS MUST MATCH ValidDeliveryTemplates
                           enum:
                           - ClusterSourceTemplate
                           - ClusterDeploymentTemplate

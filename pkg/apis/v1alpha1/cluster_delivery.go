@@ -73,7 +73,6 @@ var ValidDeliveryTemplates = []client.Object{
 }
 
 type DeliveryClusterTemplateReference struct {
-	// Kind THIS MUST MATCH ValidDeliveryTemplates
 	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1
