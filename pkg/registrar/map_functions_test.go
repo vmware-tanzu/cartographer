@@ -15,6 +15,10 @@
 package registrar_test
 
 import (
+	"context"
+	"fmt"
+	"reflect"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -469,4 +473,181 @@ var _ = Describe("MapFunctions", func() {
 			})
 		})
 	})
+
+	Describe("TemplateToSupplyChainRequests", func() {
+
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		Context("the template kind can be found", func() {
+			BeforeEach(func() {
+				fakeLogger = &registrarfakes.FakeLogger{}
+				fakeClient = &registrarfakes.FakeClient{}
+
+				m = &registrar.Mapper{
+					Client: fakeClient,
+					Logger: fakeLogger,
+				}
+
+				scheme := runtime.NewScheme()
+				err := v1alpha1.AddToScheme(scheme)
+				Expect(err).NotTo(HaveOccurred())
+
+				fakeClient.SchemeReturns(scheme)
+			})
+
+			Context("client.list does not return errors", func() {
+
+				Context("there are no SupplyChains", func() {
+					BeforeEach(func() {
+						existingList := v1alpha1.ClusterSupplyChainList{
+							Items: []v1alpha1.ClusterSupplyChain{},
+						}
+
+						fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+							listVal := reflect.ValueOf(list)
+							existingVal := reflect.ValueOf(existingList)
+
+							reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+							return nil
+						}
+					})
+
+					It("returns an empty request list", func() {
+						t := &v1alpha1.ClusterTemplate{}
+						reqs := m.TemplateToSupplyChainRequests(t)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+				Context("there are multiple supply chains", func() {
+					BeforeEach(func() {
+						existingSupplyChain1 := &v1alpha1.ClusterSupplyChain{
+							Spec: v1alpha1.SupplyChainSpec{
+								Resources: []v1alpha1.SupplyChainResource{
+									{
+										TemplateRef: v1alpha1.ClusterTemplateReference{
+											Kind: "ClusterTemplate",
+											Name: "my-template-foo",
+										},
+									},
+								},
+							},
+						}
+						existingSupplyChain2 := &v1alpha1.ClusterSupplyChain{
+							ObjectMeta: metav1.ObjectMeta{Name: "good-supply-chain"},
+							Spec: v1alpha1.SupplyChainSpec{
+								Resources: []v1alpha1.SupplyChainResource{
+									{
+										TemplateRef: v1alpha1.ClusterTemplateReference{
+											Kind: "ClusterTemplate",
+											Name: "my-template",
+										},
+									},
+								},
+							},
+						}
+						existingList := v1alpha1.ClusterSupplyChainList{
+							Items: []v1alpha1.ClusterSupplyChain{*existingSupplyChain1, *existingSupplyChain2},
+						}
+
+						fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+							listVal := reflect.ValueOf(list)
+							existingVal := reflect.ValueOf(existingList)
+
+							reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+							return nil
+						}
+					})
+
+					Describe("The template refers to some supply chains", func() {
+						It("returns requests for only the matching supply chains", func() {
+							t := &v1alpha1.ClusterTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "my-template",
+								},
+							}
+							reqs := m.TemplateToSupplyChainRequests(t)
+
+							Expect(reqs).To(HaveLen(1))
+							Expect(reqs[0].Name).To(Equal("good-supply-chain"))
+						})
+					})
+
+					Describe("The template does not reference a supply chain", func() {
+						It("returns an empty request list", func() {
+							t := &v1alpha1.ClusterTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "my-template-bar",
+								},
+							}
+							reqs := m.TemplateToSupplyChainRequests(t)
+
+							Expect(reqs).To(HaveLen(0))
+						})
+					})
+
+				})
+			})
+
+			Context("client.list errors", func() {
+				var (
+					listErr error
+				)
+				BeforeEach(func() {
+					listErr = fmt.Errorf("some error")
+
+					fakeClient.ListReturns(listErr)
+				})
+
+				It("returns the error", func() {
+					t := &v1alpha1.ClusterTemplate{}
+					reqs := m.TemplateToSupplyChainRequests(t)
+
+					Expect(reqs).To(HaveLen(0))
+					Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+					err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+					Expect(err).To(Equal(listErr))
+					Expect(msg).To(Equal("template to supply chain requests"))
+				})
+			})
+		})
+
+		Context("the template kind cannot be found", func() {
+			BeforeEach(func() {
+				fakeLogger = &registrarfakes.FakeLogger{}
+				fakeClient = &registrarfakes.FakeClient{}
+
+				m = &registrar.Mapper{
+					Client: fakeClient,
+					Logger: fakeLogger,
+				}
+
+				// empty scheme causes the error
+				fakeClient.SchemeReturns(&runtime.Scheme{})
+			})
+
+			It("returns an error", func() {
+				t := &v1alpha1.ClusterTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-template",
+					},
+				}
+				reqs := m.TemplateToSupplyChainRequests(t)
+
+				Expect(reqs).To(HaveLen(0))
+
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(ContainSubstring("missing apiVersion or kind: my-template")))
+				Expect(msg).To(Equal("could not get GVK for template: my-template"))
+			})
+		})
+	})
+
 })

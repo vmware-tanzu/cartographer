@@ -137,6 +137,27 @@ func registerSupplyChainController(mgr manager.Manager) error {
 		return fmt.Errorf("watch: %w", err)
 	}
 
+	mapper := Mapper{
+		Client: mgr.GetClient(),
+		Logger: mgr.GetLogger().WithName("supply-chain"),
+	}
+
+	templates := []client.Object{
+		&v1alpha1.ClusterSourceTemplate{},
+		&v1alpha1.ClusterImageTemplate{},
+		&v1alpha1.ClusterConfigTemplate{},
+		&v1alpha1.ClusterTemplate{},
+	}
+
+	for _, template := range templates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToSupplyChainRequests),
+		); err != nil {
+			return fmt.Errorf("watch template (%v): %w", template, err)
+		}
+	}
+
 	return nil
 }
 

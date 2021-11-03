@@ -70,6 +70,7 @@ func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error
 	var missing []string
 	for _, resource := range delivery.Spec.Resources {
 		_, err := r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+		// FIXME: should be checking if err IsNotFound
 		if err != nil {
 			missing = append(missing, resource.Name)
 			r.logger.Error(err, "retrieving cluster template")

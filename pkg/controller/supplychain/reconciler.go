@@ -17,7 +17,6 @@ package supplychain
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,8 +27,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
-
-const reconcileInterval = 5 * time.Second
 
 type Timer interface {
 	Now() metav1.Time
@@ -98,30 +95,31 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) error {
 	var (
-		resourceHandlingError, err error
-		resourcesNotFound          []string
+		err               error
+		resourcesNotFound []string
 	)
 
 	for _, resource := range chain.Spec.Resources {
 		_, err = r.repo.GetClusterTemplate(resource.TemplateRef)
 		if err != nil {
-			resourcesNotFound = append(resourcesNotFound, resource.Name)
-			if resourceHandlingError == nil {
-				resourceHandlingError = fmt.Errorf("handle resource: %w", err)
+			if !kerrors.IsNotFound(err) {
+				return err
 			}
+
+			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
 	}
 
-	if resourceHandlingError != nil {
+	if len(resourcesNotFound) > 0 {
 		r.conditionManager.AddPositive(TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
 		r.conditionManager.AddPositive(TemplatesFoundCondition())
 	}
 
-	return resourceHandlingError
+	return nil
 }
