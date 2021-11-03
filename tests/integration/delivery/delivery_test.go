@@ -41,6 +41,12 @@ var _ = Describe("Deliveries", func() {
 		ctx = context.Background()
 	})
 
+	AfterEach(func() {
+		for _, obj := range cleanups {
+			_ = c.Delete(ctx, obj, &client.DeleteOptions{})
+		}
+	})
+
 	Describe("I can define a delivery with a resource", func() {
 		BeforeEach(func() {
 			deliveryYaml := utils.HereYaml(`
@@ -62,12 +68,6 @@ var _ = Describe("Deliveries", func() {
 			delivery = &unstructured.Unstructured{}
 			err := yaml.Unmarshal([]byte(deliveryYaml), delivery)
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			for _, obj := range cleanups {
-				_ = c.Delete(ctx, obj, &client.DeleteOptions{})
-			}
 		})
 
 		Context("the referenced resource exists", func() {
@@ -315,11 +315,6 @@ var _ = Describe("Deliveries", func() {
 			)
 		})
 
-		AfterEach(func() {
-			for _, obj := range cleanups {
-				_ = c.Delete(ctx, obj, &client.DeleteOptions{})
-			}
-		})
 
 		Context("a change to the delivery occurs that does not cause the status to change", func() {
 			var conditionsBeforeMutation []metav1.Condition
