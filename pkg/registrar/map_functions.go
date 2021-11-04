@@ -176,7 +176,7 @@ func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []re
 	)
 
 	if err != nil {
-		mapper.Logger.Error(err, "template to supply chain requests")
+		mapper.Logger.Error(err, "list ClusterSupplyChains")
 		return nil
 	}
 
