@@ -48,6 +48,43 @@ spec:
             type: object
           spec:
             properties:
+              observedCompletion:
+                properties:
+                  failed:
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
+                    required:
+                    - key
+                    - value
+                    type: object
+                  succeeded:
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
+                    required:
+                    - key
+                    - value
+                    type: object
+                required:
+                - succeeded
+                type: object
+              observedMatches:
+                items:
+                  properties:
+                    input:
+                      type: string
+                    output:
+                      type: string
+                  required:
+                  - input
+                  - output
+                  type: object
+                type: array
               params:
                 items:
                   properties:

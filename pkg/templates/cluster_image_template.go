@@ -41,10 +41,10 @@ func (t clusterImageTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+func (t clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
 	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate image json path: %w", err),
 			expression: t.template.Spec.ImagePath,
 		}

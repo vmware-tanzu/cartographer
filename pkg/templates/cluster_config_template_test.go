@@ -61,7 +61,7 @@ var _ = Describe("ClusterConfigTemplate", func() {
 
 		JustBeforeEach(func() {
 			clusterConfigTemplateModel := templates.NewClusterConfigTemplateModel(configTemplate, evaluator)
-			output, err = clusterConfigTemplateModel.GetOutput(stampedObject)
+			output, err = clusterConfigTemplateModel.GetOutput(stampedObject, nil)
 		})
 
 		When("passed a stamped object for which the evaluator can return a value at the configPath", func() {
@@ -85,7 +85,7 @@ var _ = Describe("ClusterConfigTemplate", func() {
 				Expect(output).To(BeNil())
 			})
 			It("returns an error which identifies the failing json path expression", func() {
-				jsonPathErr, ok := err.(*templates.JsonPathError)
+				jsonPathErr, ok := err.(templates.JsonPathError)
 				Expect(ok).To(BeTrue())
 				Expect(jsonPathErr.JsonPathExpression()).To(Equal("some.path"))
 			})

@@ -27,7 +27,7 @@ import (
 type Template interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetDefaultParams() v1alpha1.DefaultParams
-	GetOutput(stampedObject *unstructured.Unstructured) (*Output, error)
+	GetOutput(stampedObject *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error)
 	GetName() string
 	GetKind() string
 }

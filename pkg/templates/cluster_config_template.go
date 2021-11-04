@@ -39,10 +39,10 @@ func (t clusterConfigTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterConfigTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+func (t clusterConfigTemplate) GetOutput(stampedObject *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
 	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate config url json path: %w", err),
 			expression: t.template.Spec.ConfigPath,
 		}

@@ -186,7 +186,7 @@ var _ = Describe("SupplyChainValidation", func() {
 					{
 						Name: "source-provider",
 						TemplateRef: v1alpha1.ClusterTemplateReference{
-							Kind: "ClusterSourceTemplate",
+							Kind: "ClusterImageTemplate",
 							Name: "some-other-template",
 						},
 					},

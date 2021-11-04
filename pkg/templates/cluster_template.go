@@ -36,7 +36,7 @@ func (t clusterTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterTemplate) GetOutput(_ *unstructured.Unstructured) (*Output, error) {
+func (t clusterTemplate) GetOutput(_ *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
 	return &Output{}, nil
 }
 

@@ -34,6 +34,16 @@ metadata:
 spec:
   value:
     some-key: https://github.com/ekcasey/hello-world-ops
+    duplicate-of-some-key: https://github.com/ekcasey/hello-world-ops
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: my-app---params-merge
+spec:
+  value:
+    merge-key: https://github.com/ekcasey/hello-world-ops
 
 ---
 apiVersion: carto.run/v1alpha1

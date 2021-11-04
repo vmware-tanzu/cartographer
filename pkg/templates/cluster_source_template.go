@@ -39,10 +39,10 @@ func (t clusterSourceTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+func (t clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
 	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate source url json path: %w", err),
 			expression: t.template.Spec.URLPath,
 		}
@@ -50,7 +50,7 @@ func (t clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructure
 
 	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate source revision json path: %w", err),
 			expression: t.template.Spec.RevisionPath,
 		}

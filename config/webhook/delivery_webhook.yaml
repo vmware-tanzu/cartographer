@@ -33,3 +33,17 @@ webhooks:
         path: /validate-carto-run-v1alpha1-clusterdelivery
     sideEffects: None
     admissionReviewVersions: ["v1", "v1beta1"]
+  - name: deployment-template-validator.cartographer.com
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [ "carto.run" ]
+        apiVersions: [ "v1alpha1" ]
+        resources: [ "clusterdeploymenttemplates" ]
+        scope: "Cluster"
+    clientConfig:
+      service:
+        name: cartographer-webhook
+        namespace: cartographer-system
+        path: /validate-carto-run-v1alpha1-clusterdeploymenttemplate
+    sideEffects: None
+    admissionReviewVersions: [ "v1", "v1beta1" ]

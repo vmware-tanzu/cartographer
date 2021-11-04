@@ -19,7 +19,11 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -29,8 +33,29 @@ import (
 type ClusterDeploymentTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              TemplateSpec   `json:"spec"`
+	Spec              DeploymentSpec `json:"spec"`
 	Status            TemplateStatus `json:"status,omitempty"`
+}
+
+type DeploymentSpec struct {
+	ObservedCompletion *ObservedCompletion `json:"observedCompletion,omitempty"`
+	ObservedMatches    []ObservedMatch     `json:"observedMatches,omitempty"`
+	TemplateSpec       `json:",inline"`
+}
+
+type ObservedMatch struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
+}
+
+type ObservedCompletion struct {
+	SucceededCondition Condition  `json:"succeeded"`
+	FailedCondition    *Condition `json:"failed,omitempty"`
+}
+
+type Condition struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // +kubebuilder:object:root=true
@@ -39,6 +64,41 @@ type ClusterDeploymentTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterDeploymentTemplate `json:"items"`
+}
+
+var _ webhook.Validator = &ClusterSourceTemplate{}
+
+func (c *ClusterDeploymentTemplate) ValidateCreate() error {
+	return c.validate()
+}
+
+func (c *ClusterDeploymentTemplate) ValidateUpdate(_ runtime.Object) error {
+	return c.validate()
+}
+
+func (c *ClusterDeploymentTemplate) ValidateDelete() error {
+	return nil
+}
+
+func (c *ClusterDeploymentTemplate) validate() error {
+	err := c.Spec.TemplateSpec.validate()
+	if err != nil {
+		return err
+	}
+
+	if bothSet(c.Spec) || neitherSet(c.Spec) {
+		return fmt.Errorf("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion")
+	}
+
+	return nil
+}
+
+func bothSet(spec DeploymentSpec) bool {
+	return spec.ObservedMatches != nil && spec.ObservedCompletion != nil
+}
+
+func neitherSet(spec DeploymentSpec) bool {
+	return spec.ObservedMatches == nil && spec.ObservedCompletion == nil
 }
 
 func init() {
