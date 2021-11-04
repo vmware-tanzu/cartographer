@@ -162,8 +162,15 @@ type SupplyChainResource struct {
 	Configs     []ResourceReference      `json:"configs,omitempty"`
 }
 
+var ValidSupplyChainTemplates = []client.Object{
+	&ClusterSourceTemplate{},
+	&ClusterImageTemplate{},
+	&ClusterConfigTemplate{},
+	&ClusterTemplate{},
+}
+
 type ClusterTemplateReference struct {
-	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
+	//+kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`

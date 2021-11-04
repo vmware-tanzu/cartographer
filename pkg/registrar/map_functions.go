@@ -14,6 +14,8 @@
 
 package registrar
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 import (
 	"context"
 	"fmt"
@@ -25,6 +27,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
+//counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
+
 //counterfeiter:generate . Logger
 type Logger interface {
 	Error(err error, msg string, keysAndValues ...interface{})
@@ -32,6 +36,7 @@ type Logger interface {
 
 type Mapper struct {
 	Client client.Client
+	// fixme We should accept the context, not the logger - then we get the right logger and so does the client
 	Logger Logger
 }
 
@@ -127,6 +132,66 @@ func (mapper *Mapper) RunTemplateToRunnableRequests(object client.Object) []reco
 					Namespace: runnable.Namespace,
 				},
 			})
+		}
+	}
+
+	return requests
+}
+
+// addGVK fulfills the 'GVK of an object returned from the APIServer
+// https://github.com/kubernetes-sigs/controller-runtime/issues/1517#issuecomment-844703142
+func (mapper *Mapper) addGVK(obj client.Object) error {
+	gvks, unversioned, err := mapper.Client.Scheme().ObjectKinds(obj)
+	if err != nil {
+		return fmt.Errorf("missing apiVersion or kind: %s err: %w", obj.GetName(), err)
+	}
+
+	if unversioned {
+		return fmt.Errorf("unversioned object: %s", obj.GetName())
+	}
+
+	if len(gvks) != 1 {
+		return fmt.Errorf("unexpected GVK count: %s", obj.GetName())
+	}
+
+	obj.GetObjectKind().SetGroupVersionKind(gvks[0])
+	return nil
+}
+
+func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []reconcile.Request {
+
+	templateName := template.GetName()
+
+	err := mapper.addGVK(template)
+	if err != nil {
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
+		return nil
+	}
+
+	list := &v1alpha1.ClusterSupplyChainList{}
+
+	err = mapper.Client.List(
+		context.TODO(),
+		list,
+	)
+
+	if err != nil {
+		mapper.Logger.Error(err, "list ClusterSupplyChains")
+		return nil
+	}
+
+	templateKind := template.GetObjectKind().GroupVersionKind().Kind
+
+	var requests []reconcile.Request
+	for _, sc := range list.Items {
+		for _, res := range sc.Spec.Resources {
+			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: sc.Name,
+					},
+				})
+			}
 		}
 	}
 

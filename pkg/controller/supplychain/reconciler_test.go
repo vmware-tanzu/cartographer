@@ -17,7 +17,6 @@ package supplychain_test
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -169,32 +168,19 @@ var _ = Describe("Reconciler", func() {
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesFoundCondition()))
 		})
 
-		It("reschedules for 5 seconds", func() {
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{RequeueAfter: 5 * time.Second}))
-		})
-
 		It("does not return an error", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("when retrieving a resource template fails", func() {
+		Context("get cluster template fails", func() {
 			BeforeEach(func() {
-				repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
-				repo.GetClusterTemplateReturnsOnCall(1, nil, errors.New("getting templates is hard"))
-			})
-
-			It("adds a positive templates NOT found condition listing the failed resource", func() {
-				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
+				repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
 			It("returns an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(MatchError(ContainSubstring("handle resource")))
 				Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
 			})
 
@@ -203,29 +189,17 @@ var _ = Describe("Reconciler", func() {
 
 				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 			})
+		})
 
-			Context("when retrieving multiple resource templates fails", func() {
-				BeforeEach(func() {
-					repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("first error is all that matters"))
-				})
+		Context("cannot find cluster template", func() {
+			BeforeEach(func() {
+				repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
+				repo.GetClusterTemplateReturnsOnCall(1, nil, kerrors.NewNotFound(schema.GroupResource{}, ""))
+			})
 
-				It("adds a positive templates NOT found condition listing the failed resources", func() {
-					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"first name", "second name"})))
-				})
-
-				It("returns an error", func() {
-					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).To(MatchError(ContainSubstring("handle resource")))
-					Expect(err).To(MatchError(ContainSubstring("first error is all that matters")))
-					Expect(err).NotTo(MatchError(ContainSubstring("getting templates is hard")))
-				})
-
-				It("does not requeue", func() {
-					result, _ := reconciler.Reconcile(ctx, req)
-
-					Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-				})
+			It("adds a positive templates NOT found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
 			})
 		})
 

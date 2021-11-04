@@ -20,45 +20,17 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 var _ = Describe("SupplyChainReconciler", func() {
-	var newClusterSupplyChain = func(name string, selector map[string]string) *v1alpha1.ClusterSupplyChain {
-		return &v1alpha1.ClusterSupplyChain{
-			TypeMeta: v1.TypeMeta{},
-			ObjectMeta: v1.ObjectMeta{
-				Name: name,
-			},
-			Spec: v1alpha1.SupplyChainSpec{
-				Resources: []v1alpha1.SupplyChainResource{},
-				Selector:  selector,
-			},
-		}
-	}
-
-	var reconcileAgain = func() {
-		time.Sleep(1 * time.Second) //metav1.Time unmarshals with 1 second accuracy so this sleep avoids a race condition
-
-		supplyChain := &v1alpha1.ClusterSupplyChain{}
-		err := c.Get(context.Background(), client.ObjectKey{Name: "supplychain-bob"}, supplyChain)
-		Expect(err).NotTo(HaveOccurred())
-
-		supplyChain.Spec.Selector = map[string]string{"blah": "blah"}
-		err = c.Update(context.Background(), supplyChain)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func() int64 {
-			supplyChain := &v1alpha1.ClusterSupplyChain{}
-			err := c.Get(context.Background(), client.ObjectKey{Name: "supplychain-bob"}, supplyChain)
-			Expect(err).NotTo(HaveOccurred())
-			return supplyChain.Status.ObservedGeneration
-		}).Should(Equal(supplyChain.Generation))
-	}
-
 	var (
 		ctx      context.Context
 		cleanups []client.Object
@@ -74,33 +46,126 @@ var _ = Describe("SupplyChainReconciler", func() {
 		}
 	})
 
-	Context("when reconciling a supply chain", func() {
-		var (
-			lastConditions []v1.Condition
-		)
+	Context("when reconciling a supply chain with template references", func() {
 		BeforeEach(func() {
-			supplyChain := newClusterSupplyChain("supplychain-bob", map[string]string{"name": "webapp"})
-			err := c.Create(ctx, supplyChain, &client.CreateOptions{})
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: my-terminal-template
+			`)
+
+			supplyChain := &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(supplyChainYaml), supplyChain)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, supplyChain, &client.CreateOptions{})
 			cleanups = append(cleanups, supplyChain)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() bool {
+			Eventually(func() []v1.Condition {
 				supplyChain := &v1alpha1.ClusterSupplyChain{}
-				err := c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, supplyChain)
+				err := c.Get(ctx, client.ObjectKey{Name: "my-supply-chain"}, supplyChain)
 				Expect(err).NotTo(HaveOccurred())
-				lastConditions = supplyChain.Status.Conditions
 
-				return supplyChain.Status.ObservedGeneration == supplyChain.Generation
-			}, 5*time.Second).Should(BeTrue())
+				return supplyChain.Status.Conditions
+
+			}, 5*time.Second).Should(
+				ContainElement(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("TemplatesReady"),
+						"Status": Equal(v1.ConditionFalse),
+						"Reason": Equal("TemplatesNotFound"),
+					}),
+				),
+			)
 		})
 
-		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
-			reconcileAgain()
+		Context("a change to the supply chain occurs that does not cause the status to change", func() {
+			var conditionsBeforeMutation []v1.Condition
 
-			supplyChain := &v1alpha1.ClusterSupplyChain{}
-			err := c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, supplyChain)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(supplyChain.Status.Conditions).To(Equal(lastConditions))
+			BeforeEach(func() {
+				// metav1.Time unmarshals with 1 second accuracy so this sleep ensures
+				// the transition time is noticeable if it changes
+				time.Sleep(1 * time.Second)
+
+				supplyChain := &v1alpha1.ClusterSupplyChain{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: "my-supply-chain"}, supplyChain)
+				Expect(err).NotTo(HaveOccurred())
+
+				conditionsBeforeMutation = supplyChain.Status.Conditions
+
+				supplyChain.Spec.Selector = map[string]string{"blah": "blah"}
+				err = c.Update(context.Background(), supplyChain)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() int64 {
+					supplyChain := &v1alpha1.ClusterSupplyChain{}
+					err := c.Get(context.Background(), client.ObjectKey{Name: "my-supply-chain"}, supplyChain)
+					Expect(err).NotTo(HaveOccurred())
+					return supplyChain.Status.ObservedGeneration
+				}).Should(Equal(supplyChain.Generation))
+			})
+
+			It("does not update the lastTransitionTime", func() {
+				supplyChain := &v1alpha1.ClusterSupplyChain{}
+				err := c.Get(ctx, client.ObjectKey{Name: "my-supply-chain"}, supplyChain)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(supplyChain.Status.Conditions).To(Equal(conditionsBeforeMutation))
+			})
+		})
+
+		Context("a missing referenced template is created", func() {
+			BeforeEach(func() {
+				sourceTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: my-terminal-template
+				spec:
+					template: {}
+				`)
+
+				sourceTemplate := &unstructured.Unstructured{}
+				err := yaml.Unmarshal([]byte(sourceTemplateYaml), sourceTemplate)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = c.Create(ctx, sourceTemplate, &client.CreateOptions{})
+				cleanups = append(cleanups, sourceTemplate)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("immediately updates the supply-chain status", func() {
+				Eventually(func() []v1.Condition {
+					supplyChain := &v1alpha1.ClusterSupplyChain{}
+					err := c.Get(ctx, client.ObjectKey{Name: "my-supply-chain"}, supplyChain)
+					Expect(err).NotTo(HaveOccurred())
+
+					return supplyChain.Status.Conditions
+
+				}, 3*time.Second).Should(
+					ContainElements(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("Ready"),
+							"Status": Equal(v1.ConditionTrue),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("TemplatesReady"),
+							"Status": Equal(v1.ConditionTrue),
+						}),
+					),
+				)
+			})
 		})
 	})
 })
