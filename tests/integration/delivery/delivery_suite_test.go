@@ -73,7 +73,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	if DebugControlPlane {
-		testEnv.ControlPlane.APIServer.Configure().
+		testEnv.ControlPlane.GetAPIServer().Configure().
 			Append("audit-policy-file", filepath.Join(workingDir, "policy.yaml")).
 			Append("audit-log-path", "-")
 	}

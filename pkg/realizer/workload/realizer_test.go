@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
@@ -59,12 +60,12 @@ var _ = Describe("Realize", func() {
 
 		var executedResourceOrder []string
 
-		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (*templates.Output, error) {
+		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 			executedResourceOrder = append(executedResourceOrder, resource.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
 			if resource.Name == "resource1" {
 				Expect(outputs).To(Equal(realizer.NewOutputs()))
-				return outputFromFirstResource, nil
+				return &unstructured.Unstructured{}, outputFromFirstResource, nil
 			}
 
 			if resource.Name == "resource2" {
@@ -73,16 +74,21 @@ var _ = Describe("Realize", func() {
 				Expect(outputs).To(Equal(expectedSecondResourceOutputs))
 			}
 
-			return &templates.Output{}, nil
+			return &unstructured.Unstructured{}, &templates.Output{}, nil
 		})
 
-		Expect(rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)).To(Succeed())
+		stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
+		Expect(err).ToNot(HaveOccurred())
 
 		Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
+
+		Expect(stampedObjects).To(HaveLen(2))
 	})
 
 	It("returns any error encountered realizing a resource", func() {
-		resourceRealizer.DoReturns(nil, errors.New("realizing is hard"))
-		Expect(rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)).To(MatchError("realizing is hard"))
+		resourceRealizer.DoReturns(nil, nil, errors.New("realizing is hard"))
+		stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
+		Expect(err).To(MatchError("realizing is hard"))
+		Expect(stampedObjects).To(HaveLen(0))
 	})
 })

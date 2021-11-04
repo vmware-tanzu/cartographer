@@ -117,12 +117,14 @@ var _ = Describe("Resource", func() {
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
-			It("creates a stamped object and returns the outputs", func() {
-				out, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+			It("creates a stamped object and returns the outputs and stampedObjects", func() {
+				returnedStampedObject, out, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
 				stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
+
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
 				Expect(ok).To(BeTrue())
@@ -158,7 +160,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns GetClusterTemplateError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
@@ -190,7 +192,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource 'resource-1'"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
@@ -240,7 +242,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
@@ -301,7 +303,7 @@ var _ = Describe("Resource", func() {
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))
