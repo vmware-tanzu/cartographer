@@ -65,7 +65,6 @@ type ClusterDeliveryResource struct {
 	Configs     []ResourceReference              `json:"configs,omitempty"`
 }
 
-// ValidDeliveryTemplates THIS MUST MATCH DeliveryClusterTemplateReference Kind Enum
 var ValidDeliveryTemplates = []client.Object{
 	&ClusterSourceTemplate{},
 	&ClusterDeploymentTemplate{},

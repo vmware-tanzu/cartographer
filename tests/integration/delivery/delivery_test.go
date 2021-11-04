@@ -315,7 +315,6 @@ var _ = Describe("Deliveries", func() {
 			)
 		})
 
-
 		Context("a change to the delivery occurs that does not cause the status to change", func() {
 			var conditionsBeforeMutation []metav1.Condition
 
