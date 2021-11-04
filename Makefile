@@ -124,3 +124,18 @@ copyright:
 		-ignore site/static/\*\* \
 		-ignore site/themes/\*\* \
 		.
+
+.PHONY: pre-push .pre-push-check
+.pre-push-check: copyright lint gen-manifests gen-objects test-gen-manifests test-gen-objects generate
+
+# pre-push ensures that all generated content, copywrites and lints are
+# run and ends with an error if a mutation is caused.
+#
+# usage:
+#  1. with all your work added and committed (or stashed)
+#  2. run `make pre-push && git push`
+#  3. if any mutations occur, you can amend/rewrite or otherwise adjust your commits to include the changes
+pre-push:
+	[ -z "$$(git status --porcelain)" ] || (echo "not everything is committed, failing" && exit 1)
+	$(MAKE) .pre-push-check
+	[ -z "$$(git status --porcelain)" ] || (echo "changes occurred during pre-push check" && git diff HEAD --exit-code)
