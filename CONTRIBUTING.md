@@ -77,10 +77,14 @@ Maintainers should feel free to request authors to squash their branches. Mainta
 
 ### PR CI Actions
 
-Before a PR is accepted it will need to pass the validation checks. Authors can find a reasonable degree of of surety that they will pass by running `make test` and `make lint`. `make test` is only a subset of the checks that validation undertakes (for example, validation does an e2e test). If `make lint` fails, it might autocorrect your errors, but you will need to add the fixes to your commit.
+Before a PR is accepted it will need to pass the validation checks.
+
+Validations should pass if you can run `make test pre-push` without failing.
+
+If you run `make pre-push` and it fails, it usually autocorrects lints and generable files, so `git add` the changes,
+commit them and run `make pre-push` again.
 
 ---
-
 ## Running a local cluster
 
 A local Kubernetes cluster with a local registry and Cartographer installed can
