@@ -23,6 +23,9 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
+	"sigs.k8s.io/controller-tools/pkg/loader"
+	"sigs.k8s.io/controller-tools/pkg/markers"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -490,6 +493,59 @@ var _ = Describe("ClusterSupplyChain", func() {
 				expectedSelectors = []string{}
 				Expect(actualSelectors).To(ConsistOf(expectedSelectors))
 			})
+		})
+	})
+
+	Describe("ClusterTemplateReference", func() {
+		It("has four valid references", func() {
+			Expect(v1alpha1.ValidSupplyChainTemplates).To(HaveLen(4))
+
+			Expect(v1alpha1.ValidSupplyChainTemplates).To(ContainElements(
+				&v1alpha1.ClusterSourceTemplate{},
+				&v1alpha1.ClusterConfigTemplate{},
+				&v1alpha1.ClusterImageTemplate{},
+				&v1alpha1.ClusterTemplate{},
+			))
+		})
+
+		It("has a matching valid enum for Kind", func() {
+			// an extension of go parser for loading markers.
+			// Loads the package but only with the contents of the cluster_supply_chain file
+			packages, err := loader.LoadRoots("./cluster_supply_chain.go")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(packages).To(HaveLen(1))
+			Expect(packages[0].GoFiles).To(HaveLen(1))
+
+			// create a registry of CRD markers
+			reg := &markers.Registry{}
+			err = crdmarkers.Register(reg)
+			Expect(err).NotTo(HaveOccurred())
+
+			// and a collector which `EachType` requires
+			coll := &markers.Collector{Registry: reg}
+
+			// find the "kubebuilder:validation:Enum" marker for the ClusterTemplateReference.Kind field
+			var enumMarkers crdmarkers.Enum
+			err = markers.EachType(coll, packages[0], func(info *markers.TypeInfo) {
+				if info.Name == "ClusterTemplateReference" {
+					for _, fieldInfo := range info.Fields {
+						if fieldInfo.Name == "Kind" {
+							var ok bool
+							enumMarkers, ok = fieldInfo.Markers.Get("kubebuilder:validation:Enum").(crdmarkers.Enum)
+							Expect(ok).To(BeTrue())
+						}
+					}
+				}
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// There should be 4, all found in the ValidSupplyChainTemplates List
+			Expect(enumMarkers).To(HaveLen(len(v1alpha1.ValidSupplyChainTemplates)))
+			for _, validTemplate := range v1alpha1.ValidSupplyChainTemplates {
+				typ := reflect.TypeOf(validTemplate)
+				templateName := typ.Elem().Name()
+				Expect(enumMarkers).To(ContainElement(templateName))
+			}
 		})
 	})
 })
