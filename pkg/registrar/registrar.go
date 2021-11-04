@@ -147,7 +147,7 @@ func registerSupplyChainController(mgr manager.Manager) error {
 			&source.Kind{Type: template},
 			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToSupplyChainRequests),
 		); err != nil {
-			return fmt.Errorf("watch template (%v): %w", template, err)
+			return fmt.Errorf("watch template: %w", err)
 		}
 	}
 
