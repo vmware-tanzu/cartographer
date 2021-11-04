@@ -35,6 +35,11 @@ jobs:
           make copyright
           [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
+      - name: check all generables were regenerated and commited
+        run: |-
+          make gen-manifests gen-objects test-gen-manifests test-gen-objects generate
+          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
+
       - name: lint
         run: |-
           make lint
