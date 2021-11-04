@@ -41,6 +41,12 @@ var _ = Describe("Deliveries", func() {
 		ctx = context.Background()
 	})
 
+	AfterEach(func() {
+		for _, obj := range cleanups {
+			_ = c.Delete(ctx, obj, &client.DeleteOptions{})
+		}
+	})
+
 	Describe("I can define a delivery with a resource", func() {
 		BeforeEach(func() {
 			deliveryYaml := utils.HereYaml(`
@@ -62,12 +68,6 @@ var _ = Describe("Deliveries", func() {
 			delivery = &unstructured.Unstructured{}
 			err := yaml.Unmarshal([]byte(deliveryYaml), delivery)
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			for _, obj := range cleanups {
-				_ = c.Delete(ctx, obj, &client.DeleteOptions{})
-			}
 		})
 
 		Context("the referenced resource exists", func() {
@@ -268,6 +268,129 @@ var _ = Describe("Deliveries", func() {
 			err = c.Get(context.Background(), client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(persistedDelivery.Status.Conditions).To(Equal(lastConditions))
+		})
+	})
+
+	Context("when reconciling a delivery with template references", func() {
+		BeforeEach(func() {
+			deliveryYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterDelivery
+				metadata:
+				  name: my-delivery
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: my-terminal-template
+			`)
+
+			delivery := &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(deliveryYaml), delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, delivery, &client.CreateOptions{})
+			cleanups = append(cleanups, delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() []metav1.Condition {
+				delivery := &v1alpha1.ClusterDelivery{}
+				err := c.Get(ctx, client.ObjectKey{Name: "my-delivery"}, delivery)
+				Expect(err).NotTo(HaveOccurred())
+
+				return delivery.Status.Conditions
+
+			}, 5*time.Second).Should(
+				ContainElement(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("TemplatesReady"),
+						"Status": Equal(metav1.ConditionFalse),
+						"Reason": Equal("TemplatesNotFound"),
+					}),
+				),
+			)
+		})
+
+		Context("a change to the delivery occurs that does not cause the status to change", func() {
+			var conditionsBeforeMutation []metav1.Condition
+
+			BeforeEach(func() {
+				// metav1.Time unmarshals with 1 second accuracy so this sleep ensures
+				// the transition time is noticeable if it changes
+				time.Sleep(1 * time.Second)
+
+				delivery := &v1alpha1.ClusterDelivery{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: "my-delivery"}, delivery)
+				Expect(err).NotTo(HaveOccurred())
+
+				conditionsBeforeMutation = delivery.Status.Conditions
+
+				delivery.Spec.Selector = map[string]string{"blah": "blah"}
+				err = c.Update(context.Background(), delivery)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() int64 {
+					delivery := &v1alpha1.ClusterDelivery{}
+					err := c.Get(context.Background(), client.ObjectKey{Name: "my-delivery"}, delivery)
+					Expect(err).NotTo(HaveOccurred())
+					return delivery.Status.ObservedGeneration
+				}).Should(Equal(delivery.Generation))
+			})
+
+			It("does not update the lastTransitionTime", func() {
+				delivery := &v1alpha1.ClusterDelivery{}
+				err := c.Get(ctx, client.ObjectKey{Name: "my-delivery"}, delivery)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(delivery.Status.Conditions).To(Equal(conditionsBeforeMutation))
+			})
+		})
+
+		Context("a missing referenced template is created", func() {
+			BeforeEach(func() {
+				sourceTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: my-terminal-template
+				spec:
+					template: {}
+				`)
+
+				sourceTemplate := &unstructured.Unstructured{}
+				err := yaml.Unmarshal([]byte(sourceTemplateYaml), sourceTemplate)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = c.Create(ctx, sourceTemplate, &client.CreateOptions{})
+				cleanups = append(cleanups, sourceTemplate)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("immediately updates the delivery status", func() {
+				Eventually(func() []metav1.Condition {
+					delivery := &v1alpha1.ClusterDelivery{}
+					err := c.Get(ctx, client.ObjectKey{Name: "my-delivery"}, delivery)
+					Expect(err).NotTo(HaveOccurred())
+
+					return delivery.Status.Conditions
+
+				}, 3*time.Second).Should(
+					ContainElements(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("Ready"),
+							"Status": Equal(metav1.ConditionTrue),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("TemplatesReady"),
+							"Status": Equal(metav1.ConditionTrue),
+						}),
+					),
+				)
+			})
 		})
 	})
 })

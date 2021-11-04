@@ -15,9 +15,12 @@
 package v1alpha1_test
 
 import (
+	"reflect"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -167,5 +170,39 @@ var _ = Describe("Delivery Validation", func() {
 
 	Describe("#Delete", func() {
 
+	})
+})
+
+var _ = Describe("DeliveryClusterTemplateReference", func() {
+	It("has valid references", func() {
+		Expect(v1alpha1.ValidDeliveryTemplates).To(HaveLen(3))
+
+		Expect(v1alpha1.ValidDeliveryTemplates).To(ContainElements(
+			&v1alpha1.ClusterSourceTemplate{},
+			&v1alpha1.ClusterDeploymentTemplate{},
+			&v1alpha1.ClusterTemplate{},
+		))
+	})
+
+	It("has a matching valid enum for Kind", func() {
+
+		mrkrs, err := markersFor(
+			"./cluster_delivery.go",
+			"DeliveryClusterTemplateReference",
+			"Kind",
+			"kubebuilder:validation:Enum",
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+
+		enumMarkers, ok := mrkrs.(crdmarkers.Enum)
+		Expect(ok).To(BeTrue())
+
+		Expect(enumMarkers).To(HaveLen(len(v1alpha1.ValidDeliveryTemplates)))
+		for _, validTemplate := range v1alpha1.ValidDeliveryTemplates {
+			typ := reflect.TypeOf(validTemplate)
+			templateName := typ.Elem().Name()
+			Expect(enumMarkers).To(ContainElement(templateName))
+		}
 	})
 })

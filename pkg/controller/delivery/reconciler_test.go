@@ -17,14 +17,15 @@ package delivery_test
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -143,32 +144,37 @@ var _ = Describe("delivery reconciler", func() {
 				}))
 			})
 
-			It("reschedules for 5 seconds", func() {
-				result, err := reconciler.Reconcile(ctx, req)
+			It("does not return an error", func() {
+				_, err := reconciler.Reconcile(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
-
-				Expect(result).To(Equal(ctrl.Result{RequeueAfter: 5 * time.Second}))
 			})
 		})
 
-		Context("a referenced template is not found", func() {
+		Context("get cluster template fails", func() {
 			BeforeEach(func() {
-				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, nil)
-				repo.GetDeliveryClusterTemplateReturnsOnCall(1, nil, errors.New("second-resource not found"))
+				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
-			It("returns an error without a requeue value", func() {
+			It("returns an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(HaveOccurred())
-
-				Expect(err).To(MatchError(ContainSubstring("encountered errors fetching resources: second-resource")))
+				Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
 			})
 
-			It("Sets the status for TemplateNotFound", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(HaveOccurred())
+			It("does not requeue", func() {
+				result, _ := reconciler.Reconcile(ctx, req)
 
-				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
+				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
+			})
+		})
+
+		Context("cannot find cluster template", func() {
+			BeforeEach(func() {
+				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, kerrors.NewNotFound(schema.GroupResource{}, ""))
+			})
+
+			It("adds a positive templates NOT found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+
 				deliveryObject, ok := repo.StatusUpdateArgsForCall(0).(*v1alpha1.ClusterDelivery)
 				Expect(ok).To(BeTrue())
 
@@ -191,14 +197,6 @@ var _ = Describe("delivery reconciler", func() {
 					),
 				))
 			})
-
-			It("logs all GetTemplate errors encountered", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(HaveOccurred())
-
-				Expect(out).To(Say(`"msg":"retrieving cluster template"`))
-				Expect(out).To(Say(`"error":"second-resource not found"`))
-			})
 		})
 
 		It("Starts and Finishes cleanly", func() {
@@ -208,7 +206,6 @@ var _ = Describe("delivery reconciler", func() {
 			Eventually(out).Should(Say(`"msg":"started","name":"my-new-delivery"`))
 			Eventually(out).Should(Say(`"msg":"finished","name":"my-new-delivery"`))
 		})
-
 	})
 
 	Context("repo.GetDelivery fails", func() {

@@ -175,6 +175,20 @@ func registerDeliveryController(mgr manager.Manager) error {
 		return fmt.Errorf("watch: %w", err)
 	}
 
+	mapper := Mapper{
+		Client: mgr.GetClient(),
+		Logger: mgr.GetLogger().WithName("delivery"),
+	}
+
+	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliveryRequests),
+		); err != nil {
+			return fmt.Errorf("watch template: %w", err)
+		}
+	}
+
 	return nil
 }
 

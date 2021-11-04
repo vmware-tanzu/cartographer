@@ -23,6 +23,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -62,6 +63,12 @@ type ClusterDeliveryResource struct {
 	Params      []Param                          `json:"params,omitempty"`
 	Sources     []ResourceReference              `json:"sources,omitempty"`
 	Configs     []ResourceReference              `json:"configs,omitempty"`
+}
+
+var ValidDeliveryTemplates = []client.Object{
+	&ClusterSourceTemplate{},
+	&ClusterDeploymentTemplate{},
+	&ClusterTemplate{},
 }
 
 type DeliveryClusterTemplateReference struct {

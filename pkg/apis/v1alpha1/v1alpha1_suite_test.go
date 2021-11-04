@@ -15,11 +15,15 @@
 package v1alpha1_test
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
+	"sigs.k8s.io/controller-tools/pkg/loader"
+	"sigs.k8s.io/controller-tools/pkg/markers"
 )
 
 func TestV1alpha1(t *testing.T) {
@@ -37,4 +41,53 @@ type ArbitraryObject struct {
 
 type ArbitrarySpec struct {
 	SomeKey string `json:"someKey"`
+}
+
+func markersFor(relativeFile, typeName, fieldName, markerType string) (interface{}, error) {
+	packages, err := loader.LoadRoots(relativeFile)
+	if err != nil {
+		return nil, err
+	}
+	if len(packages) != 1 {
+		return nil, fmt.Errorf("got %d package(s) for file: %s", len(packages), relativeFile)
+	}
+	if len(packages[0].GoFiles) != 1 {
+		return nil, fmt.Errorf("got %d GoFiles(s) for file: %s", len(packages[0].GoFiles), relativeFile)
+	}
+
+	// create a registry of CRD markers
+	reg := &markers.Registry{}
+	err = crdmarkers.Register(reg)
+	if err != nil {
+		return nil, err
+	}
+
+	// and a collector which `EachType` requires
+	coll := &markers.Collector{Registry: reg}
+
+	var mrkrs interface{}
+	err = markers.EachType(coll, packages[0], func(info *markers.TypeInfo) {
+		if info.Name == typeName {
+			for _, fieldInfo := range info.Fields {
+				if fieldInfo.Name == fieldName {
+					mrkrs = fieldInfo.Markers.Get(markerType)
+				}
+			}
+		}
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error enumerating types: %w", err)
+	}
+
+	if mrkrs == nil {
+		return nil, fmt.Errorf(
+			"could not find marker type '%s' in file/type/field: %s/%s/%s",
+			markerType,
+			relativeFile,
+			typeName,
+			fieldName,
+		)
+	}
+
+	return mrkrs, nil
 }
