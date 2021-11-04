@@ -789,7 +789,7 @@ var _ = Describe("MapFunctions", func() {
 
 					err, msg, _ := fakeLogger.ErrorArgsForCall(0)
 					Expect(err).To(Equal(listErr))
-					Expect(msg).To(Equal("template to delivery requests"))
+					Expect(msg).To(Equal("list ClusterDeliveries"))
 				})
 			})
 		})

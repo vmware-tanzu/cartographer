@@ -185,7 +185,7 @@ func registerDeliveryController(mgr manager.Manager) error {
 			&source.Kind{Type: template},
 			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliveryRequests),
 		); err != nil {
-			return fmt.Errorf("watch template (%v): %w", template, err)
+			return fmt.Errorf("watch template: %w", err)
 		}
 	}
 

@@ -216,7 +216,7 @@ func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []recon
 	)
 
 	if err != nil {
-		mapper.Logger.Error(err, "template to delivery requests")
+		mapper.Logger.Error(err, "list ClusterDeliveries")
 		return nil
 	}
 
