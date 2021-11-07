@@ -468,7 +468,7 @@ var _ = Describe("conditionManager", func() {
 				manager.AddPositive(goodnessCondition)
 			})
 
-			It("nothing is changed", func() {
+			It("reports as unchanged", func() {
 				newConditions, changed := manager.Finalize()
 				Expect(changed).To(BeFalse())
 
@@ -478,6 +478,29 @@ var _ = Describe("conditionManager", func() {
 				))
 			})
 		})
+
+		Context("when we change the condition back to 'unchanged'", func() {
+			BeforeEach(func() {
+				manager = conditions.NewConditionManager("HappyParent", firstConditions)
+				originalReason := goodnessCondition.Reason
+				goodnessCondition.Reason = "Dog ate homework"
+				manager.AddPositive(goodnessCondition)
+
+				goodnessCondition.Reason = originalReason
+				manager.AddPositive(goodnessCondition)
+			})
+
+			It("reports as unchanged", func() {
+				newConditions, changed := manager.Finalize()
+				Expect(changed).To(BeFalse())
+
+				Expect(newConditions).To(ConsistOf(
+					Equal(firstConditions[0]),
+					Equal(firstConditions[1]),
+				))
+			})
+		})
+
 
 	})
 })
