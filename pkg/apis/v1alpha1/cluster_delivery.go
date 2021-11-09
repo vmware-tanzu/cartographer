@@ -62,7 +62,12 @@ type ClusterDeliveryResource struct {
 	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
 	Params      []Param                          `json:"params,omitempty"`
 	Sources     []ResourceReference              `json:"sources,omitempty"`
+	Deployment  *DeploymentReference             `json:"deployment,omitempty"`
 	Configs     []ResourceReference              `json:"configs,omitempty"`
+}
+
+type DeploymentReference struct {
+	Resource string `json:"resource"`
 }
 
 var ValidDeliveryTemplates = []client.Object{
@@ -87,18 +92,43 @@ type ClusterDeliveryList struct {
 }
 
 func (c *ClusterDelivery) ValidateCreate() error {
-	return validateNewState(c)
+	return c.validateNewState()
 }
 
 func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
-	return validateNewState(c)
+	return c.validateNewState()
 }
 
 func (c *ClusterDelivery) ValidateDelete() error {
 	return nil
 }
 
-func validateNewState(c *ClusterDelivery) error {
+func (c *ClusterDelivery) validateNewState() error {
+	if err := c.validateResourceNamesUnique(); err != nil {
+		return err
+	}
+
+	if err := c.validateDeploymentPassedToProperReceivers(); err != nil {
+		return err
+	}
+
+	return c.validateDeploymentTemplateDidNotReceiveConfig()
+}
+
+func (c *ClusterDelivery) validateDeploymentPassedToProperReceivers() error {
+	for _, resource := range c.Spec.Resources {
+		if resource.TemplateRef.Kind == "ClusterDeploymentTemplate" && resource.Deployment == nil {
+			return fmt.Errorf("spec.resources['%s'] is a ClusterDeploymentTemplate and must receive a deployment", resource.Name)
+		}
+
+		if resource.Deployment != nil && resource.TemplateRef.Kind != "ClusterDeploymentTemplate" {
+			return fmt.Errorf("spec.resources['%s'] receives a deployment but is not a ClusterDeploymentTemplate", resource.Name)
+		}
+	}
+	return nil
+}
+
+func (c *ClusterDelivery) validateResourceNamesUnique() error {
 	names := map[string]bool{}
 
 	for idx, resource := range c.Spec.Resources {
@@ -106,6 +136,15 @@ func validateNewState(c *ClusterDelivery) error {
 			return fmt.Errorf("spec.resources[%d].name \"%s\" cannot appear twice", idx, resource.Name)
 		}
 		names[resource.Name] = true
+	}
+	return nil
+}
+
+func (c *ClusterDelivery) validateDeploymentTemplateDidNotReceiveConfig() error {
+	for _, resource := range c.Spec.Resources {
+		if resource.TemplateRef.Kind == "ClusterDeploymentTemplate" && resource.Configs != nil {
+			return fmt.Errorf("spec.resources['%s'] is a ClusterDeploymentTemplate and must not receive config", resource.Name)
+		}
 	}
 	return nil
 }

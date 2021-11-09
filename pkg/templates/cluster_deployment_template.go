@@ -56,9 +56,9 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 
 	output := &Output{Source: &Source{}}
 
-	originalSource, ok := t.templatingContext["source"].(*SourceInput)
+	originalSource, ok := t.templatingContext["deployment"].(SourceInput)
 	if !ok {
-		return nil, fmt.Errorf("original source not found in context: %v", t.templatingContext)
+		return nil, fmt.Errorf("deployment not found in upstream template: %v", t.templatingContext)
 	}
 
 	output.Source.URL = originalSource.URL

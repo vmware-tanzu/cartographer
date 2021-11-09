@@ -94,10 +94,10 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						evaluator.EvaluateJsonPathReturnsOnCall(2, happyPathValue, nil)
 					})
 
-					When("templating context includes a source", func() {
+					When("templating context includes a deployment", func() {
 						BeforeEach(func() {
 							templatingContext = map[string]interface{}{
-								"source": &templates.SourceInput{
+								"deployment": templates.SourceInput{
 									URL:      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 									Revision: "prod",
 								},
@@ -153,15 +153,15 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						})
 					})
 
-					When("templating context includes an incomplete source", func() {
+					When("templating context includes an incomplete deployment", func() {
 						BeforeEach(func() {
 							templatingContext = map[string]interface{}{
-								"source": &templates.SourceInput{
+								"deployment": templates.SourceInput{
 									Revision: "prod",
 								},
 							}
 						})
-						It("returns the incomplete source", func() {
+						It("returns the incomplete deployment as a source", func() {
 							expectedOutput := templates.Source{
 								Revision: "prod",
 							}
@@ -169,11 +169,11 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						})
 					})
 
-					When("templating context does not include a source", func() {
+					When("templating context does not include a deployment", func() {
 						BeforeEach(func() {
 							templatingContext = map[string]interface{}{}
 						})
-						ItReturnsAHelpfulError("original source not found in context")
+						ItReturnsAHelpfulError("deployment not found in upstream template")
 					})
 				})
 
@@ -247,10 +247,10 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(1, "a match!", nil)
 				})
 
-				When("templating context includes a source", func() {
+				When("templating context includes a deployment", func() {
 					BeforeEach(func() {
 						templatingContext = map[string]interface{}{
-							"source": &templates.SourceInput{
+							"deployment": templates.SourceInput{
 								URL:      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 								Revision: "prod",
 							},
@@ -267,15 +267,15 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					ItDoesNotReturnAnError()
 				})
 
-				When("templating context includes an incomplete source", func() {
+				When("templating context includes an incomplete deployment", func() {
 					BeforeEach(func() {
 						templatingContext = map[string]interface{}{
-							"source": &templates.SourceInput{
+							"deployment": templates.SourceInput{
 								Revision: "prod",
 							},
 						}
 					})
-					It("returns the incomplete source", func() {
+					It("returns the incomplete deployment as a source", func() {
 						expectedOutput := templates.Source{
 							Revision: "prod",
 						}
@@ -283,11 +283,11 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					})
 				})
 
-				When("templating context does not include a source", func() {
+				When("templating context does not include a deployment", func() {
 					BeforeEach(func() {
 						templatingContext = map[string]interface{}{}
 					})
-					ItReturnsAHelpfulError("original source not found in context")
+					ItReturnsAHelpfulError("deployment not found in upstream template")
 				})
 			})
 			When("input cannot be found", func() {

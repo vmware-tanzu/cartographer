@@ -47,4 +47,4 @@ spec:
       name: $(deliverable.metadata.name)$-1
     spec:
       value:
-        some-key: $(source.url)$
+        some-key: $(deployment.url)$
