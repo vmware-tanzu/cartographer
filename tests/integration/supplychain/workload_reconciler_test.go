@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,8 +65,8 @@ var _ = Describe("WorkloadReconciler", func() {
 
 	var newClusterSupplyChain = func(name string, selector map[string]string) *v1alpha1.ClusterSupplyChain {
 		return &v1alpha1.ClusterSupplyChain{
-			TypeMeta: v1.TypeMeta{},
-			ObjectMeta: v1.ObjectMeta{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
 			Spec: v1alpha1.SupplyChainSpec{
@@ -116,8 +115,8 @@ var _ = Describe("WorkloadReconciler", func() {
 	Context("Has the source template and workload installed", func() {
 		BeforeEach(func() {
 			workload := &v1alpha1.Workload{
-				TypeMeta: v1.TypeMeta{},
-				ObjectMeta: v1.ObjectMeta{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "workload-bob",
 					Namespace: testNS,
 					Labels: map[string]string{
@@ -133,7 +132,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 
 		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
-			var lastConditions []v1.Condition
+			var lastConditions []metav1.Condition
 
 			Eventually(func() bool {
 				workload := &v1alpha1.Workload{}
@@ -155,8 +154,8 @@ var _ = Describe("WorkloadReconciler", func() {
 		Context("when reconciliation will end in an unknown status", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
-					TypeMeta: v1.TypeMeta{},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "proper-template-bob",
 					},
 					Spec: v1alpha1.SourceTemplateSpec{
@@ -188,7 +187,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 
 			It("does not error if the reconciliation ends in an unknown status", func() {
-				Eventually(func() []v1.Condition {
+				Eventually(func() []metav1.Condition {
 					obj := &v1alpha1.Workload{}
 					err := c.Get(ctx, client.ObjectKey{Name: "workload-bob", Namespace: testNS}, obj)
 					Expect(err).NotTo(HaveOccurred())
@@ -198,12 +197,12 @@ var _ = Describe("WorkloadReconciler", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("MissingValueAtPath"),
-						"Status": Equal(v1.ConditionStatus("Unknown")),
+						"Status": Equal(metav1.ConditionStatus("Unknown")),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("Ready"),
 						"Reason": Equal("MissingValueAtPath"),
-						"Status": Equal(v1.ConditionStatus("Unknown")),
+						"Status": Equal(metav1.ConditionStatus("Unknown")),
 					}),
 				))
 				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))
@@ -212,7 +211,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 		It("shortcuts backoff when a supply chain is provided", func() {
 			By("expecting a supply chain")
-			Eventually(func() []v1.Condition {
+			Eventually(func() []metav1.Condition {
 				obj := &v1alpha1.Workload{}
 				err := c.Get(ctx, client.ObjectKey{Name: "workload-bob", Namespace: testNS}, obj)
 				Expect(err).NotTo(HaveOccurred())
@@ -221,7 +220,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("SupplyChainReady"),
 				"Reason": Equal("SupplyChainNotFound"),
-				"Status": Equal(v1.ConditionStatus("False")),
+				"Status": Equal(metav1.ConditionStatus("False")),
 			})))
 
 			// todo: this test is flakey
@@ -258,23 +257,23 @@ var _ = Describe("WorkloadReconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			obj := &v1alpha1.ClusterSupplyChain{}
-			Eventually(func() ([]v1.Condition, error) {
+			Eventually(func() ([]metav1.Condition, error) {
 				err = c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, obj)
 				return obj.Status.Conditions, err
 			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("Ready"),
 				"Reason": Equal("Ready"),
-				"Status": Equal(v1.ConditionStatus("True")),
+				"Status": Equal(metav1.ConditionStatus("True")),
 			})))
 
 			By("reconcile in less than a second")
-			Eventually(func() ([]v1.Condition, error) {
+			Eventually(func() ([]metav1.Condition, error) {
 				err = c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, obj)
 				return obj.Status.Conditions, err
 			}, 500*time.Millisecond).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("Ready"),
 				"Reason": Equal("Ready"),
-				"Status": Equal(v1.ConditionStatus("True")),
+				"Status": Equal(metav1.ConditionStatus("True")),
 			})))
 		})
 	})
@@ -335,8 +334,8 @@ var _ = Describe("WorkloadReconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			workload := &v1alpha1.Workload{
-				TypeMeta: v1.TypeMeta{},
-				ObjectMeta: v1.ObjectMeta{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "workload-joe",
 					Namespace: testNS,
 					Labels: map[string]string{
@@ -353,12 +352,12 @@ var _ = Describe("WorkloadReconciler", func() {
 			test = &resources.Test{}
 
 			// FIXME: make this more obvious
-			Eventually(func() ([]v1.Condition, error) {
+			Eventually(func() ([]metav1.Condition, error) {
 				err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
 				return test.Status.Conditions, err
 			}).Should(BeNil())
 
-			Eventually(func() []v1.Condition {
+			Eventually(func() []metav1.Condition {
 				obj := &v1alpha1.Workload{}
 				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
 				Expect(err).NotTo(HaveOccurred())
@@ -368,17 +367,17 @@ var _ = Describe("WorkloadReconciler", func() {
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("SupplyChainReady"),
 					"Reason": Equal("Ready"),
-					"Status": Equal(v1.ConditionTrue),
+					"Status": Equal(metav1.ConditionTrue),
 				}),
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("ResourcesSubmitted"),
 					"Reason": Equal("MissingValueAtPath"),
-					"Status": Equal(v1.ConditionStatus("Unknown")),
+					"Status": Equal(metav1.ConditionStatus("Unknown")),
 				}),
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("Ready"),
 					"Reason": Equal("MissingValueAtPath"),
-					"Status": Equal(v1.ConditionStatus("Unknown")),
+					"Status": Equal(metav1.ConditionStatus("Unknown")),
 				}),
 			))
 		})
@@ -403,14 +402,14 @@ var _ = Describe("WorkloadReconciler", func() {
 				err := c.Status().Update(ctx, test)
 				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(func() ([]v1.Condition, error) {
+				Eventually(func() ([]metav1.Condition, error) {
 					err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
 					return test.Status.Conditions, err
 				}).Should(Not(BeNil()))
 			})
 
 			It("immediately reconciles", func() {
-				Eventually(func() []v1.Condition {
+				Eventually(func() []metav1.Condition {
 					obj := &v1alpha1.Workload{}
 					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
 					Expect(err).NotTo(HaveOccurred())
@@ -420,17 +419,17 @@ var _ = Describe("WorkloadReconciler", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("SupplyChainReady"),
 						"Reason": Equal("Ready"),
-						"Status": Equal(v1.ConditionStatus("True")),
+						"Status": Equal(metav1.ConditionStatus("True")),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("ResourceSubmissionComplete"),
-						"Status": Equal(v1.ConditionStatus("True")),
+						"Status": Equal(metav1.ConditionStatus("True")),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("Ready"),
 						"Reason": Equal("Ready"),
-						"Status": Equal(v1.ConditionStatus("True")),
+						"Status": Equal(metav1.ConditionStatus("True")),
 					}),
 				))
 			})

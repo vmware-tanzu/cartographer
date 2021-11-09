@@ -17,8 +17,6 @@ package deliverable
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,8 +28,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
-
-const reconcileInterval = 5 * time.Second
 
 type Reconciler struct {
 	repo                    repository.Repository
@@ -134,7 +130,7 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		return ctrl.Result{}, fmt.Errorf("deliverable not ready")
 	}
 
-	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *Reconciler) checkDeliveryReadiness(delivery *v1alpha1.ClusterDelivery) error {

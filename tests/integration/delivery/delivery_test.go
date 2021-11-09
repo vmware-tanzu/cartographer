@@ -16,6 +16,7 @@ package delivery_test
 
 import (
 	"context"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -390,6 +391,163 @@ var _ = Describe("Deliveries", func() {
 						}),
 					),
 				)
+			})
+		})
+	})
+
+	FContext("a delivery with a template that has stamped a test crd", func() {
+		var (
+			test *resources.Test
+		)
+
+		BeforeEach(func() {
+			templateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSourceTemplate
+				metadata:
+				  name: my-source-template
+				spec:
+				  urlPath: status.conditions[?(@.type=="Ready")]
+				  revisionPath: "happy"
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: test-resource
+					spec:
+					  foo: "bar"
+			`)
+
+			template := &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(templateYaml), template)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, template, &client.CreateOptions{})
+			cleanups = append(cleanups, template)
+			Expect(err).NotTo(HaveOccurred())
+
+			deliveryYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterDelivery
+				metadata:
+				  name: my-delivery
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterSourceTemplate
+				        name: my-source-template
+			`)
+
+			delivery := &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(deliveryYaml), delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, delivery, &client.CreateOptions{})
+			cleanups = append(cleanups, delivery)
+			Expect(err).NotTo(HaveOccurred())
+
+			deliverable := &v1alpha1.Deliverable{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deliverable-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+			}
+
+			cleanups = append(cleanups, deliverable)
+			err = c.Create(ctx, deliverable, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			test = &resources.Test{}
+
+			Eventually(func() ([]metav1.Condition, error) {
+				err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
+				return test.Status.Conditions, err
+			}).Should(BeNil())
+
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Deliverable{}
+				err := c.Get(ctx, client.ObjectKey{Name: "deliverable-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 5*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("DeliveryReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Reason": Equal("MissingValueAtPath"),
+					"Status": Equal(metav1.ConditionStatus("Unknown")),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Reason": Equal("MissingValueAtPath"),
+					"Status": Equal(metav1.ConditionStatus("Unknown")),
+				}),
+			))
+		})
+
+		Context("a stamped object has changed", func() {
+
+			BeforeEach(func() {
+				test.Status.Conditions = []metav1.Condition{
+					{
+						Type:               "Ready",
+						Status:             "True",
+						Reason:             "LifeIsGood",
+						LastTransitionTime: metav1.Now(),
+					},
+					{
+						Type:               "Succeeded",
+						Status:             "True",
+						Reason:             "Success",
+						LastTransitionTime: metav1.Now(),
+					},
+				}
+				err := c.Status().Update(ctx, test)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() ([]metav1.Condition, error) {
+					err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
+					return test.Status.Conditions, err
+				}).Should(Not(BeNil()))
+			})
+
+			It("immediately reconciles", func() {
+				Eventually(func() []metav1.Condition {
+					obj := &v1alpha1.Deliverable{}
+					err := c.Get(ctx, client.ObjectKey{Name: "deliverable-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return obj.Status.Conditions
+				}, 5*time.Second).Should(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("DeliveryReady"),
+						"Reason": Equal("Ready"),
+						"Status": Equal(metav1.ConditionStatus("True")),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("ResourcesSubmitted"),
+						"Reason": Equal("ResourceSubmissionComplete"),
+						"Status": Equal(metav1.ConditionStatus("True")),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("Ready"),
+						"Reason": Equal("Ready"),
+						"Status": Equal(metav1.ConditionStatus("True")),
+					}),
+				))
 			})
 		})
 	})
