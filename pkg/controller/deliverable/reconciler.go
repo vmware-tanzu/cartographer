@@ -14,6 +14,8 @@
 
 package deliverable
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 import (
 	"context"
 	"fmt"
@@ -53,6 +55,7 @@ func NewReconciler(repo repository.Repository, conditionManagerBuilder condition
 	}
 }
 
+//counterfeiter:generate . DynamicTracker
 type DynamicTracker interface {
 	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler) error
 }

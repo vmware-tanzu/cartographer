@@ -71,8 +71,6 @@ var _ = Describe("Reconciler", func() {
 			return conditionManager
 		}
 
-		conditionManager.IsSuccessfulReturns(true)
-
 		rlzr = &workloadfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 

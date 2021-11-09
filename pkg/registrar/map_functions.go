@@ -262,7 +262,7 @@ func (mapper *Mapper) templateToDeliveries(template client.Object) []*v1alpha1.C
 	)
 
 	if err != nil {
-		mapper.Logger.Error(err, "list ClusterSupplyChains")
+		mapper.Logger.Error(err, "list ClusterDeliveries")
 		return nil
 	}
 
