@@ -15,10 +15,8 @@
 package supplychain_test
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
-	"io"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -207,74 +205,6 @@ var _ = Describe("WorkloadReconciler", func() {
 				))
 				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))
 			})
-		})
-
-		It("shortcuts backoff when a supply chain is provided", func() {
-			By("expecting a supply chain")
-			Eventually(func() []metav1.Condition {
-				obj := &v1alpha1.Workload{}
-				err := c.Get(ctx, client.ObjectKey{Name: "workload-bob", Namespace: testNS}, obj)
-				Expect(err).NotTo(HaveOccurred())
-
-				return obj.Status.Conditions
-			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("SupplyChainReady"),
-				"Reason": Equal("SupplyChainNotFound"),
-				"Status": Equal(metav1.ConditionStatus("False")),
-			})))
-
-			// todo: this test is flakey
-			reader := bufio.NewReader(controllerBuffer)
-			var previousSeconds float64
-			Eventually(func() float64 {
-				line, _, err := reader.ReadLine()
-				if err == io.EOF {
-					return 0
-				}
-				Expect(err).NotTo(HaveOccurred())
-				var logLine LogLine
-				err = json.Unmarshal(line, &logLine)
-				if err != nil {
-					return 0
-				}
-				if logLine.Message != "Reconciler error" || logLine.Namespace != testNS || logLine.Name != "workload-bob" {
-					return 0
-				}
-
-				if previousSeconds == 0 {
-					previousSeconds = logLine.Timestamp
-					return 0
-				}
-
-				return logLine.Timestamp - previousSeconds
-			}, 2500*time.Millisecond).Should(BeNumerically(">", 1.0))
-
-			By("accepting a supply chain")
-			supplyChain := newClusterSupplyChain("supplychain-bob", map[string]string{"name": "webapp"})
-			cleanups = append(cleanups, supplyChain)
-
-			err := c.Create(ctx, supplyChain, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			obj := &v1alpha1.ClusterSupplyChain{}
-			Eventually(func() ([]metav1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, obj)
-				return obj.Status.Conditions, err
-			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Reason": Equal("Ready"),
-				"Status": Equal(metav1.ConditionStatus("True")),
-			})))
-
-			By("reconcile in less than a second")
-			Eventually(func() ([]metav1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "supplychain-bob"}, obj)
-				return obj.Status.Conditions, err
-			}, 500*time.Millisecond).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Reason": Equal("Ready"),
-				"Status": Equal(metav1.ConditionStatus("True")),
-			})))
 		})
 	})
 

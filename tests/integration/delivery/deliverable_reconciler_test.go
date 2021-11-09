@@ -15,10 +15,8 @@
 package delivery_test
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
-	"io"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -204,74 +202,6 @@ var _ = Describe("DeliverableReconciler", func() {
 				))
 				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))
 			})
-		})
-
-		It("shortcuts backoff when a delivery is provided", func() {
-			By("expecting a delivery")
-			Eventually(func() []v1.Condition {
-				obj := &v1alpha1.Deliverable{}
-				err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, obj)
-				Expect(err).NotTo(HaveOccurred())
-
-				return obj.Status.Conditions
-			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("DeliveryReady"),
-				"Reason": Equal("DeliveryNotFound"),
-				"Status": Equal(v1.ConditionStatus("False")),
-			})))
-
-			// todo: this test is flakey
-			reader := bufio.NewReader(controllerBuffer)
-			var previousSeconds float64
-			Eventually(func() float64 {
-				line, _, err := reader.ReadLine()
-				if err == io.EOF {
-					return 0
-				}
-				Expect(err).NotTo(HaveOccurred())
-				var logLine LogLine
-				err = json.Unmarshal(line, &logLine)
-				if err != nil {
-					return 0
-				}
-				if logLine.Message != "Reconciler error" || logLine.Namespace != testNS || logLine.Name != "deliverable-bob" {
-					return 0
-				}
-
-				if previousSeconds == 0 {
-					previousSeconds = logLine.Timestamp
-					return 0
-				}
-
-				return logLine.Timestamp - previousSeconds
-			}, 2500*time.Millisecond).Should(BeNumerically(">", 1.0))
-
-			By("accepting a delivery")
-			delivery := newClusterDelivery("delivery-bob", map[string]string{"name": "webapp"})
-			cleanups = append(cleanups, delivery)
-
-			err := c.Create(ctx, delivery, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			obj := &v1alpha1.ClusterDelivery{}
-			Eventually(func() ([]v1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "delivery-bob"}, obj)
-				return obj.Status.Conditions, err
-			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Reason": Equal("Ready"),
-				"Status": Equal(v1.ConditionStatus("True")),
-			})))
-
-			By("reconcile in less than a second")
-			Eventually(func() ([]v1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "delivery-bob"}, obj)
-				return obj.Status.Conditions, err
-			}, 500*time.Millisecond).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Reason": Equal("Ready"),
-				"Status": Equal(v1.ConditionStatus("True")),
-			})))
 		})
 	})
 })
