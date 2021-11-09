@@ -78,7 +78,7 @@ spec:
     metadata:
       name: example-config-configmap
     data:
-      favorite_color: #@ data.values.image.image
+      favorite_color: #@ data.values.image
   configPath: data.favorite_color
 
 ---
@@ -95,4 +95,4 @@ spec:
     metadata:
       name: example-config
     data:
-      best_name: #@ data.values.config.config
+      best_name: #@ data.values.config

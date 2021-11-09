@@ -29,10 +29,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 type LogLine struct {
@@ -272,6 +276,164 @@ var _ = Describe("WorkloadReconciler", func() {
 				"Reason": Equal("Ready"),
 				"Status": Equal(v1.ConditionStatus("True")),
 			})))
+		})
+	})
+
+	Context("a supply chain with a template that has stamped a test crd", func() {
+		var (
+			test *resources.Test
+		)
+
+		BeforeEach(func() {
+			templateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: status.conditions[?(@.type=="Ready")]
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: test-resource
+					spec:
+					  foo: "bar"
+			`)
+
+			template := &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(templateYaml), template)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, template, &client.CreateOptions{})
+			cleanups = append(cleanups, template)
+			Expect(err).NotTo(HaveOccurred())
+
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			`)
+
+			supplyChain := &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(supplyChainYaml), supplyChain)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, supplyChain, &client.CreateOptions{})
+			cleanups = append(cleanups, supplyChain)
+			Expect(err).NotTo(HaveOccurred())
+
+			workload := &v1alpha1.Workload{
+				TypeMeta: v1.TypeMeta{},
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "workload-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{},
+			}
+
+			cleanups = append(cleanups, workload)
+			err = c.Create(ctx, workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			test = &resources.Test{}
+
+			// FIXME: make this more obvious
+			Eventually(func() ([]v1.Condition, error) {
+				err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
+				return test.Status.Conditions, err
+			}).Should(BeNil())
+
+			Eventually(func() []v1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 5*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("SupplyChainReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(v1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Reason": Equal("MissingValueAtPath"),
+					"Status": Equal(v1.ConditionStatus("Unknown")),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Reason": Equal("MissingValueAtPath"),
+					"Status": Equal(v1.ConditionStatus("Unknown")),
+				}),
+			))
+		})
+
+		Context("a stamped object has changed", func() {
+
+			BeforeEach(func() {
+				test.Status.Conditions = []metav1.Condition{
+					{
+						Type:               "Ready",
+						Status:             "True",
+						Reason:             "LifeIsGood",
+						LastTransitionTime: metav1.Now(),
+					},
+					{
+						Type:               "Succeeded",
+						Status:             "True",
+						Reason:             "Success",
+						LastTransitionTime: metav1.Now(),
+					},
+				}
+				err := c.Status().Update(ctx, test)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() ([]v1.Condition, error) {
+					err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
+					return test.Status.Conditions, err
+				}).Should(Not(BeNil()))
+			})
+
+			It("immediately reconciles", func() {
+				Eventually(func() []v1.Condition {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return obj.Status.Conditions
+				}, 5*time.Second).Should(ContainElements(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("SupplyChainReady"),
+						"Reason": Equal("Ready"),
+						"Status": Equal(v1.ConditionStatus("True")),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("ResourcesSubmitted"),
+						"Reason": Equal("ResourceSubmissionComplete"),
+						"Status": Equal(v1.ConditionStatus("True")),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal("Ready"),
+						"Reason": Equal("Ready"),
+						"Status": Equal(v1.ConditionStatus("True")),
+					}),
+				))
+			})
 		})
 	})
 })

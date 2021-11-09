@@ -34,6 +34,168 @@ import (
 )
 
 var _ = Describe("MapFunctions", func() {
+	Describe("TemplateToWorkloadRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		Context("the template kind can be found", func() {
+			BeforeEach(func() {
+				fakeLogger = &registrarfakes.FakeLogger{}
+				fakeClient = &registrarfakes.FakeClient{}
+
+				m = &registrar.Mapper{
+					Client: fakeClient,
+					Logger: fakeLogger,
+				}
+
+				scheme := runtime.NewScheme()
+				err := v1alpha1.AddToScheme(scheme)
+				Expect(err).NotTo(HaveOccurred())
+
+				fakeClient.SchemeReturns(scheme)
+			})
+
+			Context("client.list does not return errors", func() {
+
+				Context("there are no SupplyChains", func() {
+					BeforeEach(func() {
+						existingList := v1alpha1.ClusterSupplyChainList{
+							Items: []v1alpha1.ClusterSupplyChain{},
+						}
+
+						fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+							listVal := reflect.ValueOf(list)
+							existingVal := reflect.ValueOf(existingList)
+
+							reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+							return nil
+						}
+					})
+
+					It("returns an empty request list", func() {
+						t := &v1alpha1.ClusterTemplate{}
+						reqs := m.TemplateToWorkloadRequests(t)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+				Context("there are multiple supply chains", func() {
+					BeforeEach(func() {
+						existingSupplyChain1 := v1alpha1.ClusterSupplyChain{
+							Spec: v1alpha1.SupplyChainSpec{
+								Resources: []v1alpha1.SupplyChainResource{
+									{
+										TemplateRef: v1alpha1.ClusterTemplateReference{
+											Kind: "ClusterTemplate",
+											Name: "my-template-foo",
+										},
+									},
+								},
+							},
+						}
+						existingSupplyChain2 := v1alpha1.ClusterSupplyChain{
+							ObjectMeta: metav1.ObjectMeta{Name: "good-supply-chain"},
+							Spec: v1alpha1.SupplyChainSpec{
+								Resources: []v1alpha1.SupplyChainResource{
+									{
+										TemplateRef: v1alpha1.ClusterTemplateReference{
+											Kind: "ClusterTemplate",
+											Name: "my-template",
+										},
+									},
+								},
+							},
+						}
+						existingSupplyChainList := v1alpha1.ClusterSupplyChainList{
+							Items: []v1alpha1.ClusterSupplyChain{existingSupplyChain1, existingSupplyChain2},
+						}
+
+						existingWorkload := v1alpha1.Workload{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "my-workload",
+							},
+						}
+						existingWorkloadList := v1alpha1.WorkloadList{
+							Items: []v1alpha1.Workload{existingWorkload},
+						}
+
+						fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+							listVal := reflect.Indirect(reflect.ValueOf(list))
+							switch list.(type) {
+							case *v1alpha1.ClusterSupplyChainList:
+								existingVal := reflect.Indirect(reflect.ValueOf(existingSupplyChainList))
+								listVal.Set(existingVal)
+							case *v1alpha1.WorkloadList:
+								existingVal := reflect.Indirect(reflect.ValueOf(existingWorkloadList))
+								listVal.Set(existingVal)
+							default:
+								panic("list type not stubbed")
+							}
+
+							return nil
+						}
+					})
+
+					Describe("The template refers to some supply chains", func() {
+						It("returns requests for only the matching workloads", func() {
+							t := &v1alpha1.ClusterTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "my-template",
+								},
+							}
+							reqs := m.TemplateToWorkloadRequests(t)
+
+							Expect(reqs).To(HaveLen(1))
+							Expect(reqs[0].Name).To(Equal("my-workload"))
+						})
+					})
+
+					Describe("The template does not reference a supply chain", func() {
+						It("returns an empty request list", func() {
+							t := &v1alpha1.ClusterTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "my-template-bar",
+								},
+							}
+							reqs := m.TemplateToWorkloadRequests(t)
+
+							Expect(reqs).To(HaveLen(0))
+						})
+					})
+
+				})
+			})
+
+			Context("client.list errors", func() {
+				var (
+					listErr error
+				)
+				BeforeEach(func() {
+					listErr = fmt.Errorf("some error")
+
+					fakeClient.ListReturns(listErr)
+				})
+
+				It("returns the error", func() {
+					t := &v1alpha1.ClusterTemplate{}
+					reqs := m.TemplateToWorkloadRequests(t)
+
+					Expect(reqs).To(HaveLen(0))
+					Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+					err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+					Expect(err).To(Equal(listErr))
+					Expect(msg).To(Equal("list ClusterSupplyChains"))
+				})
+			})
+		})
+
+	})
+
 	Describe("ClusterSupplyChainToWorkloadRequests", func() {
 		var (
 			clientObjects      []client.Object

@@ -87,12 +87,17 @@ func registerWorkloadController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("workload-repo"),
 	)
 
+	reconciler := workload.NewReconciler(repo, conditions.NewConditionManager, realizerworkload.NewRealizer())
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
-		Reconciler: workload.NewReconciler(repo, conditions.NewConditionManager, realizerworkload.NewRealizer()),
+		Reconciler: reconciler,
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
 	}
+
+	reconciler.AddTracking(&external.ObjectTracker{
+		Controller: ctrl,
+	})
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Workload{}},
@@ -111,6 +116,15 @@ func registerWorkloadController(mgr manager.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(mapper.ClusterSupplyChainToWorkloadRequests),
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)
+	}
+
+	for _, template := range v1alpha1.ValidSupplyChainTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToWorkloadRequests),
+		); err != nil {
+			return fmt.Errorf("watch template: %w", err)
+		}
 	}
 
 	return nil
