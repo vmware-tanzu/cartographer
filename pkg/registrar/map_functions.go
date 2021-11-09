@@ -45,7 +45,7 @@ func (mapper *Mapper) TemplateToDeliverableRequests(template client.Object) []re
 
 	var requests []reconcile.Request
 	for _, delivery := range deliveries {
-		reqs := mapper.ClusterDeliveryToDeliverableRequests(delivery)
+		reqs := mapper.ClusterDeliveryToDeliverableRequests(&delivery)
 		requests = append(requests, reqs...)
 	}
 
@@ -245,7 +245,7 @@ func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []recon
 	return requests
 }
 
-func (mapper *Mapper) templateToDeliveries(template client.Object) []*v1alpha1.ClusterDelivery {
+func (mapper *Mapper) templateToDeliveries(template client.Object) []v1alpha1.ClusterDelivery {
 	templateName := template.GetName()
 
 	err := mapper.addGVK(template)
@@ -268,12 +268,11 @@ func (mapper *Mapper) templateToDeliveries(template client.Object) []*v1alpha1.C
 
 	templateKind := template.GetObjectKind().GroupVersionKind().Kind
 
-	var deliveries []*v1alpha1.ClusterDelivery
-	for dIndex := range list.Items {
-		d := list.Items[dIndex]
-		for _, res := range d.Spec.Resources {
+	var deliveries []v1alpha1.ClusterDelivery
+	for _, delivery := range list.Items {
+		for _, res := range delivery.Spec.Resources {
 			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				deliveries = append(deliveries, &d)
+				deliveries = append(deliveries, delivery)
 			}
 		}
 	}
