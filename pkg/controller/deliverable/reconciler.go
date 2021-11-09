@@ -74,9 +74,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deliverable, err := r.repo.GetDeliverable(req.Name, req.Namespace)
 	if err != nil || deliverable == nil {
 		if kerrors.IsNotFound(err) {
+			// 1. Does not exist, we watch deliverables, do not requeue
 			return ctrl.Result{}, nil
 		}
 
+		// 2. Server error, we should requeue
 		return ctrl.Result{}, fmt.Errorf("get deliverable: %w", err)
 	}
 
@@ -84,11 +86,18 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	delivery, err := r.getDeliveriesForDeliverable(deliverable)
 	if err != nil {
+		// 3.a len(deliverable.Labels) == 0, we watch deliverables, do not requeue
+		// 3.b GetDeliveriesForDeliverable, server error, we should requeue
+		// 3.c len(deliveries) == 0, we watch deliveries, do not requeue
+		//       SHOULD THIS BE A STATUS?
+		// 3.d len(deliveries) > 1, we watch deliveries, do not requeue
+		//       SHOULD THIS BE A STATUS?
 		return r.completeReconciliation(deliverable, err)
 	}
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.repo.GetScheme())
 	if err != nil {
+		// 4. This would be a real error, I'm not sure how it would ever be fixed tho?, we should requeue
 		return r.completeReconciliation(deliverable, fmt.Errorf("get object gvk: %w", err))
 	}
 
@@ -97,6 +106,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	err = r.checkDeliveryReadiness(delivery)
 	if err != nil {
+		// 5. If readyCondition.Status != "True", we watch deliveries, do not requeue, should not even be an error
 		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
 		return r.completeReconciliation(deliverable, err)
 	}
@@ -106,14 +116,25 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetDeliveryClusterTemplateError:
+			// 6.a invalid kind, we watch templates, do not requeue
+			// 6.b get object, server error, requeue
+			// 6.c impossible to get here??, do not requeue
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
 		case realizer.StampError:
+			// 7.a. unknwon resource template type, we watch templates, do not requeue
+			// 7.b. templatize, we watch templates, deliverables, deliveries, do not requeue
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
+			// 8.a list - server error, requeue
+			// 8.b patch - server error, requeue
+			// 8.c create - server error, requeue
+			// 8.d invalid unstructured..... do not requeue, FUTURE
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 		case realizer.RetrieveOutputError:
+			// 9.a evaluate json path - ???, do not requeue
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
 		default:
+			// 10. ?????????????????????, requeue
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 		}
 	} else {
