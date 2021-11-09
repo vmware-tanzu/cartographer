@@ -37,9 +37,9 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
-	deliverablefakes2 "github.com/vmware-tanzu/cartographer/pkg/controller/deliverable/deliverablefakes"
+	ctrldeliverablefakes "github.com/vmware-tanzu/cartographer/pkg/controller/deliverable/deliverablefakes"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
+	rlzdeliverablefakes "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -53,10 +53,10 @@ var _ = Describe("Reconciler", func() {
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
 		conditionManager  *conditionsfakes.FakeConditionManager
-		rlzr              *deliverablefakes.FakeRealizer
+		rlzr              *rlzdeliverablefakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
-		dynamicTracker    *deliverablefakes2.FakeDynamicTracker
+		dynamicTracker    *ctrldeliverablefakes.FakeDynamicTracker
 	)
 
 	BeforeEach(func() {
@@ -70,10 +70,10 @@ var _ = Describe("Reconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &deliverablefakes.FakeRealizer{}
+		rlzr = &rlzdeliverablefakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
-		dynamicTracker = &deliverablefakes2.FakeDynamicTracker{}
+		dynamicTracker = &ctrldeliverablefakes.FakeDynamicTracker{}
 
 		repo = &repositoryfakes.FakeRepository{}
 		scheme := runtime.NewScheme()
