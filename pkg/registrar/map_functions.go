@@ -45,14 +45,14 @@ func (mapper *Mapper) TemplateToWorkloadRequests(template client.Object) []recon
 
 	var requests []reconcile.Request
 	for _, supplyChain := range supplyChains {
-		reqs := mapper.ClusterSupplyChainToWorkloadRequests(supplyChain)
+		reqs := mapper.ClusterSupplyChainToWorkloadRequests(&supplyChain)
 		requests = append(requests, reqs...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) templateToSupplyChains(template client.Object) []*v1alpha1.ClusterSupplyChain {
+func (mapper *Mapper) templateToSupplyChains(template client.Object) []v1alpha1.ClusterSupplyChain {
 	templateName := template.GetName()
 
 	err := mapper.addGVK(template)
@@ -75,12 +75,11 @@ func (mapper *Mapper) templateToSupplyChains(template client.Object) []*v1alpha1
 
 	templateKind := template.GetObjectKind().GroupVersionKind().Kind
 
-	var supplyChains []*v1alpha1.ClusterSupplyChain
-	for scIndex := range list.Items {
-		sc := list.Items[scIndex] // see https://play.golang.org/p/GzU80LswSEt
+	var supplyChains []v1alpha1.ClusterSupplyChain
+	for _, sc := range list.Items {
 		for _, res := range sc.Spec.Resources {
 			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				supplyChains = append(supplyChains, &sc)
+				supplyChains = append(supplyChains, sc)
 			}
 		}
 	}
