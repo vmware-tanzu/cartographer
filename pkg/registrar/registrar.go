@@ -213,12 +213,17 @@ func registerDeliverableController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("deliverable-repo"),
 	)
 
+	reconciler := deliverable.NewReconciler(repo, conditions.NewConditionManager, realizerdeliverable.NewRealizer())
 	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{
-		Reconciler: deliverable.NewReconciler(repo, conditions.NewConditionManager, realizerdeliverable.NewRealizer()),
+		Reconciler: reconciler,
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
 	}
+
+	reconciler.AddTracking(&external.ObjectTracker{
+		Controller: ctrl,
+	})
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Deliverable{}},
@@ -237,6 +242,15 @@ func registerDeliverableController(mgr manager.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(mapper.ClusterDeliveryToDeliverableRequests),
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)
+	}
+
+	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliverableRequests),
+		); err != nil {
+			return fmt.Errorf("watch template: %w", err)
+		}
 	}
 
 	return nil

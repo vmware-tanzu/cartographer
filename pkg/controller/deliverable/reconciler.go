@@ -20,7 +20,9 @@ import (
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -29,23 +31,37 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type Reconciler struct {
+type Reconciler interface {
+	Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error)
+	AddTracking(dynamicTracker DynamicTracker)
+}
+
+type reconciler struct {
 	repo                    repository.Repository
 	conditionManager        conditions.ConditionManager
 	conditionManagerBuilder conditions.ConditionManagerBuilder
 	realizer                realizer.Realizer
 	logger                  logr.Logger
+	dynamicTracker          DynamicTracker
 }
 
-func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizer.Realizer) *Reconciler {
-	return &Reconciler{
+func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizer.Realizer) Reconciler {
+	return &reconciler{
 		repo:                    repo,
 		conditionManagerBuilder: conditionManagerBuilder,
 		realizer:                realizer,
 	}
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+type DynamicTracker interface {
+	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler) error
+}
+
+func (r *reconciler) AddTracking(dynamicTracker DynamicTracker) {
+	r.dynamicTracker = dynamicTracker
+}
+
+func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
 	r.logger.Info("started")
@@ -82,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
-	err = r.realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.repo), delivery)
+	stampedObjects, err := r.realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.repo), delivery)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetDeliveryClusterTemplateError:
@@ -97,16 +113,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 		}
-
-		return r.completeReconciliation(deliverable, err)
+	} else {
+		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
-	r.conditionManager.AddPositive(ResourcesSubmittedCondition())
+	if len(stampedObjects) > 0 {
+		for _, stampedObject := range stampedObjects {
+			err = r.dynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
+			if err != nil {
+				r.logger.Error(err, "dynamic tracker watch")
+			}
+		}
+	}
 
 	return r.completeReconciliation(deliverable, nil)
 }
 
-func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
+func (r *reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
@@ -126,14 +149,10 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		return ctrl.Result{}, err
 	}
 
-	if !r.conditionManager.IsSuccessful() { // TODO: Discuss rename to IsReady
-		return ctrl.Result{}, fmt.Errorf("deliverable not ready")
-	}
-
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) checkDeliveryReadiness(delivery *v1alpha1.ClusterDelivery) error {
+func (r *reconciler) checkDeliveryReadiness(delivery *v1alpha1.ClusterDelivery) error {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	if readyCondition.Status == "True" {
 		return nil
@@ -150,7 +169,7 @@ func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condit
 	return metav1.Condition{}
 }
 
-func (r *Reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
+func (r *reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
 	if len(deliverable.Labels) == 0 {
 		r.conditionManager.AddPositive(DeliverableMissingLabelsCondition())
 		return nil, fmt.Errorf("deliverable is missing required labels")

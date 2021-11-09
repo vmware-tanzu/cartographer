@@ -409,7 +409,7 @@ var _ = Describe("Deliveries", func() {
 				  name: my-source-template
 				spec:
 				  urlPath: status.conditions[?(@.type=="Ready")]
-				  revisionPath: "happy"
+				  revisionPath: status.conditions[?(@.type=="Succeeded")]
 			      template:
 					apiVersion: test.run/v1alpha1
 					kind: Test

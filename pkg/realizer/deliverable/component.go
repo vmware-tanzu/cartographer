@@ -16,6 +16,7 @@ package deliverable
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -26,7 +27,7 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -41,10 +42,10 @@ func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repo
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 	template, err := r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
 	if err != nil {
-		return nil, GetDeliveryClusterTemplateError{
+		return nil, nil, GetDeliveryClusterTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
 		}
@@ -78,7 +79,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	stampContext := templates.StamperBuilder(r.deliverable, templatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
-		return nil, StampError{
+		return nil, nil, StampError{
 			Err:      err,
 			Resource: resource,
 		}
@@ -86,7 +87,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 
 	err = r.repo.EnsureObjectExistsOnCluster(stampedObject, true)
 	if err != nil {
-		return nil, ApplyStampedObjectError{
+		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
 		}
@@ -94,11 +95,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 
 	output, err := template.GetOutput(stampedObject)
 	if err != nil {
-		return nil, RetrieveOutputError{
+		return stampedObject, nil, RetrieveOutputError{
 			Err:      err,
 			resource: resource,
 		}
 	}
 
-	return output, nil
+	return stampedObject, output, nil
 }

@@ -18,13 +18,14 @@ package deliverable
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) error
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]*unstructured.Unstructured, error)
 }
 
 type realizer struct{}
@@ -33,17 +34,22 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) error {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]*unstructured.Unstructured, error) {
 	outs := NewOutputs()
+	var stampedObjects []*unstructured.Unstructured
 
 	for i := range delivery.Spec.Resources {
 		resource := delivery.Spec.Resources[i]
-		out, err := resourceRealizer.Do(ctx, &resource, delivery.Name, outs)
-		if err != nil {
-			return err
+		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, delivery.Name, outs)
+		if stampedObject != nil {
+			stampedObjects = append(stampedObjects, stampedObject)
 		}
+		if err != nil {
+			return stampedObjects, err
+		}
+
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return nil
+	return stampedObjects, nil
 }
