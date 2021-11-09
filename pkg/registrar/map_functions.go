@@ -77,7 +77,7 @@ func (mapper *Mapper) templateToSupplyChains(template client.Object) []*v1alpha1
 
 	var supplyChains []*v1alpha1.ClusterSupplyChain
 	for scIndex := range list.Items {
-		sc := list.Items[scIndex]
+		sc := list.Items[scIndex] // see https://play.golang.org/p/GzU80LswSEt
 		for _, res := range sc.Spec.Resources {
 			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
 				supplyChains = append(supplyChains, &sc)

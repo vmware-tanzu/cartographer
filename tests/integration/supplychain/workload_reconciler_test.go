@@ -358,8 +358,6 @@ var _ = Describe("WorkloadReconciler", func() {
 				return test.Status.Conditions, err
 			}).Should(BeNil())
 
-			_ = c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)
-
 			Eventually(func() []v1.Condition {
 				obj := &v1alpha1.Workload{}
 				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
