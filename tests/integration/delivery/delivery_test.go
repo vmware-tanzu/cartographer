@@ -16,7 +16,6 @@ package delivery_test
 
 import (
 	"context"
-	"github.com/vmware-tanzu/cartographer/tests/resources"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Deliveries", func() {
@@ -395,7 +395,7 @@ var _ = Describe("Deliveries", func() {
 		})
 	})
 
-	FContext("a delivery with a template that has stamped a test crd", func() {
+	Context("a delivery with a template that has stamped a test crd", func() {
 		var (
 			test *resources.Test
 		)
