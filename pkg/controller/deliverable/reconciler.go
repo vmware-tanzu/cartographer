@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,11 +75,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deliverable, err := r.repo.GetDeliverable(req.Name, req.Namespace)
 	if err != nil || deliverable == nil {
 		if kerrors.IsNotFound(err) {
-			// 1. Does not exist, we watch deliverables, do not requeue
 			return ctrl.Result{}, nil
 		}
 
-		// 2. Server error, we should requeue
 		return ctrl.Result{}, fmt.Errorf("get deliverable: %w", err)
 	}
 
@@ -97,18 +96,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.repo.GetScheme())
 	if err != nil {
-		// 4. This would be a real error, I'm not sure how it would ever be fixed tho?, we should requeue
-		return r.completeReconciliation(deliverable, fmt.Errorf("get object gvk: %w", err))
+		return r.completeReconciliation(deliverable, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
 
 	deliverable.Status.DeliveryRef.Kind = deliveryGVK.Kind
 	deliverable.Status.DeliveryRef.Name = delivery.Name
 
-	err = r.checkDeliveryReadiness(delivery)
-	if err != nil {
-		// 5. If readyCondition.Status != "True", we watch deliveries, do not requeue, should not even be an error
+	if !r.isDeliveryReady(delivery) {
 		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
-		return r.completeReconciliation(deliverable, err)
+		return r.completeReconciliation(deliverable, nil)
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
@@ -169,19 +165,18 @@ func (r *reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		}
 	}
 
-	if err != nil {
+	// log handled errors?
+
+	if err != nil && controller.IsUnhandledError(err) {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) checkDeliveryReadiness(delivery *v1alpha1.ClusterDelivery) error {
+func (r *reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
-	if readyCondition.Status == "True" {
-		return nil
-	}
-	return fmt.Errorf("delivery is not in ready condition")
+	return readyCondition.Status == "True"
 }
 
 func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condition {
@@ -201,7 +196,7 @@ func (r *reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverab
 
 	deliveries, err := r.repo.GetDeliveriesForDeliverable(deliverable)
 	if err != nil {
-		r.conditionManager.AddPositive(DeliveryNotFoundCondition(deliverable.Labels))
+		//return nil, controller.NewUnhandledError(fmt.Errorf("get delivery by label: %w", err))
 		return nil, fmt.Errorf("get delivery by label: %w", err)
 	}
 

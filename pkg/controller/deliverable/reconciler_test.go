@@ -265,10 +265,9 @@ var _ = Describe("Reconciler", func() {
 				}
 				repo.GetDeliveriesForDeliverableReturns([]v1alpha1.ClusterDelivery{delivery}, nil)
 			})
-			It("returns a helpful error", func() {
+			It("does not return an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-
-				Expect(err.Error()).To(ContainSubstring("delivery is not in ready condition"))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("calls the condition manager to report delivery not ready", func() {
@@ -420,6 +419,14 @@ var _ = Describe("Reconciler", func() {
 		It("returns a helpful error", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err.Error()).To(ContainSubstring("deliverable is missing required labels"))
+		})
+
+		It("logs that an error in updating", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(out).To(Say(`"msg":"update error"`))
+			Expect(out).To(Say(`"name":"my-deliverable-name"`))
+			Expect(out).To(Say(`"namespace":"my-namespace"`))
 		})
 	})
 
