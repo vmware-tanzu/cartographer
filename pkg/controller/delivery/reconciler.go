@@ -29,15 +29,9 @@ import (
 )
 
 type Reconciler struct {
-	repo             repository.Repository
+	Repo             repository.Repository
 	conditionManager conditions.ConditionManager
 	logger           logr.Logger
-}
-
-func NewReconciler(repo repository.Repository) *Reconciler {
-	return &Reconciler{
-		repo: repo,
-	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
@@ -46,7 +40,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	delivery, err := r.repo.GetDelivery(req.Name)
+	delivery, err := r.Repo.GetDelivery(req.Name)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get delivery: %w", err)
 	}
@@ -70,7 +64,7 @@ func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error
 	)
 
 	for _, resource := range delivery.Spec.Resources {
-		_, err = r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+		_, err = r.Repo.GetDeliveryClusterTemplate(resource.TemplateRef)
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
@@ -93,7 +87,7 @@ func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, 
 	delivery.Status.Conditions, _ = r.conditionManager.Finalize()
 
 	delivery.Status.ObservedGeneration = delivery.Generation
-	err := r.repo.StatusUpdate(delivery)
+	err := r.Repo.StatusUpdate(delivery)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("status update: %w", err)
 	}

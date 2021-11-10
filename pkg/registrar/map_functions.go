@@ -40,6 +40,18 @@ type Mapper struct {
 	Logger Logger
 }
 
+func (mapper *Mapper) TemplateToDeliverableRequests(template client.Object) []reconcile.Request {
+	deliveries := mapper.templateToDeliveries(template)
+
+	var requests []reconcile.Request
+	for _, delivery := range deliveries {
+		reqs := mapper.ClusterDeliveryToDeliverableRequests(&delivery)
+		requests = append(requests, reqs...)
+	}
+
+	return requests
+}
+
 func (mapper *Mapper) TemplateToWorkloadRequests(template client.Object) []reconcile.Request {
 	supplyChains := mapper.templateToSupplyChains(template)
 
@@ -219,7 +231,21 @@ func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []re
 }
 
 func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []reconcile.Request {
+	deliveries := mapper.templateToDeliveries(template)
 
+	var requests []reconcile.Request
+	for _, delivery := range deliveries {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: delivery.Name,
+			},
+		})
+	}
+
+	return requests
+}
+
+func (mapper *Mapper) templateToDeliveries(template client.Object) []v1alpha1.ClusterDelivery {
 	templateName := template.GetName()
 
 	err := mapper.addGVK(template)
@@ -242,20 +268,15 @@ func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []recon
 
 	templateKind := template.GetObjectKind().GroupVersionKind().Kind
 
-	var requests []reconcile.Request
-	for _, sc := range list.Items {
-		for _, res := range sc.Spec.Resources {
+	var deliveries []v1alpha1.ClusterDelivery
+	for _, delivery := range list.Items {
+		for _, res := range delivery.Spec.Resources {
 			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: sc.Name,
-					},
-				})
+				deliveries = append(deliveries, delivery)
 			}
 		}
 	}
-
-	return requests
+	return deliveries
 }
 
 func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.ClusterRunTemplate) bool {

@@ -38,6 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 func TestDeliveryIntegration(t *testing.T) {
@@ -68,7 +69,10 @@ var _ = BeforeSuite(func() {
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
 		},
-		CRDDirectoryPaths:        []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{
+			filepath.Join("..", "..", "..", "config", "crd", "bases"),
+			filepath.Join("..", "..", "resources", "crds"),
+		},
 		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
 	}
 
@@ -123,6 +127,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = batchv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = resources.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	c, err = client.New(apiConfig, client.Options{

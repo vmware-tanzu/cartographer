@@ -39,7 +39,7 @@ import (
 var _ = Describe("delivery reconciler", func() {
 	var (
 		repo       *repositoryfakes.FakeRepository
-		reconciler reconcile.Reconciler
+		reconciler delivery.Reconciler
 		ctx        context.Context
 		req        reconcile.Request
 		out        *Buffer
@@ -47,7 +47,10 @@ var _ = Describe("delivery reconciler", func() {
 
 	BeforeEach(func() {
 		repo = &repositoryfakes.FakeRepository{}
-		reconciler = delivery.NewReconciler(repo)
+
+		reconciler = delivery.Reconciler{
+			Repo: repo,
+		}
 
 		out = NewBuffer()
 		logger := zap.New(zap.WriteTo(out))
@@ -212,7 +215,6 @@ var _ = Describe("delivery reconciler", func() {
 		It("returns an error", func() {
 			repo.GetDeliveryReturns(nil, errors.New("repo.GetDelivery failed"))
 
-			reconciler := delivery.NewReconciler(repo)
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("get delivery: repo.GetDelivery failed"))
@@ -223,13 +225,10 @@ var _ = Describe("delivery reconciler", func() {
 		It("returns an error", func() {
 			apiDelivery := &v1alpha1.ClusterDelivery{}
 			repo.GetDeliveryReturns(apiDelivery, nil)
-
 			repo.StatusUpdateReturns(errors.New("repo.StatusUpdate failed"))
 
-			reconciler := delivery.NewReconciler(repo)
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).To(HaveOccurred())
-
 			Expect(err.Error()).To(ContainSubstring("status update: repo.StatusUpdate failed"))
 		})
 	})

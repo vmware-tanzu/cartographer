@@ -73,7 +73,7 @@ func RegisterControllers(mgr manager.Manager) error {
 		return fmt.Errorf("register deliverable controller: %w", err)
 	}
 
-	if err := registerRunnableServiceController(mgr); err != nil {
+	if err := registerRunnableController(mgr); err != nil {
 		return fmt.Errorf("register runnable-service controller: %w", err)
 	}
 
@@ -87,7 +87,12 @@ func registerWorkloadController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("workload-repo"),
 	)
 
-	reconciler := workload.NewReconciler(repo, conditions.NewConditionManager, realizerworkload.NewRealizer())
+	reconciler := &workload.Reconciler{
+		Repo:                    repo,
+		ConditionManagerBuilder: conditions.NewConditionManager,
+		Realizer:                realizerworkload.NewRealizer(),
+	}
+
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
 	})
@@ -95,9 +100,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 		return fmt.Errorf("controller new: %w", err)
 	}
 
-	reconciler.AddTracking(&external.ObjectTracker{
-		Controller: ctrl,
-	})
+	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Workload{}},
@@ -137,8 +140,12 @@ func registerSupplyChainController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("supply-chain-repo"),
 	)
 
+	reconciler := &supplychain.Reconciler{
+		Repo:                    repo,
+		ConditionManagerBuilder: conditions.NewConditionManager,
+	}
 	ctrl, err := pkgcontroller.New("supply-chain", mgr, pkgcontroller.Options{
-		Reconciler: supplychain.NewReconciler(repo, conditions.NewConditionManager),
+		Reconciler: reconciler,
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
@@ -175,8 +182,11 @@ func registerDeliveryController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("delivery-repo"),
 	)
 
+	reconciler := &delivery.Reconciler{
+		Repo: repo,
+	}
 	ctrl, err := pkgcontroller.New("delivery", mgr, pkgcontroller.Options{
-		Reconciler: delivery.NewReconciler(repo),
+		Reconciler: reconciler,
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
@@ -213,12 +223,20 @@ func registerDeliverableController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("deliverable-repo"),
 	)
 
+	reconciler := &deliverable.Reconciler{
+		Repo:                    repo,
+		ConditionManagerBuilder: conditions.NewConditionManager,
+		Realizer:                realizerdeliverable.NewRealizer(),
+	}
+
 	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{
-		Reconciler: deliverable.NewReconciler(repo, conditions.NewConditionManager, realizerdeliverable.NewRealizer()),
+		Reconciler: reconciler,
 	})
 	if err != nil {
 		return fmt.Errorf("controller new: %w", err)
 	}
+
+	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Deliverable{}},
@@ -239,17 +257,29 @@ func registerDeliverableController(mgr manager.Manager) error {
 		return fmt.Errorf("watch: %w", err)
 	}
 
+	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliverableRequests),
+		); err != nil {
+			return fmt.Errorf("watch template: %w", err)
+		}
+	}
+
 	return nil
 }
 
-func registerRunnableServiceController(mgr manager.Manager) error {
+func registerRunnableController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
 		mgr.GetLogger().WithName("runnable-repo"),
 	)
 
-	reconciler := runnable.NewReconciler(repo, realizerrunnable.NewRealizer())
+	reconciler := &runnable.Reconciler{
+		Repo:     repo,
+		Realizer: realizerrunnable.NewRealizer(),
+	}
 	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
 	})
@@ -257,9 +287,7 @@ func registerRunnableServiceController(mgr manager.Manager) error {
 		return fmt.Errorf("controller new runnable-service: %w", err)
 	}
 
-	reconciler.AddTracking(&external.ObjectTracker{
-		Controller: ctrl,
-	})
+	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Runnable{}},

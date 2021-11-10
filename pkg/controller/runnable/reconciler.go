@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -30,42 +29,22 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 )
 
-type Reconciler interface {
-	Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error)
-	AddTracking(dynamicTracker DynamicTracker)
+type Reconciler struct {
+	Repo           repository.Repository
+	Realizer       realizer.Realizer
+	DynamicTracker tracker.DynamicTracker
 }
 
-func NewReconciler(repository repository.Repository, realizer realizer.Realizer) Reconciler {
-	return &reconciler{
-		repository: repository,
-		realizer:   realizer,
-	}
-}
-
-type reconciler struct {
-	repository     repository.Repository
-	realizer       realizer.Realizer
-	dynamicTracker DynamicTracker
-}
-
-//counterfeiter:generate . DynamicTracker
-type DynamicTracker interface {
-	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler) error
-}
-
-func (r *reconciler) AddTracking(dynamicTracker DynamicTracker) {
-	r.dynamicTracker = dynamicTracker
-}
-
-func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := logr.FromContext(ctx).
 		WithValues("name", request.Name, "namespace", request.Namespace)
 	logger.Info("started")
 	defer logger.Info("finished")
 
-	runnable, err := r.repository.GetRunnable(request.Name, request.Namespace)
+	runnable, err := r.Repo.GetRunnable(request.Name, request.Namespace)
 
 	if kerrors.IsNotFound(err) {
 		logger.Info("runnable no longer exists")
@@ -76,9 +55,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	condition, outputs, stampedObject := r.realizer.Realize(ctx, runnable, logger, r.repository)
+	condition, outputs, stampedObject := r.Realizer.Realize(ctx, runnable, logger, r.Repo)
 	if stampedObject != nil {
-		err = r.dynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
+		err = r.DynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if err != nil {
 			logger.Error(err, "dynamic tracker watch")
 		}
@@ -90,7 +69,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	runnable.Status.Conditions, _ = conditionManager.Finalize()
 	runnable.Status.Outputs = outputs
 
-	statusUpdateError := r.repository.StatusUpdate(runnable)
+	statusUpdateError := r.Repo.StatusUpdate(runnable)
 	if statusUpdateError != nil {
 		return ctrl.Result{}, fmt.Errorf("update runnable status: %w", statusUpdateError)
 	}

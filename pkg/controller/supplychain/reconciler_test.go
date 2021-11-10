@@ -42,7 +42,7 @@ import (
 var _ = Describe("Reconciler", func() {
 	var (
 		out                *Buffer
-		reconciler         *supplychain.Reconciler
+		reconciler         supplychain.Reconciler
 		ctx                context.Context
 		req                ctrl.Request
 		conditionManager   *conditionsfakes.FakeConditionManager
@@ -108,7 +108,10 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		reconciler = supplychain.NewReconciler(repo, fakeConditionManagerBuilder)
+		reconciler = supplychain.Reconciler{
+			Repo:                    repo,
+			ConditionManagerBuilder: fakeConditionManagerBuilder,
+		}
 
 		req = ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},

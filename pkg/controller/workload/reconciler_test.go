@@ -33,8 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	workloadfakes2 "github.com/vmware-tanzu/cartographer/pkg/controller/workload/workloadfakes"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
@@ -44,6 +42,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -57,7 +56,7 @@ var _ = Describe("Reconciler", func() {
 		rlzr             *workloadfakes.FakeRealizer
 		wl               *v1alpha1.Workload
 		workloadLabels   map[string]string
-		dynamicTracker   *workloadfakes2.FakeDynamicTracker
+		dynamicTracker   *trackerfakes.FakeDynamicTracker
 	)
 
 	BeforeEach(func() {
@@ -71,12 +70,10 @@ var _ = Describe("Reconciler", func() {
 			return conditionManager
 		}
 
-		conditionManager.IsSuccessfulReturns(true)
-
 		rlzr = &workloadfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
-		dynamicTracker = &workloadfakes2.FakeDynamicTracker{}
+		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
 
 		repo = &repositoryfakes.FakeRepository{}
 		scheme := runtime.NewScheme()
@@ -84,8 +81,12 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		reconciler = workload.NewReconciler(repo, fakeConditionManagerBuilder, rlzr)
-		reconciler.AddTracking(dynamicTracker)
+		reconciler = workload.Reconciler{
+			Repo:                    repo,
+			ConditionManagerBuilder: fakeConditionManagerBuilder,
+			Realizer:                rlzr,
+			DynamicTracker:          dynamicTracker,
+		}
 
 		req = ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: "my-workload-name", Namespace: "my-namespace"},
