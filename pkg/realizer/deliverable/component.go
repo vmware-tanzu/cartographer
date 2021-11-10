@@ -16,6 +16,7 @@ package deliverable
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -44,12 +45,17 @@ func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repo
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	template, err := r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetDeliveryClusterTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
 		}
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		return nil, nil, fmt.Errorf("new model from api: %w", err)
 	}
 
 	labels := map[string]string{

@@ -35,8 +35,8 @@ import (
 //counterfeiter:generate . Repository
 type Repository interface {
 	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
-	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (templates.Template, error)
-	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error)
+	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (client.Object, error)
+	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
 	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
@@ -147,15 +147,15 @@ func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstru
 	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (templates.Template, error) {
+func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (client.Object, error) {
 	return r.getTemplate(ref.Name, ref.Kind)
 }
 
-func (r *repository) GetDeliveryClusterTemplate(ref v1alpha1.DeliveryClusterTemplateReference) (templates.Template, error) {
+func (r *repository) GetDeliveryClusterTemplate(ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
 	return r.getTemplate(ref.Name, ref.Kind)
 }
 
-func (r *repository) getTemplate(name string, kind string) (templates.Template, error) {
+func (r *repository) getTemplate(name string, kind string) (client.Object, error) {
 	apiTemplate, err := v1alpha1.GetAPITemplate(kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
@@ -165,13 +165,7 @@ func (r *repository) getTemplate(name string, kind string) (templates.Template, 
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
-
-	template, err := templates.NewModelFromAPI(apiTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("new model from api: %w", err)
-	}
-
-	return template, nil
+	return apiTemplate, nil
 }
 
 func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error) {
