@@ -37,9 +37,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
-	ctrldeliverablefakes "github.com/vmware-tanzu/cartographer/pkg/controller/deliverable/deliverablefakes"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
-	rlzdeliverablefakes "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -54,7 +53,7 @@ var _ = Describe("Reconciler", func() {
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
 		conditionManager  *conditionsfakes.FakeConditionManager
-		rlzr              *rlzdeliverablefakes.FakeRealizer
+		rlzr              *deliverablefakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
 		dynamicTracker    *trackerfakes.FakeDynamicTracker
@@ -71,7 +70,7 @@ var _ = Describe("Reconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &rlzdeliverablefakes.FakeRealizer{}
+		rlzr = &deliverablefakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
 		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
