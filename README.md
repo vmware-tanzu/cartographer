@@ -1,11 +1,11 @@
 # Cartographer
 <img src="site/themes/template/static/img/cartographer-logo.png">
 
-Cartographer is a Kubernetes native [Choreographer]. It allows users to configure K8s resources into re-usable [_Supply Chains_](site/content/docs/reference.md#ClusterSupplyChain) that can be used to define all of the stages that an [_Application Workload_](site/content/docs/reference.md#Workload) must go through to get to an environment.
+Cartographer is a Kubernetes-native [Choreographer]. It allows users to configure K8s resources into re-usable [_Supply Chains_](site/content/docs/reference.md#ClusterSupplyChain) that can be used to define all of the stages that an [_Application Workload_](site/content/docs/reference.md#Workload) must go through to get to an environment.
 
 [Choreographer]: https://tanzu.vmware.com/developer/guides/supply-chain-choreography/
 
-Cartographer also allows for separation of controls between a user who is responsible for defining a Supply Chain (known as a App Operator) and a user who is focused on creating applications (Developer). These roles are not necessarily mutually exclusive, but provide the ability to create a separation concern.
+Cartographer also allows for separation of controls between a user who is responsible for defining a Supply Chain (known as an App Operator) and a user who is focused on creating applications (Developer). These roles are not necessarily mutually exclusive, but Cartographer provides the ability to create a separation of concerns.
 
 ## Known Issues
 - **WARNING!!** At this time, the Supply Chain ClusterRoleBinding has more permissions than it needs. This will be fixed in an upcoming release.
@@ -16,12 +16,12 @@ The issue can be tracked [here](https://github.com/vmware-tanzu/cartographer/iss
 Detailed documentation for Cartographer can be found in the `site` folder of this repository:
 
 * [About Cartographer](site/content/docs/about.md): Details the design and philosophy of Cartographer
-* [Examples](examples/source-to-knative-service/README.md): Contains an example of using Cartographer to create a supply chain that takes a repository, creates and image and deploys it to a cluster
+* [Examples](examples/source-to-knative-service/README.md): Contains an example of using Cartographer to create a Supply Chain that takes a repository, creates an image, and deploys it to a cluster
 * [Spec Reference](site/content/docs/reference.md): Detailed descriptions of the CRD Specs for Cartographer
 
 ## Getting Started
 
-An example of using Cartographer to define a Supply Chain that pulls code from a repository, builds an image for the code and deploys it the the same cluster can be found in the [examples folder of this repository](examples/source-to-knative-service/README.md)
+An example of using Cartographer to define a Supply Chain that pulls code from a repository, builds an image for the code, and deploys it to the same cluster can be found in the [examples folder of this repository](examples/source-to-knative-service/README.md)
 
 
 ## Installation

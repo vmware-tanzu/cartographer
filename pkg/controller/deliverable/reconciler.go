@@ -21,10 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -32,47 +30,26 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type Reconciler interface {
-	Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error)
-	AddTracking(dynamicTracker DynamicTracker)
-}
-
-type reconciler struct {
-	repo                    repository.Repository
+type Reconciler struct {
+	Repo                    repository.Repository
+	ConditionManagerBuilder conditions.ConditionManagerBuilder
+	Realizer                realizer.Realizer
+	DynamicTracker          tracker.DynamicTracker
 	conditionManager        conditions.ConditionManager
-	conditionManagerBuilder conditions.ConditionManagerBuilder
-	realizer                realizer.Realizer
 	logger                  logr.Logger
-	dynamicTracker          DynamicTracker
 }
 
-func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizer.Realizer) Reconciler {
-	return &reconciler{
-		repo:                    repo,
-		conditionManagerBuilder: conditionManagerBuilder,
-		realizer:                realizer,
-	}
-}
-
-//counterfeiter:generate . DynamicTracker
-type DynamicTracker interface {
-	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler) error
-}
-
-func (r *reconciler) AddTracking(dynamicTracker DynamicTracker) {
-	r.dynamicTracker = dynamicTracker
-}
-
-func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	deliverable, err := r.repo.GetDeliverable(req.Name, req.Namespace)
+	deliverable, err := r.Repo.GetDeliverable(req.Name, req.Namespace)
 	if err != nil || deliverable == nil {
 		if kerrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -81,7 +58,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("get deliverable: %w", err)
 	}
 
-	r.conditionManager = r.conditionManagerBuilder(v1alpha1.DeliverableReady, deliverable.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.DeliverableReady, deliverable.Status.Conditions)
 
 	delivery, err := r.getDeliveriesForDeliverable(deliverable)
 	if err != nil {
@@ -94,7 +71,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(deliverable, err)
 	}
 
-	deliveryGVK, err := utils.GetObjectGVK(delivery, r.repo.GetScheme())
+	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
 		return r.completeReconciliation(deliverable, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
@@ -108,7 +85,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
-	stampedObjects, err := r.realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.repo), delivery)
+	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.Repo), delivery)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetDeliveryClusterTemplateError:
@@ -139,7 +116,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if len(stampedObjects) > 0 {
 		for _, stampedObject := range stampedObjects {
-			err = r.dynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
+			err = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
 			if err != nil {
 				r.logger.Error(err, "dynamic tracker watch")
 			}
@@ -149,14 +126,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.completeReconciliation(deliverable, nil)
 }
 
-func (r *reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) {
 		deliverable.Status.ObservedGeneration = deliverable.Generation
-		updateErr = r.repo.StatusUpdate(deliverable)
+		updateErr = r.Repo.StatusUpdate(deliverable)
 		if updateErr != nil {
 			r.logger.Error(updateErr, "update error")
 			if err == nil {
@@ -174,7 +151,7 @@ func (r *reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
+func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	return readyCondition.Status == "True"
 }
@@ -188,13 +165,13 @@ func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condit
 	return metav1.Condition{}
 }
 
-func (r *reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
+func (r *Reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
 	if len(deliverable.Labels) == 0 {
 		r.conditionManager.AddPositive(DeliverableMissingLabelsCondition())
 		return nil, fmt.Errorf("deliverable is missing required labels")
 	}
 
-	deliveries, err := r.repo.GetDeliveriesForDeliverable(deliverable)
+	deliveries, err := r.Repo.GetDeliveriesForDeliverable(deliverable)
 	if err != nil {
 		//return nil, controller.NewUnhandledError(fmt.Errorf("get delivery by label: %w", err))
 		return nil, fmt.Errorf("get delivery by label: %w", err)

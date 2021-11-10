@@ -33,16 +33,9 @@ type Timer interface {
 }
 
 type Reconciler struct {
-	repo                    repository.Repository
+	Repo                    repository.Repository
+	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
-	conditionManagerBuilder conditions.ConditionManagerBuilder
-}
-
-func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder) *Reconciler {
-	return &Reconciler{
-		repo:                    repo,
-		conditionManagerBuilder: conditionManagerBuilder,
-	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -52,7 +45,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	reconcileCtx := logr.NewContext(ctx, logger)
 
-	sc, err := r.repo.GetSupplyChain(req.Name)
+	sc, err := r.Repo.GetSupplyChain(req.Name)
 	if err != nil || sc == nil {
 		if kerrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -64,7 +57,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// fixme: discuss DeepCopy() as a prophylactic
 	supplyChain := sc.DeepCopy()
 
-	r.conditionManager = r.conditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
 
 	err = r.reconcileSupplyChain(supplyChain)
 
@@ -80,7 +73,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 	var updateErr error
 	if changed || (supplyChain.Status.ObservedGeneration != supplyChain.Generation) {
 		supplyChain.Status.ObservedGeneration = supplyChain.Generation
-		updateErr = r.repo.StatusUpdate(supplyChain)
+		updateErr = r.Repo.StatusUpdate(supplyChain)
 		if updateErr != nil {
 			logger.Error(updateErr, "update error")
 			if err == nil {
@@ -105,7 +98,7 @@ func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) er
 	)
 
 	for _, resource := range chain.Spec.Resources {
-		_, err = r.repo.GetClusterTemplate(resource.TemplateRef)
+		_, err = r.Repo.GetClusterTemplate(resource.TemplateRef)
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
