@@ -23,11 +23,12 @@ import (
 )
 
 type clusterConfigTemplate struct {
-	template  *v1alpha1.ClusterConfigTemplate
-	evaluator evaluator
+	template      *v1alpha1.ClusterConfigTemplate
+	evaluator     evaluator
+	stampedObject *unstructured.Unstructured
 }
 
-func (t clusterConfigTemplate) GetKind() string {
+func (t *clusterConfigTemplate) GetKind() string {
 	return t.template.Kind
 }
 
@@ -35,12 +36,18 @@ func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate, eva
 	return &clusterConfigTemplate{template: template, evaluator: eval}
 }
 
-func (t clusterConfigTemplate) GetName() string {
+func (t *clusterConfigTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterConfigTemplate) GetOutput(stampedObject *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
-	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
+func (t *clusterConfigTemplate) SetTemplatingContext(_ map[string]interface{}) {}
+
+func (t *clusterConfigTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
+	t.stampedObject = stampedObject
+}
+
+func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
+	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate config url json path: %w", err),
@@ -53,10 +60,10 @@ func (t clusterConfigTemplate) GetOutput(stampedObject *unstructured.Unstructure
 	}, nil
 }
 
-func (t clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+func (t *clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }
 
-func (t clusterConfigTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterConfigTemplate) GetDefaultParams() v1alpha1.DefaultParams {
 	return t.template.Spec.Params
 }

@@ -66,7 +66,8 @@ var _ = Describe("ClusterSourceTemplate", func() {
 
 		JustBeforeEach(func() {
 			clusterSourceTemplateModel := templates.NewClusterSourceTemplateModel(sourceTemplate, evaluator)
-			output, err = clusterSourceTemplateModel.GetOutput(stampedObject, nil)
+			clusterSourceTemplateModel.SetStampedObject(stampedObject)
+			output, err = clusterSourceTemplateModel.GetOutput()
 		})
 
 		When("passed a stamped object for which the evaluator can return a value at the urlPath and revisionPath", func() {

@@ -69,7 +69,9 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 		JustBeforeEach(func() {
 			clusterDeploymentTemplateModel := templates.NewClusterDeploymentTemplateModel(deploymentTemplate, evaluator)
-			output, err = clusterDeploymentTemplateModel.GetOutput(stampedObject, templatingContext)
+			clusterDeploymentTemplateModel.SetStampedObject(stampedObject)
+			clusterDeploymentTemplateModel.SetTemplatingContext(templatingContext)
+			output, err = clusterDeploymentTemplateModel.GetOutput()
 		})
 
 		Context("observedCompletion", func() {

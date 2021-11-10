@@ -61,7 +61,8 @@ var _ = Describe("ClusterImageTemplate", func() {
 
 		JustBeforeEach(func() {
 			clusterImageTemplateModel := templates.NewClusterImageTemplateModel(imageTemplate, evaluator)
-			output, err = clusterImageTemplateModel.GetOutput(stampedObject, nil)
+			clusterImageTemplateModel.SetStampedObject(stampedObject)
+			output, err = clusterImageTemplateModel.GetOutput()
 		})
 
 		When("passed a stamped object for which the evaluator can return a value at the imagePath", func() {

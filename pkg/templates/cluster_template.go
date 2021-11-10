@@ -24,7 +24,7 @@ type clusterTemplate struct {
 	template *v1alpha1.ClusterTemplate
 }
 
-func (t clusterTemplate) GetKind() string {
+func (t *clusterTemplate) GetKind() string {
 	return t.template.Kind
 }
 
@@ -32,21 +32,25 @@ func NewClusterTemplateModel(template *v1alpha1.ClusterTemplate) *clusterTemplat
 	return &clusterTemplate{template: template}
 }
 
-func (t clusterTemplate) GetName() string {
+func (t *clusterTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterTemplate) GetOutput(_ *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
+func (t *clusterTemplate) SetTemplatingContext(_ map[string]interface{}) {}
+
+func (t *clusterTemplate) SetStampedObject(_ *unstructured.Unstructured) {}
+
+func (t *clusterTemplate) GetOutput() (*Output, error) {
 	return &Output{}, nil
 }
 
-func (t clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return v1alpha1.TemplateSpec{
 		Template: t.template.Spec.Template,
 		Ytt:      t.template.Spec.Ytt,
 	}
 }
 
-func (t clusterTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterTemplate) GetDefaultParams() v1alpha1.DefaultParams {
 	return t.template.Spec.Params
 }

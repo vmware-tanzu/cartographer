@@ -23,11 +23,13 @@ import (
 )
 
 type clusterDeploymentTemplate struct {
-	template  *v1alpha1.ClusterDeploymentTemplate
-	evaluator evaluator
+	template          *v1alpha1.ClusterDeploymentTemplate
+	evaluator         evaluator
+	templatingContext map[string]interface{}
+	stampedObject     *unstructured.Unstructured
 }
 
-func (t clusterDeploymentTemplate) GetKind() string {
+func (t *clusterDeploymentTemplate) GetKind() string {
 	return t.template.Kind
 }
 
@@ -35,20 +37,28 @@ func NewClusterDeploymentTemplateModel(template *v1alpha1.ClusterDeploymentTempl
 	return &clusterDeploymentTemplate{template: template, evaluator: eval}
 }
 
-func (t clusterDeploymentTemplate) GetName() string {
+func (t *clusterDeploymentTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterDeploymentTemplate) GetOutput(stampedObject *unstructured.Unstructured, templatingContext map[string]interface{}) (*Output, error) {
-	if err := t.outputReady(stampedObject); err != nil {
+func (t *clusterDeploymentTemplate) SetTemplatingContext(templatingContext map[string]interface{}) {
+	t.templatingContext = templatingContext
+}
+
+func (t *clusterDeploymentTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
+	t.stampedObject = stampedObject
+}
+
+func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
+	if err := t.outputReady(t.stampedObject); err != nil {
 		return nil, err
 	}
 
 	output := &Output{Source: &Source{}}
 
-	originalSource, ok := templatingContext["source"].(*SourceInput)
+	originalSource, ok := t.templatingContext["source"].(*SourceInput)
 	if !ok {
-		return nil, fmt.Errorf("original source not found in context: %v", templatingContext)
+		return nil, fmt.Errorf("original source not found in context: %v", t.templatingContext)
 	}
 
 	output.Source.URL = originalSource.URL
@@ -57,15 +67,15 @@ func (t clusterDeploymentTemplate) GetOutput(stampedObject *unstructured.Unstruc
 	return output, nil
 }
 
-func (t clusterDeploymentTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+func (t *clusterDeploymentTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }
 
-func (t clusterDeploymentTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterDeploymentTemplate) GetDefaultParams() v1alpha1.DefaultParams {
 	return t.template.Spec.Params
 }
 
-func (t clusterDeploymentTemplate) outputReady(stampedObject *unstructured.Unstructured) error {
+func (t *clusterDeploymentTemplate) outputReady(stampedObject *unstructured.Unstructured) error {
 	if t.template.Spec.ObservedCompletion != nil {
 		return t.observedCompletionReady(stampedObject)
 	} else {
@@ -73,7 +83,7 @@ func (t clusterDeploymentTemplate) outputReady(stampedObject *unstructured.Unstr
 	}
 }
 
-func (t clusterDeploymentTemplate) observedMatchesReady(stampedObject *unstructured.Unstructured) error {
+func (t *clusterDeploymentTemplate) observedMatchesReady(stampedObject *unstructured.Unstructured) error {
 	for _, match := range t.template.Spec.ObservedMatches {
 		input, err := t.evaluator.EvaluateJsonPath(match.Input, stampedObject.UnstructuredContent())
 		if err != nil {
@@ -99,7 +109,7 @@ func (t clusterDeploymentTemplate) observedMatchesReady(stampedObject *unstructu
 	return nil
 }
 
-func (t clusterDeploymentTemplate) observedCompletionReady(stampedObject *unstructured.Unstructured) error {
+func (t *clusterDeploymentTemplate) observedCompletionReady(stampedObject *unstructured.Unstructured) error {
 	generation, err := t.evaluator.EvaluateJsonPath("metadata.generation", stampedObject.UnstructuredContent())
 	if err != nil {
 		return JsonPathError{

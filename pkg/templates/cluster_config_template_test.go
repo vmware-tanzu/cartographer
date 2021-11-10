@@ -61,7 +61,8 @@ var _ = Describe("ClusterConfigTemplate", func() {
 
 		JustBeforeEach(func() {
 			clusterConfigTemplateModel := templates.NewClusterConfigTemplateModel(configTemplate, evaluator)
-			output, err = clusterConfigTemplateModel.GetOutput(stampedObject, nil)
+			clusterConfigTemplateModel.SetStampedObject(stampedObject)
+			output, err = clusterConfigTemplateModel.GetOutput()
 		})
 
 		When("passed a stamped object for which the evaluator can return a value at the configPath", func() {

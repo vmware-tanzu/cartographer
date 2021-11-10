@@ -100,7 +100,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	output, err := template.GetOutput(stampedObject, templatingContext)
+	template.SetTemplatingContext(templatingContext)
+	template.SetStampedObject(stampedObject)
+
+	output, err := template.GetOutput()
 	if err != nil {
 		return stampedObject, nil, RetrieveOutputError{
 			Err:      err,
