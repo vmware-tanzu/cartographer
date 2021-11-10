@@ -250,7 +250,8 @@ var _ = Describe("Reconciler", func() {
 			BeforeEach(func() {
 				repo.GetSchemeReturns(runtime.NewScheme())
 			})
-			It("returns a helpful error", func() {
+
+			It("returns a helpful error and requeues", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 
 				Expect(err.Error()).To(ContainSubstring("get object gvk: "))
@@ -269,6 +270,7 @@ var _ = Describe("Reconciler", func() {
 				}
 				repo.GetDeliveriesForDeliverableReturns([]v1alpha1.ClusterDelivery{delivery}, nil)
 			})
+
 			It("does not return an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
@@ -383,66 +385,33 @@ var _ = Describe("Reconciler", func() {
 				Expect(out).To(Say(`"msg":"dynamic tracker watch"`))
 			})
 		})
-
-		Context("but status update fails", func() {
-			BeforeEach(func() {
-				repo.StatusUpdateReturns(errors.New("some error"))
-			})
-
-			It("returns a helpful error", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-
-				Expect(err).To(MatchError(ContainSubstring("update deliverable status: ")))
-			})
-
-			It("does not requeue", func() { // TODO: Discuss, is this the proper behavior?
-				result, _ := reconciler.Reconcile(ctx, req)
-
-				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-			})
-
-			It("logs that an error in updating", func() {
-				_, _ = reconciler.Reconcile(ctx, req)
-
-				Expect(out).To(Say(`"msg":"update error"`))
-				Expect(out).To(Say(`"name":"my-deliverable-name"`))
-				Expect(out).To(Say(`"namespace":"my-namespace"`))
-			})
-		})
 	})
 
 	Context("but the deliverable has no label to match with the delivery", func() {
 		BeforeEach(func() {
 			dl.Labels = nil
 		})
+
+		It("does not return an error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("calls the condition manager to report the bad state", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliverableMissingLabelsCondition()))
 		})
-
-		It("returns a helpful error", func() {
-			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("deliverable is missing required labels"))
-		})
-
-		It("logs that an error in updating", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-
-			Expect(out).To(Say(`"msg":"update error"`))
-			Expect(out).To(Say(`"name":"my-deliverable-name"`))
-			Expect(out).To(Say(`"namespace":"my-namespace"`))
-		})
 	})
 
 	Context("and repo returns an empty list of deliveries", func() {
+		It("does not return an error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("calls the condition manager to add a delivery not found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliveryNotFoundCondition(deliverableLabels)))
-		})
-
-		It("returns a helpful error", func() {
-			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("no delivery found where full selector is satisfied by labels: "))
 		})
 	})
 
@@ -450,12 +419,8 @@ var _ = Describe("Reconciler", func() {
 		BeforeEach(func() {
 			repo.GetDeliveriesForDeliverableReturns(nil, errors.New("some error"))
 		})
-		It("calls the condition manager to add a delivery not found condition", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliveryNotFoundCondition(deliverableLabels)))
-		})
 
-		It("returns a helpful error", func() {
+		It("returns a helpful error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err.Error()).To(ContainSubstring("get delivery by label: some error"))
 		})
@@ -467,14 +432,14 @@ var _ = Describe("Reconciler", func() {
 			repo.GetDeliveriesForDeliverableReturns([]v1alpha1.ClusterDelivery{delivery, delivery}, nil)
 		})
 
+		It("does not return an error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("calls the condition manager to report too mane deliveries matched", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.TooManyDeliveryMatchesCondition()))
-		})
-
-		It("returns a helpful error", func() {
-			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("too many deliveries match the deliverable selector"))
 		})
 	})
 
@@ -483,16 +448,9 @@ var _ = Describe("Reconciler", func() {
 			repo.StatusUpdateReturns(errors.New("some error"))
 		})
 
-		It("returns the reconciliation error rather than the update error", func() {
+		It("returns a helpful error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
-
-			Expect(err).NotTo(MatchError(ContainSubstring("update deliverable status: ")))
-		})
-
-		It("does not requeue", func() { // TODO: Discuss, is this the proper behavior?
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
+			Expect(err).To(MatchError(ContainSubstring("update deliverable status: ")))
 		})
 
 		It("logs that an error in updating", func() {
@@ -501,6 +459,25 @@ var _ = Describe("Reconciler", func() {
 			Expect(out).To(Say(`"msg":"update error"`))
 			Expect(out).To(Say(`"name":"my-deliverable-name"`))
 			Expect(out).To(Say(`"namespace":"my-namespace"`))
+		})
+
+		Context("but there is an unhandled error", func() {
+			BeforeEach(func() {
+				repo.GetDeliveriesForDeliverableReturns(nil, errors.New("unhandled error"))
+			})
+
+			It("returns the helpful unhandled error and requeues", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).ToNot(MatchError(ContainSubstring("update deliverable status: ")))
+				Expect(err).To(MatchError(ContainSubstring("unhandled error")))
+			})
+		})
+
+		Context("but there is a handled error", func() {
+			It("returns a helpful status update error and requeues", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).To(MatchError(ContainSubstring("update deliverable status: ")))
+			})
 		})
 	})
 

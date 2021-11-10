@@ -63,12 +63,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	delivery, err := r.getDeliveriesForDeliverable(deliverable)
 	if err != nil {
-		// 3.a len(deliverable.Labels) == 0, we watch deliverables, do not requeue
-		// 3.b GetDeliveriesForDeliverable, server error, we should requeue
-		// 3.c len(deliveries) == 0, we watch deliveries, do not requeue
-		//       SHOULD THIS BE A STATUS?
-		// 3.d len(deliveries) > 1, we watch deliveries, do not requeue
-		//       SHOULD THIS BE A STATUS?
 		return r.completeReconciliation(deliverable, err)
 	}
 
@@ -137,18 +131,17 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		updateErr = r.Repo.StatusUpdate(deliverable)
 		if updateErr != nil {
 			r.logger.Error(updateErr, "update error")
-			if err == nil {
+			if err == nil || !controller.IsUnhandledError(err) {
 				return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
 			}
 		}
 	}
 
-	// log handled errors?
-
 	if err != nil && controller.IsUnhandledError(err) {
 		return ctrl.Result{}, err
 	}
 
+	// TODO: log handled errors?
 	return ctrl.Result{}, nil
 }
 
@@ -174,8 +167,7 @@ func (r *Reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverab
 
 	deliveries, err := r.Repo.GetDeliveriesForDeliverable(deliverable)
 	if err != nil {
-		//return nil, controller.NewUnhandledError(fmt.Errorf("get delivery by label: %w", err))
-		return nil, fmt.Errorf("get delivery by label: %w", err)
+		return nil, controller.NewUnhandledError(fmt.Errorf("get delivery by label: %w", err))
 	}
 
 	if len(deliveries) == 0 {
