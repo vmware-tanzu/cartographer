@@ -233,6 +233,15 @@ func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []re
 func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []reconcile.Request {
 	deliveries := mapper.templateToDeliveries(template)
 
+	// The worst function "Map" is pointless, it doesn't make the code clearer.
+	//requests := deliveriesMapToRequest(deliveries, func(delivery v1alpha1.ClusterDelivery) reconcile.Request {
+	//	return reconcile.Request{
+	//		NamespacedName: types.NamespacedName{
+	//			Name: delivery.Name,
+	//		},
+	//	}
+	//})
+
 	var requests []reconcile.Request
 	for _, delivery := range deliveries {
 		requests = append(requests, reconcile.Request{
@@ -253,6 +262,7 @@ func (mapper *Mapper) templateToDeliveries(template client.Object) []v1alpha1.Cl
 		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
 		return nil
 	}
+	templateKind := template.GetObjectKind().GroupVersionKind().Kind
 
 	list := &v1alpha1.ClusterDeliveryList{}
 
@@ -266,16 +276,12 @@ func (mapper *Mapper) templateToDeliveries(template client.Object) []v1alpha1.Cl
 		return nil
 	}
 
-	templateKind := template.GetObjectKind().GroupVersionKind().Kind
+	deliveries := deliveriesFilter(list.Items, func(delivery v1alpha1.ClusterDelivery) bool {
+		return deliveryResourceAny(delivery.Spec.Resources, func(resource v1alpha1.ClusterDeliveryResource) bool {
+			return resource.TemplateRef.Kind == templateKind && resource.TemplateRef.Name == templateName
+		})
+	})
 
-	var deliveries []v1alpha1.ClusterDelivery
-	for _, delivery := range list.Items {
-		for _, res := range delivery.Spec.Resources {
-			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				deliveries = append(deliveries, delivery)
-			}
-		}
-	}
 	return deliveries
 }
 
