@@ -86,19 +86,19 @@ func (c *ClusterDeploymentTemplate) validate() error {
 		return err
 	}
 
-	if bothSet(c.Spec) || neitherSet(c.Spec) {
+	if c.bothConditionsSet() || c.neitherConditionSet() {
 		return fmt.Errorf("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion")
 	}
 
 	return nil
 }
 
-func bothSet(spec DeploymentSpec) bool {
-	return spec.ObservedMatches != nil && spec.ObservedCompletion != nil
+func (c *ClusterDeploymentTemplate) bothConditionsSet() bool {
+	return c.Spec.ObservedMatches != nil && c.Spec.ObservedCompletion != nil
 }
 
-func neitherSet(spec DeploymentSpec) bool {
-	return spec.ObservedMatches == nil && spec.ObservedCompletion == nil
+func (c *ClusterDeploymentTemplate) neitherConditionSet() bool {
+	return c.Spec.ObservedMatches == nil && c.Spec.ObservedCompletion == nil
 }
 
 func init() {
