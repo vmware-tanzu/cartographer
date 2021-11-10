@@ -35,11 +35,11 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
-	runnablefakes2 "github.com/vmware-tanzu/cartographer/pkg/controller/runnable/runnablefakes"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
 )
 
 var _ = Describe("Reconcile", func() {
@@ -50,7 +50,7 @@ var _ = Describe("Reconcile", func() {
 		request        controllerruntime.Request
 		repository     *repositoryfakes.FakeRepository
 		rlzr           *runnablefakes.FakeRealizer
-		dynamicTracker *runnablefakes2.FakeDynamicTracker
+		dynamicTracker *trackerfakes.FakeDynamicTracker
 	)
 
 	BeforeEach(func() {
@@ -59,10 +59,13 @@ var _ = Describe("Reconcile", func() {
 		ctx = logr.NewContext(context.Background(), logger)
 		repository = &repositoryfakes.FakeRepository{}
 		rlzr = &runnablefakes.FakeRealizer{}
-		dynamicTracker = &runnablefakes2.FakeDynamicTracker{}
+		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
 
-		reconciler = runnable.NewReconciler(repository, rlzr)
-		reconciler.AddTracking(dynamicTracker)
+		reconciler = runnable.Reconciler{
+			Repo:           repository,
+			Realizer:       rlzr,
+			DynamicTracker: dynamicTracker,
+		}
 
 		request = controllerruntime.Request{
 			NamespacedName: types.NamespacedName{

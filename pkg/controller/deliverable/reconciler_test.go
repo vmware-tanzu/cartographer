@@ -37,12 +37,12 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
-	ctrldeliverablefakes "github.com/vmware-tanzu/cartographer/pkg/controller/deliverable/deliverablefakes"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	rlzdeliverablefakes "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -56,7 +56,7 @@ var _ = Describe("Reconciler", func() {
 		rlzr              *rlzdeliverablefakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
-		dynamicTracker    *ctrldeliverablefakes.FakeDynamicTracker
+		dynamicTracker    *trackerfakes.FakeDynamicTracker
 	)
 
 	BeforeEach(func() {
@@ -73,7 +73,7 @@ var _ = Describe("Reconciler", func() {
 		rlzr = &rlzdeliverablefakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
-		dynamicTracker = &ctrldeliverablefakes.FakeDynamicTracker{}
+		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
 
 		repo = &repositoryfakes.FakeRepository{}
 		scheme := runtime.NewScheme()
@@ -81,8 +81,12 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		reconciler = deliverable.NewReconciler(repo, fakeConditionManagerBuilder, rlzr)
-		reconciler.AddTracking(dynamicTracker)
+		reconciler = deliverable.Reconciler{
+			Repo:                    repo,
+			ConditionManagerBuilder: fakeConditionManagerBuilder,
+			Realizer:                rlzr,
+			DynamicTracker:          dynamicTracker,
+		}
 
 		req = ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: "my-deliverable-name", Namespace: "my-namespace"},
