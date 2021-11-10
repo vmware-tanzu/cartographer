@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -37,7 +36,7 @@ type Repository interface {
 	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (client.Object, error)
 	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
-	GetRunTemplate(reference v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)
+	GetRunTemplate(reference v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
@@ -168,7 +167,7 @@ func (r *repository) getTemplate(name string, kind string) (client.Object, error
 	return apiTemplate, nil
 }
 
-func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error) {
+func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
 	runTemplate := &v1alpha1.ClusterRunTemplate{}
 
 	err := r.cl.Get(context.TODO(), client.ObjectKey{
@@ -178,12 +177,7 @@ func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (templates.C
 		return nil, fmt.Errorf("get: %w", err)
 	}
 
-	template := templates.NewRunTemplateModel(runTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("new model from api: %w", err)
-	}
-
-	return template, nil
+	return runTemplate, nil
 }
 
 func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {

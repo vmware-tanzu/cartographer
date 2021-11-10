@@ -48,7 +48,7 @@ type TemplatingContext struct {
 
 func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
 	runnable.Spec.RunTemplateRef.Kind = "ClusterRunTemplate"
-	template, err := repository.GetRunTemplate(runnable.Spec.RunTemplateRef)
+	apiRunTemplate, err := repository.GetRunTemplate(runnable.Spec.RunTemplateRef)
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("could not get ClusterRunTemplate '%s'", runnable.Spec.RunTemplateRef.Name)
@@ -56,6 +56,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
 	}
+
+	template := templates.NewRunTemplateModel(apiRunTemplate)
 
 	labels := map[string]string{
 		"carto.run/runnable-name":     runnable.Name,

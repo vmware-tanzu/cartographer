@@ -6,7 +6,6 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,17 +90,17 @@ type FakeRepository struct {
 		result1 client.Object
 		result2 error
 	}
-	GetRunTemplateStub        func(v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)
+	GetRunTemplateStub        func(v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	getRunTemplateMutex       sync.RWMutex
 	getRunTemplateArgsForCall []struct {
 		arg1 v1alpha1.TemplateReference
 	}
 	getRunTemplateReturns struct {
-		result1 templates.ClusterRunTemplate
+		result1 *v1alpha1.ClusterRunTemplate
 		result2 error
 	}
 	getRunTemplateReturnsOnCall map[int]struct {
-		result1 templates.ClusterRunTemplate
+		result1 *v1alpha1.ClusterRunTemplate
 		result2 error
 	}
 	GetRunnableStub        func(string, string) (*v1alpha1.Runnable, error)
@@ -579,7 +578,7 @@ func (fake *FakeRepository) GetDeliveryClusterTemplateReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetRunTemplate(arg1 v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error) {
+func (fake *FakeRepository) GetRunTemplate(arg1 v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
 	fake.getRunTemplateMutex.Lock()
 	ret, specificReturn := fake.getRunTemplateReturnsOnCall[len(fake.getRunTemplateArgsForCall)]
 	fake.getRunTemplateArgsForCall = append(fake.getRunTemplateArgsForCall, struct {
@@ -604,7 +603,7 @@ func (fake *FakeRepository) GetRunTemplateCallCount() int {
 	return len(fake.getRunTemplateArgsForCall)
 }
 
-func (fake *FakeRepository) GetRunTemplateCalls(stub func(v1alpha1.TemplateReference) (templates.ClusterRunTemplate, error)) {
+func (fake *FakeRepository) GetRunTemplateCalls(stub func(v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)) {
 	fake.getRunTemplateMutex.Lock()
 	defer fake.getRunTemplateMutex.Unlock()
 	fake.GetRunTemplateStub = stub
@@ -617,28 +616,28 @@ func (fake *FakeRepository) GetRunTemplateArgsForCall(i int) v1alpha1.TemplateRe
 	return argsForCall.arg1
 }
 
-func (fake *FakeRepository) GetRunTemplateReturns(result1 templates.ClusterRunTemplate, result2 error) {
+func (fake *FakeRepository) GetRunTemplateReturns(result1 *v1alpha1.ClusterRunTemplate, result2 error) {
 	fake.getRunTemplateMutex.Lock()
 	defer fake.getRunTemplateMutex.Unlock()
 	fake.GetRunTemplateStub = nil
 	fake.getRunTemplateReturns = struct {
-		result1 templates.ClusterRunTemplate
+		result1 *v1alpha1.ClusterRunTemplate
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetRunTemplateReturnsOnCall(i int, result1 templates.ClusterRunTemplate, result2 error) {
+func (fake *FakeRepository) GetRunTemplateReturnsOnCall(i int, result1 *v1alpha1.ClusterRunTemplate, result2 error) {
 	fake.getRunTemplateMutex.Lock()
 	defer fake.getRunTemplateMutex.Unlock()
 	fake.GetRunTemplateStub = nil
 	if fake.getRunTemplateReturnsOnCall == nil {
 		fake.getRunTemplateReturnsOnCall = make(map[int]struct {
-			result1 templates.ClusterRunTemplate
+			result1 *v1alpha1.ClusterRunTemplate
 			result2 error
 		})
 	}
 	fake.getRunTemplateReturnsOnCall[i] = struct {
-		result1 templates.ClusterRunTemplate
+		result1 *v1alpha1.ClusterRunTemplate
 		result2 error
 	}{result1, result2}
 }
