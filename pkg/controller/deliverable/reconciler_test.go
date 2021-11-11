@@ -347,17 +347,77 @@ var _ = Describe("Reconciler", func() {
 
 			Context("of type RetrieveOutputError", func() {
 				var retrieveError realizer.RetrieveOutputError
-				BeforeEach(func() {
-					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+				var wrappedError error
+
+				JustBeforeEach(func() {
 					retrieveError = realizer.NewRetrieveOutputError(
 						&v1alpha1.ClusterDeliveryResource{Name: "some-resource"},
-						&jsonPathError)
+						wrappedError)
 					rlzr.RealizeReturns(nil, retrieveError)
 				})
 
-				It("calls the condition manager to report", func() {
-					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
+				Context("which wraps an ObservedGenerationError", func() {
+					BeforeEach(func() {
+						wrappedError = templates.NewObservedGenerationError(errors.New("some error"))
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateStampFailureByObservedGenerationCondition(retrieveError)))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				Context("which wraps an DeploymentConditionError", func() {
+					BeforeEach(func() {
+						wrappedError = templates.NewDeploymentConditionError(errors.New("some error"))
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.DeploymentConditionNotMetCondition(retrieveError)))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				Context("which wraps an DeploymentFailedConditionMetError", func() {
+					BeforeEach(func() {
+						wrappedError = templates.NewDeploymentFailedConditionMetError(errors.New("some error"))
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.DeploymentFailedConditionMetCondition(retrieveError)))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				Context("which wraps any other error", func() {
+					BeforeEach(func() {
+						wrappedError = templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
 				})
 			})
 

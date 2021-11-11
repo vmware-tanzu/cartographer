@@ -18,7 +18,7 @@ kind: Deliverable
 metadata:
   name: my-app
   labels:
-    app.tanzu.vmware.com/deliverable-type: web---deliverable
+    app.tanzu.vmware.com/deliverable-type: web---deploy-w-missing-match
 spec:
   source:
     git:

@@ -19,15 +19,15 @@ This RFC proposes the introduction of four new resources to the carto.run/v1alph
   
 - **Deliverables** are namespaced resources that enable application developers to specify K8s configuration.
   A Deliverable is analogous to a Workload, in that it instantiates the resources defined by the Delivery.
-  
-- **ClusterDeployTemplates** are cluster-scoped resources that enable application operators to specify resource templates that deploy environments.
-  ClusterDeployTemplates take a single source artifact and return a single deployment artifact. 
-  
-  source -> deployment
 
-- **ClusterDeliveryTemplates** are cluster-scoped resources that enable application operators to specify resource templates that perform validations on a particular deployed environment.
+- **ClusterDeploymentTemplates** are cluster-scoped resources that enable application operators to specify resource templates that deploy environments.
   ClusterDeliveryTemplates take a deployment artifact and any number of additional source artifacts. They return a single deployment artifact.
-  
+
+  deployment, source[] -> deployment
+
+- **ClusterDeploymentValidationTemplates** are cluster-scoped resources that enable application operators to specify resource templates that perform validations on a particular deployed environment.
+  ClusterDeliveryTemplates take a deployment artifact and any number of additional source artifacts. They return a single deployment artifact.
+
   deployment, source[] -> deployment
 
 In addition to these resources, the following existing resources are valid in a ClusterDelivery:

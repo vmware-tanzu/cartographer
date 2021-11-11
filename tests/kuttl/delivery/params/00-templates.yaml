@@ -16,7 +16,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: source
+  name: source---params
 spec:
   urlPath: .spec.value.url
   revisionPath: .spec.value.ref
@@ -46,8 +46,11 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterDeploymentTemplate
 metadata:
-  name: app-deploy
+  name: app-deploy---params
 spec:
+  observedMatches:
+    - input: spec.value.some-key
+      output: spec.value.duplicate-of-some-key
   template:
     apiVersion: test.run/v1alpha1
     kind: Test
@@ -56,3 +59,19 @@ spec:
     spec:
       value:
         some-key: $(source.url)$
+        duplicate-of-some-key: $(source.url)$
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: git-merge---params
+spec:
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(deliverable.metadata.name)$-merge
+    spec:
+      value:
+        merge-key: $(source.url)$

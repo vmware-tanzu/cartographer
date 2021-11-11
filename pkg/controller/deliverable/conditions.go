@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 )
 
 // -- Delivery conditions
@@ -102,6 +103,33 @@ func TemplateStampFailureCondition(err error) metav1.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
 		Message: err.Error(),
+	}
+}
+
+func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
+		Message: fmt.Sprintf("resource '%s' cannot satisfy observedCompletion without observedGeneration in object status", err.(deliverable.RetrieveOutputError).ResourceName()),
+	}
+}
+
+func DeploymentConditionNotMetCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Status:  metav1.ConditionUnknown,
+		Reason:  v1alpha1.DeploymentConditionNotMetResourcesSubmittedReason,
+		Message: fmt.Sprintf("resource '%s' condition not met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
+	}
+}
+
+func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.DeploymentFailedConditionMetResourcesSubmittedReason,
+		Message: fmt.Sprintf("resource '%s' failed condition met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
 	}
 }
 

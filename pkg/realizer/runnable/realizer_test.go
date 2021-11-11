@@ -35,7 +35,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
@@ -102,8 +101,8 @@ var _ = Describe("Realizer", func() {
 					},
 				},
 			}
-			template := templates.NewRunTemplateModel(templateAPI)
-			repository.GetRunTemplateReturns(template, nil)
+
+			repository.GetRunTemplateReturns(templateAPI, nil)
 
 			createdUnstructured = &unstructured.Unstructured{}
 
@@ -379,8 +378,8 @@ var _ = Describe("Realizer", func() {
 					},
 				},
 			}
-			template := templates.NewRunTemplateModel(templateAPI)
-			repository.GetRunTemplateReturns(template, nil)
+
+			repository.GetRunTemplateReturns(templateAPI, nil)
 
 			createdUnstructured = &unstructured.Unstructured{}
 
@@ -424,8 +423,7 @@ var _ = Describe("Realizer", func() {
 					Template: runtime.RawExtension{},
 				},
 			}
-			template := templates.NewRunTemplateModel(templateAPI)
-			repository.GetRunTemplateReturns(template, nil)
+			repository.GetRunTemplateReturns(templateAPI, nil)
 		})
 
 		It("logs the error", func() {
@@ -447,7 +445,6 @@ var _ = Describe("Realizer", func() {
 				}),
 			)
 		})
-
 	})
 
 	Context("the ClusterRunTemplate cannot be fetched", func() {

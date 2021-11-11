@@ -23,11 +23,12 @@ import (
 )
 
 type clusterSourceTemplate struct {
-	template  *v1alpha1.ClusterSourceTemplate
-	evaluator evaluator
+	template      *v1alpha1.ClusterSourceTemplate
+	evaluator     evaluator
+	stampedObject *unstructured.Unstructured
 }
 
-func (t clusterSourceTemplate) GetKind() string {
+func (t *clusterSourceTemplate) GetKind() string {
 	return t.template.Kind
 }
 
@@ -35,22 +36,28 @@ func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eva
 	return &clusterSourceTemplate{template: template, evaluator: eval}
 }
 
-func (t clusterSourceTemplate) GetName() string {
+func (t *clusterSourceTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
-	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, stampedObject.UnstructuredContent())
+func (t *clusterSourceTemplate) SetTemplatingContext(_ map[string]interface{}) {}
+
+func (t *clusterSourceTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
+	t.stampedObject = stampedObject
+}
+
+func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
+	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate source url json path: %w", err),
 			expression: t.template.Spec.URLPath,
 		}
 	}
 
-	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, stampedObject.UnstructuredContent())
+	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate source revision json path: %w", err),
 			expression: t.template.Spec.RevisionPath,
 		}
@@ -63,10 +70,10 @@ func (t clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructure
 	}, nil
 }
 
-func (t clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }
 
-func (t clusterSourceTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterSourceTemplate) GetDefaultParams() v1alpha1.DefaultParams {
 	return t.template.Spec.Params
 }

@@ -24,7 +24,7 @@ spec:
     - name: config-provider
       templateRef:
         kind: ClusterSourceTemplate
-        name: source
+        name: source---params
       params:
         - name: uses-delivery
           value: spiders
@@ -33,7 +33,14 @@ spec:
     - name: deployer
       templateRef:
         kind: ClusterDeploymentTemplate
-        name: app-deploy
+        name: app-deploy---params
       sources:
         - resource: config-provider
           name: solo-source-provider
+    - name: promoter
+      templateRef:
+        kind: ClusterTemplate
+        name: git-merge---deliverable
+      sources:
+        - resource: deployer
+          name: deployer
