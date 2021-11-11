@@ -1,5 +1,10 @@
 # RFC 0003 Intermediate Value CRDs
 
+## Status
+Withdrawn
+
+Withdrawn in favor of RFC 14
+
 ## Summary
 
 Create a CRD type that will be used to store the values emitted by a node in a supply chain.
