@@ -30,6 +30,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
@@ -90,7 +91,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
+			switch typedErr.Err.(type) {
+			case templates.ObservedGenerationError:
+				r.conditionManager.AddPositive(TemplateStampFailureByObservedGenerationCondition(typedErr))
+			case templates.DeploymentFailedConditionMetError:
+				r.conditionManager.AddPositive(DeploymentFailedConditionMetCondition(typedErr))
+			case templates.DeploymentConditionError:
+				r.conditionManager.AddPositive(DeploymentConditionNotMetCondition(typedErr))
+			default:
+				r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
+			}
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 		}

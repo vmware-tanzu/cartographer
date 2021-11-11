@@ -16,6 +16,7 @@ package workload
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -44,12 +45,17 @@ func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	template, err := r.repo.GetClusterTemplate(resource.TemplateRef)
+	apiTemplate, err := r.repo.GetClusterTemplate(resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetClusterTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
 		}
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		return nil, nil, fmt.Errorf("new model from api: %w", err)
 	}
 
 	labels := map[string]string{
@@ -98,7 +104,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	output, err := template.GetOutput(stampedObject)
+	template.SetStampedObject(stampedObject)
+
+	output, err := template.GetOutput()
 	if err != nil {
 		return stampedObject, nil, RetrieveOutputError{
 			Err:      err,

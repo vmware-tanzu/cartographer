@@ -16,26 +16,19 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterDelivery
 metadata:
-  name: delivery---deliverable
+  name: delivery---deploy-w-missing-match
 spec:
   selector:
-    app.tanzu.vmware.com/deliverable-type: web---deliverable
+    app.tanzu.vmware.com/deliverable-type: web---deploy-w-missing-match
   resources:
     - name: config-provider
       templateRef:
         kind: ClusterSourceTemplate
-        name: source---deliverable
+        name: source---deploy-w-missing-match
     - name: deployer
       templateRef:
         kind: ClusterDeploymentTemplate
-        name: app-deploy---deliverable
+        name: app-deploy---deploy-w-missing-match
       sources:
         - resource: config-provider
           name: solo-source-provider
-    - name: promoter
-      templateRef:
-        kind: ClusterTemplate
-        name: git-merge---deliverable
-      sources:
-      - resource: deployer
-        name: deployer

@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -113,8 +112,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
+				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
@@ -171,6 +169,28 @@ var _ = Describe("Resource", func() {
 			})
 		})
 
+		When("unable to create a template model from apiTemplate", func() {
+			BeforeEach(func() {
+				templateAPI := &v1alpha1.Workload{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "carto.run/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "not-a-template",
+						Namespace: "some-namespace",
+					},
+				}
+
+				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
+			})
+
+			It("returns a helpful error", func() {
+				_, _, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("new model from api:"))
+			})
+		})
+
 		When("unable to Stamp a new template", func() {
 			BeforeEach(func() {
 				templateAPI := &v1alpha1.ClusterSourceTemplate{
@@ -189,8 +209,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
+				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
@@ -238,8 +257,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
+				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
@@ -300,8 +318,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterSourceTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetDeliveryClusterTemplateReturns(template, nil)
+				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
