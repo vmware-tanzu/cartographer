@@ -54,7 +54,7 @@ install_ko() {
         local fname=ko_${KO_VERSION}_Linux_x86_64.tar.gz
 
         curl -sSOL $url
-        echo "${KO_CHECKSUM} $fname" | sha256sum -c
+        echo "${KO_CHECKSUM}  $fname" | sha256sum -c
         tar xzf $fname
 
         install -m 0755 ./ko /usr/local/bin
@@ -65,7 +65,7 @@ install_kubebuilder() {
         local fname=kubebuilder-tools-${KUBERNETES_VERSION}-linux-amd64.tar.gz
 
         curl -sSOL $url
-        echo "${KUBERNETES_CHECKSUM} $fname" | sha256sum -c
+        echo "${KUBERNETES_CHECKSUM}  $fname" | sha256sum -c
         tar xvzf $fname
 
         mv ./kubebuilder/bin/* /usr/local/bin
@@ -76,7 +76,7 @@ install_kuttl() {
         local fname=kubectl-kuttl_${KUTTL_VERSION}_linux_x86_64
 
         curl -sSOL $url
-        echo "${KUTTL_CHECKSUM} $fname" | sha256sum -c
+        echo "${KUTTL_CHECKSUM}  $fname" | sha256sum -c
 
         install -m 0755 $fname /usr/local/bin/kubectl-kuttl
 }
@@ -86,7 +86,7 @@ install_gh() {
         local fname=gh_${GH_VERSION}_linux_amd64.tar.gz
 
         curl -sSOL $url
-        echo "${GH_CHECKSUM} $fname" | sha256sum -c
+        echo "${GH_CHECKSUM}  $fname" | sha256sum -c
         tar xzf $fname --strip-components=1
 
         mv ./bin/gh /usr/local/bin
