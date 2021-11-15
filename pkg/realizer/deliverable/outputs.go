@@ -15,7 +15,7 @@
 package deliverable
 
 import (
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/carto/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 

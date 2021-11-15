@@ -17,7 +17,7 @@ package templates
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/carto/v1alpha1"
 )
 
 type Params map[string]apiextensionsv1.JSON

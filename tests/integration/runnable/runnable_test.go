@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/carto/v1alpha1"
 	. "github.com/vmware-tanzu/cartographer/pkg/utils"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
