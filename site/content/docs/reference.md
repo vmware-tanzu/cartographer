@@ -514,15 +514,15 @@ spec:
   #
   # (required)
   #
-	template:
-		apiVersion: tekton.dev/v1beta1
-		kind: TaskRun
-		metadata:
-			generateName: $(runnable.metadata.name)$-
-		spec:
-			serviceAccountName: $(runnable.spec.inputs.serviceAccount)$
-			taskRef: $(runnable.spec.inputs.taskRef)$
-			params: $(runnable.spec.inputs.params)$
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      generateName: $(runnable.metadata.name)$-
+    spec:
+      serviceAccountName: $(runnable.spec.inputs.serviceAccount)$
+      taskRef: $(runnable.spec.inputs.taskRef)$
+      params: $(runnable.spec.inputs.params)$
 ```
 
 It differs from supply chain templates in some aspects:
