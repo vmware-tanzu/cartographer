@@ -46,6 +46,50 @@ spec:
 ---
 #
 #
+# `test` instantiates a Runnable object, responsible for submitting to
+# Kubernetes "pipeline invocation objects" (tekton's PipelineRun objects) that
+# run tests against the source code.
+#
+# Taking a `source` as input and passing that through as `output` if
+# successfull makes this template a gate that will effectively block a given
+# commit from moving forward in the supply chain in case tests fail.
+#
+#
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: test
+spec:
+  urlPath: .spec.inputs.source.url
+  revisionPath: .spec.inputs.source.revision
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Runnable
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      runTemplateRef:
+        name: tekton-pipelinerun
+
+      selector:
+        resource:
+          apiVersion: tekton.dev/v1beta1
+          kind: Task
+        matchingLabels:
+          apps.tanzu.vmware.com/task: test
+
+      inputs:
+        source: $(source)$
+        params:
+          - name: blob-url
+            value: $(source.url)$
+
+
+---
+#
+#
 # `image` instantiates a `kpack/Image` object, responsible for ensuring that
 # there's a container image built and pushed to a container image registry
 # whenever there's either new source code, or its image builder gets na update.
