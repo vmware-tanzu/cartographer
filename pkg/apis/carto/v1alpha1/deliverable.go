@@ -42,6 +42,7 @@ const (
 	DeploymentFailedConditionMetResourcesSubmittedReason   = "FailedConditionMet"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 

@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 
