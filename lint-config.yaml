@@ -29,8 +29,9 @@ run:
   skip-dirs:
     - cmd/random
   skip-files:
-    - pkg/apis/v1alpha1/zz_generated.deepcopy.go
+    - pkg/apis/carto/v1alpha1/zz_generated.deepcopy.go
     - config/bases/crds.yaml
+    - pkg/generated
 
 issues:
   fix: true
