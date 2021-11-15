@@ -73,6 +73,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		"params":      templates.ParamsBuilder(template.GetDefaultParams(), resource.Params),
 		"sources":     inputs.Sources,
 		"configs":     inputs.Configs,
+		"deployment":  inputs.Deployment,
 	}
 
 	// Todo: this belongs in Stamp.

@@ -63,6 +63,13 @@ spec:
                         - resource
                         type: object
                       type: array
+                    deployment:
+                      properties:
+                        resource:
+                          type: string
+                      required:
+                      - resource
+                      type: object
                     name:
                       type: string
                     params:

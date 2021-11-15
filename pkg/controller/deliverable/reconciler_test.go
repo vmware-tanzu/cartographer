@@ -403,7 +403,7 @@ var _ = Describe("Reconciler", func() {
 					})
 				})
 
-				Context("which wraps any other error", func() {
+				Context("which wraps a json path error", func() {
 					BeforeEach(func() {
 						wrappedError = templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					})
@@ -411,6 +411,22 @@ var _ = Describe("Reconciler", func() {
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
 						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
+				Context("which wraps any other error", func() {
+					BeforeEach(func() {
+						wrappedError = errors.New("some error")
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.UnknownResourceErrorCondition(retrieveError)))
 					})
 
 					It("does not return an error", func() {

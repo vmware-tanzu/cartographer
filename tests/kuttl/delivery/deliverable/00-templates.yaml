@@ -33,6 +33,34 @@ spec:
 
 ---
 apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: additional---deliverable
+spec:
+  urlPath: .spec.value.creepy
+  revisionPath: .spec.value.spooky
+
+  params:
+    - name: uses-delivery
+      default: clowns
+    - name: uses-default
+      default: snakes
+    - name: uses-deliverable
+      default: monster
+
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(deliverable.metadata.name)$-additional
+    spec:
+      value:
+        creepy: $(params.uses-delivery)$
+        scary: $(params.uses-default)$
+        spooky: $(params.uses-deliverable)$
+
+---
+apiVersion: carto.run/v1alpha1
 kind: ClusterDeploymentTemplate
 metadata:
   name: app-deploy---deliverable
@@ -47,8 +75,27 @@ spec:
       name: $(deliverable.metadata.name)$-1
     spec:
       value:
-        some-key: $(source.url)$
-        duplicate-of-some-key: $(source.url)$
+        some-key: $(deployment.url)$
+        duplicate-of-some-key: $(deployment.url)$
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeploymentTemplate
+metadata:
+  name: sidecar-deploy---deliverable
+spec:
+  observedMatches:
+    - input: "spec.value.some-key"
+      output: "spec.value.duplicate-of-some-key"
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(deliverable.metadata.name)$-sidecar
+    spec:
+      value:
+        some-key: $(deployment.url)$
+        duplicate-of-some-key: $(deployment.url)$
 
 ---
 apiVersion: carto.run/v1alpha1
