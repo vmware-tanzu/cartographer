@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: test
+  labels:
+    apps.tanzu.vmware.com/task: test
+spec:
+  params:
+    - name: blob-url
+  steps:
+    - name: test
+      image: golang
+      command:
+        - bash
+        - -cxe
+        - |-
+          set -o pipefail
+
+          cd `mktemp -d`
+          curl -SL $(params.blob-url) | tar xvzf -
+          go test -v ./...

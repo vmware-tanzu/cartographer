@@ -21,10 +21,10 @@ spec:
     app.tanzu.vmware.com/workload-type: web
 
   #
-  #
-  #   source-provider <--[src]-- image-builder <--[img]--- deployer
-  #     GitRepository               Image                    App
-  #
+  #     source-provider                   fluxcd/GitRepository
+  #       <--[src]-- source-tester        carto.run/Runnable --> tekton/TaskRun
+  #          <--[src]-- image-builder     kpack/Image
+  #             <--[img]-- deployer       kapp-ctrl/App
   #
   resources:
     - name: source-provider
@@ -32,12 +32,20 @@ spec:
         kind: ClusterSourceTemplate
         name: source
 
+    - name: source-tester
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: test
+      sources:
+        - resource: source-provider
+          name: source
+
     - name: image-builder
       templateRef:
         kind: ClusterImageTemplate
         name: image
       sources:
-        - resource: source-provider
+        - resource: source-tester
           name: source
 
     - name: deployer

@@ -8,7 +8,7 @@ practices from [buildpacks] via [kpack/Image] and deployed to the cluster using
 
 ```
 
-  source --> image --> knative service
+  source --> tests --> image --> knative service
 
 ```
 
@@ -22,14 +22,16 @@ objects would be set by the different personas in the system:
       │                                        to configured systems other than
       │                                              cartographer (like, kpack)
       │
-      │       
+      │
       ├── app-operator                      cartographer-specific configuration
       │   ├── supply-chain-templates.yaml            that an app-operator would
-      │   └── supply-chain.yaml                                          submit
-      │       
-      │       
+      │   ├── ...                                                        submit
+      │   └── supply-chain.yaml
+      │
+      │
       └── developer                         cartographer-specific configuration
-          └── workload.yaml                             that an app-dev submits
+          ├── ...                                       that an app-dev submits
+          └── workload.yaml
 ```
 
 
@@ -132,7 +134,7 @@ As mentioned before, there are three directories: [./00-cluster](./00-cluster),
 for cluster-wide configuration, [./app-operator](./app-operator), with
 cartographer-specific files that an App Operator would submit, and
 [./developer](./developer), containing Kubernetes objects that a developer
-would submit (yes, just a [Workload]!)
+would submit (yes, just a [Workload] and a [Pipeline]!)
 
 Before we get started with the details pertaining to Cartographer, first we
 need to set up a few details related to where container images should be pushed
@@ -187,15 +189,18 @@ incrementally owns more objects. For instance, we can see that using the plugin
 
 ```console
 $ kubectl tree workload dev
-NAMESPACE  NAME                                   READY  REASON               AGE
-default    Workload/dev                           True   Ready                6m4s
-default    ├─GitRepository/dev                    True   GitOperationSucceed  6m4s
-default    ├─Image/dev                            True                        6m2s
-default    │ ├─Build/dev-build-1-5dxn9            -                           5m54s
-default    │ │ └─Pod/dev-build-1-5dxn9-build-pod  False  PodCompleted         5m53s
-default    │ ├─PersistentVolumeClaim/dev-cache    -                           6m2s
-default    │ └─SourceResolver/dev-source          True                        6m2s
-default    └─App/dev                              -                           52s
+NAMESPACE  NAME
+default    Workload/dev
+default    ├─GitRepository/dev                    source fetching
+default    ├─Runnable/dev                            test running
+default    │  └─TaskRun/dev-gdss4
+default    │    └─Pod/dev-gdss4-pod-xvrj5
+default    ├─Image/dev                             image building
+default    │ ├─Build/dev-build-1-5dxn9
+default    │ │ └─Pod/dev-build-1-5dxn9-build-pod
+default    │ ├─PersistentVolumeClaim/dev-cache
+default    │ └─SourceResolver/dev-source
+default    └─App/dev                               app deployment
 ```
 
 ps.: [octant](https://github.com/vmware-tanzu/octant) is another tool that
@@ -293,8 +298,8 @@ With the goal of creating a software supply chain like mentioned above
 
 ```
 
-  source --> image --> knative service
-                      
+  source --> test --> image --> knative service
+
 
 ```
 
@@ -370,7 +375,7 @@ metadata:
   name: hello-world
 spec:
   source:
-    git: 
+    git:
       url: https://github.com/kontinue/hello-world
       revision: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4
   ...
@@ -390,7 +395,7 @@ metadata:
   name: hello-world
 spec:
   source:
-    git: 
+    git:
       url: https://github.com/kontinue/hello-world
       revision: $(commit_that_passed_tests)$
   ...
@@ -407,7 +412,7 @@ metadata:
   name: $(name_of_the_project)
 spec:
   source:
-    git: 
+    git:
       url: $(developer's_repository)
       revision: $(commit_that_passed_tests)$
   ...
@@ -504,7 +509,7 @@ status:
   conditions: [...]
   latestImage: gcr.io/foo/bar@sha256:b4df00d --------.
                                                      |
-                                                    ... 
+                                                    ...
                                                      |
                                                      ∨
                                           possibly .. a Deployment?
@@ -545,7 +550,7 @@ spec:
     metadata:
       name: $(workload.name)$            #     `$(workload.*)$` provides access
     spec:                                #        to fields from the `Workload`
-      interval: 1m                       #              object submitted by the 
+      interval: 1m                       #              object submitted by the
       url: $(workload.source.git.url)$   #                           developers
       ref: $(workload.source.git.ref)$
       gitImplementation: libgit2
@@ -584,7 +589,7 @@ spec:
         name: go-builder
       source:
         blob:
-          url: $(sources[0].url)$       # source information from that a source 
+          url: $(sources[0].url)$       # source information from that a source
                                         #    provider like fluxcd/GitRepository
                                         #          from a ClusterSourceTemplate
                                         #                              provides
@@ -607,7 +612,7 @@ spec:
   selector:
     app.tanzu.vmware.com/workload-type: web
 
-  
+
   # declare the set of resources that form the software supply chain that
   # we are building.
   #
@@ -823,7 +828,10 @@ spec:
 ### What next?
 
 The intention of this step-by-step guide was to demonstrate how the base shape
-of the supplychain in this repository is set up.
+of the supplychain in this repository is set up. This example supply chain has
+a little more to it (for instance, it leverages [Runnable] for declaratively
+expressing the desire of having PipelineRun objects being submitted when we
+detect new code changes), but the concepts remain the same.
 
 As you can tell, Cartographer is not necessarily tied to any of the resources
 utilized: if you want to switch [kpack] by any other image builder that does so
@@ -835,6 +843,7 @@ same ideas here, but adds [knative] and [kapp-controller] to the mix.
 
 [ClusterBuilder]: https://github.com/pivotal/kpack/blob/main/docs/builders.md#cluster-builders
 [ClusterSupplyChain]: ../../site/content/docs/reference.md#ClusterSupplyChain
+[Pipeline]: https://github.com/tektoncd/pipeline/blob/main/docs/pipelines.md
 [Workload]: ../../site/content/docs/reference.md#Workload
 [buildpacks]: https://buildpacks.io/
 [carvel]: https://carvel.dev/
