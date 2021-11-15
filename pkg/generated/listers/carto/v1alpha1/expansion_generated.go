@@ -89,6 +89,14 @@ type DeliverableListerExpansion interface{}
 // DeliverableNamespaceLister.
 type DeliverableNamespaceListerExpansion interface{}
 
+// RunnableListerExpansion allows custom methods to be added to
+// RunnableLister.
+type RunnableListerExpansion interface{}
+
+// RunnableNamespaceListerExpansion allows custom methods to be added to
+// RunnableNamespaceLister.
+type RunnableNamespaceListerExpansion interface{}
+
 // WorkloadListerExpansion allows custom methods to be added to
 // WorkloadLister.
 type WorkloadListerExpansion interface{}

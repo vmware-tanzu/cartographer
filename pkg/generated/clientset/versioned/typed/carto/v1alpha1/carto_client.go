@@ -34,6 +34,7 @@ type CartoV1alpha1Interface interface {
 	ClusterSupplyChainsGetter
 	ClusterTemplatesGetter
 	DeliverablesGetter
+	RunnablesGetter
 	WorkloadsGetter
 }
 
@@ -76,6 +77,10 @@ func (c *CartoV1alpha1Client) ClusterTemplates(namespace string) ClusterTemplate
 
 func (c *CartoV1alpha1Client) Deliverables(namespace string) DeliverableInterface {
 	return newDeliverables(c, namespace)
+}
+
+func (c *CartoV1alpha1Client) Runnables(namespace string) RunnableInterface {
+	return newRunnables(c, namespace)
 }
 
 func (c *CartoV1alpha1Client) Workloads(namespace string) WorkloadInterface {

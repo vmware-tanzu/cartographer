@@ -63,6 +63,10 @@ func (c *FakeCartoV1alpha1) Deliverables(namespace string) v1alpha1.DeliverableI
 	return &FakeDeliverables{c, namespace}
 }
 
+func (c *FakeCartoV1alpha1) Runnables(namespace string) v1alpha1.RunnableInterface {
+	return &FakeRunnables{c, namespace}
+}
+
 func (c *FakeCartoV1alpha1) Workloads(namespace string) v1alpha1.WorkloadInterface {
 	return &FakeWorkloads{c, namespace}
 }

@@ -35,4 +35,6 @@ type ClusterTemplateExpansion interface{}
 
 type DeliverableExpansion interface{}
 
+type RunnableExpansion interface{}
+
 type WorkloadExpansion interface{}

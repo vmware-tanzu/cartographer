@@ -40,6 +40,7 @@ const (
 	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
 )
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 

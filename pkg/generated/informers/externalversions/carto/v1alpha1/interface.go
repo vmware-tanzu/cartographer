@@ -41,6 +41,8 @@ type Interface interface {
 	ClusterTemplates() ClusterTemplateInformer
 	// Deliverables returns a DeliverableInformer.
 	Deliverables() DeliverableInformer
+	// Runnables returns a RunnableInformer.
+	Runnables() RunnableInformer
 	// Workloads returns a WorkloadInformer.
 	Workloads() WorkloadInformer
 }
@@ -99,6 +101,11 @@ func (v *version) ClusterTemplates() ClusterTemplateInformer {
 // Deliverables returns a DeliverableInformer.
 func (v *version) Deliverables() DeliverableInformer {
 	return &deliverableInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Runnables returns a RunnableInformer.
+func (v *version) Runnables() RunnableInformer {
+	return &runnableInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Workloads returns a WorkloadInformer.
