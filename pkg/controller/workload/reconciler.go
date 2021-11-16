@@ -20,9 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
-
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,6 +34,77 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
+
+type RequestObjectGetter func(req ctrl.Request) (v1alpha1.StatusObject, error)
+
+type ReconcilerI interface {
+	Reconcile(context.Context, ctrl.Request) (ctrl.Result, error)
+}
+
+type MetaReconciler struct {
+	Singular         string
+	logger           logr.Logger
+	Repo             repository.Repository
+	ObjectGetter     RequestObjectGetter
+	conditionManager conditions.ConditionManager
+}
+
+func (r MetaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// (1) patch the logging context
+	r.logger = logr.FromContext(ctx).
+		WithValues("name", req.Name, "namespace", req.Namespace)
+	ctx = logr.NewContext(ctx, r.logger)
+	r.logger.Info("started")
+	defer r.logger.Info("finished")
+
+	// (2) get the object requested
+	obj, err := r.ObjectGetter(req)
+	if err != nil || obj == nil {
+		if kerrors.IsNotFound(err) {
+			// TODO log delete
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{}, fmt.Errorf("get %s: %w", r.Singular, err)
+	}
+
+	// (3) attach conditions
+	status := obj.GetStatus()
+	r.conditionManager = conditions.NewConditionManager(v1alpha1.WorkloadReady, status.Conditions)
+
+	// (4) do the meat
+	// Reconcile(*conditionManager, obj) err
+	// (5) finalize conditions and errors
+	var changed bool
+	status.Conditions, changed = r.conditionManager.Finalize()
+
+	var updateErr error
+	if changed || (status.ObservedGeneration != obj.GetGeneration()) {
+		status.ObservedGeneration = obj.GetGeneration()
+		updateErr = r.Repo.StatusUpdate(obj)
+		if updateErr != nil {
+			return ctrl.Result{}, fmt.Errorf("update workload status: %w", updateErr)
+		}
+	}
+
+	if err != nil && controller.IsUnhandledError(err) {
+		return ctrl.Result{}, err
+	}
+
+	r.logger.Info("handled error", "error", err)
+	return ctrl.Result{}, nil
+
+}
+
+// --------------
+
+//type ReconcilerBuilder func(repo repository.Repository) ReconcilerI
+
+func NewReconciler(repo repository.Repository) ReconcilerI {
+	return MetaReconciler{
+		Repo: repo,
+	}
+}
 
 type Reconciler struct {
 	Repo                    repository.Repository
@@ -73,8 +143,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(workload, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
 
-	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
-	workload.Status.SupplyChainRef.Name = supplyChain.Name
+	workload.Status.OwnerRef.Kind = supplyChainGVK.Kind
+	workload.Status.OwnerRef.Name = supplyChain.Name
 
 	if !r.isSupplyChainReady(supplyChain) {
 		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))

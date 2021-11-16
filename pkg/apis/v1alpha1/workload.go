@@ -21,6 +21,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -37,6 +38,17 @@ const (
 	NotReadySupplyChainReason              = "SupplyChainNotReady"
 )
 
+type Status struct {
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	OwnerRef           ObjectReference    `json:"ownerRef,omitempty"`
+}
+
+type StatusObject interface {
+	client.Object
+	GetStatus() *Status
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
@@ -44,7 +56,7 @@ type Workload struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              WorkloadSpec   `json:"spec"`
-	Status            WorkloadStatus `json:"status,omitempty"`
+	Status            Status `json:"status,omitempty"`
 }
 
 type WorkloadServiceClaim struct {
@@ -67,12 +79,6 @@ type WorkloadSpec struct {
 	ServiceClaims []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
 	Env           []corev1.EnvVar              `json:"env,omitempty"`
 	Resources     *corev1.ResourceRequirements `json:"resources,omitempty"`
-}
-
-type WorkloadStatus struct {
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	SupplyChainRef     ObjectReference    `json:"supplyChainRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

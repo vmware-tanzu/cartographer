@@ -38,7 +38,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
 	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	realizerrunnable "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
-	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -87,11 +86,8 @@ func registerWorkloadController(mgr manager.Manager) error {
 		mgr.GetLogger().WithName("workload-repo"),
 	)
 
-	reconciler := &workload.Reconciler{
-		Repo:                    repo,
-		ConditionManagerBuilder: conditions.NewConditionManager,
-		Realizer:                realizerworkload.NewRealizer(),
-	}
+
+	reconciler := workload.NewReconciler(repo)
 
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
@@ -100,7 +96,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 		return fmt.Errorf("controller new: %w", err)
 	}
 
-	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
+	//reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Workload{}},
