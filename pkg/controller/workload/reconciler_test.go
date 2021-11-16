@@ -45,10 +45,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
 )
 
-var _ = Describe("Reconciler", func() {
+var _ = Describe("Meater", func() {
 	var (
 		out              *Buffer
-		reconciler       workload.Reconciler
+		reconciler       workload.Meater
 		ctx              context.Context
 		req              ctrl.Request
 		repo             *repositoryfakes.FakeRepository
@@ -81,7 +81,7 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		reconciler = workload.Reconciler{
+		reconciler = workload.Meater{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			Realizer:                rlzr,

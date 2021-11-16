@@ -387,13 +387,13 @@ spec:
 			})
 		})
 
-		Context("GetSupplyChainsForWorkload", func() {
+		Context("GetSupplyChainsByLabels", func() {
 			BeforeEach(func() {
 				cl.ListReturns(errors.New("some list error"))
 			})
 
 			It("attempts to list the object from the apiServer", func() {
-				_, err := repo.GetSupplyChainsForWorkload(&v1alpha1.Workload{})
+				_, err := repo.GetSupplyChainsByLabels(&v1alpha1.Workload{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("list supply chains:"))
 			})
@@ -728,7 +728,7 @@ spec:
 			})
 		})
 
-		Context("GetSupplyChainsForWorkload", func() {
+		Context("GetSupplyChainsByLabels", func() {
 			Context("One supply chain", func() {
 				BeforeEach(func() {
 					supplyChain := &v1alpha1.ClusterSupplyChain{
@@ -753,7 +753,7 @@ spec:
 						Spec:   v1alpha1.WorkloadSpec{},
 						Status: v1alpha1.WorkloadStatus{},
 					}
-					supplyChains, err := repo.GetSupplyChainsForWorkload(workload)
+					supplyChains, err := repo.GetSupplyChainsByLabels(workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(1))
 					Expect(supplyChains[0].Name).To(Equal("supplychain-name"))
@@ -793,7 +793,7 @@ spec:
 						Spec:   v1alpha1.WorkloadSpec{},
 						Status: v1alpha1.WorkloadStatus{},
 					}
-					supplyChains, err := repo.GetSupplyChainsForWorkload(workload)
+					supplyChains, err := repo.GetSupplyChainsByLabels(workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(1))
 					Expect(supplyChains[0].Name).To(Equal("supplychain-name"))
@@ -809,7 +809,7 @@ spec:
 						Spec:   v1alpha1.WorkloadSpec{},
 						Status: v1alpha1.WorkloadStatus{},
 					}
-					supplyChains, err := repo.GetSupplyChainsForWorkload(workload)
+					supplyChains, err := repo.GetSupplyChainsByLabels(workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(0))
 				})

@@ -824,7 +824,7 @@ func (fake *FakeRepository) GetSupplyChainReturnsOnCall(i int, result1 *v1alpha1
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetSupplyChainsForWorkload(arg1 *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
+func (fake *FakeRepository) GetSupplyChainsByLabels(arg1 *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	ret, specificReturn := fake.getSupplyChainsForWorkloadReturnsOnCall[len(fake.getSupplyChainsForWorkloadArgsForCall)]
 	fake.getSupplyChainsForWorkloadArgsForCall = append(fake.getSupplyChainsForWorkloadArgsForCall, struct {
@@ -832,7 +832,7 @@ func (fake *FakeRepository) GetSupplyChainsForWorkload(arg1 *v1alpha1.Workload) 
 	}{arg1})
 	stub := fake.GetSupplyChainsForWorkloadStub
 	fakeReturns := fake.getSupplyChainsForWorkloadReturns
-	fake.recordInvocation("GetSupplyChainsForWorkload", []interface{}{arg1})
+	fake.recordInvocation("GetSupplyChainsByLabels", []interface{}{arg1})
 	fake.getSupplyChainsForWorkloadMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)

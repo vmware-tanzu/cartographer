@@ -37,7 +37,7 @@ type Repository interface {
 	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (client.Object, error)
 	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
 	GetRunTemplate(reference v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
-	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
+	GetSupplyChainsByLabels(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
 	GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
 	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
 	GetDeliverable(name string, namespace string) (*v1alpha1.Deliverable, error)
@@ -202,7 +202,7 @@ func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, o
 	return nil
 }
 
-func (r *repository) GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
+func (r *repository) GetSupplyChainsByLabels(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
 	list := &v1alpha1.ClusterSupplyChainList{}
 	if err := r.cl.List(context.TODO(), list); err != nil {
 		return nil, fmt.Errorf("list supply chains: %w", err)
