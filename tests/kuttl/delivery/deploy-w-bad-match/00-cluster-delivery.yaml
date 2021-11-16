@@ -29,6 +29,6 @@ spec:
       templateRef:
         kind: ClusterDeploymentTemplate
         name: app-deploy---deploy-w-bad-match
-      sources:
-        - resource: config-provider
-          name: solo-source-provider
+      deployment:
+        resource: config-provider
+        name: solo-source-provider

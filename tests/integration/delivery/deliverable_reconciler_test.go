@@ -367,9 +367,8 @@ var _ = Describe("DeliverableReconciler", func() {
 						  templateRef:
 							kind: ClusterDeploymentTemplate
 							name: app-deploy
-						  sources:
-							- resource: config-provider
-							  name: solo-source-provider
+						  deployment:
+							resource: config-provider
 						- name: promoter
 						  templateRef:
 							kind: ClusterTemplate
@@ -404,7 +403,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						  name: $(deliverable.metadata.name)$-1
 						spec:
 						  value:
-							some-key: $(source.url)$
+							some-key: $(deployment.url)$
 			    `)
 
 					clusterDeploymentTemplate := createObject(ctx, clusterDeploymentTemplateYaml, "")
@@ -594,7 +593,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						  name: $(deliverable.metadata.name)$-1
 						spec:
 						  value:
-							some-key: $(source.url)$
+							some-key: $(deployment.url)$
 			   		`)
 
 					clusterDeploymentTemplate := createObject(ctx, clusterDeploymentTemplateYaml, "")

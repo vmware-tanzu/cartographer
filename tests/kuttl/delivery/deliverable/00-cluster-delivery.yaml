@@ -25,17 +25,34 @@ spec:
       templateRef:
         kind: ClusterSourceTemplate
         name: source---deliverable
+    - name: additional-info-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: additional---deliverable
+      params:
+        - name: uses-delivery
+          value: spiders
+        - name: uses-deliverable
+          value: $(deliverable.spec.params[?(@.name=="spooky")].value)$
     - name: deployer
       templateRef:
         kind: ClusterDeploymentTemplate
         name: app-deploy---deliverable
+      deployment:
+        resource: config-provider
       sources:
-        - resource: config-provider
-          name: solo-source-provider
+        - resource: additional-info-provider
+          name: additional
+    - name: sidecar-deployer
+      templateRef:
+        kind: ClusterDeploymentTemplate
+        name: sidecar-deploy---deliverable
+      deployment:
+        resource: deployer
     - name: promoter
       templateRef:
         kind: ClusterTemplate
         name: git-merge---deliverable
       sources:
-      - resource: deployer
-        name: deployer
+      - resource: sidecar-deployer
+        name: sidecar-deployer

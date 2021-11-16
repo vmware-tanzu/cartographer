@@ -64,14 +64,14 @@ download_ytt_to_kodata() {
         local dest
         dest=$(realpath ./cmd/cartographer/kodata/$fname)
 
-        test -x $dest && echo "${YTT_CHECKSUM} $dest" | sha256sum -c && {
+        test -x $dest && echo "${YTT_CHECKSUM}  $dest" | sha256sum -c && {
                 echo "ytt already found in kodata."
                 return
         }
 
         pushd "$(mktemp -d)"
         curl -sSOL $url
-        echo "${YTT_CHECKSUM} $fname" | sha256sum -c
+        echo "${YTT_CHECKSUM}  $fname" | sha256sum -c
         install -m 0755 $fname $dest
         popd
 }

@@ -49,6 +49,6 @@ spec:
       name: $(deliverable.metadata.name)$-1
     spec:
       value:
-        some-key: $(source.url)$
-        good-key: $(source.url)$
+        some-key: $(deployment.url)$
+        good-key: $(deployment.url)$
         bad-key: "some-mismatching-value"

@@ -25,3 +25,6 @@ spec:
       url: https://github.com/ekcasey/hello-world-ops
       ref:
         branch: prod
+  params:
+    - name: spooky
+      value: ghosts

@@ -100,8 +100,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				r.conditionManager.AddPositive(DeploymentFailedConditionMetCondition(typedErr))
 			case templates.DeploymentConditionError:
 				r.conditionManager.AddPositive(DeploymentConditionNotMetCondition(typedErr))
-			default:
+			case templates.JsonPathError:
 				r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
+			default:
+				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			}
 			err = controller.NewUnhandledError(err)
 		default:
