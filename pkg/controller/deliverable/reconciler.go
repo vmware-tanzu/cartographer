@@ -114,13 +114,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
+	var trackingError error
 	if len(stampedObjects) > 0 {
 		for _, stampedObject := range stampedObjects {
-			err = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
-			if err != nil {
+			trackingError = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
+			if trackingError != nil {
 				r.logger.Error(err, "dynamic tracker watch")
+				err = controller.NewUnhandledError(trackingError)
 			}
-			err = controller.NewUnhandledError(err)
 		}
 	}
 
