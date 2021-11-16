@@ -105,7 +105,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			default:
 				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			}
-			err = controller.NewUnhandledError(err)
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
