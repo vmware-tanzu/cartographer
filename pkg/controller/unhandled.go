@@ -14,7 +14,9 @@
 
 package controller
 
-import "errors"
+import (
+	"errors"
+)
 
 func NewUnhandledError(err error) error {
 	return unhandledError{e: err}

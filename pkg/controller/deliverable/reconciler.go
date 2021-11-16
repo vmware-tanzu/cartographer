@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if !r.isDeliveryReady(delivery) {
 		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
-		return r.completeReconciliation(deliverable, nil)
+		return r.completeReconciliation(deliverable, fmt.Errorf("delivery is not in ready state"))
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
@@ -85,22 +85,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetDeliveryClusterTemplateError:
-			// 6.a invalid kind, we watch templates, do not requeue
-			// 6.b get object, server error, requeue
-			// 6.c impossible to get here??, do not requeue
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		case realizer.StampError:
-			// 7.a. unknwon resource template type, we watch templates, do not requeue
-			// 7.b. templatize, we watch templates, deliverables, deliveries, do not requeue
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
-			// 8.a list - server error, requeue
-			// 8.b patch - server error, requeue
-			// 8.c create - server error, requeue
-			// 8.d invalid unstructured..... do not requeue, FUTURE
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
-			// 9.a evaluate json path - ???, do not requeue
 			switch typedErr.Err.(type) {
 			case templates.ObservedGenerationError:
 				r.conditionManager.AddPositive(TemplateStampFailureByObservedGenerationCondition(typedErr))
@@ -111,9 +103,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			default:
 				r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
 			}
+			err = controller.NewUnhandledError(err)
 		default:
-			// 10. ?????????????????????, requeue
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		}
 	} else {
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
@@ -125,10 +118,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err != nil {
 				r.logger.Error(err, "dynamic tracker watch")
 			}
+			err = controller.NewUnhandledError(err)
 		}
 	}
 
-	return r.completeReconciliation(deliverable, nil)
+	return r.completeReconciliation(deliverable, err)
 }
 
 func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
@@ -140,10 +134,7 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		deliverable.Status.ObservedGeneration = deliverable.Generation
 		updateErr = r.Repo.StatusUpdate(deliverable)
 		if updateErr != nil {
-			r.logger.Error(updateErr, "update error")
-			if err == nil || !controller.IsUnhandledError(err) {
-				return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
-			}
+			return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
 		}
 	}
 
@@ -151,7 +142,7 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		return ctrl.Result{}, err
 	}
 
-	// TODO: log handled errors?
+	r.logger.Info("handled error", "error", err)
 	return ctrl.Result{}, nil
 }
 

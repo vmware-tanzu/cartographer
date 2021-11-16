@@ -251,7 +251,7 @@ var _ = Describe("Reconciler", func() {
 				repo.GetSchemeReturns(runtime.NewScheme())
 			})
 
-			It("returns a helpful error and requeues", func() {
+			It("returns an unhandled error and requeues", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 
 				Expect(err.Error()).To(ContainSubstring("get object gvk: "))
@@ -288,6 +288,14 @@ var _ = Describe("Reconciler", func() {
 				}
 				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.MissingReadyInDeliveryCondition(expectedCondition)))
 			})
+
+			It("logs the handled error message", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"msg":"handled error"`))
+				Expect(out).To(Say(`"error":"delivery is not in ready state"`))
+			})
 		})
 
 		Context("but the realizer returns an error", func() {
@@ -303,6 +311,12 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateObjectRetrievalFailureCondition(templateError)))
+				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+
+					Expect(err.Error()).To(ContainSubstring("unable to get template"))
 				})
 			})
 
@@ -327,6 +341,19 @@ var _ = Describe("Reconciler", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateStampFailureCondition(stampError)))
 				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error"`))
+					Expect(out).To(Say(`"error":"unable to stamp object for resource 'some-name': some error"`))
+				})
 			})
 
 			Context("of type ApplyStampedObjectError", func() {
@@ -342,6 +369,12 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+
+					Expect(err.Error()).To(ContainSubstring("unable to apply object"))
 				})
 			})
 
@@ -366,9 +399,10 @@ var _ = Describe("Reconciler", func() {
 						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateStampFailureByObservedGenerationCondition(retrieveError)))
 					})
 
-					It("does not return an error", func() {
+					It("returns an unhandled error and requeues", func() {
 						_, err := reconciler.Reconcile(ctx, req)
-						Expect(err).NotTo(HaveOccurred())
+
+						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
 				})
 
@@ -382,9 +416,10 @@ var _ = Describe("Reconciler", func() {
 						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.DeploymentConditionNotMetCondition(retrieveError)))
 					})
 
-					It("does not return an error", func() {
+					It("returns an unhandled error and requeues", func() {
 						_, err := reconciler.Reconcile(ctx, req)
-						Expect(err).NotTo(HaveOccurred())
+
+						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
 				})
 
@@ -398,9 +433,10 @@ var _ = Describe("Reconciler", func() {
 						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.DeploymentFailedConditionMetCondition(retrieveError)))
 					})
 
-					It("does not return an error", func() {
+					It("returns an unhandled error and requeues", func() {
 						_, err := reconciler.Reconcile(ctx, req)
-						Expect(err).NotTo(HaveOccurred())
+
+						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
 				})
 
@@ -414,9 +450,10 @@ var _ = Describe("Reconciler", func() {
 						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
 					})
 
-					It("does not return an error", func() {
+					It("returns an unhandled error and requeues", func() {
 						_, err := reconciler.Reconcile(ctx, req)
-						Expect(err).NotTo(HaveOccurred())
+
+						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
 				})
 			})
@@ -432,17 +469,31 @@ var _ = Describe("Reconciler", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.UnknownResourceErrorCondition(realizerError)))
 				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+
+					Expect(err.Error()).To(ContainSubstring("some error"))
+				})
 			})
 		})
 
 		Context("but the watcher returns an error", func() {
-			It("logs the error message", func() {
+			BeforeEach(func() {
 				dynamicTracker.WatchReturns(errors.New("could not watch"))
+			})
 
+			It("logs the error message", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
 				Expect(out).To(Say(`"level":"error"`))
 				Expect(out).To(Say(`"msg":"dynamic tracker watch"`))
+			})
+
+			It("returns an unhandled error and requeues", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+
+				Expect(err.Error()).To(ContainSubstring("could not watch"))
 			})
 		})
 	})
@@ -455,6 +506,14 @@ var _ = Describe("Reconciler", func() {
 		It("does not return an error", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("logs the handled error message", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(out).To(Say(`"level":"info"`))
+			Expect(out).To(Say(`"msg":"handled error"`))
+			Expect(out).To(Say(`"error":"deliverable is missing required labels"`))
 		})
 
 		It("calls the condition manager to report the bad state", func() {
@@ -473,6 +532,14 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliveryNotFoundCondition(deliverableLabels)))
 		})
+
+		It("logs the handled error message", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(out).To(Say(`"level":"info"`))
+			Expect(out).To(Say(`"msg":"handled error"`))
+			Expect(out).To(Say(`"error":"no delivery found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
+		})
 	})
 
 	Context("and repo returns an an error when requesting deliveries", func() {
@@ -480,7 +547,7 @@ var _ = Describe("Reconciler", func() {
 			repo.GetDeliveriesForDeliverableReturns(nil, errors.New("some error"))
 		})
 
-		It("returns a helpful error and requeues", func() {
+		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err.Error()).To(ContainSubstring("get delivery by label: some error"))
 		})
@@ -501,6 +568,14 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.TooManyDeliveryMatchesCondition()))
 		})
+
+		It("logs the handled error message", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(out).To(Say(`"level":"info"`))
+			Expect(out).To(Say(`"msg":"handled error"`))
+			Expect(out).To(Say(`"error":"too many deliveries match the deliverable selector label"`))
+		})
 	})
 
 	Context("but status update fails", func() {
@@ -508,36 +583,9 @@ var _ = Describe("Reconciler", func() {
 			repo.StatusUpdateReturns(errors.New("some error"))
 		})
 
-		It("returns a helpful error and requeues", func() {
+		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).To(MatchError(ContainSubstring("update deliverable status: ")))
-		})
-
-		It("logs that an error in updating", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-
-			Expect(out).To(Say(`"msg":"update error"`))
-			Expect(out).To(Say(`"name":"my-deliverable-name"`))
-			Expect(out).To(Say(`"namespace":"my-namespace"`))
-		})
-
-		Context("but there is an unhandled error", func() {
-			BeforeEach(func() {
-				repo.GetDeliveriesForDeliverableReturns(nil, errors.New("unhandled error"))
-			})
-
-			It("returns the helpful unhandled error and requeues", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).ToNot(MatchError(ContainSubstring("update deliverable status: ")))
-				Expect(err).To(MatchError(ContainSubstring("unhandled error")))
-			})
-		})
-
-		Context("but there is a handled error", func() {
-			It("returns a helpful status update error and requeues", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(MatchError(ContainSubstring("update deliverable status: ")))
-			})
 		})
 	})
 
@@ -546,6 +594,7 @@ var _ = Describe("Reconciler", func() {
 			repositoryError := errors.New("RepositoryError")
 			repo.GetDeliverableReturns(nil, repositoryError)
 		})
+
 		It("returns the error from the repository", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
@@ -560,6 +609,7 @@ var _ = Describe("Reconciler", func() {
 				Resource: "deliverable",
 			}, "some-deliverable"))
 		})
+
 		It("finishes the reconcile and does not requeue", func() {
 			result, err := reconciler.Reconcile(ctx, req)
 
