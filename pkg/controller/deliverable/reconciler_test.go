@@ -467,9 +467,10 @@ var _ = Describe("Reconciler", func() {
 						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.UnknownResourceErrorCondition(retrieveError)))
 					})
 
-					It("does not return an error", func() {
+					It("returns an unhandled error and requeues", func() {
 						_, err := reconciler.Reconcile(ctx, req)
-						Expect(err).NotTo(HaveOccurred())
+
+						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
 				})
 			})
