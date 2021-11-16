@@ -19,6 +19,7 @@ package workload
 import (
 	"context"
 	"fmt"
+
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
 
 	"github.com/go-logr/logr"
@@ -94,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
-			err = controller.NewUnhandledError(err)
+			//err = controller.NewUnhandledError(err)
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)

@@ -392,10 +392,17 @@ var _ = Describe("Reconciler", func() {
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
 				})
 
-				It("returns an unhandled error and requeues", func() {
+				It("does not return an error", func() {
 					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+				})
 
-					Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error"`))
+					Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': evaluate json path 'this.wont.find.anything': some error"`))
 				})
 			})
 
