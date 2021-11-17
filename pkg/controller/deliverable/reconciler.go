@@ -140,11 +140,13 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		}
 	}
 
-	if err != nil && controller.IsUnhandledError(err) {
-		return ctrl.Result{}, err
+	if err != nil {
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
-	r.logger.Info("handled error", "error", err)
 	return ctrl.Result{}, nil
 }
 
