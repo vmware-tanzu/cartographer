@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -44,7 +44,7 @@ var _ = Describe("Reconciler", func() {
 		out                *Buffer
 		reconciler         supplychain.Reconciler
 		ctx                context.Context
-		req                ctrl.Request
+		req                reconcile.Request
 		conditionManager   *conditionsfakes.FakeConditionManager
 		repo               *repositoryfakes.FakeRepository
 		sc                 *v1alpha1.ClusterSupplyChain
@@ -113,7 +113,7 @@ var _ = Describe("Reconciler", func() {
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 		}
 
-		req = ctrl.Request{
+		req = reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
 		}
 	})
