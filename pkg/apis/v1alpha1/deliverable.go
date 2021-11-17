@@ -39,6 +39,8 @@ const (
 	TemplateStampFailureResourcesSubmittedReason           = "TemplateStampFailure"
 	TemplateRejectedByAPIServerResourcesSubmittedReason    = "TemplateRejectedByAPIServer"
 	UnknownErrorResourcesSubmittedReason                   = "UnknownError"
+	DeploymentConditionNotMetResourcesSubmittedReason      = "ConditionNotMet"
+	DeploymentFailedConditionMetResourcesSubmittedReason   = "FailedConditionMet"
 )
 
 // +kubebuilder:object:root=true

@@ -15,10 +15,9 @@
 package delivery_test
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
-	"io"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,10 +28,14 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 type LogLine struct {
@@ -52,12 +55,77 @@ var _ = Describe("DeliverableReconciler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "example-config-map",
 			},
-			Data: map[string]string{},
+			Data: map[string]string{
+				"existent-field": "a-value",
+			},
 		}
 
 		templateBytes, err := json.Marshal(configMap)
 		Expect(err).ToNot(HaveOccurred())
 		return templateBytes
+	}
+
+	var createObject = func(ctx context.Context, objYaml, namespace string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		err := yaml.Unmarshal([]byte(objYaml), obj)
+		Expect(err).NotTo(HaveOccurred())
+		if namespace != "" {
+			obj.SetNamespace(namespace)
+		}
+
+		err = c.Create(ctx, obj, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		return obj
+	}
+
+	var assertObjectExistsWithCorrectSpec = func(ctx context.Context, expectedObjYaml string) {
+		expectedObj := &unstructured.Unstructured{}
+		err := yaml.Unmarshal([]byte(expectedObjYaml), expectedObj)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() interface{} {
+			obj := &unstructured.Unstructured{}
+			obj.SetGroupVersionKind(expectedObj.GroupVersionKind())
+			_ = c.Get(ctx, client.ObjectKey{Name: expectedObj.GetName(), Namespace: testNS}, obj)
+			return obj.UnstructuredContent()["spec"]
+		}).Should(Equal(expectedObj.UnstructuredContent()["spec"]), fmt.Sprintf("failed on obj name: %s", expectedObj.GetName()))
+	}
+
+	var updateObservedGenerationOfTest = func(ctx context.Context, name string) {
+		testToUpdate := &resources.Test{}
+
+		Eventually(func() error {
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: testNS}, testToUpdate)
+			return err
+		}).Should(BeNil())
+
+		testToUpdate.Status.ObservedGeneration = testToUpdate.Generation
+		err := c.Status().Update(ctx, testToUpdate)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	var setConditionOfTest = func(ctx context.Context, name, conditionType string, conditionStatus metav1.ConditionStatus) {
+		testToUpdate := &resources.Test{}
+
+		Eventually(func() error {
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: testNS}, testToUpdate)
+			return err
+		}).Should(BeNil())
+
+		if testToUpdate.Status.Conditions == nil {
+			testToUpdate.Status.Conditions = []metav1.Condition{}
+		}
+
+		testToUpdate.Status.Conditions = append(testToUpdate.Status.Conditions, metav1.Condition{
+			Type:               conditionType,
+			Status:             conditionStatus,
+			LastTransitionTime: v1.Now(),
+			Reason:             "SetByTest",
+			Message:            "",
+		})
+
+		err := c.Status().Update(ctx, testToUpdate)
+		Expect(err).NotTo(HaveOccurred())
 	}
 
 	var newClusterDelivery = func(name string, selector map[string]string) *v1alpha1.ClusterDelivery {
@@ -109,23 +177,49 @@ var _ = Describe("DeliverableReconciler", func() {
 		}
 	})
 
-	Context("Has the source template and deliverable installed", func() {
+	Context("when deliverable enters exponential backoff from lack of matching delivery", func() {
 		BeforeEach(func() {
-			deliverable := &v1alpha1.Deliverable{
-				TypeMeta: v1.TypeMeta{},
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "deliverable-bob",
-					Namespace: testNS,
-					Labels: map[string]string{
-						"name": "webapp",
-					},
-				},
-				Spec: v1alpha1.DeliverableSpec{},
-			}
+			deliverableYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: Deliverable
+				metadata:
+				  name: deliverable-bob
+				  labels:
+					name: webapp
+				spec:
+				  source:
+					git:
+					  url: https://github.com/ekcasey/hello-world-ops
+					  ref:
+						branch: prod
+			`)
 
+			deliverable := createObject(ctx, deliverableYaml, testNS)
 			cleanups = append(cleanups, deliverable)
-			err := c.Create(ctx, deliverable, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when the deliverable is installed", func() {
+		BeforeEach(func() {
+			deliverableYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: Deliverable
+				metadata:
+				  name: deliverable-bob
+				  labels:
+					name: webapp
+				spec:
+				  source:
+					git:
+					  url: https://github.com/ekcasey/hello-world-ops
+					  ref:
+						branch: prod
+			`)
+
+			deliverable := createObject(ctx, deliverableYaml, testNS)
+			cleanups = append(cleanups, deliverable)
 		})
 
 		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
@@ -148,7 +242,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			Expect(deliverable.Status.Conditions).To(Equal(lastConditions))
 		})
 
-		Context("when reconciliation will end in an unknown status", func() {
+		Context("and reconciliation will end in an unknown status", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: v1.TypeMeta{},
@@ -206,72 +300,417 @@ var _ = Describe("DeliverableReconciler", func() {
 			})
 		})
 
-		It("shortcuts backoff when a delivery is provided", func() {
-			By("expecting a delivery")
-			Eventually(func() []v1.Condition {
-				obj := &v1alpha1.Deliverable{}
-				err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, obj)
-				Expect(err).NotTo(HaveOccurred())
+		Context("along with a delivery with a source, deployment, and bare template", func() {
+			BeforeEach(func() {
+				// Create Source
+				clusterSourceTemplateYaml := utils.HereYaml(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: ClusterSourceTemplate
+					metadata:
+					  name: source
+					spec:
+					  urlPath: .spec.value.url
+					  revisionPath: .spec.value.ref
+					
+					  template:
+						apiVersion: test.run/v1alpha1
+						kind: Test
+						metadata:
+						  name: $(deliverable.metadata.name)$
+						spec:
+						  value:
+							url: $(deliverable.spec.source.git.url)$
+							ref: $(deliverable.spec.source.git.ref)$
+			    `)
 
-				return obj.Status.Conditions
-			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("DeliveryReady"),
-				"Reason": Equal("DeliveryNotFound"),
-				"Status": Equal(v1.ConditionStatus("False")),
-			})))
+				clusterSourceTemplate := createObject(ctx, clusterSourceTemplateYaml, "")
+				cleanups = append(cleanups, clusterSourceTemplate)
 
-			// todo: this test is flakey
-			reader := bufio.NewReader(controllerBuffer)
-			var previousSeconds float64
-			Eventually(func() float64 {
-				line, _, err := reader.ReadLine()
-				if err == io.EOF {
-					return 0
-				}
-				Expect(err).NotTo(HaveOccurred())
-				var logLine LogLine
-				err = json.Unmarshal(line, &logLine)
-				if err != nil {
-					return 0
-				}
-				if logLine.Message != "Reconciler error" || logLine.Namespace != testNS || logLine.Name != "deliverable-bob" {
-					return 0
-				}
+				// Create Bare Template
+				clusterTemplateYaml := utils.HereYaml(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: ClusterTemplate
+					metadata:
+					  name: git-merge
+					spec:
+					  template:
+						apiVersion: test.run/v1alpha1
+						kind: Test
+						metadata:
+						  name: $(deliverable.metadata.name)$-merge
+						spec:
+						  value:
+							merge-key: $(source.url)$
+			    `)
 
-				if previousSeconds == 0 {
-					previousSeconds = logLine.Timestamp
-					return 0
-				}
+				clusterTemplate := createObject(ctx, clusterTemplateYaml, "")
+				cleanups = append(cleanups, clusterTemplate)
 
-				return logLine.Timestamp - previousSeconds
-			}, 2500*time.Millisecond).Should(BeNumerically(">", 1.0))
+				// Create Delivery
+				clusterDeliveryYaml := utils.HereYaml(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: ClusterDelivery
+					metadata:
+					  name: delivery
+					spec:
+					  selector:
+						name: webapp
+					  resources:
+						- name: config-provider
+						  templateRef:
+							kind: ClusterSourceTemplate
+							name: source
+						- name: deployer
+						  templateRef:
+							kind: ClusterDeploymentTemplate
+							name: app-deploy
+						  deployment:
+							resource: config-provider
+						- name: promoter
+						  templateRef:
+							kind: ClusterTemplate
+							name: git-merge
+						  sources:
+							- resource: deployer
+							  name: deployer
+			    `)
 
-			By("accepting a delivery")
-			delivery := newClusterDelivery("delivery-bob", map[string]string{"name": "webapp"})
-			cleanups = append(cleanups, delivery)
+				clusterDelivery := createObject(ctx, clusterDeliveryYaml, "")
+				cleanups = append(cleanups, clusterDelivery)
+			})
 
-			err := c.Create(ctx, delivery, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			Context("and the deployment has only a succeeded condition", func() {
+				BeforeEach(func() {
+					// Create Deployment
+					clusterDeploymentTemplateYaml := utils.HereYaml(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: ClusterDeploymentTemplate
+					metadata:
+					  name: app-deploy
+					spec:
+					  observedCompletion:
+						succeeded:
+						  key: 'status.conditions[?(@.type=="Succeeded")].status'
+						  value: "True"
+					  template:
+						apiVersion: test.run/v1alpha1
+						kind: Test
+						metadata:
+						  name: $(deliverable.metadata.name)$-1
+						spec:
+						  value:
+							some-key: $(deployment.url)$
+			    `)
 
-			obj := &v1alpha1.ClusterDelivery{}
-			Eventually(func() ([]v1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "delivery-bob"}, obj)
-				return obj.Status.Conditions, err
-			}, 5*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Reason": Equal("Ready"),
-				"Status": Equal(v1.ConditionStatus("True")),
-			})))
+					clusterDeploymentTemplate := createObject(ctx, clusterDeploymentTemplateYaml, "")
+					cleanups = append(cleanups, clusterDeploymentTemplate)
+				})
 
-			By("reconcile in less than a second")
-			Eventually(func() ([]v1.Condition, error) {
-				err = c.Get(ctx, client.ObjectKey{Name: "delivery-bob"}, obj)
-				return obj.Status.Conditions, err
-			}, 500*time.Millisecond).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal("Ready"),
-				"Reason": Equal("Ready"),
-				"Status": Equal(v1.ConditionStatus("True")),
-			})))
+				Context("and the object does not have an observedGeneration", func() {
+					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
+						resourceNotYetStamped := &resources.Test{}
+
+						Consistently(func() error {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
+							return err
+						}).Should(HaveOccurred())
+					})
+
+					It("reports the error on the deliverable Ready condition", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("TemplateStampFailure"),
+								"Message": ContainSubstring("resource 'deployer' cannot satisfy observedCompletion without observedGeneration in object status"),
+							}),
+						}))
+					})
+				})
+
+				Context("and the object has an observedGeneration, but the success condition is not met", func() {
+					BeforeEach(func() {
+						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
+						setConditionOfTest(ctx, "deliverable-bob-1", "Succeeded", metav1.ConditionFalse)
+					})
+					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
+						resourceNotYetStamped := &resources.Test{}
+
+						Consistently(func() error {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
+							return err
+						}).Should(HaveOccurred())
+					})
+					It("the deliverable has an unknown Ready condition", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal("ConditionNotMet"),
+								"Message": ContainSubstring("resource 'deployer' condition not met: expected 'status.conditions[?(@.type==\"Succeeded\")].status' to be 'True' but found 'False'"),
+							}),
+						}))
+					})
+				})
+
+				Context("and the object has an observedGeneration, but the success key is not found", func() {
+					BeforeEach(func() {
+						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
+					})
+					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
+						resourceNotYetStamped := &resources.Test{}
+
+						Consistently(func() error {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
+							return err
+						}).Should(HaveOccurred())
+					})
+					It("reports the MissingValue on the deliverable Ready condition", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal("ConditionNotMet"),
+								"Message": ContainSubstring(`resource 'deployer' condition not met: could not find value at key 'status.conditions[?(@.type=="Succeeded")].status'`),
+							}),
+						}))
+					})
+				})
+
+				Context("after the deployment stamped object has reconciled", func() {
+					BeforeEach(func() {
+						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
+						setConditionOfTest(ctx, "deliverable-bob-1", "Succeeded", metav1.ConditionTrue)
+					})
+
+					It("can find the objects stamped from templates consuming the deployment outputs", func() {
+						assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
+							---
+							apiVersion: test.run/v1alpha1
+							kind: Test
+							metadata:
+							  name: deliverable-bob-merge
+							spec:
+							  value:
+								merge-key: https://github.com/ekcasey/hello-world-ops
+						`))
+					})
+
+					It("reports the deliverable Ready condition as True", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": BeEquivalentTo("True"),
+							}),
+						}))
+					})
+				})
+
+				It("finds the templated objects", func() {
+					assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
+					---
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: deliverable-bob
+					spec:
+					  value:
+						url: https://github.com/ekcasey/hello-world-ops
+						ref:
+						  branch: prod
+			    `))
+
+					assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
+					---
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: deliverable-bob-1
+					spec:
+					  value:
+						some-key: https://github.com/ekcasey/hello-world-ops
+			    `))
+				})
+			})
+
+			Context("and the deployment has succeeded and failed conditions", func() {
+				BeforeEach(func() {
+					// Create Deployment
+					clusterDeploymentTemplateYaml := utils.HereYaml(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: ClusterDeploymentTemplate
+					metadata:
+					  name: app-deploy
+					spec:
+					  observedCompletion:
+						succeeded:
+						  key: 'status.conditions[?(@.type=="Succeeded")].status'
+						  value: "True"
+						failed:
+						  key: 'status.conditions[?(@.type=="Failed")].status'
+						  value: "True"
+					  template:
+						apiVersion: test.run/v1alpha1
+						kind: Test
+						metadata:
+						  name: $(deliverable.metadata.name)$-1
+						spec:
+						  value:
+							some-key: $(deployment.url)$
+			   		`)
+
+					clusterDeploymentTemplate := createObject(ctx, clusterDeploymentTemplateYaml, "")
+					cleanups = append(cleanups, clusterDeploymentTemplate)
+				})
+
+				Context("and the object has an observedGeneration, and both the succeeded and failed conditions are met", func() {
+					BeforeEach(func() {
+						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
+						setConditionOfTest(ctx, "deliverable-bob-1", "Failed", metav1.ConditionTrue)
+						setConditionOfTest(ctx, "deliverable-bob-1", "Succeeded", metav1.ConditionTrue)
+					})
+
+					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
+						resourceNotYetStamped := &resources.Test{}
+
+						Consistently(func() error {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
+							return err
+						}).Should(HaveOccurred())
+					})
+
+					It("the deliverable has a failed Ready condition", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("FailedConditionMet"),
+								"Message": ContainSubstring("resource 'deployer' failed condition met: 'status.conditions[?(@.type==\"Failed\")].status' was 'True'"),
+							}),
+						}))
+					})
+				})
+
+				Context("and the object has an observedGeneration, and only the failed condition is met", func() {
+					BeforeEach(func() {
+						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
+						setConditionOfTest(ctx, "deliverable-bob-1", "Failed", metav1.ConditionTrue)
+						setConditionOfTest(ctx, "deliverable-bob-1", "Succeeded", metav1.ConditionFalse)
+					})
+
+					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
+						resourceNotYetStamped := &resources.Test{}
+
+						Consistently(func() error {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
+							return err
+						}).Should(HaveOccurred())
+					})
+
+					It("the deliverable has a failed Ready condition", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("FailedConditionMet"),
+								"Message": ContainSubstring("resource 'deployer' failed condition met: 'status.conditions[?(@.type==\"Failed\")].status' was 'True'"),
+							}),
+						}))
+					})
+				})
+
+				Context("and the object has an observedGeneration, and only the succeeded condition is met", func() {
+					BeforeEach(func() {
+						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
+						setConditionOfTest(ctx, "deliverable-bob-1", "Failed", metav1.ConditionFalse)
+						setConditionOfTest(ctx, "deliverable-bob-1", "Succeeded", metav1.ConditionTrue)
+					})
+
+					It("can find the objects stamped from templates consuming the deployment outputs", func() {
+						assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
+					---
+					apiVersion: test.run/v1alpha1
+					kind: Test
+					metadata:
+					  name: deliverable-bob-merge
+					spec:
+					  value:
+						merge-key: https://github.com/ekcasey/hello-world-ops
+				`))
+					})
+
+					It("reports the deliverable Ready condition as True", func() {
+						deliverable := &v1alpha1.Deliverable{}
+
+						id := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							_ = c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions
+						}).Should(MatchElements(id, IgnoreExtras, Elements{
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": BeEquivalentTo("True"),
+							}),
+						}))
+					})
+				})
+			})
+
 		})
 	})
 })

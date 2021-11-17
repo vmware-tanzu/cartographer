@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -112,17 +111,18 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
-			It("creates a stamped object and returns the outputs", func() {
-				out, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+			It("creates a stamped object and returns the outputs and stampedObjects", func() {
+				returnedStampedObject, out, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
 				stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
+
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
 				Expect(ok).To(BeTrue())
@@ -158,12 +158,34 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns GetClusterTemplateError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetClusterTemplateError"))
+			})
+		})
+
+		When("unable to create a template model from apiTemplate", func() {
+			BeforeEach(func() {
+				templateAPI := &v1alpha1.Workload{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "carto.run/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "not-a-template",
+						Namespace: "some-namespace",
+					},
+				}
+
+				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
+			})
+
+			It("returns a helpful error", func() {
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("new model from api:"))
 			})
 		})
 
@@ -185,12 +207,11 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource 'resource-1'"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
@@ -234,13 +255,12 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
@@ -296,12 +316,11 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				template := templates.NewClusterImageTemplateModel(templateAPI, eval.EvaluatorBuilder())
-				fakeRepo.GetClusterTemplateReturns(template, nil)
+				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				_, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
+				_, _, err := r.Do(context.TODO(), &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))

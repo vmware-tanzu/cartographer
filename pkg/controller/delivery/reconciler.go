@@ -25,19 +25,14 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
 type Reconciler struct {
-	repo             repository.Repository
+	Repo             repository.Repository
 	conditionManager conditions.ConditionManager
 	logger           logr.Logger
-}
-
-func NewReconciler(repo repository.Repository) *Reconciler {
-	return &Reconciler{
-		repo: repo,
-	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
@@ -46,7 +41,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	delivery, err := r.repo.GetDelivery(req.Name)
+	delivery, err := r.Repo.GetDelivery(req.Name)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get delivery: %w", err)
 	}
@@ -70,10 +65,10 @@ func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error
 	)
 
 	for _, resource := range delivery.Spec.Resources {
-		_, err = r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+		_, err = r.Repo.GetDeliveryClusterTemplate(resource.TemplateRef)
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
-				return err
+				return controller.NewUnhandledError(fmt.Errorf("get delivery cluster template: %w", err))
 			}
 
 			resourcesNotFound = append(resourcesNotFound, resource.Name)
@@ -89,17 +84,24 @@ func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error
 	return nil
 }
 
-func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, reconcileError error) (ctrl.Result, error) {
-	delivery.Status.Conditions, _ = r.conditionManager.Finalize()
+func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
+	var changed bool
+	delivery.Status.Conditions, changed = r.conditionManager.Finalize()
 
-	delivery.Status.ObservedGeneration = delivery.Generation
-	err := r.repo.StatusUpdate(delivery)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("status update: %w", err)
+	var updateErr error
+	if changed || (delivery.Status.ObservedGeneration != delivery.Generation) {
+		delivery.Status.ObservedGeneration = delivery.Generation
+		updateErr = r.Repo.StatusUpdate(delivery)
+		if updateErr != nil {
+			return ctrl.Result{}, fmt.Errorf("status update: %w", updateErr)
+		}
 	}
 
-	if reconcileError != nil {
-		return ctrl.Result{}, reconcileError
+	if err != nil {
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
 	return ctrl.Result{}, nil

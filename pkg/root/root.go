@@ -102,7 +102,11 @@ func (cmd *Command) Execute() error {
 			Complete(); err != nil {
 			return fmt.Errorf("clusterdelivery webhook: %w", err)
 		}
-
+		if err := controllerruntime.NewWebhookManagedBy(mgr).
+			For(&v1alpha1.ClusterDeploymentTemplate{}).
+			Complete(); err != nil {
+			return fmt.Errorf("clusterdeploymenttemplate webhook: %w", err)
+		}
 	}
 
 	if err := mgr.Start(cmd.Context); err != nil {

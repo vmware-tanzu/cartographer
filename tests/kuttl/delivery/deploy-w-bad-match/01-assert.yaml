@@ -13,44 +13,23 @@
 # limitations under the License.
 
 ---
-apiVersion: test.run/v1alpha1
-kind: Test
-metadata:
-  name: my-app---params
-spec:
-  value:
-    url: https://github.com/ekcasey/hello-world-ops
-    ref:
-      branch: prod
-    creepy: spiders
-    scary: snakes
-    spooky: ghosts
-
----
-apiVersion: test.run/v1alpha1
-kind: Test
-metadata:
-  name: my-app---params-1
-spec:
-  value:
-    some-key: https://github.com/ekcasey/hello-world-ops
-
----
 apiVersion: carto.run/v1alpha1
 kind: Deliverable
 metadata:
-  name: my-app---params
+  name: my-app
 status:
   conditions:
     - type: DeliveryReady
       status: "True"
       reason: Ready
     - type: ResourcesSubmitted
-      status: "True"
-      reason: ResourceSubmissionComplete
+      status: Unknown
+      reason: ConditionNotMet
+      message: "resource 'deployer' condition not met: expected 'https://github.com/ekcasey/hello-world-ops' to match 'some-mismatching-value'"
     - type: Ready
-      status: "True"
-      reason: Ready
+      status: "Unknown"
+      reason: ConditionNotMet
+      message: "resource 'deployer' condition not met: expected 'https://github.com/ekcasey/hello-world-ops' to match 'some-mismatching-value'"
   deliveryRef:
-    name: delivery---params
+    name: delivery---deploy-w-bad-match
     kind: ClusterDelivery

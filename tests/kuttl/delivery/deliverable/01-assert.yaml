@@ -27,10 +27,41 @@ spec:
 apiVersion: test.run/v1alpha1
 kind: Test
 metadata:
+  name: my-app-additional
+spec:
+  value:
+    creepy: spiders
+    scary: snakes
+    spooky: ghosts
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
   name: my-app-1
 spec:
   value:
     some-key: https://github.com/ekcasey/hello-world-ops
+    duplicate-of-some-key: https://github.com/ekcasey/hello-world-ops
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: my-app-sidecar
+spec:
+  value:
+    some-key: https://github.com/ekcasey/hello-world-ops
+    duplicate-of-some-key: https://github.com/ekcasey/hello-world-ops
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: my-app-merge
+spec:
+  value:
+    merge-key: https://github.com/ekcasey/hello-world-ops
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -49,5 +80,5 @@ status:
       status: "True"
       reason: Ready
   deliveryRef:
-    name: delivery
+    name: delivery---deliverable
     kind: ClusterDelivery

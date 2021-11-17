@@ -7,10 +7,11 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type FakeRealizer struct {
-	RealizeStub        func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) error
+	RealizeStub        func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error)
 	realizeMutex       sync.RWMutex
 	realizeArgsForCall []struct {
 		arg1 context.Context
@@ -18,16 +19,18 @@ type FakeRealizer struct {
 		arg3 *v1alpha1.ClusterSupplyChain
 	}
 	realizeReturns struct {
-		result1 error
+		result1 []*unstructured.Unstructured
+		result2 error
 	}
 	realizeReturnsOnCall map[int]struct {
-		result1 error
+		result1 []*unstructured.Unstructured
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRealizer, arg3 *v1alpha1.ClusterSupplyChain) error {
+func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRealizer, arg3 *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error) {
 	fake.realizeMutex.Lock()
 	ret, specificReturn := fake.realizeReturnsOnCall[len(fake.realizeArgsForCall)]
 	fake.realizeArgsForCall = append(fake.realizeArgsForCall, struct {
@@ -43,9 +46,9 @@ func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRe
 		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeRealizer) RealizeCallCount() int {
@@ -54,7 +57,7 @@ func (fake *FakeRealizer) RealizeCallCount() int {
 	return len(fake.realizeArgsForCall)
 }
 
-func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) error) {
+func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error)) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = stub
@@ -67,27 +70,30 @@ func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, workload.R
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeRealizer) RealizeReturns(result1 error) {
+func (fake *FakeRealizer) RealizeReturns(result1 []*unstructured.Unstructured, result2 error) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = nil
 	fake.realizeReturns = struct {
-		result1 error
-	}{result1}
+		result1 []*unstructured.Unstructured
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 error) {
+func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 []*unstructured.Unstructured, result2 error) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = nil
 	if fake.realizeReturnsOnCall == nil {
 		fake.realizeReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 []*unstructured.Unstructured
+			result2 error
 		})
 	}
 	fake.realizeReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+		result1 []*unstructured.Unstructured
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeRealizer) Invocations() map[string][][]interface{} {

@@ -18,10 +18,13 @@ kind: Deliverable
 metadata:
   name: my-app
   labels:
-    app.tanzu.vmware.com/deliverable-type: web
+    app.tanzu.vmware.com/deliverable-type: web---deliverable
 spec:
   source:
     git:
       url: https://github.com/ekcasey/hello-world-ops
       ref:
         branch: prod
+  params:
+    - name: spooky
+      value: ghosts

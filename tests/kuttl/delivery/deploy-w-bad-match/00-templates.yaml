@@ -16,18 +16,10 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: source
+  name: source---deploy-w-bad-match
 spec:
   urlPath: .spec.value.url
   revisionPath: .spec.value.ref
-
-  params:
-    - name: uses-delivery
-      default: clowns
-    - name: uses-default
-      default: snakes
-    - name: uses-deliverable
-      default: monster
 
   template:
     apiVersion: test.run/v1alpha1
@@ -38,16 +30,18 @@ spec:
       value:
         url: $(deliverable.spec.source.git.url)$
         ref: $(deliverable.spec.source.git.ref)$
-        creepy: $(params.uses-delivery)$
-        scary: $(params.uses-default)$
-        spooky: $(params.uses-deliverable)$
 
 ---
 apiVersion: carto.run/v1alpha1
 kind: ClusterDeploymentTemplate
 metadata:
-  name: app-deploy
+  name: app-deploy---deploy-w-bad-match
 spec:
+  observedMatches:
+    - input: "spec.value.some-key"
+      output: "spec.value.good-key"
+    - input: "spec.value.some-key"
+      output: "spec.value.bad-key"
   template:
     apiVersion: test.run/v1alpha1
     kind: Test
@@ -55,4 +49,6 @@ spec:
       name: $(deliverable.metadata.name)$-1
     spec:
       value:
-        some-key: $(source.url)$
+        some-key: $(deployment.url)$
+        good-key: $(deployment.url)$
+        bad-key: "some-mismatching-value"

@@ -25,6 +25,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -33,66 +34,52 @@ type Timer interface {
 }
 
 type Reconciler struct {
-	repo                    repository.Repository
+	Repo                    repository.Repository
+	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
-	conditionManagerBuilder conditions.ConditionManagerBuilder
-}
-
-func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder) *Reconciler {
-	return &Reconciler{
-		repo:                    repo,
-		conditionManagerBuilder: conditionManagerBuilder,
-	}
+	logger                  logr.Logger
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx).
+	r.logger = logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
-	logger.Info("started")
+	r.logger.Info("started")
+	defer r.logger.Info("finished")
 
-	reconcileCtx := logr.NewContext(ctx, logger)
-
-	sc, err := r.repo.GetSupplyChain(req.Name)
-	if err != nil || sc == nil {
+	supplyChain, err := r.Repo.GetSupplyChain(req.Name)
+	if err != nil || supplyChain == nil {
 		if kerrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, fmt.Errorf("get supplyChain: %w", err)
+		return ctrl.Result{}, fmt.Errorf("get supply chain: %w", err)
 	}
 
-	// fixme: discuss DeepCopy() as a prophylactic
-	supplyChain := sc.DeepCopy()
-
-	r.conditionManager = r.conditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
 
 	err = r.reconcileSupplyChain(supplyChain)
 
-	return r.completeReconciliation(reconcileCtx, supplyChain, err)
+	return r.completeReconciliation(supplyChain, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx)
-
+func (r *Reconciler) completeReconciliation(supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
 	var changed bool
 	supplyChain.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (supplyChain.Status.ObservedGeneration != supplyChain.Generation) {
 		supplyChain.Status.ObservedGeneration = supplyChain.Generation
-		updateErr = r.repo.StatusUpdate(supplyChain)
+		updateErr = r.Repo.StatusUpdate(supplyChain)
 		if updateErr != nil {
-			logger.Error(updateErr, "update error")
-			if err == nil {
-				logger.Info("finished")
-				return ctrl.Result{}, fmt.Errorf("update supply-chain status: %w", updateErr)
-			}
+			return ctrl.Result{}, fmt.Errorf("update supply chain status: %w", updateErr)
 		}
 	}
 
-	logger.Info("finished")
 	if err != nil {
-		return ctrl.Result{}, err
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
 	return ctrl.Result{}, nil
@@ -105,10 +92,10 @@ func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) er
 	)
 
 	for _, resource := range chain.Spec.Resources {
-		_, err = r.repo.GetClusterTemplate(resource.TemplateRef)
+		_, err = r.Repo.GetClusterTemplate(resource.TemplateRef)
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
-				return err
+				return controller.NewUnhandledError(fmt.Errorf("get cluster template: %w", err))
 			}
 
 			resourcesNotFound = append(resourcesNotFound, resource.Name)

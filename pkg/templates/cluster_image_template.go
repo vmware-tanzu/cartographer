@@ -25,11 +25,12 @@ import (
 )
 
 type clusterImageTemplate struct {
-	template  *v1alpha1.ClusterImageTemplate
-	evaluator evaluator
+	template      *v1alpha1.ClusterImageTemplate
+	evaluator     evaluator
+	stampedObject *unstructured.Unstructured
 }
 
-func (t clusterImageTemplate) GetKind() string {
+func (t *clusterImageTemplate) GetKind() string {
 	return t.template.Kind
 }
 
@@ -37,14 +38,20 @@ func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate, eval 
 	return &clusterImageTemplate{template: template, evaluator: eval}
 }
 
-func (t clusterImageTemplate) GetName() string {
+func (t *clusterImageTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
-	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, stampedObject.UnstructuredContent())
+func (t *clusterImageTemplate) SetTemplatingContext(_ map[string]interface{}) {}
+
+func (t *clusterImageTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
+	t.stampedObject = stampedObject
+}
+
+func (t *clusterImageTemplate) GetOutput() (*Output, error) {
+	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, t.stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, &JsonPathError{
+		return nil, JsonPathError{
 			Err:        fmt.Errorf("evaluate image json path: %w", err),
 			expression: t.template.Spec.ImagePath,
 		}
@@ -55,10 +62,10 @@ func (t clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured
 	}, nil
 }
 
-func (t clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }
 
-func (t clusterImageTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterImageTemplate) GetDefaultParams() v1alpha1.DefaultParams {
 	return t.template.Spec.Params
 }

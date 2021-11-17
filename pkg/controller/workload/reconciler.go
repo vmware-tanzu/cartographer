@@ -14,49 +14,44 @@
 
 package workload
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-const reconcileInterval = 5 * time.Second
-
 type Reconciler struct {
-	repo                    repository.Repository
+	Repo                    repository.Repository
+	ConditionManagerBuilder conditions.ConditionManagerBuilder
+	Realizer                realizer.Realizer
+	DynamicTracker          tracker.DynamicTracker
 	conditionManager        conditions.ConditionManager
-	conditionManagerBuilder conditions.ConditionManagerBuilder
-	realizer                realizer.Realizer
-}
-
-func NewReconciler(repo repository.Repository, conditionManagerBuilder conditions.ConditionManagerBuilder, realizer realizer.Realizer) *Reconciler {
-	return &Reconciler{
-		repo:                    repo,
-		conditionManagerBuilder: conditionManagerBuilder,
-		realizer:                realizer,
-	}
+	logger                  logr.Logger
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx).
+	r.logger = logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
-	ctx = logr.NewContext(ctx, logger)
-	logger.Info("started")
+	ctx = logr.NewContext(ctx, r.logger)
+	r.logger.Info("started")
+	defer r.logger.Info("finished")
 
-	reconcileCtx := logr.NewContext(ctx, logger)
-
-	workload, err := r.repo.GetWorkload(req.Name, req.Namespace)
+	workload, err := r.Repo.GetWorkload(req.Name, req.Namespace)
 	if err != nil || workload == nil {
 		if kerrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -65,90 +60,88 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("get workload: %w", err)
 	}
 
-	r.conditionManager = r.conditionManagerBuilder(v1alpha1.WorkloadReady, workload.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.WorkloadReady, workload.Status.Conditions)
 
 	supplyChain, err := r.getSupplyChainsForWorkload(workload)
 	if err != nil {
-		return r.completeReconciliation(reconcileCtx, workload, err)
+		return r.completeReconciliation(workload, err)
 	}
 
-	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.repo.GetScheme())
+	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
-		return r.completeReconciliation(reconcileCtx, workload, fmt.Errorf("get object gvk: %w", err))
+		return r.completeReconciliation(workload, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
 
 	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
 	workload.Status.SupplyChainRef.Name = supplyChain.Name
 
-	err = r.checkSupplyChainReadiness(supplyChain)
-	if err != nil {
+	if !r.isSupplyChainReady(supplyChain) {
 		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
-		return r.completeReconciliation(reconcileCtx, workload, err)
+		return r.completeReconciliation(workload, fmt.Errorf("supply chain is not in ready state"))
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	err = r.realizer.Realize(ctx, realizer.NewResourceRealizer(workload, r.repo), supplyChain)
+	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(workload, r.Repo), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetClusterTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
-			err = nil
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		}
-
-		return r.completeReconciliation(reconcileCtx, workload, err)
+	} else {
+		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
-	r.conditionManager.AddPositive(ResourcesSubmittedCondition())
+	var trackingError error
+	if len(stampedObjects) > 0 {
+		for _, stampedObject := range stampedObjects {
+			trackingError = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
+			if trackingError != nil {
+				r.logger.Error(err, "dynamic tracker watch")
+				err = controller.NewUnhandledError(trackingError)
+			}
+		}
+	}
 
-	return r.completeReconciliation(reconcileCtx, workload, nil)
+	return r.completeReconciliation(workload, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx)
-
+func (r *Reconciler) completeReconciliation(workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
 	var changed bool
 	workload.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (workload.Status.ObservedGeneration != workload.Generation) {
 		workload.Status.ObservedGeneration = workload.Generation
-		updateErr = r.repo.StatusUpdate(workload)
+		updateErr = r.Repo.StatusUpdate(workload)
 		if updateErr != nil {
-			logger.Error(updateErr, "update error")
-			if err == nil {
-				logger.Info("finished")
-				return ctrl.Result{}, fmt.Errorf("update workload status: %w", updateErr)
-			}
+			return ctrl.Result{}, fmt.Errorf("update workload status: %w", updateErr)
 		}
 	}
 
-	logger.Info("finished")
-
 	if err != nil {
-		return ctrl.Result{}, err
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
-	if !r.conditionManager.IsSuccessful() { // TODO: Discuss rename to IsReady
-		return ctrl.Result{}, fmt.Errorf("workload not ready")
-	}
-
-	return ctrl.Result{RequeueAfter: reconcileInterval}, nil
+	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) checkSupplyChainReadiness(supplyChain *v1alpha1.ClusterSupplyChain) error {
+func (r *Reconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
 	supplyChainReadyCondition := getSupplyChainReadyCondition(supplyChain)
-	if supplyChainReadyCondition.Status == "True" {
-		return nil
-	}
-	return fmt.Errorf("supply-chain is not in ready condition")
+	return supplyChainReadyCondition.Status == "True"
 }
 
 func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) metav1.Condition {
@@ -166,19 +159,20 @@ func (r *Reconciler) getSupplyChainsForWorkload(workload *v1alpha1.Workload) (*v
 		return nil, fmt.Errorf("workload is missing required labels")
 	}
 
-	supplyChains, err := r.repo.GetSupplyChainsForWorkload(workload)
-	if err != nil || len(supplyChains) == 0 {
-		r.conditionManager.AddPositive(SupplyChainNotFoundCondition(workload.Labels))
+	supplyChains, err := r.Repo.GetSupplyChainsForWorkload(workload)
+	if err != nil {
+		return nil, controller.NewUnhandledError(fmt.Errorf("get supply chain for workload: %w", err))
+	}
 
-		if err != nil {
-			return nil, fmt.Errorf("get supply chain by label: %w", err)
-		} else {
-			return nil, fmt.Errorf("no supply chain found where full selector is satisfied by labels: %v", workload.Labels)
-		}
-	} else if len(supplyChains) > 1 {
+	if len(supplyChains) == 0 {
+		r.conditionManager.AddPositive(SupplyChainNotFoundCondition(workload.Labels))
+		return nil, fmt.Errorf("no supply chain found where full selector is satisfied by labels: %v", workload.Labels)
+	}
+
+	if len(supplyChains) > 1 {
 		r.conditionManager.AddPositive(TooManySupplyChainMatchesCondition())
 		return nil, fmt.Errorf("too many supply chains match the workload selector")
 	}
 
-	return supplyChains[0].DeepCopy(), nil
+	return &supplyChains[0], nil
 }

@@ -37,3 +37,45 @@ func (e JsonPathError) Error() string {
 func (e JsonPathError) JsonPathExpression() string {
 	return e.expression
 }
+
+type ObservedGenerationError struct {
+	Err error
+}
+
+func NewObservedGenerationError(err error) ObservedGenerationError {
+	return ObservedGenerationError{
+		Err: err,
+	}
+}
+
+func (e ObservedGenerationError) Error() string {
+	return e.Err.Error()
+}
+
+type DeploymentConditionError struct {
+	Err error
+}
+
+func NewDeploymentConditionError(err error) DeploymentConditionError {
+	return DeploymentConditionError{
+		Err: err,
+	}
+}
+
+func (e DeploymentConditionError) Error() string {
+	return e.Err.Error()
+}
+
+type DeploymentFailedConditionMetError struct {
+	Err error
+}
+
+func NewDeploymentFailedConditionMetError(err error) DeploymentFailedConditionMetError {
+	return DeploymentFailedConditionMetError{
+		Err: err,
+	}
+}
+
+func (e DeploymentFailedConditionMetError) Error() string {
+	return e.Err.Error()
+}

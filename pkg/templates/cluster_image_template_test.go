@@ -61,7 +61,8 @@ var _ = Describe("ClusterImageTemplate", func() {
 
 		JustBeforeEach(func() {
 			clusterImageTemplateModel := templates.NewClusterImageTemplateModel(imageTemplate, evaluator)
-			output, err = clusterImageTemplateModel.GetOutput(stampedObject)
+			clusterImageTemplateModel.SetStampedObject(stampedObject)
+			output, err = clusterImageTemplateModel.GetOutput()
 		})
 
 		When("passed a stamped object for which the evaluator can return a value at the imagePath", func() {
@@ -86,7 +87,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 				Expect(output).To(BeNil())
 			})
 			It("returns an error which identifies the failing json path expression", func() {
-				jsonPathErr, ok := err.(*templates.JsonPathError)
+				jsonPathErr, ok := err.(templates.JsonPathError)
 				Expect(ok).To(BeTrue())
 				Expect(jsonPathErr.JsonPathExpression()).To(Equal("some.path"))
 			})

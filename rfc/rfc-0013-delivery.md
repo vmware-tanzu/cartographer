@@ -19,15 +19,15 @@ This RFC proposes the introduction of four new resources to the carto.run/v1alph
   
 - **Deliverables** are namespaced resources that enable application developers to specify K8s configuration.
   A Deliverable is analogous to a Workload, in that it instantiates the resources defined by the Delivery.
-  
-- **ClusterDeployTemplates** are cluster-scoped resources that enable application operators to specify resource templates that deploy environments.
-  ClusterDeployTemplates take a single source artifact and return a single deployment artifact. 
-  
-  source -> deployment
 
-- **ClusterDeliveryTemplates** are cluster-scoped resources that enable application operators to specify resource templates that perform validations on a particular deployed environment.
-  ClusterDeliveryTemplates take a deployment artifact and any number of additional source artifacts. They return a single deployment artifact.
-  
+- **ClusterDeploymentTemplates** are cluster-scoped resources that enable application operators to specify resource templates that deploy environments.
+  ClusterDeploymentTemplates take a deployment artifact and any number of additional source artifacts. They return a single deployment artifact.
+
+  deployment, source[] -> deployment
+
+- **ClusterDeploymentValidationTemplates** are cluster-scoped resources that enable application operators to specify resource templates that perform validations on a particular deployed environment.
+  ClusterDeploymentValidationTemplates take a deployment artifact and any number of additional source artifacts. They return a single deployment artifact.
+
   deployment, source[] -> deployment
 
 In addition to these resources, the following existing resources are valid in a ClusterDelivery:
@@ -42,12 +42,12 @@ In addition to these resources, the following existing resources are valid in a 
   
   config[], source[] -> X
   
-ClusterDeployTemplates resource specs are only modified when their returned deployment revision is no longer being processed by any ClusterDeliveryTemplate resources.
-This prevents an environment from changing while it is being validated by a ClusterDeliveryTemplate resource.
+ClusterDeploymentTemplate resource specs are only modified when their returned deployment revision is no longer being processed by any ClusterDeploymentValidationTemplate resources.
+This prevents an environment from changing while it is being validated by a ClusterDeploymentValidationTemplate resource.
 
 Deployment artifacts represent a revision of K8s configuration source and therefore use the same structure as source artifacts.
 When needed, deployment artifacts may be “cast” into source artifacts, because a deployment revision is a type of source revision.
-For example, a ClusterTemplate that promotes a commit containing K8s configuration to a production branch might consume that commit as a deployment artifact from a ClusterDeliveryTemplate that validated the deployment.
+For example, a ClusterTemplate that promotes a commit containing K8s configuration to a production branch might consume that commit as a deployment artifact from a ClusterDeploymentValidationTemplate that validated the deployment.
 See the Staging Cluster example below.
 
 
@@ -58,7 +58,7 @@ Rationale:
 - SupplyChain takes application source code as input (via Workload), not K8s config
 
 Alternatives:
-- Deployment validations could be integrated into the ClusterDeployTemplate to avoid synchronization complexities
+- Deployment validations could be integrated into the ClusterDeploymentTemplate to avoid synchronization complexities
 - Do nothing, keep using SupplyChain for deployment
 - Do nothing, don't address CD
 
@@ -121,10 +121,10 @@ spec:
 
 ```
 
-ClusterDeployTemplate
+ClusterDeploymentTemplate
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ClusterDeployTemplate
+kind: ClusterDeploymentTemplate
 metadata:
   name: <name>
 spec:
@@ -144,10 +144,10 @@ spec:
 
 ```
 
-ClusterDeliveryTemplate
+ClusterDeploymentValidationTemplate
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ClusterDeliveryTemplate
+kind: ClusterDeploymentValidationTemplate
 metadata:
   name: <name>
 spec:
@@ -208,7 +208,7 @@ spec:
         name: git-repository
     - name: deployer
       templateRef:
-        kind: ClusterDeployTemplate
+        kind: ClusterDeploymentTemplate
         name: app-deploy
       source:
         resource: config-provider
@@ -237,10 +237,10 @@ spec:
       ignore: ""
 ```
 
-ClusterDeployTemplate
+ClusterDeploymentTemplate
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ClusterDeployTemplate
+kind: ClusterDeploymentTemplate
 metadata:
   name: app-deploy
 spec:
@@ -308,7 +308,7 @@ spec:
         name: git-repository
     - name: deployer
       templateRef:
-        kind: ClusterDeployTemplate
+        kind: ClusterDeploymentTemplate
         name: app-deploy
       source:
         resource: config-provider
@@ -355,10 +355,10 @@ spec:
       ignore: ""
 ```
 
-ClusterDeployTemplate
+ClusterDeploymentTemplate
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ClusterDeployTemplate
+kind: ClusterDeploymentTemplate
 metadata:
   name: app-deploy
 spec:
@@ -384,10 +384,10 @@ spec:
         - kapp: {}
 ```
 
-ClusterDeliveryTemplate - Integration Test
+ClusterDeploymentValidationTemplate - Integration Test
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ClusterDeliveryTemplate
+kind: ClusterDeploymentValidationTemplate
 metadata:
   name: tekton-integration-tests
 spec:
@@ -414,10 +414,10 @@ spec:
 
 ```
 
-ClusterDeliveryTemplate - Performance Test
+ClusterDeploymentValidationTemplate - Performance Test
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ClusterDeliveryTemplate
+kind: ClusterDeploymentValidationTemplate
 metadata:
   name: tekton-performance-tests
 spec:

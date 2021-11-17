@@ -40,6 +40,64 @@ type Mapper struct {
 	Logger Logger
 }
 
+func (mapper *Mapper) TemplateToDeliverableRequests(template client.Object) []reconcile.Request {
+	deliveries := mapper.templateToDeliveries(template)
+
+	var requests []reconcile.Request
+	for _, delivery := range deliveries {
+		reqs := mapper.ClusterDeliveryToDeliverableRequests(&delivery)
+		requests = append(requests, reqs...)
+	}
+
+	return requests
+}
+
+func (mapper *Mapper) TemplateToWorkloadRequests(template client.Object) []reconcile.Request {
+	supplyChains := mapper.templateToSupplyChains(template)
+
+	var requests []reconcile.Request
+	for _, supplyChain := range supplyChains {
+		reqs := mapper.ClusterSupplyChainToWorkloadRequests(&supplyChain)
+		requests = append(requests, reqs...)
+	}
+
+	return requests
+}
+
+func (mapper *Mapper) templateToSupplyChains(template client.Object) []v1alpha1.ClusterSupplyChain {
+	templateName := template.GetName()
+
+	err := mapper.addGVK(template)
+	if err != nil {
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
+		return nil
+	}
+
+	list := &v1alpha1.ClusterSupplyChainList{}
+
+	err = mapper.Client.List(
+		context.TODO(),
+		list,
+	)
+
+	if err != nil {
+		mapper.Logger.Error(err, "list ClusterSupplyChains")
+		return nil
+	}
+
+	templateKind := template.GetObjectKind().GroupVersionKind().Kind
+
+	var supplyChains []v1alpha1.ClusterSupplyChain
+	for _, sc := range list.Items {
+		for _, res := range sc.Spec.Resources {
+			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
+				supplyChains = append(supplyChains, sc)
+			}
+		}
+	}
+	return supplyChains
+}
+
 func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object) []reconcile.Request {
 	var err error
 
@@ -70,7 +128,6 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 	}
 
 	return requests
-
 }
 
 func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object) []reconcile.Request {
@@ -159,47 +216,36 @@ func (mapper *Mapper) addGVK(obj client.Object) error {
 }
 
 func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []reconcile.Request {
-
-	templateName := template.GetName()
-
-	err := mapper.addGVK(template)
-	if err != nil {
-		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
-		return nil
-	}
-
-	list := &v1alpha1.ClusterSupplyChainList{}
-
-	err = mapper.Client.List(
-		context.TODO(),
-		list,
-	)
-
-	if err != nil {
-		mapper.Logger.Error(err, "list ClusterSupplyChains")
-		return nil
-	}
-
-	templateKind := template.GetObjectKind().GroupVersionKind().Kind
+	supplyChains := mapper.templateToSupplyChains(template)
 
 	var requests []reconcile.Request
-	for _, sc := range list.Items {
-		for _, res := range sc.Spec.Resources {
-			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: sc.Name,
-					},
-				})
-			}
-		}
+	for _, supplyChain := range supplyChains {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: supplyChain.Name,
+			},
+		})
 	}
 
 	return requests
 }
 
 func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []reconcile.Request {
+	deliveries := mapper.templateToDeliveries(template)
 
+	var requests []reconcile.Request
+	for _, delivery := range deliveries {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: delivery.Name,
+			},
+		})
+	}
+
+	return requests
+}
+
+func (mapper *Mapper) templateToDeliveries(template client.Object) []v1alpha1.ClusterDelivery {
 	templateName := template.GetName()
 
 	err := mapper.addGVK(template)
@@ -222,20 +268,15 @@ func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []recon
 
 	templateKind := template.GetObjectKind().GroupVersionKind().Kind
 
-	var requests []reconcile.Request
-	for _, sc := range list.Items {
-		for _, res := range sc.Spec.Resources {
+	var deliveries []v1alpha1.ClusterDelivery
+	for _, delivery := range list.Items {
+		for _, res := range delivery.Spec.Resources {
 			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: sc.Name,
-					},
-				})
+				deliveries = append(deliveries, delivery)
 			}
 		}
 	}
-
-	return requests
+	return deliveries
 }
 
 func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.ClusterRunTemplate) bool {

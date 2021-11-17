@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -42,9 +42,9 @@ import (
 var _ = Describe("Reconciler", func() {
 	var (
 		out                *Buffer
-		reconciler         *supplychain.Reconciler
+		reconciler         supplychain.Reconciler
 		ctx                context.Context
-		req                ctrl.Request
+		req                reconcile.Request
 		conditionManager   *conditionsfakes.FakeConditionManager
 		repo               *repositoryfakes.FakeRepository
 		sc                 *v1alpha1.ClusterSupplyChain
@@ -108,9 +108,12 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		reconciler = supplychain.NewReconciler(repo, fakeConditionManagerBuilder)
+		reconciler = supplychain.Reconciler{
+			Repo:                    repo,
+			ConditionManagerBuilder: fakeConditionManagerBuilder,
+		}
 
-		req = ctrl.Request{
+		req = reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
 		}
 	})
@@ -178,15 +181,9 @@ var _ = Describe("Reconciler", func() {
 			repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 		})
 
-		It("returns an error", func() {
+		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
-		})
-
-		It("does not requeue", func() {
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 		})
 	})
 
@@ -200,6 +197,11 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
 		})
+
+		It("does not return an error", func() {
+			_, err := reconciler.Reconcile(ctx, req)
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	Context("when the update fails", func() {
@@ -207,41 +209,11 @@ var _ = Describe("Reconciler", func() {
 			repo.StatusUpdateReturns(errors.New("updating is hard"))
 		})
 
-		It("logs the update error", func() {
-			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(out).To(Say("update error"))
-			Expect(out).To(Say("updating is hard"))
-		})
-
-		It("returns an error", func() {
+		It("returns an error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
-			Expect(err).To(MatchError(ContainSubstring("update supply-chain status")))
+			Expect(err).To(MatchError(ContainSubstring("update supply chain status")))
 			Expect(err).To(MatchError(ContainSubstring("updating is hard")))
-		})
-
-		It("does not requeue", func() {
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-		})
-
-		Context("when there has been a reconciliation error", func() {
-			BeforeEach(func() {
-				repo.GetClusterTemplateReturns(nil, errors.New("some error"))
-			})
-
-			It("returns an error", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-
-				Expect(err).To(MatchError(ContainSubstring("some error")))
-			})
-
-			It("does not requeue", func() {
-				result, _ := reconciler.Reconcile(ctx, req)
-
-				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-			})
 		})
 	})
 
@@ -258,12 +230,6 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 		})
-
-		It("does not requeue", func() {
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
-		})
 	})
 
 	Context("when the client errors", func() {
@@ -271,18 +237,12 @@ var _ = Describe("Reconciler", func() {
 			repo.GetSupplyChainReturns(nil, errors.New("some error"))
 		})
 
-		It("returns a helpful error", func() {
+		It("returns an error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("get supplyChain: "))
+			Expect(err.Error()).To(ContainSubstring("get supply chain: "))
 			Expect(err.Error()).To(ContainSubstring("some error"))
-		})
-
-		It("does not requeue", func() {
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 		})
 	})
 

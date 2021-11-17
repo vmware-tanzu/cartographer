@@ -16,24 +16,19 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterDelivery
 metadata:
-  name: delivery---params
+  name: delivery---deploy-w-missing-match
 spec:
   selector:
-    app.tanzu.vmware.com/deliverable-type: web--params
+    app.tanzu.vmware.com/deliverable-type: web---deploy-w-missing-match
   resources:
     - name: config-provider
       templateRef:
         kind: ClusterSourceTemplate
-        name: source
-      params:
-        - name: uses-delivery
-          value: spiders
-        - name: uses-deliverable
-          value: $(deliverable.spec.params[?(@.name=="spooky")].value)$
+        name: source---deploy-w-missing-match
     - name: deployer
       templateRef:
         kind: ClusterDeploymentTemplate
-        name: app-deploy
-      sources:
-        - resource: config-provider
-          name: solo-source-provider
+        name: app-deploy---deploy-w-missing-match
+      deployment:
+        resource: config-provider
+        name: solo-source-provider
