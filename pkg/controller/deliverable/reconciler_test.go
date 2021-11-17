@@ -404,6 +404,14 @@ var _ = Describe("Reconciler", func() {
 
 						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error"`))
+						Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': some error"`))
+					})
 				})
 
 				Context("which wraps an DeploymentConditionError", func() {
@@ -420,6 +428,14 @@ var _ = Describe("Reconciler", func() {
 						_, err := reconciler.Reconcile(ctx, req)
 
 						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
+					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error"`))
+						Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': some error"`))
 					})
 				})
 
@@ -438,6 +454,14 @@ var _ = Describe("Reconciler", func() {
 
 						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error"`))
+						Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': some error"`))
+					})
 				})
 
 				Context("which wraps a json path error", func() {
@@ -455,6 +479,14 @@ var _ = Describe("Reconciler", func() {
 
 						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
 					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error"`))
+						Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': evaluate json path 'this.wont.find.anything': some error"`))
+					})
 				})
 
 				Context("which wraps any other error", func() {
@@ -471,6 +503,14 @@ var _ = Describe("Reconciler", func() {
 						_, err := reconciler.Reconcile(ctx, req)
 
 						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from stamped object for resource"))
+					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error"`))
+						Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': some error"`))
 					})
 				})
 			})

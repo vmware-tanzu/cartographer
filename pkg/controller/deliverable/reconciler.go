@@ -105,7 +105,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			default:
 				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			}
-			err = controller.NewUnhandledError(err)
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -114,13 +113,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
+	var trackingError error
 	if len(stampedObjects) > 0 {
 		for _, stampedObject := range stampedObjects {
-			err = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
-			if err != nil {
+			trackingError = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
+			if trackingError != nil {
 				r.logger.Error(err, "dynamic tracker watch")
+				err = controller.NewUnhandledError(trackingError)
 			}
-			err = controller.NewUnhandledError(err)
 		}
 	}
 
@@ -140,11 +140,13 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		}
 	}
 
-	if err != nil && controller.IsUnhandledError(err) {
-		return ctrl.Result{}, err
+	if err != nil {
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
-	r.logger.Info("handled error", "error", err)
 	return ctrl.Result{}, nil
 }
 
