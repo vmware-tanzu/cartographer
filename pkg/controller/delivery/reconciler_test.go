@@ -23,9 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -96,8 +94,7 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("all referenced templates exist", func() {
 			BeforeEach(func() {
-				// Returns no error, so template is `found`
-				repo.GetDeliveryClusterTemplateReturns(nil, nil)
+				repo.GetDeliveryClusterTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
 			})
 
 			It("Attaches a ready/true status", func() {
@@ -165,7 +162,7 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("cannot find cluster template", func() {
 			BeforeEach(func() {
-				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, kerrors.NewNotFound(schema.GroupResource{}, ""))
+				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, nil)
 			})
 
 			It("adds a positive templates NOT found condition", func() {
