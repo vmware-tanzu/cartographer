@@ -496,7 +496,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("get supply chain by label: some error"))
+			Expect(err.Error()).To(ContainSubstring("get supply chain for workload: some error"))
 		})
 	})
 

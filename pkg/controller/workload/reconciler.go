@@ -94,7 +94,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
-			//err = controller.NewUnhandledError(err)
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -162,7 +161,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(workload *v1alpha1.Workload) (*v
 
 	supplyChains, err := r.Repo.GetSupplyChainsForWorkload(workload)
 	if err != nil {
-		return nil, controller.NewUnhandledError(fmt.Errorf("get supply chain by label: %w", err))
+		return nil, controller.NewUnhandledError(fmt.Errorf("get supply chain for workload: %w", err))
 	}
 
 	if len(supplyChains) == 0 {
