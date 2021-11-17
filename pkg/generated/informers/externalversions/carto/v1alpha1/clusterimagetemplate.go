@@ -41,33 +41,32 @@ type ClusterImageTemplateInformer interface {
 type clusterImageTemplateInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewClusterImageTemplateInformer constructs a new informer for ClusterImageTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterImageTemplateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterImageTemplateInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterImageTemplateInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterImageTemplateInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredClusterImageTemplateInformer constructs a new informer for ClusterImageTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterImageTemplateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterImageTemplateInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CartoV1alpha1().ClusterImageTemplates(namespace).List(context.TODO(), options)
+				return client.CartoV1alpha1().ClusterImageTemplates().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CartoV1alpha1().ClusterImageTemplates(namespace).Watch(context.TODO(), options)
+				return client.CartoV1alpha1().ClusterImageTemplates().Watch(context.TODO(), options)
 			},
 		},
 		&cartov1alpha1.ClusterImageTemplate{},
@@ -77,7 +76,7 @@ func NewFilteredClusterImageTemplateInformer(client versioned.Interface, namespa
 }
 
 func (f *clusterImageTemplateInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterImageTemplateInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredClusterImageTemplateInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *clusterImageTemplateInformer) Informer() cache.SharedIndexInformer {

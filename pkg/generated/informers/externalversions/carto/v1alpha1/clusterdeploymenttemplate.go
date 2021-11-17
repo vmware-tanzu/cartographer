@@ -41,33 +41,32 @@ type ClusterDeploymentTemplateInformer interface {
 type clusterDeploymentTemplateInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewClusterDeploymentTemplateInformer constructs a new informer for ClusterDeploymentTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterDeploymentTemplateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterDeploymentTemplateInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterDeploymentTemplateInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterDeploymentTemplateInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredClusterDeploymentTemplateInformer constructs a new informer for ClusterDeploymentTemplate type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterDeploymentTemplateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterDeploymentTemplateInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CartoV1alpha1().ClusterDeploymentTemplates(namespace).List(context.TODO(), options)
+				return client.CartoV1alpha1().ClusterDeploymentTemplates().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CartoV1alpha1().ClusterDeploymentTemplates(namespace).Watch(context.TODO(), options)
+				return client.CartoV1alpha1().ClusterDeploymentTemplates().Watch(context.TODO(), options)
 			},
 		},
 		&cartov1alpha1.ClusterDeploymentTemplate{},
@@ -77,7 +76,7 @@ func NewFilteredClusterDeploymentTemplateInformer(client versioned.Interface, na
 }
 
 func (f *clusterDeploymentTemplateInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterDeploymentTemplateInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredClusterDeploymentTemplateInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *clusterDeploymentTemplateInformer) Informer() cache.SharedIndexInformer {

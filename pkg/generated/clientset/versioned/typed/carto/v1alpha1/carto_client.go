@@ -43,36 +43,36 @@ type CartoV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *CartoV1alpha1Client) ClusterConfigTemplates(namespace string) ClusterConfigTemplateInterface {
-	return newClusterConfigTemplates(c, namespace)
+func (c *CartoV1alpha1Client) ClusterConfigTemplates() ClusterConfigTemplateInterface {
+	return newClusterConfigTemplates(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterDeliveries(namespace string) ClusterDeliveryInterface {
-	return newClusterDeliveries(c, namespace)
+func (c *CartoV1alpha1Client) ClusterDeliveries() ClusterDeliveryInterface {
+	return newClusterDeliveries(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterDeploymentTemplates(namespace string) ClusterDeploymentTemplateInterface {
-	return newClusterDeploymentTemplates(c, namespace)
+func (c *CartoV1alpha1Client) ClusterDeploymentTemplates() ClusterDeploymentTemplateInterface {
+	return newClusterDeploymentTemplates(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterImageTemplates(namespace string) ClusterImageTemplateInterface {
-	return newClusterImageTemplates(c, namespace)
+func (c *CartoV1alpha1Client) ClusterImageTemplates() ClusterImageTemplateInterface {
+	return newClusterImageTemplates(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterRunTemplates(namespace string) ClusterRunTemplateInterface {
-	return newClusterRunTemplates(c, namespace)
+func (c *CartoV1alpha1Client) ClusterRunTemplates() ClusterRunTemplateInterface {
+	return newClusterRunTemplates(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterSourceTemplates(namespace string) ClusterSourceTemplateInterface {
-	return newClusterSourceTemplates(c, namespace)
+func (c *CartoV1alpha1Client) ClusterSourceTemplates() ClusterSourceTemplateInterface {
+	return newClusterSourceTemplates(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterSupplyChains(namespace string) ClusterSupplyChainInterface {
-	return newClusterSupplyChains(c, namespace)
+func (c *CartoV1alpha1Client) ClusterSupplyChains() ClusterSupplyChainInterface {
+	return newClusterSupplyChains(c)
 }
 
-func (c *CartoV1alpha1Client) ClusterTemplates(namespace string) ClusterTemplateInterface {
-	return newClusterTemplates(c, namespace)
+func (c *CartoV1alpha1Client) ClusterTemplates() ClusterTemplateInterface {
+	return newClusterTemplates(c)
 }
 
 func (c *CartoV1alpha1Client) Deliverables(namespace string) DeliverableInterface {

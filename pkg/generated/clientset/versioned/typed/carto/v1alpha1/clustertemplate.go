@@ -32,7 +32,7 @@ import (
 // ClusterTemplatesGetter has a method to return a ClusterTemplateInterface.
 // A group's client should implement this interface.
 type ClusterTemplatesGetter interface {
-	ClusterTemplates(namespace string) ClusterTemplateInterface
+	ClusterTemplates() ClusterTemplateInterface
 }
 
 // ClusterTemplateInterface has methods to work with ClusterTemplate resources.
@@ -52,14 +52,12 @@ type ClusterTemplateInterface interface {
 // clusterTemplates implements ClusterTemplateInterface
 type clusterTemplates struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterTemplates returns a ClusterTemplates
-func newClusterTemplates(c *CartoV1alpha1Client, namespace string) *clusterTemplates {
+func newClusterTemplates(c *CartoV1alpha1Client) *clusterTemplates {
 	return &clusterTemplates{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -67,7 +65,6 @@ func newClusterTemplates(c *CartoV1alpha1Client, namespace string) *clusterTempl
 func (c *clusterTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterTemplate, err error) {
 	result = &v1alpha1.ClusterTemplate{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -84,7 +81,6 @@ func (c *clusterTemplates) List(ctx context.Context, opts v1.ListOptions) (resul
 	}
 	result = &v1alpha1.ClusterTemplateList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -101,7 +97,6 @@ func (c *clusterTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watc
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -112,7 +107,6 @@ func (c *clusterTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watc
 func (c *clusterTemplates) Create(ctx context.Context, clusterTemplate *v1alpha1.ClusterTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterTemplate, err error) {
 	result = &v1alpha1.ClusterTemplate{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterTemplate).
@@ -125,7 +119,6 @@ func (c *clusterTemplates) Create(ctx context.Context, clusterTemplate *v1alpha1
 func (c *clusterTemplates) Update(ctx context.Context, clusterTemplate *v1alpha1.ClusterTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterTemplate, err error) {
 	result = &v1alpha1.ClusterTemplate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		Name(clusterTemplate.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -140,7 +133,6 @@ func (c *clusterTemplates) Update(ctx context.Context, clusterTemplate *v1alpha1
 func (c *clusterTemplates) UpdateStatus(ctx context.Context, clusterTemplate *v1alpha1.ClusterTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterTemplate, err error) {
 	result = &v1alpha1.ClusterTemplate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		Name(clusterTemplate.Name).
 		SubResource("status").
@@ -154,7 +146,6 @@ func (c *clusterTemplates) UpdateStatus(ctx context.Context, clusterTemplate *v1
 // Delete takes name of the clusterTemplate and deletes it. Returns an error if one occurs.
 func (c *clusterTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		Name(name).
 		Body(&opts).
@@ -169,7 +160,6 @@ func (c *clusterTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteO
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -182,7 +172,6 @@ func (c *clusterTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteO
 func (c *clusterTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterTemplate, err error) {
 	result = &v1alpha1.ClusterTemplate{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clustertemplates").
 		Name(name).
 		SubResource(subresources...).

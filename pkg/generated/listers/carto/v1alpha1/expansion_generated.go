@@ -21,65 +21,33 @@ package v1alpha1
 // ClusterConfigTemplateLister.
 type ClusterConfigTemplateListerExpansion interface{}
 
-// ClusterConfigTemplateNamespaceListerExpansion allows custom methods to be added to
-// ClusterConfigTemplateNamespaceLister.
-type ClusterConfigTemplateNamespaceListerExpansion interface{}
-
 // ClusterDeliveryListerExpansion allows custom methods to be added to
 // ClusterDeliveryLister.
 type ClusterDeliveryListerExpansion interface{}
-
-// ClusterDeliveryNamespaceListerExpansion allows custom methods to be added to
-// ClusterDeliveryNamespaceLister.
-type ClusterDeliveryNamespaceListerExpansion interface{}
 
 // ClusterDeploymentTemplateListerExpansion allows custom methods to be added to
 // ClusterDeploymentTemplateLister.
 type ClusterDeploymentTemplateListerExpansion interface{}
 
-// ClusterDeploymentTemplateNamespaceListerExpansion allows custom methods to be added to
-// ClusterDeploymentTemplateNamespaceLister.
-type ClusterDeploymentTemplateNamespaceListerExpansion interface{}
-
 // ClusterImageTemplateListerExpansion allows custom methods to be added to
 // ClusterImageTemplateLister.
 type ClusterImageTemplateListerExpansion interface{}
-
-// ClusterImageTemplateNamespaceListerExpansion allows custom methods to be added to
-// ClusterImageTemplateNamespaceLister.
-type ClusterImageTemplateNamespaceListerExpansion interface{}
 
 // ClusterRunTemplateListerExpansion allows custom methods to be added to
 // ClusterRunTemplateLister.
 type ClusterRunTemplateListerExpansion interface{}
 
-// ClusterRunTemplateNamespaceListerExpansion allows custom methods to be added to
-// ClusterRunTemplateNamespaceLister.
-type ClusterRunTemplateNamespaceListerExpansion interface{}
-
 // ClusterSourceTemplateListerExpansion allows custom methods to be added to
 // ClusterSourceTemplateLister.
 type ClusterSourceTemplateListerExpansion interface{}
-
-// ClusterSourceTemplateNamespaceListerExpansion allows custom methods to be added to
-// ClusterSourceTemplateNamespaceLister.
-type ClusterSourceTemplateNamespaceListerExpansion interface{}
 
 // ClusterSupplyChainListerExpansion allows custom methods to be added to
 // ClusterSupplyChainLister.
 type ClusterSupplyChainListerExpansion interface{}
 
-// ClusterSupplyChainNamespaceListerExpansion allows custom methods to be added to
-// ClusterSupplyChainNamespaceLister.
-type ClusterSupplyChainNamespaceListerExpansion interface{}
-
 // ClusterTemplateListerExpansion allows custom methods to be added to
 // ClusterTemplateLister.
 type ClusterTemplateListerExpansion interface{}
-
-// ClusterTemplateNamespaceListerExpansion allows custom methods to be added to
-// ClusterTemplateNamespaceLister.
-type ClusterTemplateNamespaceListerExpansion interface{}
 
 // DeliverableListerExpansion allows custom methods to be added to
 // DeliverableLister.

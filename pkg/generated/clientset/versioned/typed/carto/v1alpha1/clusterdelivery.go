@@ -32,7 +32,7 @@ import (
 // ClusterDeliveriesGetter has a method to return a ClusterDeliveryInterface.
 // A group's client should implement this interface.
 type ClusterDeliveriesGetter interface {
-	ClusterDeliveries(namespace string) ClusterDeliveryInterface
+	ClusterDeliveries() ClusterDeliveryInterface
 }
 
 // ClusterDeliveryInterface has methods to work with ClusterDelivery resources.
@@ -52,14 +52,12 @@ type ClusterDeliveryInterface interface {
 // clusterDeliveries implements ClusterDeliveryInterface
 type clusterDeliveries struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterDeliveries returns a ClusterDeliveries
-func newClusterDeliveries(c *CartoV1alpha1Client, namespace string) *clusterDeliveries {
+func newClusterDeliveries(c *CartoV1alpha1Client) *clusterDeliveries {
 	return &clusterDeliveries{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -67,7 +65,6 @@ func newClusterDeliveries(c *CartoV1alpha1Client, namespace string) *clusterDeli
 func (c *clusterDeliveries) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	result = &v1alpha1.ClusterDelivery{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -84,7 +81,6 @@ func (c *clusterDeliveries) List(ctx context.Context, opts v1.ListOptions) (resu
 	}
 	result = &v1alpha1.ClusterDeliveryList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -101,7 +97,6 @@ func (c *clusterDeliveries) Watch(ctx context.Context, opts v1.ListOptions) (wat
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -112,7 +107,6 @@ func (c *clusterDeliveries) Watch(ctx context.Context, opts v1.ListOptions) (wat
 func (c *clusterDeliveries) Create(ctx context.Context, clusterDelivery *v1alpha1.ClusterDelivery, opts v1.CreateOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	result = &v1alpha1.ClusterDelivery{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterDelivery).
@@ -125,7 +119,6 @@ func (c *clusterDeliveries) Create(ctx context.Context, clusterDelivery *v1alpha
 func (c *clusterDeliveries) Update(ctx context.Context, clusterDelivery *v1alpha1.ClusterDelivery, opts v1.UpdateOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	result = &v1alpha1.ClusterDelivery{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		Name(clusterDelivery.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -140,7 +133,6 @@ func (c *clusterDeliveries) Update(ctx context.Context, clusterDelivery *v1alpha
 func (c *clusterDeliveries) UpdateStatus(ctx context.Context, clusterDelivery *v1alpha1.ClusterDelivery, opts v1.UpdateOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	result = &v1alpha1.ClusterDelivery{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		Name(clusterDelivery.Name).
 		SubResource("status").
@@ -154,7 +146,6 @@ func (c *clusterDeliveries) UpdateStatus(ctx context.Context, clusterDelivery *v
 // Delete takes name of the clusterDelivery and deletes it. Returns an error if one occurs.
 func (c *clusterDeliveries) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		Name(name).
 		Body(&opts).
@@ -169,7 +160,6 @@ func (c *clusterDeliveries) DeleteCollection(ctx context.Context, opts v1.Delete
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -182,7 +172,6 @@ func (c *clusterDeliveries) DeleteCollection(ctx context.Context, opts v1.Delete
 func (c *clusterDeliveries) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterDelivery, err error) {
 	result = &v1alpha1.ClusterDelivery{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clusterdeliveries").
 		Name(name).
 		SubResource(subresources...).

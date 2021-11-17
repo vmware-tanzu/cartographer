@@ -30,8 +30,9 @@ type ClusterConfigTemplateLister interface {
 	// List lists all ClusterConfigTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterConfigTemplate, err error)
-	// ClusterConfigTemplates returns an object that can list and get ClusterConfigTemplates.
-	ClusterConfigTemplates(namespace string) ClusterConfigTemplateNamespaceLister
+	// Get retrieves the ClusterConfigTemplate from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterConfigTemplate, error)
 	ClusterConfigTemplateListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterConfigTemplateLister) List(selector labels.Selector) (ret []*v1a
 	return ret, err
 }
 
-// ClusterConfigTemplates returns an object that can list and get ClusterConfigTemplates.
-func (s *clusterConfigTemplateLister) ClusterConfigTemplates(namespace string) ClusterConfigTemplateNamespaceLister {
-	return clusterConfigTemplateNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterConfigTemplateNamespaceLister helps list and get ClusterConfigTemplates.
-// All objects returned here must be treated as read-only.
-type ClusterConfigTemplateNamespaceLister interface {
-	// List lists all ClusterConfigTemplates in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterConfigTemplate, err error)
-	// Get retrieves the ClusterConfigTemplate from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterConfigTemplate, error)
-	ClusterConfigTemplateNamespaceListerExpansion
-}
-
-// clusterConfigTemplateNamespaceLister implements the ClusterConfigTemplateNamespaceLister
-// interface.
-type clusterConfigTemplateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterConfigTemplates in the indexer for a given namespace.
-func (s clusterConfigTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterConfigTemplate, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterConfigTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterConfigTemplate from the indexer for a given namespace and name.
-func (s clusterConfigTemplateNamespaceLister) Get(name string) (*v1alpha1.ClusterConfigTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterConfigTemplate from the index for a given name.
+func (s *clusterConfigTemplateLister) Get(name string) (*v1alpha1.ClusterConfigTemplate, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

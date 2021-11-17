@@ -32,7 +32,6 @@ import (
 // FakeClusterImageTemplates implements ClusterImageTemplateInterface
 type FakeClusterImageTemplates struct {
 	Fake *FakeCartoV1alpha1
-	ns   string
 }
 
 var clusterimagetemplatesResource = schema.GroupVersionResource{Group: "carto.run", Version: "v1alpha1", Resource: "clusterimagetemplates"}
@@ -42,8 +41,7 @@ var clusterimagetemplatesKind = schema.GroupVersionKind{Group: "carto.run", Vers
 // Get takes name of the clusterImageTemplate, and returns the corresponding clusterImageTemplate object, and an error if there is any.
 func (c *FakeClusterImageTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterImageTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clusterimagetemplatesResource, c.ns, name), &v1alpha1.ClusterImageTemplate{})
-
+		Invokes(testing.NewRootGetAction(clusterimagetemplatesResource, name), &v1alpha1.ClusterImageTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeClusterImageTemplates) Get(ctx context.Context, name string, option
 // List takes label and field selectors, and returns the list of ClusterImageTemplates that match those selectors.
 func (c *FakeClusterImageTemplates) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterImageTemplateList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clusterimagetemplatesResource, clusterimagetemplatesKind, c.ns, opts), &v1alpha1.ClusterImageTemplateList{})
-
+		Invokes(testing.NewRootListAction(clusterimagetemplatesResource, clusterimagetemplatesKind, opts), &v1alpha1.ClusterImageTemplateList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeClusterImageTemplates) List(ctx context.Context, opts v1.ListOption
 // Watch returns a watch.Interface that watches the requested clusterImageTemplates.
 func (c *FakeClusterImageTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clusterimagetemplatesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clusterimagetemplatesResource, opts))
 }
 
 // Create takes the representation of a clusterImageTemplate and creates it.  Returns the server's representation of the clusterImageTemplate, and an error, if there is any.
 func (c *FakeClusterImageTemplates) Create(ctx context.Context, clusterImageTemplate *v1alpha1.ClusterImageTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterImageTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clusterimagetemplatesResource, c.ns, clusterImageTemplate), &v1alpha1.ClusterImageTemplate{})
-
+		Invokes(testing.NewRootCreateAction(clusterimagetemplatesResource, clusterImageTemplate), &v1alpha1.ClusterImageTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeClusterImageTemplates) Create(ctx context.Context, clusterImageTemp
 // Update takes the representation of a clusterImageTemplate and updates it. Returns the server's representation of the clusterImageTemplate, and an error, if there is any.
 func (c *FakeClusterImageTemplates) Update(ctx context.Context, clusterImageTemplate *v1alpha1.ClusterImageTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterImageTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clusterimagetemplatesResource, c.ns, clusterImageTemplate), &v1alpha1.ClusterImageTemplate{})
-
+		Invokes(testing.NewRootUpdateAction(clusterimagetemplatesResource, clusterImageTemplate), &v1alpha1.ClusterImageTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,8 +99,7 @@ func (c *FakeClusterImageTemplates) Update(ctx context.Context, clusterImageTemp
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeClusterImageTemplates) UpdateStatus(ctx context.Context, clusterImageTemplate *v1alpha1.ClusterImageTemplate, opts v1.UpdateOptions) (*v1alpha1.ClusterImageTemplate, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clusterimagetemplatesResource, "status", c.ns, clusterImageTemplate), &v1alpha1.ClusterImageTemplate{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(clusterimagetemplatesResource, "status", clusterImageTemplate), &v1alpha1.ClusterImageTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -116,14 +109,13 @@ func (c *FakeClusterImageTemplates) UpdateStatus(ctx context.Context, clusterIma
 // Delete takes name of the clusterImageTemplate and deletes it. Returns an error if one occurs.
 func (c *FakeClusterImageTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clusterimagetemplatesResource, c.ns, name), &v1alpha1.ClusterImageTemplate{})
-
+		Invokes(testing.NewRootDeleteAction(clusterimagetemplatesResource, name), &v1alpha1.ClusterImageTemplate{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterImageTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clusterimagetemplatesResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(clusterimagetemplatesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterImageTemplateList{})
 	return err
@@ -132,8 +124,7 @@ func (c *FakeClusterImageTemplates) DeleteCollection(ctx context.Context, opts v
 // Patch applies the patch and returns the patched clusterImageTemplate.
 func (c *FakeClusterImageTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterImageTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clusterimagetemplatesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ClusterImageTemplate{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clusterimagetemplatesResource, name, pt, data, subresources...), &v1alpha1.ClusterImageTemplate{})
 	if obj == nil {
 		return nil, err
 	}

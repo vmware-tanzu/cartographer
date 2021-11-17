@@ -32,7 +32,6 @@ import (
 // FakeClusterSourceTemplates implements ClusterSourceTemplateInterface
 type FakeClusterSourceTemplates struct {
 	Fake *FakeCartoV1alpha1
-	ns   string
 }
 
 var clustersourcetemplatesResource = schema.GroupVersionResource{Group: "carto.run", Version: "v1alpha1", Resource: "clustersourcetemplates"}
@@ -42,8 +41,7 @@ var clustersourcetemplatesKind = schema.GroupVersionKind{Group: "carto.run", Ver
 // Get takes name of the clusterSourceTemplate, and returns the corresponding clusterSourceTemplate object, and an error if there is any.
 func (c *FakeClusterSourceTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterSourceTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clustersourcetemplatesResource, c.ns, name), &v1alpha1.ClusterSourceTemplate{})
-
+		Invokes(testing.NewRootGetAction(clustersourcetemplatesResource, name), &v1alpha1.ClusterSourceTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeClusterSourceTemplates) Get(ctx context.Context, name string, optio
 // List takes label and field selectors, and returns the list of ClusterSourceTemplates that match those selectors.
 func (c *FakeClusterSourceTemplates) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterSourceTemplateList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clustersourcetemplatesResource, clustersourcetemplatesKind, c.ns, opts), &v1alpha1.ClusterSourceTemplateList{})
-
+		Invokes(testing.NewRootListAction(clustersourcetemplatesResource, clustersourcetemplatesKind, opts), &v1alpha1.ClusterSourceTemplateList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeClusterSourceTemplates) List(ctx context.Context, opts v1.ListOptio
 // Watch returns a watch.Interface that watches the requested clusterSourceTemplates.
 func (c *FakeClusterSourceTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clustersourcetemplatesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clustersourcetemplatesResource, opts))
 }
 
 // Create takes the representation of a clusterSourceTemplate and creates it.  Returns the server's representation of the clusterSourceTemplate, and an error, if there is any.
 func (c *FakeClusterSourceTemplates) Create(ctx context.Context, clusterSourceTemplate *v1alpha1.ClusterSourceTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterSourceTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clustersourcetemplatesResource, c.ns, clusterSourceTemplate), &v1alpha1.ClusterSourceTemplate{})
-
+		Invokes(testing.NewRootCreateAction(clustersourcetemplatesResource, clusterSourceTemplate), &v1alpha1.ClusterSourceTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeClusterSourceTemplates) Create(ctx context.Context, clusterSourceTe
 // Update takes the representation of a clusterSourceTemplate and updates it. Returns the server's representation of the clusterSourceTemplate, and an error, if there is any.
 func (c *FakeClusterSourceTemplates) Update(ctx context.Context, clusterSourceTemplate *v1alpha1.ClusterSourceTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterSourceTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clustersourcetemplatesResource, c.ns, clusterSourceTemplate), &v1alpha1.ClusterSourceTemplate{})
-
+		Invokes(testing.NewRootUpdateAction(clustersourcetemplatesResource, clusterSourceTemplate), &v1alpha1.ClusterSourceTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,8 +99,7 @@ func (c *FakeClusterSourceTemplates) Update(ctx context.Context, clusterSourceTe
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeClusterSourceTemplates) UpdateStatus(ctx context.Context, clusterSourceTemplate *v1alpha1.ClusterSourceTemplate, opts v1.UpdateOptions) (*v1alpha1.ClusterSourceTemplate, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clustersourcetemplatesResource, "status", c.ns, clusterSourceTemplate), &v1alpha1.ClusterSourceTemplate{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(clustersourcetemplatesResource, "status", clusterSourceTemplate), &v1alpha1.ClusterSourceTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -116,14 +109,13 @@ func (c *FakeClusterSourceTemplates) UpdateStatus(ctx context.Context, clusterSo
 // Delete takes name of the clusterSourceTemplate and deletes it. Returns an error if one occurs.
 func (c *FakeClusterSourceTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clustersourcetemplatesResource, c.ns, name), &v1alpha1.ClusterSourceTemplate{})
-
+		Invokes(testing.NewRootDeleteAction(clustersourcetemplatesResource, name), &v1alpha1.ClusterSourceTemplate{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterSourceTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clustersourcetemplatesResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(clustersourcetemplatesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterSourceTemplateList{})
 	return err
@@ -132,8 +124,7 @@ func (c *FakeClusterSourceTemplates) DeleteCollection(ctx context.Context, opts 
 // Patch applies the patch and returns the patched clusterSourceTemplate.
 func (c *FakeClusterSourceTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterSourceTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clustersourcetemplatesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ClusterSourceTemplate{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clustersourcetemplatesResource, name, pt, data, subresources...), &v1alpha1.ClusterSourceTemplate{})
 	if obj == nil {
 		return nil, err
 	}

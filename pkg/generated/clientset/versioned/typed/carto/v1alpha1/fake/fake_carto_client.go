@@ -27,36 +27,36 @@ type FakeCartoV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeCartoV1alpha1) ClusterConfigTemplates(namespace string) v1alpha1.ClusterConfigTemplateInterface {
-	return &FakeClusterConfigTemplates{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterConfigTemplates() v1alpha1.ClusterConfigTemplateInterface {
+	return &FakeClusterConfigTemplates{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterDeliveries(namespace string) v1alpha1.ClusterDeliveryInterface {
-	return &FakeClusterDeliveries{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterDeliveries() v1alpha1.ClusterDeliveryInterface {
+	return &FakeClusterDeliveries{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterDeploymentTemplates(namespace string) v1alpha1.ClusterDeploymentTemplateInterface {
-	return &FakeClusterDeploymentTemplates{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterDeploymentTemplates() v1alpha1.ClusterDeploymentTemplateInterface {
+	return &FakeClusterDeploymentTemplates{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterImageTemplates(namespace string) v1alpha1.ClusterImageTemplateInterface {
-	return &FakeClusterImageTemplates{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterImageTemplates() v1alpha1.ClusterImageTemplateInterface {
+	return &FakeClusterImageTemplates{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterRunTemplates(namespace string) v1alpha1.ClusterRunTemplateInterface {
-	return &FakeClusterRunTemplates{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterRunTemplates() v1alpha1.ClusterRunTemplateInterface {
+	return &FakeClusterRunTemplates{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterSourceTemplates(namespace string) v1alpha1.ClusterSourceTemplateInterface {
-	return &FakeClusterSourceTemplates{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterSourceTemplates() v1alpha1.ClusterSourceTemplateInterface {
+	return &FakeClusterSourceTemplates{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterSupplyChains(namespace string) v1alpha1.ClusterSupplyChainInterface {
-	return &FakeClusterSupplyChains{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterSupplyChains() v1alpha1.ClusterSupplyChainInterface {
+	return &FakeClusterSupplyChains{c}
 }
 
-func (c *FakeCartoV1alpha1) ClusterTemplates(namespace string) v1alpha1.ClusterTemplateInterface {
-	return &FakeClusterTemplates{c, namespace}
+func (c *FakeCartoV1alpha1) ClusterTemplates() v1alpha1.ClusterTemplateInterface {
+	return &FakeClusterTemplates{c}
 }
 
 func (c *FakeCartoV1alpha1) Deliverables(namespace string) v1alpha1.DeliverableInterface {

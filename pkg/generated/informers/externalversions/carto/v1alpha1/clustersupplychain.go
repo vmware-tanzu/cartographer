@@ -41,33 +41,32 @@ type ClusterSupplyChainInformer interface {
 type clusterSupplyChainInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
-	namespace        string
 }
 
 // NewClusterSupplyChainInformer constructs a new informer for ClusterSupplyChain type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewClusterSupplyChainInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredClusterSupplyChainInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewClusterSupplyChainInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredClusterSupplyChainInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredClusterSupplyChainInformer constructs a new informer for ClusterSupplyChain type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredClusterSupplyChainInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredClusterSupplyChainInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CartoV1alpha1().ClusterSupplyChains(namespace).List(context.TODO(), options)
+				return client.CartoV1alpha1().ClusterSupplyChains().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CartoV1alpha1().ClusterSupplyChains(namespace).Watch(context.TODO(), options)
+				return client.CartoV1alpha1().ClusterSupplyChains().Watch(context.TODO(), options)
 			},
 		},
 		&cartov1alpha1.ClusterSupplyChain{},
@@ -77,7 +76,7 @@ func NewFilteredClusterSupplyChainInformer(client versioned.Interface, namespace
 }
 
 func (f *clusterSupplyChainInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredClusterSupplyChainInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredClusterSupplyChainInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *clusterSupplyChainInformer) Informer() cache.SharedIndexInformer {

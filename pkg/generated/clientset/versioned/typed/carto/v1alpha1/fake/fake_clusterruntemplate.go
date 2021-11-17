@@ -32,7 +32,6 @@ import (
 // FakeClusterRunTemplates implements ClusterRunTemplateInterface
 type FakeClusterRunTemplates struct {
 	Fake *FakeCartoV1alpha1
-	ns   string
 }
 
 var clusterruntemplatesResource = schema.GroupVersionResource{Group: "carto.run", Version: "v1alpha1", Resource: "clusterruntemplates"}
@@ -42,8 +41,7 @@ var clusterruntemplatesKind = schema.GroupVersionKind{Group: "carto.run", Versio
 // Get takes name of the clusterRunTemplate, and returns the corresponding clusterRunTemplate object, and an error if there is any.
 func (c *FakeClusterRunTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterRunTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clusterruntemplatesResource, c.ns, name), &v1alpha1.ClusterRunTemplate{})
-
+		Invokes(testing.NewRootGetAction(clusterruntemplatesResource, name), &v1alpha1.ClusterRunTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeClusterRunTemplates) Get(ctx context.Context, name string, options 
 // List takes label and field selectors, and returns the list of ClusterRunTemplates that match those selectors.
 func (c *FakeClusterRunTemplates) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterRunTemplateList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clusterruntemplatesResource, clusterruntemplatesKind, c.ns, opts), &v1alpha1.ClusterRunTemplateList{})
-
+		Invokes(testing.NewRootListAction(clusterruntemplatesResource, clusterruntemplatesKind, opts), &v1alpha1.ClusterRunTemplateList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeClusterRunTemplates) List(ctx context.Context, opts v1.ListOptions)
 // Watch returns a watch.Interface that watches the requested clusterRunTemplates.
 func (c *FakeClusterRunTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clusterruntemplatesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clusterruntemplatesResource, opts))
 }
 
 // Create takes the representation of a clusterRunTemplate and creates it.  Returns the server's representation of the clusterRunTemplate, and an error, if there is any.
 func (c *FakeClusterRunTemplates) Create(ctx context.Context, clusterRunTemplate *v1alpha1.ClusterRunTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterRunTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clusterruntemplatesResource, c.ns, clusterRunTemplate), &v1alpha1.ClusterRunTemplate{})
-
+		Invokes(testing.NewRootCreateAction(clusterruntemplatesResource, clusterRunTemplate), &v1alpha1.ClusterRunTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeClusterRunTemplates) Create(ctx context.Context, clusterRunTemplate
 // Update takes the representation of a clusterRunTemplate and updates it. Returns the server's representation of the clusterRunTemplate, and an error, if there is any.
 func (c *FakeClusterRunTemplates) Update(ctx context.Context, clusterRunTemplate *v1alpha1.ClusterRunTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterRunTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clusterruntemplatesResource, c.ns, clusterRunTemplate), &v1alpha1.ClusterRunTemplate{})
-
+		Invokes(testing.NewRootUpdateAction(clusterruntemplatesResource, clusterRunTemplate), &v1alpha1.ClusterRunTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -104,14 +98,13 @@ func (c *FakeClusterRunTemplates) Update(ctx context.Context, clusterRunTemplate
 // Delete takes name of the clusterRunTemplate and deletes it. Returns an error if one occurs.
 func (c *FakeClusterRunTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clusterruntemplatesResource, c.ns, name), &v1alpha1.ClusterRunTemplate{})
-
+		Invokes(testing.NewRootDeleteAction(clusterruntemplatesResource, name), &v1alpha1.ClusterRunTemplate{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterRunTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clusterruntemplatesResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(clusterruntemplatesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterRunTemplateList{})
 	return err
@@ -120,8 +113,7 @@ func (c *FakeClusterRunTemplates) DeleteCollection(ctx context.Context, opts v1.
 // Patch applies the patch and returns the patched clusterRunTemplate.
 func (c *FakeClusterRunTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterRunTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clusterruntemplatesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ClusterRunTemplate{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clusterruntemplatesResource, name, pt, data, subresources...), &v1alpha1.ClusterRunTemplate{})
 	if obj == nil {
 		return nil, err
 	}

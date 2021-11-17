@@ -30,8 +30,9 @@ type ClusterImageTemplateLister interface {
 	// List lists all ClusterImageTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterImageTemplate, err error)
-	// ClusterImageTemplates returns an object that can list and get ClusterImageTemplates.
-	ClusterImageTemplates(namespace string) ClusterImageTemplateNamespaceLister
+	// Get retrieves the ClusterImageTemplate from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterImageTemplate, error)
 	ClusterImageTemplateListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterImageTemplateLister) List(selector labels.Selector) (ret []*v1al
 	return ret, err
 }
 
-// ClusterImageTemplates returns an object that can list and get ClusterImageTemplates.
-func (s *clusterImageTemplateLister) ClusterImageTemplates(namespace string) ClusterImageTemplateNamespaceLister {
-	return clusterImageTemplateNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterImageTemplateNamespaceLister helps list and get ClusterImageTemplates.
-// All objects returned here must be treated as read-only.
-type ClusterImageTemplateNamespaceLister interface {
-	// List lists all ClusterImageTemplates in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterImageTemplate, err error)
-	// Get retrieves the ClusterImageTemplate from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterImageTemplate, error)
-	ClusterImageTemplateNamespaceListerExpansion
-}
-
-// clusterImageTemplateNamespaceLister implements the ClusterImageTemplateNamespaceLister
-// interface.
-type clusterImageTemplateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterImageTemplates in the indexer for a given namespace.
-func (s clusterImageTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterImageTemplate, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterImageTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterImageTemplate from the indexer for a given namespace and name.
-func (s clusterImageTemplateNamespaceLister) Get(name string) (*v1alpha1.ClusterImageTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterImageTemplate from the index for a given name.
+func (s *clusterImageTemplateLister) Get(name string) (*v1alpha1.ClusterImageTemplate, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

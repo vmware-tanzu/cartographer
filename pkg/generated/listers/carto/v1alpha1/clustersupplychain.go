@@ -30,8 +30,9 @@ type ClusterSupplyChainLister interface {
 	// List lists all ClusterSupplyChains in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterSupplyChain, err error)
-	// ClusterSupplyChains returns an object that can list and get ClusterSupplyChains.
-	ClusterSupplyChains(namespace string) ClusterSupplyChainNamespaceLister
+	// Get retrieves the ClusterSupplyChain from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterSupplyChain, error)
 	ClusterSupplyChainListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterSupplyChainLister) List(selector labels.Selector) (ret []*v1alph
 	return ret, err
 }
 
-// ClusterSupplyChains returns an object that can list and get ClusterSupplyChains.
-func (s *clusterSupplyChainLister) ClusterSupplyChains(namespace string) ClusterSupplyChainNamespaceLister {
-	return clusterSupplyChainNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterSupplyChainNamespaceLister helps list and get ClusterSupplyChains.
-// All objects returned here must be treated as read-only.
-type ClusterSupplyChainNamespaceLister interface {
-	// List lists all ClusterSupplyChains in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterSupplyChain, err error)
-	// Get retrieves the ClusterSupplyChain from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterSupplyChain, error)
-	ClusterSupplyChainNamespaceListerExpansion
-}
-
-// clusterSupplyChainNamespaceLister implements the ClusterSupplyChainNamespaceLister
-// interface.
-type clusterSupplyChainNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterSupplyChains in the indexer for a given namespace.
-func (s clusterSupplyChainNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterSupplyChain, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterSupplyChain))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterSupplyChain from the indexer for a given namespace and name.
-func (s clusterSupplyChainNamespaceLister) Get(name string) (*v1alpha1.ClusterSupplyChain, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterSupplyChain from the index for a given name.
+func (s *clusterSupplyChainLister) Get(name string) (*v1alpha1.ClusterSupplyChain, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

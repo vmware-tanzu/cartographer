@@ -30,8 +30,9 @@ type ClusterTemplateLister interface {
 	// List lists all ClusterTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterTemplate, err error)
-	// ClusterTemplates returns an object that can list and get ClusterTemplates.
-	ClusterTemplates(namespace string) ClusterTemplateNamespaceLister
+	// Get retrieves the ClusterTemplate from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterTemplate, error)
 	ClusterTemplateListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterTemplateLister) List(selector labels.Selector) (ret []*v1alpha1.
 	return ret, err
 }
 
-// ClusterTemplates returns an object that can list and get ClusterTemplates.
-func (s *clusterTemplateLister) ClusterTemplates(namespace string) ClusterTemplateNamespaceLister {
-	return clusterTemplateNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterTemplateNamespaceLister helps list and get ClusterTemplates.
-// All objects returned here must be treated as read-only.
-type ClusterTemplateNamespaceLister interface {
-	// List lists all ClusterTemplates in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterTemplate, err error)
-	// Get retrieves the ClusterTemplate from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterTemplate, error)
-	ClusterTemplateNamespaceListerExpansion
-}
-
-// clusterTemplateNamespaceLister implements the ClusterTemplateNamespaceLister
-// interface.
-type clusterTemplateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterTemplates in the indexer for a given namespace.
-func (s clusterTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterTemplate, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterTemplate from the indexer for a given namespace and name.
-func (s clusterTemplateNamespaceLister) Get(name string) (*v1alpha1.ClusterTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterTemplate from the index for a given name.
+func (s *clusterTemplateLister) Get(name string) (*v1alpha1.ClusterTemplate, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

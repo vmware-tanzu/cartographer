@@ -32,7 +32,6 @@ import (
 // FakeClusterDeliveries implements ClusterDeliveryInterface
 type FakeClusterDeliveries struct {
 	Fake *FakeCartoV1alpha1
-	ns   string
 }
 
 var clusterdeliveriesResource = schema.GroupVersionResource{Group: "carto.run", Version: "v1alpha1", Resource: "clusterdeliveries"}
@@ -42,8 +41,7 @@ var clusterdeliveriesKind = schema.GroupVersionKind{Group: "carto.run", Version:
 // Get takes name of the clusterDelivery, and returns the corresponding clusterDelivery object, and an error if there is any.
 func (c *FakeClusterDeliveries) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clusterdeliveriesResource, c.ns, name), &v1alpha1.ClusterDelivery{})
-
+		Invokes(testing.NewRootGetAction(clusterdeliveriesResource, name), &v1alpha1.ClusterDelivery{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeClusterDeliveries) Get(ctx context.Context, name string, options v1
 // List takes label and field selectors, and returns the list of ClusterDeliveries that match those selectors.
 func (c *FakeClusterDeliveries) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterDeliveryList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clusterdeliveriesResource, clusterdeliveriesKind, c.ns, opts), &v1alpha1.ClusterDeliveryList{})
-
+		Invokes(testing.NewRootListAction(clusterdeliveriesResource, clusterdeliveriesKind, opts), &v1alpha1.ClusterDeliveryList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeClusterDeliveries) List(ctx context.Context, opts v1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested clusterDeliveries.
 func (c *FakeClusterDeliveries) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clusterdeliveriesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clusterdeliveriesResource, opts))
 }
 
 // Create takes the representation of a clusterDelivery and creates it.  Returns the server's representation of the clusterDelivery, and an error, if there is any.
 func (c *FakeClusterDeliveries) Create(ctx context.Context, clusterDelivery *v1alpha1.ClusterDelivery, opts v1.CreateOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clusterdeliveriesResource, c.ns, clusterDelivery), &v1alpha1.ClusterDelivery{})
-
+		Invokes(testing.NewRootCreateAction(clusterdeliveriesResource, clusterDelivery), &v1alpha1.ClusterDelivery{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeClusterDeliveries) Create(ctx context.Context, clusterDelivery *v1a
 // Update takes the representation of a clusterDelivery and updates it. Returns the server's representation of the clusterDelivery, and an error, if there is any.
 func (c *FakeClusterDeliveries) Update(ctx context.Context, clusterDelivery *v1alpha1.ClusterDelivery, opts v1.UpdateOptions) (result *v1alpha1.ClusterDelivery, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clusterdeliveriesResource, c.ns, clusterDelivery), &v1alpha1.ClusterDelivery{})
-
+		Invokes(testing.NewRootUpdateAction(clusterdeliveriesResource, clusterDelivery), &v1alpha1.ClusterDelivery{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,8 +99,7 @@ func (c *FakeClusterDeliveries) Update(ctx context.Context, clusterDelivery *v1a
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeClusterDeliveries) UpdateStatus(ctx context.Context, clusterDelivery *v1alpha1.ClusterDelivery, opts v1.UpdateOptions) (*v1alpha1.ClusterDelivery, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clusterdeliveriesResource, "status", c.ns, clusterDelivery), &v1alpha1.ClusterDelivery{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(clusterdeliveriesResource, "status", clusterDelivery), &v1alpha1.ClusterDelivery{})
 	if obj == nil {
 		return nil, err
 	}
@@ -116,14 +109,13 @@ func (c *FakeClusterDeliveries) UpdateStatus(ctx context.Context, clusterDeliver
 // Delete takes name of the clusterDelivery and deletes it. Returns an error if one occurs.
 func (c *FakeClusterDeliveries) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clusterdeliveriesResource, c.ns, name), &v1alpha1.ClusterDelivery{})
-
+		Invokes(testing.NewRootDeleteAction(clusterdeliveriesResource, name), &v1alpha1.ClusterDelivery{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterDeliveries) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clusterdeliveriesResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(clusterdeliveriesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterDeliveryList{})
 	return err
@@ -132,8 +124,7 @@ func (c *FakeClusterDeliveries) DeleteCollection(ctx context.Context, opts v1.De
 // Patch applies the patch and returns the patched clusterDelivery.
 func (c *FakeClusterDeliveries) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterDelivery, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clusterdeliveriesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ClusterDelivery{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clusterdeliveriesResource, name, pt, data, subresources...), &v1alpha1.ClusterDelivery{})
 	if obj == nil {
 		return nil, err
 	}

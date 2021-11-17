@@ -30,8 +30,9 @@ type ClusterDeliveryLister interface {
 	// List lists all ClusterDeliveries in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterDelivery, err error)
-	// ClusterDeliveries returns an object that can list and get ClusterDeliveries.
-	ClusterDeliveries(namespace string) ClusterDeliveryNamespaceLister
+	// Get retrieves the ClusterDelivery from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterDelivery, error)
 	ClusterDeliveryListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterDeliveryLister) List(selector labels.Selector) (ret []*v1alpha1.
 	return ret, err
 }
 
-// ClusterDeliveries returns an object that can list and get ClusterDeliveries.
-func (s *clusterDeliveryLister) ClusterDeliveries(namespace string) ClusterDeliveryNamespaceLister {
-	return clusterDeliveryNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterDeliveryNamespaceLister helps list and get ClusterDeliveries.
-// All objects returned here must be treated as read-only.
-type ClusterDeliveryNamespaceLister interface {
-	// List lists all ClusterDeliveries in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterDelivery, err error)
-	// Get retrieves the ClusterDelivery from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterDelivery, error)
-	ClusterDeliveryNamespaceListerExpansion
-}
-
-// clusterDeliveryNamespaceLister implements the ClusterDeliveryNamespaceLister
-// interface.
-type clusterDeliveryNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterDeliveries in the indexer for a given namespace.
-func (s clusterDeliveryNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterDelivery, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterDelivery))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterDelivery from the indexer for a given namespace and name.
-func (s clusterDeliveryNamespaceLister) Get(name string) (*v1alpha1.ClusterDelivery, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterDelivery from the index for a given name.
+func (s *clusterDeliveryLister) Get(name string) (*v1alpha1.ClusterDelivery, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

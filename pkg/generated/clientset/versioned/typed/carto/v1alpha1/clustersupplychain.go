@@ -32,7 +32,7 @@ import (
 // ClusterSupplyChainsGetter has a method to return a ClusterSupplyChainInterface.
 // A group's client should implement this interface.
 type ClusterSupplyChainsGetter interface {
-	ClusterSupplyChains(namespace string) ClusterSupplyChainInterface
+	ClusterSupplyChains() ClusterSupplyChainInterface
 }
 
 // ClusterSupplyChainInterface has methods to work with ClusterSupplyChain resources.
@@ -52,14 +52,12 @@ type ClusterSupplyChainInterface interface {
 // clusterSupplyChains implements ClusterSupplyChainInterface
 type clusterSupplyChains struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterSupplyChains returns a ClusterSupplyChains
-func newClusterSupplyChains(c *CartoV1alpha1Client, namespace string) *clusterSupplyChains {
+func newClusterSupplyChains(c *CartoV1alpha1Client) *clusterSupplyChains {
 	return &clusterSupplyChains{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -67,7 +65,6 @@ func newClusterSupplyChains(c *CartoV1alpha1Client, namespace string) *clusterSu
 func (c *clusterSupplyChains) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	result = &v1alpha1.ClusterSupplyChain{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -84,7 +81,6 @@ func (c *clusterSupplyChains) List(ctx context.Context, opts v1.ListOptions) (re
 	}
 	result = &v1alpha1.ClusterSupplyChainList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -101,7 +97,6 @@ func (c *clusterSupplyChains) Watch(ctx context.Context, opts v1.ListOptions) (w
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -112,7 +107,6 @@ func (c *clusterSupplyChains) Watch(ctx context.Context, opts v1.ListOptions) (w
 func (c *clusterSupplyChains) Create(ctx context.Context, clusterSupplyChain *v1alpha1.ClusterSupplyChain, opts v1.CreateOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	result = &v1alpha1.ClusterSupplyChain{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterSupplyChain).
@@ -125,7 +119,6 @@ func (c *clusterSupplyChains) Create(ctx context.Context, clusterSupplyChain *v1
 func (c *clusterSupplyChains) Update(ctx context.Context, clusterSupplyChain *v1alpha1.ClusterSupplyChain, opts v1.UpdateOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	result = &v1alpha1.ClusterSupplyChain{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		Name(clusterSupplyChain.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -140,7 +133,6 @@ func (c *clusterSupplyChains) Update(ctx context.Context, clusterSupplyChain *v1
 func (c *clusterSupplyChains) UpdateStatus(ctx context.Context, clusterSupplyChain *v1alpha1.ClusterSupplyChain, opts v1.UpdateOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	result = &v1alpha1.ClusterSupplyChain{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		Name(clusterSupplyChain.Name).
 		SubResource("status").
@@ -154,7 +146,6 @@ func (c *clusterSupplyChains) UpdateStatus(ctx context.Context, clusterSupplyCha
 // Delete takes name of the clusterSupplyChain and deletes it. Returns an error if one occurs.
 func (c *clusterSupplyChains) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		Name(name).
 		Body(&opts).
@@ -169,7 +160,6 @@ func (c *clusterSupplyChains) DeleteCollection(ctx context.Context, opts v1.Dele
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -182,7 +172,6 @@ func (c *clusterSupplyChains) DeleteCollection(ctx context.Context, opts v1.Dele
 func (c *clusterSupplyChains) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterSupplyChain, err error) {
 	result = &v1alpha1.ClusterSupplyChain{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clustersupplychains").
 		Name(name).
 		SubResource(subresources...).

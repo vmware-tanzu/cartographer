@@ -32,7 +32,7 @@ import (
 // ClusterDeploymentTemplatesGetter has a method to return a ClusterDeploymentTemplateInterface.
 // A group's client should implement this interface.
 type ClusterDeploymentTemplatesGetter interface {
-	ClusterDeploymentTemplates(namespace string) ClusterDeploymentTemplateInterface
+	ClusterDeploymentTemplates() ClusterDeploymentTemplateInterface
 }
 
 // ClusterDeploymentTemplateInterface has methods to work with ClusterDeploymentTemplate resources.
@@ -52,14 +52,12 @@ type ClusterDeploymentTemplateInterface interface {
 // clusterDeploymentTemplates implements ClusterDeploymentTemplateInterface
 type clusterDeploymentTemplates struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterDeploymentTemplates returns a ClusterDeploymentTemplates
-func newClusterDeploymentTemplates(c *CartoV1alpha1Client, namespace string) *clusterDeploymentTemplates {
+func newClusterDeploymentTemplates(c *CartoV1alpha1Client) *clusterDeploymentTemplates {
 	return &clusterDeploymentTemplates{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -67,7 +65,6 @@ func newClusterDeploymentTemplates(c *CartoV1alpha1Client, namespace string) *cl
 func (c *clusterDeploymentTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	result = &v1alpha1.ClusterDeploymentTemplate{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -84,7 +81,6 @@ func (c *clusterDeploymentTemplates) List(ctx context.Context, opts v1.ListOptio
 	}
 	result = &v1alpha1.ClusterDeploymentTemplateList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -101,7 +97,6 @@ func (c *clusterDeploymentTemplates) Watch(ctx context.Context, opts v1.ListOpti
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -112,7 +107,6 @@ func (c *clusterDeploymentTemplates) Watch(ctx context.Context, opts v1.ListOpti
 func (c *clusterDeploymentTemplates) Create(ctx context.Context, clusterDeploymentTemplate *v1alpha1.ClusterDeploymentTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	result = &v1alpha1.ClusterDeploymentTemplate{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterDeploymentTemplate).
@@ -125,7 +119,6 @@ func (c *clusterDeploymentTemplates) Create(ctx context.Context, clusterDeployme
 func (c *clusterDeploymentTemplates) Update(ctx context.Context, clusterDeploymentTemplate *v1alpha1.ClusterDeploymentTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	result = &v1alpha1.ClusterDeploymentTemplate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		Name(clusterDeploymentTemplate.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -140,7 +133,6 @@ func (c *clusterDeploymentTemplates) Update(ctx context.Context, clusterDeployme
 func (c *clusterDeploymentTemplates) UpdateStatus(ctx context.Context, clusterDeploymentTemplate *v1alpha1.ClusterDeploymentTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	result = &v1alpha1.ClusterDeploymentTemplate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		Name(clusterDeploymentTemplate.Name).
 		SubResource("status").
@@ -154,7 +146,6 @@ func (c *clusterDeploymentTemplates) UpdateStatus(ctx context.Context, clusterDe
 // Delete takes name of the clusterDeploymentTemplate and deletes it. Returns an error if one occurs.
 func (c *clusterDeploymentTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		Name(name).
 		Body(&opts).
@@ -169,7 +160,6 @@ func (c *clusterDeploymentTemplates) DeleteCollection(ctx context.Context, opts 
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -182,7 +172,6 @@ func (c *clusterDeploymentTemplates) DeleteCollection(ctx context.Context, opts 
 func (c *clusterDeploymentTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	result = &v1alpha1.ClusterDeploymentTemplate{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clusterdeploymenttemplates").
 		Name(name).
 		SubResource(subresources...).

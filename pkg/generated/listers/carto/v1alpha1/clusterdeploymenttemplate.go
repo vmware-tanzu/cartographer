@@ -30,8 +30,9 @@ type ClusterDeploymentTemplateLister interface {
 	// List lists all ClusterDeploymentTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterDeploymentTemplate, err error)
-	// ClusterDeploymentTemplates returns an object that can list and get ClusterDeploymentTemplates.
-	ClusterDeploymentTemplates(namespace string) ClusterDeploymentTemplateNamespaceLister
+	// Get retrieves the ClusterDeploymentTemplate from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterDeploymentTemplate, error)
 	ClusterDeploymentTemplateListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterDeploymentTemplateLister) List(selector labels.Selector) (ret []
 	return ret, err
 }
 
-// ClusterDeploymentTemplates returns an object that can list and get ClusterDeploymentTemplates.
-func (s *clusterDeploymentTemplateLister) ClusterDeploymentTemplates(namespace string) ClusterDeploymentTemplateNamespaceLister {
-	return clusterDeploymentTemplateNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterDeploymentTemplateNamespaceLister helps list and get ClusterDeploymentTemplates.
-// All objects returned here must be treated as read-only.
-type ClusterDeploymentTemplateNamespaceLister interface {
-	// List lists all ClusterDeploymentTemplates in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterDeploymentTemplate, err error)
-	// Get retrieves the ClusterDeploymentTemplate from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterDeploymentTemplate, error)
-	ClusterDeploymentTemplateNamespaceListerExpansion
-}
-
-// clusterDeploymentTemplateNamespaceLister implements the ClusterDeploymentTemplateNamespaceLister
-// interface.
-type clusterDeploymentTemplateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterDeploymentTemplates in the indexer for a given namespace.
-func (s clusterDeploymentTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterDeploymentTemplate, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterDeploymentTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterDeploymentTemplate from the indexer for a given namespace and name.
-func (s clusterDeploymentTemplateNamespaceLister) Get(name string) (*v1alpha1.ClusterDeploymentTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterDeploymentTemplate from the index for a given name.
+func (s *clusterDeploymentTemplateLister) Get(name string) (*v1alpha1.ClusterDeploymentTemplate, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

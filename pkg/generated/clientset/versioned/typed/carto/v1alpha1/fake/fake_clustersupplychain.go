@@ -32,7 +32,6 @@ import (
 // FakeClusterSupplyChains implements ClusterSupplyChainInterface
 type FakeClusterSupplyChains struct {
 	Fake *FakeCartoV1alpha1
-	ns   string
 }
 
 var clustersupplychainsResource = schema.GroupVersionResource{Group: "carto.run", Version: "v1alpha1", Resource: "clustersupplychains"}
@@ -42,8 +41,7 @@ var clustersupplychainsKind = schema.GroupVersionKind{Group: "carto.run", Versio
 // Get takes name of the clusterSupplyChain, and returns the corresponding clusterSupplyChain object, and an error if there is any.
 func (c *FakeClusterSupplyChains) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clustersupplychainsResource, c.ns, name), &v1alpha1.ClusterSupplyChain{})
-
+		Invokes(testing.NewRootGetAction(clustersupplychainsResource, name), &v1alpha1.ClusterSupplyChain{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeClusterSupplyChains) Get(ctx context.Context, name string, options 
 // List takes label and field selectors, and returns the list of ClusterSupplyChains that match those selectors.
 func (c *FakeClusterSupplyChains) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterSupplyChainList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clustersupplychainsResource, clustersupplychainsKind, c.ns, opts), &v1alpha1.ClusterSupplyChainList{})
-
+		Invokes(testing.NewRootListAction(clustersupplychainsResource, clustersupplychainsKind, opts), &v1alpha1.ClusterSupplyChainList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeClusterSupplyChains) List(ctx context.Context, opts v1.ListOptions)
 // Watch returns a watch.Interface that watches the requested clusterSupplyChains.
 func (c *FakeClusterSupplyChains) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clustersupplychainsResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clustersupplychainsResource, opts))
 }
 
 // Create takes the representation of a clusterSupplyChain and creates it.  Returns the server's representation of the clusterSupplyChain, and an error, if there is any.
 func (c *FakeClusterSupplyChains) Create(ctx context.Context, clusterSupplyChain *v1alpha1.ClusterSupplyChain, opts v1.CreateOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clustersupplychainsResource, c.ns, clusterSupplyChain), &v1alpha1.ClusterSupplyChain{})
-
+		Invokes(testing.NewRootCreateAction(clustersupplychainsResource, clusterSupplyChain), &v1alpha1.ClusterSupplyChain{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeClusterSupplyChains) Create(ctx context.Context, clusterSupplyChain
 // Update takes the representation of a clusterSupplyChain and updates it. Returns the server's representation of the clusterSupplyChain, and an error, if there is any.
 func (c *FakeClusterSupplyChains) Update(ctx context.Context, clusterSupplyChain *v1alpha1.ClusterSupplyChain, opts v1.UpdateOptions) (result *v1alpha1.ClusterSupplyChain, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clustersupplychainsResource, c.ns, clusterSupplyChain), &v1alpha1.ClusterSupplyChain{})
-
+		Invokes(testing.NewRootUpdateAction(clustersupplychainsResource, clusterSupplyChain), &v1alpha1.ClusterSupplyChain{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,8 +99,7 @@ func (c *FakeClusterSupplyChains) Update(ctx context.Context, clusterSupplyChain
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeClusterSupplyChains) UpdateStatus(ctx context.Context, clusterSupplyChain *v1alpha1.ClusterSupplyChain, opts v1.UpdateOptions) (*v1alpha1.ClusterSupplyChain, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clustersupplychainsResource, "status", c.ns, clusterSupplyChain), &v1alpha1.ClusterSupplyChain{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(clustersupplychainsResource, "status", clusterSupplyChain), &v1alpha1.ClusterSupplyChain{})
 	if obj == nil {
 		return nil, err
 	}
@@ -116,14 +109,13 @@ func (c *FakeClusterSupplyChains) UpdateStatus(ctx context.Context, clusterSuppl
 // Delete takes name of the clusterSupplyChain and deletes it. Returns an error if one occurs.
 func (c *FakeClusterSupplyChains) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clustersupplychainsResource, c.ns, name), &v1alpha1.ClusterSupplyChain{})
-
+		Invokes(testing.NewRootDeleteAction(clustersupplychainsResource, name), &v1alpha1.ClusterSupplyChain{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterSupplyChains) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clustersupplychainsResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(clustersupplychainsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterSupplyChainList{})
 	return err
@@ -132,8 +124,7 @@ func (c *FakeClusterSupplyChains) DeleteCollection(ctx context.Context, opts v1.
 // Patch applies the patch and returns the patched clusterSupplyChain.
 func (c *FakeClusterSupplyChains) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterSupplyChain, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clustersupplychainsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ClusterSupplyChain{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clustersupplychainsResource, name, pt, data, subresources...), &v1alpha1.ClusterSupplyChain{})
 	if obj == nil {
 		return nil, err
 	}

@@ -30,8 +30,9 @@ type ClusterRunTemplateLister interface {
 	// List lists all ClusterRunTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterRunTemplate, err error)
-	// ClusterRunTemplates returns an object that can list and get ClusterRunTemplates.
-	ClusterRunTemplates(namespace string) ClusterRunTemplateNamespaceLister
+	// Get retrieves the ClusterRunTemplate from the index for a given name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ClusterRunTemplate, error)
 	ClusterRunTemplateListerExpansion
 }
 
@@ -53,41 +54,9 @@ func (s *clusterRunTemplateLister) List(selector labels.Selector) (ret []*v1alph
 	return ret, err
 }
 
-// ClusterRunTemplates returns an object that can list and get ClusterRunTemplates.
-func (s *clusterRunTemplateLister) ClusterRunTemplates(namespace string) ClusterRunTemplateNamespaceLister {
-	return clusterRunTemplateNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// ClusterRunTemplateNamespaceLister helps list and get ClusterRunTemplates.
-// All objects returned here must be treated as read-only.
-type ClusterRunTemplateNamespaceLister interface {
-	// List lists all ClusterRunTemplates in the indexer for a given namespace.
-	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ClusterRunTemplate, err error)
-	// Get retrieves the ClusterRunTemplate from the indexer for a given namespace and name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ClusterRunTemplate, error)
-	ClusterRunTemplateNamespaceListerExpansion
-}
-
-// clusterRunTemplateNamespaceLister implements the ClusterRunTemplateNamespaceLister
-// interface.
-type clusterRunTemplateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ClusterRunTemplates in the indexer for a given namespace.
-func (s clusterRunTemplateNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterRunTemplate, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterRunTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterRunTemplate from the indexer for a given namespace and name.
-func (s clusterRunTemplateNamespaceLister) Get(name string) (*v1alpha1.ClusterRunTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the ClusterRunTemplate from the index for a given name.
+func (s *clusterRunTemplateLister) Get(name string) (*v1alpha1.ClusterRunTemplate, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

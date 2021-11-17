@@ -32,7 +32,6 @@ import (
 // FakeClusterDeploymentTemplates implements ClusterDeploymentTemplateInterface
 type FakeClusterDeploymentTemplates struct {
 	Fake *FakeCartoV1alpha1
-	ns   string
 }
 
 var clusterdeploymenttemplatesResource = schema.GroupVersionResource{Group: "carto.run", Version: "v1alpha1", Resource: "clusterdeploymenttemplates"}
@@ -42,8 +41,7 @@ var clusterdeploymenttemplatesKind = schema.GroupVersionKind{Group: "carto.run",
 // Get takes name of the clusterDeploymentTemplate, and returns the corresponding clusterDeploymentTemplate object, and an error if there is any.
 func (c *FakeClusterDeploymentTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(clusterdeploymenttemplatesResource, c.ns, name), &v1alpha1.ClusterDeploymentTemplate{})
-
+		Invokes(testing.NewRootGetAction(clusterdeploymenttemplatesResource, name), &v1alpha1.ClusterDeploymentTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -53,8 +51,7 @@ func (c *FakeClusterDeploymentTemplates) Get(ctx context.Context, name string, o
 // List takes label and field selectors, and returns the list of ClusterDeploymentTemplates that match those selectors.
 func (c *FakeClusterDeploymentTemplates) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterDeploymentTemplateList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(clusterdeploymenttemplatesResource, clusterdeploymenttemplatesKind, c.ns, opts), &v1alpha1.ClusterDeploymentTemplateList{})
-
+		Invokes(testing.NewRootListAction(clusterdeploymenttemplatesResource, clusterdeploymenttemplatesKind, opts), &v1alpha1.ClusterDeploymentTemplateList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -75,15 +72,13 @@ func (c *FakeClusterDeploymentTemplates) List(ctx context.Context, opts v1.ListO
 // Watch returns a watch.Interface that watches the requested clusterDeploymentTemplates.
 func (c *FakeClusterDeploymentTemplates) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(clusterdeploymenttemplatesResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(clusterdeploymenttemplatesResource, opts))
 }
 
 // Create takes the representation of a clusterDeploymentTemplate and creates it.  Returns the server's representation of the clusterDeploymentTemplate, and an error, if there is any.
 func (c *FakeClusterDeploymentTemplates) Create(ctx context.Context, clusterDeploymentTemplate *v1alpha1.ClusterDeploymentTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(clusterdeploymenttemplatesResource, c.ns, clusterDeploymentTemplate), &v1alpha1.ClusterDeploymentTemplate{})
-
+		Invokes(testing.NewRootCreateAction(clusterdeploymenttemplatesResource, clusterDeploymentTemplate), &v1alpha1.ClusterDeploymentTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -93,8 +88,7 @@ func (c *FakeClusterDeploymentTemplates) Create(ctx context.Context, clusterDepl
 // Update takes the representation of a clusterDeploymentTemplate and updates it. Returns the server's representation of the clusterDeploymentTemplate, and an error, if there is any.
 func (c *FakeClusterDeploymentTemplates) Update(ctx context.Context, clusterDeploymentTemplate *v1alpha1.ClusterDeploymentTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(clusterdeploymenttemplatesResource, c.ns, clusterDeploymentTemplate), &v1alpha1.ClusterDeploymentTemplate{})
-
+		Invokes(testing.NewRootUpdateAction(clusterdeploymenttemplatesResource, clusterDeploymentTemplate), &v1alpha1.ClusterDeploymentTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -105,8 +99,7 @@ func (c *FakeClusterDeploymentTemplates) Update(ctx context.Context, clusterDepl
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeClusterDeploymentTemplates) UpdateStatus(ctx context.Context, clusterDeploymentTemplate *v1alpha1.ClusterDeploymentTemplate, opts v1.UpdateOptions) (*v1alpha1.ClusterDeploymentTemplate, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(clusterdeploymenttemplatesResource, "status", c.ns, clusterDeploymentTemplate), &v1alpha1.ClusterDeploymentTemplate{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(clusterdeploymenttemplatesResource, "status", clusterDeploymentTemplate), &v1alpha1.ClusterDeploymentTemplate{})
 	if obj == nil {
 		return nil, err
 	}
@@ -116,14 +109,13 @@ func (c *FakeClusterDeploymentTemplates) UpdateStatus(ctx context.Context, clust
 // Delete takes name of the clusterDeploymentTemplate and deletes it. Returns an error if one occurs.
 func (c *FakeClusterDeploymentTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clusterdeploymenttemplatesResource, c.ns, name), &v1alpha1.ClusterDeploymentTemplate{})
-
+		Invokes(testing.NewRootDeleteAction(clusterdeploymenttemplatesResource, name), &v1alpha1.ClusterDeploymentTemplate{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterDeploymentTemplates) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(clusterdeploymenttemplatesResource, c.ns, listOpts)
+	action := testing.NewRootDeleteCollectionAction(clusterdeploymenttemplatesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterDeploymentTemplateList{})
 	return err
@@ -132,8 +124,7 @@ func (c *FakeClusterDeploymentTemplates) DeleteCollection(ctx context.Context, o
 // Patch applies the patch and returns the patched clusterDeploymentTemplate.
 func (c *FakeClusterDeploymentTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterDeploymentTemplate, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(clusterdeploymenttemplatesResource, c.ns, name, pt, data, subresources...), &v1alpha1.ClusterDeploymentTemplate{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(clusterdeploymenttemplatesResource, name, pt, data, subresources...), &v1alpha1.ClusterDeploymentTemplate{})
 	if obj == nil {
 		return nil, err
 	}

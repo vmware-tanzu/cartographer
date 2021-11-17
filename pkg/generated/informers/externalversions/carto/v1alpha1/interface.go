@@ -60,42 +60,42 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // ClusterConfigTemplates returns a ClusterConfigTemplateInformer.
 func (v *version) ClusterConfigTemplates() ClusterConfigTemplateInformer {
-	return &clusterConfigTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterConfigTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterDeliveries returns a ClusterDeliveryInformer.
 func (v *version) ClusterDeliveries() ClusterDeliveryInformer {
-	return &clusterDeliveryInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterDeliveryInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterDeploymentTemplates returns a ClusterDeploymentTemplateInformer.
 func (v *version) ClusterDeploymentTemplates() ClusterDeploymentTemplateInformer {
-	return &clusterDeploymentTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterDeploymentTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterImageTemplates returns a ClusterImageTemplateInformer.
 func (v *version) ClusterImageTemplates() ClusterImageTemplateInformer {
-	return &clusterImageTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterImageTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterRunTemplates returns a ClusterRunTemplateInformer.
 func (v *version) ClusterRunTemplates() ClusterRunTemplateInformer {
-	return &clusterRunTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterRunTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterSourceTemplates returns a ClusterSourceTemplateInformer.
 func (v *version) ClusterSourceTemplates() ClusterSourceTemplateInformer {
-	return &clusterSourceTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterSourceTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterSupplyChains returns a ClusterSupplyChainInformer.
 func (v *version) ClusterSupplyChains() ClusterSupplyChainInformer {
-	return &clusterSupplyChainInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterSupplyChainInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ClusterTemplates returns a ClusterTemplateInformer.
 func (v *version) ClusterTemplates() ClusterTemplateInformer {
-	return &clusterTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Deliverables returns a DeliverableInformer.

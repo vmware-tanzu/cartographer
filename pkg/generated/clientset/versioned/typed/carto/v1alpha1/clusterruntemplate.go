@@ -32,7 +32,7 @@ import (
 // ClusterRunTemplatesGetter has a method to return a ClusterRunTemplateInterface.
 // A group's client should implement this interface.
 type ClusterRunTemplatesGetter interface {
-	ClusterRunTemplates(namespace string) ClusterRunTemplateInterface
+	ClusterRunTemplates() ClusterRunTemplateInterface
 }
 
 // ClusterRunTemplateInterface has methods to work with ClusterRunTemplate resources.
@@ -51,14 +51,12 @@ type ClusterRunTemplateInterface interface {
 // clusterRunTemplates implements ClusterRunTemplateInterface
 type clusterRunTemplates struct {
 	client rest.Interface
-	ns     string
 }
 
 // newClusterRunTemplates returns a ClusterRunTemplates
-func newClusterRunTemplates(c *CartoV1alpha1Client, namespace string) *clusterRunTemplates {
+func newClusterRunTemplates(c *CartoV1alpha1Client) *clusterRunTemplates {
 	return &clusterRunTemplates{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -66,7 +64,6 @@ func newClusterRunTemplates(c *CartoV1alpha1Client, namespace string) *clusterRu
 func (c *clusterRunTemplates) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterRunTemplate, err error) {
 	result = &v1alpha1.ClusterRunTemplate{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -83,7 +80,6 @@ func (c *clusterRunTemplates) List(ctx context.Context, opts v1.ListOptions) (re
 	}
 	result = &v1alpha1.ClusterRunTemplateList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -100,7 +96,6 @@ func (c *clusterRunTemplates) Watch(ctx context.Context, opts v1.ListOptions) (w
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -111,7 +106,6 @@ func (c *clusterRunTemplates) Watch(ctx context.Context, opts v1.ListOptions) (w
 func (c *clusterRunTemplates) Create(ctx context.Context, clusterRunTemplate *v1alpha1.ClusterRunTemplate, opts v1.CreateOptions) (result *v1alpha1.ClusterRunTemplate, err error) {
 	result = &v1alpha1.ClusterRunTemplate{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterRunTemplate).
@@ -124,7 +118,6 @@ func (c *clusterRunTemplates) Create(ctx context.Context, clusterRunTemplate *v1
 func (c *clusterRunTemplates) Update(ctx context.Context, clusterRunTemplate *v1alpha1.ClusterRunTemplate, opts v1.UpdateOptions) (result *v1alpha1.ClusterRunTemplate, err error) {
 	result = &v1alpha1.ClusterRunTemplate{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		Name(clusterRunTemplate.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -137,7 +130,6 @@ func (c *clusterRunTemplates) Update(ctx context.Context, clusterRunTemplate *v1
 // Delete takes name of the clusterRunTemplate and deletes it. Returns an error if one occurs.
 func (c *clusterRunTemplates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		Name(name).
 		Body(&opts).
@@ -152,7 +144,6 @@ func (c *clusterRunTemplates) DeleteCollection(ctx context.Context, opts v1.Dele
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -165,7 +156,6 @@ func (c *clusterRunTemplates) DeleteCollection(ctx context.Context, opts v1.Dele
 func (c *clusterRunTemplates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterRunTemplate, err error) {
 	result = &v1alpha1.ClusterRunTemplate{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("clusterruntemplates").
 		Name(name).
 		SubResource(subresources...).
