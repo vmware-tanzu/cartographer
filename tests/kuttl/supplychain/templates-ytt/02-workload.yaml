@@ -18,7 +18,7 @@ kind: Workload
 metadata:
   name: petclinic
   labels:
-    integration-test: "templates-consume-output-of-resources"
+    integration-test: "templates-templates-ytt"
 spec:
   source:
     git:
