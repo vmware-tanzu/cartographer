@@ -28,6 +28,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -68,16 +69,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
-		return r.completeReconciliation(deliverable, fmt.Errorf("get object gvk: %w", err))
+		return r.completeReconciliation(deliverable, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
 
 	deliverable.Status.DeliveryRef.Kind = deliveryGVK.Kind
 	deliverable.Status.DeliveryRef.Name = delivery.Name
 
-	err = r.checkDeliveryReadiness(delivery)
-	if err != nil {
+	if !r.isDeliveryReady(delivery) {
 		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
-		return r.completeReconciliation(deliverable, err)
+		return r.completeReconciliation(deliverable, fmt.Errorf("delivery is not in ready state"))
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
@@ -86,10 +86,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		switch typedErr := err.(type) {
 		case realizer.GetDeliveryClusterTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
 			switch typedErr.Err.(type) {
 			case templates.ObservedGenerationError:
@@ -105,21 +107,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
+			err = controller.NewUnhandledError(err)
 		}
 	} else {
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
+	var trackingError error
 	if len(stampedObjects) > 0 {
 		for _, stampedObject := range stampedObjects {
-			err = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
-			if err != nil {
+			trackingError = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
+			if trackingError != nil {
 				r.logger.Error(err, "dynamic tracker watch")
+				err = controller.NewUnhandledError(trackingError)
 			}
 		}
 	}
 
-	return r.completeReconciliation(deliverable, nil)
+	return r.completeReconciliation(deliverable, err)
 }
 
 func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
@@ -131,26 +136,23 @@ func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, e
 		deliverable.Status.ObservedGeneration = deliverable.Generation
 		updateErr = r.Repo.StatusUpdate(deliverable)
 		if updateErr != nil {
-			r.logger.Error(updateErr, "update error")
-			if err == nil {
-				return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
-			}
+			return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
 		}
 	}
 
 	if err != nil {
-		return ctrl.Result{}, err
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) checkDeliveryReadiness(delivery *v1alpha1.ClusterDelivery) error {
+func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
-	if readyCondition.Status == "True" {
-		return nil
-	}
-	return fmt.Errorf("delivery is not in ready condition")
+	return readyCondition.Status == "True"
 }
 
 func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condition {
@@ -170,8 +172,7 @@ func (r *Reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverab
 
 	deliveries, err := r.Repo.GetDeliveriesForDeliverable(deliverable)
 	if err != nil {
-		r.conditionManager.AddPositive(DeliveryNotFoundCondition(deliverable.Labels))
-		return nil, fmt.Errorf("get delivery by label: %w", err)
+		return nil, controller.NewUnhandledError(fmt.Errorf("get delivery by label: %w", err))
 	}
 
 	if len(deliveries) == 0 {
