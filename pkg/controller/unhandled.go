@@ -18,6 +18,9 @@ import (
 	"errors"
 )
 
+// NewUnhandledError should be used if the reconciler should return an error and requeue.
+// Otherwise, the reconciler assumes the error is handled, will not requeue, and wait
+// until it is called to reconcile again via informers.
 func NewUnhandledError(err error) error {
 	return unhandledError{e: err}
 }
