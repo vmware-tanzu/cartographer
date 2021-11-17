@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -158,15 +157,9 @@ var _ = Describe("delivery reconciler", func() {
 				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
-			It("returns an error", func() {
+			It("returns an error and requeues", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 				Expect(err).To(MatchError(ContainSubstring("getting templates is hard")))
-			})
-
-			It("does not requeue", func() {
-				result, _ := reconciler.Reconcile(ctx, req)
-
-				Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 			})
 		})
 
@@ -200,6 +193,11 @@ var _ = Describe("delivery reconciler", func() {
 					),
 				))
 			})
+
+			It("does not return an error", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		It("Starts and Finishes cleanly", func() {
@@ -212,7 +210,7 @@ var _ = Describe("delivery reconciler", func() {
 	})
 
 	Context("repo.GetDelivery fails", func() {
-		It("returns an error", func() {
+		It("returns an error and requeues", func() {
 			repo.GetDeliveryReturns(nil, errors.New("repo.GetDelivery failed"))
 
 			_, err := reconciler.Reconcile(ctx, req)
@@ -222,7 +220,7 @@ var _ = Describe("delivery reconciler", func() {
 	})
 
 	Context("repo.StatusUpdate fails", func() {
-		It("returns an error", func() {
+		It("returns an error and requeues", func() {
 			apiDelivery := &v1alpha1.ClusterDelivery{}
 			repo.GetDeliveryReturns(apiDelivery, nil)
 			repo.StatusUpdateReturns(errors.New("repo.StatusUpdate failed"))
@@ -242,12 +240,6 @@ var _ = Describe("delivery reconciler", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("does not requeue", func() {
-			result, _ := reconciler.Reconcile(ctx, req)
-
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 		})
 	})
 })
