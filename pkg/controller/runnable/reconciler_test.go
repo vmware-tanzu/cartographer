@@ -34,7 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -43,13 +46,14 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		out            *Buffer
-		ctx            context.Context
-		reconciler     runnable.Reconciler
-		request        controllerruntime.Request
-		repository     *repositoryfakes.FakeRepository
-		rlzr           *runnablefakes.FakeRealizer
-		dynamicTracker *trackerfakes.FakeDynamicTracker
+		out              *Buffer
+		ctx              context.Context
+		reconciler       runnable.Reconciler
+		request          controllerruntime.Request
+		repository       *repositoryfakes.FakeRepository
+		rlzr             *runnablefakes.FakeRealizer
+		dynamicTracker   *trackerfakes.FakeDynamicTracker
+		conditionManager *conditionsfakes.FakeConditionManager
 	)
 
 	BeforeEach(func() {
@@ -59,11 +63,17 @@ var _ = Describe("Reconcile", func() {
 		repository = &repositoryfakes.FakeRepository{}
 		rlzr = &runnablefakes.FakeRealizer{}
 		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
+		conditionManager = &conditionsfakes.FakeConditionManager{}
+
+		fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
+			return conditionManager
+		}
 
 		reconciler = runnable.Reconciler{
-			Repo:           repository,
-			Realizer:       rlzr,
-			DynamicTracker: dynamicTracker,
+			Repo:                    repository,
+			Realizer:                rlzr,
+			DynamicTracker:          dynamicTracker,
+			ConditionManagerBuilder: fakeConditionManagerBuilder,
 		}
 
 		request = controllerruntime.Request{
@@ -82,8 +92,9 @@ var _ = Describe("Reconcile", func() {
 					APIVersion: "carto.run/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-runnable",
-					Namespace: "my-namespace",
+					Name:       "my-runnable",
+					Namespace:  "my-namespace",
+					Generation: 1,
 				},
 				Spec: v1alpha1.RunnableSpec{
 					RunTemplateRef: v1alpha1.TemplateReference{
@@ -93,6 +104,37 @@ var _ = Describe("Reconcile", func() {
 				},
 			}, nil)
 
+		})
+
+		It("updates the conditions based on the condition manager", func() {
+			someConditions := []metav1.Condition{
+				{
+					Type:               "some type",
+					Status:             "True",
+					LastTransitionTime: metav1.Time{},
+					Reason:             "great causes",
+					Message:            "good going",
+				},
+				{
+					Type:               "another type",
+					Status:             "False",
+					LastTransitionTime: metav1.Time{},
+					Reason:             "sad omens",
+					Message:            "gotta get fixed",
+				},
+			}
+
+			conditionManager.FinalizeReturns(someConditions, true)
+
+			_, _ = reconciler.Reconcile(ctx, request)
+
+			updatedRunnable := repository.StatusUpdateArgsForCall(0)
+
+			Expect(*updatedRunnable.(*v1alpha1.Runnable)).To(MatchFields(IgnoreExtras, Fields{
+				"Status": MatchFields(IgnoreExtras, Fields{
+					"Conditions": Equal(someConditions),
+				}),
+			}))
 		})
 
 		Context("watching does not cause an error", func() {
@@ -115,16 +157,24 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		Context("watching causes an error", func() {
-			It("logs the error message", func() {
+			BeforeEach(func() {
 				stampedObject := &unstructured.Unstructured{}
 				rlzr.RealizeReturns(stampedObject, nil, nil)
 
 				dynamicTracker.WatchReturns(errors.New("could not watch"))
+			})
 
+			It("logs the error message", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(out).To(Say(`"level":"error"`))
 				Expect(out).To(Say(`"msg":"dynamic tracker watch"`))
+			})
+
+			It("returns an unhandled error and requeues", func() {
+				_, err := reconciler.Reconcile(ctx, request)
+
+				Expect(err.Error()).To(ContainSubstring("could not watch"))
 			})
 		})
 
@@ -132,6 +182,7 @@ var _ = Describe("Reconcile", func() {
 			BeforeEach(func() {
 				rlzr.RealizeReturns(nil, nil, nil)
 			})
+
 			It("fetches the runnable", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
@@ -149,31 +200,15 @@ var _ = Describe("Reconcile", func() {
 				Expect(out).To(Say(`"msg":"finished","name":"my-runnable","namespace":"my-namespace"`))
 			})
 
-			It("Updates the status with a Happy Condition", func() {
+			It("Updates the status with no outputs", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
 				statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Runnable)
-
 				Expect(ok).To(BeTrue())
 
-				Expect(statusObject.GetObjectKind().GroupVersionKind()).To(MatchFields(0, Fields{
-					"Kind":    Equal("Runnable"),
-					"Version": Equal("v1alpha1"),
-					"Group":   Equal("carto.run"),
-				}))
-
-				Expect(statusObject.Name).To(Equal("my-runnable"))
-
-				Expect(statusObject.Status.Conditions).To(ContainElements(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal("RunTemplateReady"),
-						"Status": Equal(metav1.ConditionTrue),
-						"Reason": Equal("Ready"),
-					}),
-				))
-
+				Expect(statusObject.Status.Outputs).To(HaveLen(0))
 			})
 		})
 
@@ -218,7 +253,7 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
-		Context("realizer could not stamp the object", func() {
+		Context("the realizer returns an error", func() {
 			BeforeEach(func() {
 				rlzr.RealizeReturns(nil, nil, nil)
 			})
@@ -236,6 +271,192 @@ var _ = Describe("Reconcile", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(dynamicTracker.WatchCallCount()).To(Equal(0))
+			})
+
+			Context("of type GetRunTemplateError", func() {
+				var err error
+				BeforeEach(func() {
+					err = realizer.GetRunTemplateError{
+						Err:      errors.New("some error"),
+						Runnable: &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+					}
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.RunTemplateMissingCondition(err)))
+				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+
+					Expect(err.Error()).To(ContainSubstring("unable to get runnable 'my-ns/my-runnable': 'some error'"))
+				})
+			})
+
+			Context("of type ResolveSelectorError", func() {
+				var err error
+				BeforeEach(func() {
+					err = realizer.ResolveSelectorError{
+						Err: errors.New("some error"),
+						Selector: &v1alpha1.ResourceSelector{
+							Resource: v1alpha1.ResourceType{
+								APIVersion: "my-api-version",
+								Kind:       "my-kind",
+							},
+							MatchingLabels: map[string]string{"foo": "bar", "moo": "cow"},
+						},
+					}
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.TemplateStampFailureCondition(err)))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error"`))
+					Expect(out).To(Say(`"error":"unable to resolve selector '\(apiVersion:my-api-version kind:my-kind labels:map\[foo:bar moo:cow\]\)': 'some error'"`))
+				})
+			})
+
+			Context("of type StampError", func() {
+				var err error
+				BeforeEach(func() {
+					err = realizer.StampError{
+						Err:      errors.New("some error"),
+						Runnable: &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+					}
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("does not try to watch the stampedObjects", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(dynamicTracker.WatchCallCount()).To(Equal(0))
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.TemplateStampFailureCondition(err)))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error"`))
+					Expect(out).To(Say(`"error":"unable to stamp object 'my-ns/my-runnable': 'some error'"`))
+				})
+			})
+
+			Context("of type ApplyStampedObjectError", func() {
+				var err error
+				BeforeEach(func() {
+					err = realizer.ApplyStampedObjectError{
+						Err:           errors.New("some error"),
+						StampedObject: &unstructured.Unstructured{},
+					}
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.StampedObjectRejectedByAPIServerCondition(err)))
+				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+
+					Expect(err.Error()).To(ContainSubstring("unable to apply stamped object"))
+				})
+			})
+
+			Context("of type ListCreatedObjectsError", func() {
+				var err error
+				BeforeEach(func() {
+					err = realizer.ListCreatedObjectsError{
+						Err:       errors.New("some error"),
+						Namespace: "some-ns",
+						Labels:    map[string]string{"hi": "bye"},
+					}
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.FailedToListCreatedObjectsCondition(err)))
+				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+
+					Expect(err.Error()).To(ContainSubstring("unable to list objects in namespace 'some-ns' with labels 'map[hi:bye]': 'some error'"))
+				})
+			})
+
+			Context("of type RetrieveOutputError", func() {
+				var err error
+				BeforeEach(func() {
+					err = realizer.RetrieveOutputError{
+						Err:      errors.New("some error"),
+						Runnable: &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+					}
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.OutputPathNotSatisfiedCondition(err)))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error"`))
+					Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for runnable 'my-ns/my-runnable': some error"`))
+				})
+			})
+
+			Context("of unknown type", func() {
+				var err error
+				BeforeEach(func() {
+					err = errors.New("some error")
+					rlzr.RealizeReturns(nil, nil, err)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.UnknownErrorCondition(err)))
+				})
+
+				It("returns an unhandled error and requeues", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+
+					Expect(err.Error()).To(ContainSubstring("some error"))
+				})
 			})
 		})
 	})
@@ -278,7 +499,7 @@ var _ = Describe("Reconcile", func() {
 			repository.GetRunnableReturns(nil, errors.New("very bad runnable"))
 		})
 
-		It("returns a helpful error", func() {
+		It("returns an error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("very bad runnable"))

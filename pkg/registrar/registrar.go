@@ -277,8 +277,9 @@ func registerRunnableController(mgr manager.Manager) error {
 	)
 
 	reconciler := &runnable.Reconciler{
-		Repo:     repo,
-		Realizer: realizerrunnable.NewRealizer(),
+		Repo:                    repo,
+		Realizer:                realizerrunnable.NewRealizer(),
+		ConditionManagerBuilder: conditions.NewConditionManager,
 	}
 	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,

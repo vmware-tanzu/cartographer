@@ -34,9 +34,11 @@ import (
 )
 
 type Reconciler struct {
-	Repo           repository.Repository
-	Realizer       realizer.Realizer
-	DynamicTracker tracker.DynamicTracker
+	Repo                    repository.Repository
+	Realizer                realizer.Realizer
+	DynamicTracker          tracker.DynamicTracker
+	ConditionManagerBuilder conditions.ConditionManagerBuilder
+	conditionManager        conditions.ConditionManager
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -60,32 +62,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("get runnable: %w", err)
 	}
 
-	conditionManager := conditions.NewConditionManager(v1alpha1.RunnableReady, runnable.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
 	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetRunTemplateError:
-			conditionManager.AddPositive(RunTemplateMissingCondition(typedErr))
+			r.conditionManager.AddPositive(RunTemplateMissingCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.ResolveSelectorError:
-			conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
+			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.StampError:
-			conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
+			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
-			conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
+			r.conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.ListCreatedObjectsError:
-			conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
+			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
-			conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr))
+			r.conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr))
 		default:
-			conditionManager.AddPositive(UnknownErrorCondition(typedErr))
+			r.conditionManager.AddPositive(UnknownErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		}
 	} else {
-		conditionManager.AddPositive(RunTemplateReadyCondition())
+		r.conditionManager.AddPositive(RunTemplateReadyCondition())
 	}
 
 	var trackingError error
@@ -98,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	var changed bool
-	runnable.Status.Conditions, changed = conditionManager.Finalize()
+	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	if changed || (runnable.Status.ObservedGeneration != runnable.Generation) {
 		runnable.Status.Outputs = outputs

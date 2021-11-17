@@ -50,8 +50,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	if err != nil {
 		return nil, nil, GetRunTemplateError{
-			err:      err,
-			runnable: runnable,
+			Err:      err,
+			Runnable: runnable,
 		}
 	}
 
@@ -65,8 +65,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	selected, err := resolveSelector(runnable.Spec.Selector, repository)
 	if err != nil {
 		return nil, nil, ResolveSelectorError{
-			err:      err,
-			selector: runnable.Spec.Selector,
+			Err:      err,
+			Selector: runnable.Spec.Selector,
 		}
 	}
 
@@ -82,16 +82,16 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		return nil, nil, StampError{
-			err:      err,
-			runnable: runnable,
+			Err:      err,
+			Runnable: runnable,
 		}
 	}
 
 	err = repository.EnsureObjectExistsOnCluster(stampedObject.DeepCopy(), false)
 	if err != nil {
 		return nil, nil, ApplyStampedObjectError{
-			err:           err,
-			stampedObject: stampedObject,
+			Err:           err,
+			StampedObject: stampedObject,
 		}
 	}
 
@@ -101,17 +101,17 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	allRunnableStampedObjects, err := repository.ListUnstructured(objectForListCall)
 	if err != nil {
 		return stampedObject, nil, ListCreatedObjectsError{
-			err:       err,
-			namespace: objectForListCall.GetNamespace(),
-			labels:    objectForListCall.GetLabels(),
+			Err:       err,
+			Namespace: objectForListCall.GetNamespace(),
+			Labels:    objectForListCall.GetLabels(),
 		}
 	}
 
 	outputs, err := template.GetOutput(allRunnableStampedObjects)
 	if err != nil {
 		return stampedObject, nil, RetrieveOutputError{
-			err:      err,
-			runnable: runnable,
+			Err:      err,
+			Runnable: runnable,
 		}
 	}
 
