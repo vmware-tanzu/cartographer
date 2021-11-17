@@ -1,8 +1,4 @@
----
-version: v0.0.6
-cascade:
-  layout: docs
----
+# About Cartographer
 
 ## TLDR
 
@@ -12,7 +8,8 @@ Each pre-approved supply chain creates a paved road to production; orchestrating
 
 ## Cartographer Design and Philosophy
 
-Cartographer allows users to define all of the steps that an application must go through to create an image and Kubernetes configuration.
+Cartographerallows users to define all of the steps that an application must go through to create an image and Kubernetes configuration.
+
 Users achieve this with the Supply Chain abstraction ([Spec Reference](reference.md#clustersupplychain)).
 
 The supply chain consists of resources that are specified via Templates.
