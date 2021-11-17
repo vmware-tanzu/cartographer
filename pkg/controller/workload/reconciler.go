@@ -131,11 +131,13 @@ func (r *Reconciler) completeReconciliation(workload *v1alpha1.Workload, err err
 		}
 	}
 
-	if err != nil && controller.IsUnhandledError(err) {
-		return ctrl.Result{}, err
+	if err != nil {
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		r.logger.Info("handled error", "error", err)
 	}
 
-	r.logger.Info("handled error", "error", err)
 	return ctrl.Result{}, nil
 }
 
