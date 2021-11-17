@@ -25,8 +25,6 @@ import (
 func SetLogLevel(logLevel string) (zap.Opts, error) {
 	var level zapcore.Level
 	switch strings.ToUpper(logLevel) {
-	case "TRACE":
-		level = zapcore.Level(-2)
 	case "DEBUG":
 		level = zapcore.Level(-1)
 	case "INFO":
@@ -34,7 +32,7 @@ func SetLogLevel(logLevel string) (zap.Opts, error) {
 	case "ERROR":
 		level = zapcore.Level(1)
 	default:
-		return nil, fmt.Errorf("if present, log-level must be one of {error, info, debug, trace}")
+		return nil, fmt.Errorf("if present, log-level must be one of {error, info, debug}")
 	}
 
 	zapOpt := zap.Options{}
