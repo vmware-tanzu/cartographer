@@ -3,6 +3,7 @@ version: v0.0.6
 cascade:
   layout: docs
 ---
+*This is the documentation for the latest development version of Cartographer. **Both code and docs may be unstable** and these docs are not guaranteed to be up to date or correct. See the [latest version](https://cartographer.sh/docs/v0.0.7/).*
 
 ## TLDR
 
