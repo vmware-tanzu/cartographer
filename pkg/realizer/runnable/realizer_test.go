@@ -19,18 +19,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 
 	. "github.com/MakeNowJust/heredoc/dot"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
@@ -40,21 +38,21 @@ import (
 
 var _ = Describe("Realizer", func() {
 	var (
-		out                 *Buffer
 		repository          *repositoryfakes.FakeRepository
-		logger              logr.Logger
 		rlzr                realizer.Realizer
 		runnable            *v1alpha1.Runnable
 		createdUnstructured *unstructured.Unstructured
 	)
 
 	BeforeEach(func() {
-		out = NewBuffer()
-		logger = zap.New(zap.WriteTo(out))
 		repository = &repositoryfakes.FakeRepository{}
 		rlzr = realizer.NewRealizer()
 
 		runnable = &v1alpha1.Runnable{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-runnable",
+				Namespace: "my-important-ns",
+			},
 			Spec: v1alpha1.RunnableSpec{
 				RunTemplateRef: v1alpha1.TemplateReference{
 					Kind: "ClusterRunTemplate",
@@ -115,7 +113,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("stamps out the resource from the template", func() {
-			_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
+			_, _, _ = rlzr.Realize(context.TODO(), runnable, repository)
 
 			Expect(repository.GetRunTemplateCallCount()).To(Equal(1))
 			Expect(repository.GetRunTemplateArgsForCall(0)).To(MatchFields(IgnoreExtras,
@@ -142,24 +140,18 @@ var _ = Describe("Realizer", func() {
 			)
 		})
 
-		It("returns a happy condition", func() {
-			condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-			Expect(*condition).To(
-				MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal("RunTemplateReady"),
-					"Status": Equal(metav1.ConditionTrue),
-					"Reason": Equal("Ready"),
-				}),
-			)
+		It("does not return an error", func() {
+			_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("returns the outputs", func() {
-			_, outputs, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
+			_, outputs, _ := rlzr.Realize(context.TODO(), runnable, repository)
 			Expect(outputs["myout"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
 		})
 
 		It("returns the stampedObject", func() {
-			_, _, stampedObject := rlzr.Realize(context.TODO(), runnable, logger, repository)
+			stampedObject, _, _ := rlzr.Realize(context.TODO(), runnable, repository)
 			Expect(stampedObject.Object["spec"]).To(Equal(map[string]interface{}{
 				"foo":   "is a string",
 				"value": nil,
@@ -168,29 +160,16 @@ var _ = Describe("Realizer", func() {
 			Expect(stampedObject.Object["kind"]).To(Equal("Test"))
 		})
 
-		Context("error on Create", func() {
+		Context("error on EnsureObjectExistsOnCluster", func() {
 			BeforeEach(func() {
 				repository.EnsureObjectExistsOnClusterReturns(errors.New("some bad error"))
 			})
 
-			It("logs the error", func() {
-				_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(out).To(Say(`"msg":"could not create object"`))
-				Expect(out).To(Say(`"error":"some bad error"`))
-			})
-
-			It("returns a condition stating that it failed to create", func() {
-				condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(*condition).To(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("StampedObjectRejectedByAPIServer"),
-						"Message": Equal("could not create object: some bad error"),
-					}),
-				)
+			It("returns ApplyStampedObjectError", func() {
+				_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("some bad error"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ApplyStampedObjectError"))
 			})
 		})
 
@@ -199,23 +178,11 @@ var _ = Describe("Realizer", func() {
 				repository.ListUnstructuredReturns(nil, errors.New("some list error"))
 			})
 
-			It("logs the error", func() {
-				_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(out).To(Say(`"msg":"could not list runnable objects: some list error"`))
-			})
-
-			It("returns a condition stating that it failed to list created objects", func() {
-				condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(*condition).To(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("FailedToListCreatedObjects"),
-						"Message": Equal("could not list runnable objects: some list error"),
-					}),
-				)
+			It("returns ListCreatedObjectsError", func() {
+				_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("some list error"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ListCreatedObjectsError"))
 			})
 		})
 
@@ -232,7 +199,7 @@ var _ = Describe("Realizer", func() {
 			})
 
 			It("makes the selected object available in the templating context", func() {
-				_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
+				_, _, _ = rlzr.Realize(context.TODO(), runnable, repository)
 
 				Expect(repository.ListUnstructuredCallCount()).To(Equal(2))
 				clientQueryObjectForSelector := repository.ListUnstructuredArgsForCall(0)
@@ -272,24 +239,11 @@ var _ = Describe("Realizer", func() {
 				repository.ListUnstructuredReturns([]*unstructured.Unstructured{{map[string]interface{}{}}, {map[string]interface{}{}}}, nil)
 			})
 
-			It("logs the error", func() {
-				_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(out).To(Say(`"msg":"could not resolve selector \(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map\[expected-label:expected-value\]\)"`))
-				Expect(out).To(Say(`"error":"selector matched multiple objects"`))
-			})
-
-			It("returns a condition stating that it failed to create", func() {
-				condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(*condition).To(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("TemplateStampFailure"),
-						"Message": Equal("could not resolve selector (apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value]): selector matched multiple objects"),
-					}),
-				)
+			It("returns ResolveSelectorError", func() {
+				_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector '(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value])': 'selector matched multiple objects'`))
+				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
 
@@ -305,24 +259,11 @@ var _ = Describe("Realizer", func() {
 				repository.ListUnstructuredReturns([]*unstructured.Unstructured{}, nil)
 			})
 
-			It("logs the error", func() {
-				_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(out).To(Say(`"msg":"could not resolve selector \(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map\[expected-label:expected-value\]\)"`))
-				Expect(out).To(Say(`"error":"selector did not match any objects"`))
-			})
-
-			It("returns a condition stating that it failed to create", func() {
-				condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(*condition).To(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("TemplateStampFailure"),
-						"Message": Equal("could not resolve selector (apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value]): selector did not match any objects"),
-					}),
-				)
+			It("returns ResolveSelectorError", func() {
+				_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector '(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value])': 'selector did not match any objects'`))
+				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
 
@@ -338,24 +279,11 @@ var _ = Describe("Realizer", func() {
 				repository.ListUnstructuredReturns(nil, fmt.Errorf("listing unstructured is hard"))
 			})
 
-			It("logs the error", func() {
-				_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(out).To(Say(`"msg":"could not resolve selector \(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map\[expected-label:expected-value\]\)"`))
-				Expect(out).To(Say(`"error":"could not list objects matching selector: listing unstructured is hard"`))
-			})
-
-			It("returns a condition stating that it failed to create", func() {
-				condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-				Expect(*condition).To(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal("RunTemplateReady"),
-						"Status":  Equal(metav1.ConditionFalse),
-						"Reason":  Equal("TemplateStampFailure"),
-						"Message": Equal("could not resolve selector (apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value]): could not list objects matching selector: listing unstructured is hard"),
-					}),
-				)
+			It("returns ResolveSelectorError", func() {
+				_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector '(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value])': 'could not list objects matching selector: listing unstructured is hard'`))
+				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
 	})
@@ -391,29 +319,12 @@ var _ = Describe("Realizer", func() {
 			repository.ListUnstructuredReturns([]*unstructured.Unstructured{createdUnstructured}, nil)
 		})
 
-		It("logs info about the missing outputs", func() {
-			_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-			// FIXME need a `Log` matcher so we dont have multiline matches.
-			Expect(out).To(Say(`"level":"info"`))
-			Expect(out).To(Say(`"msg":"could not get output: get output: evaluate: find results: hasnot is not found"`))
+		It("returns RetrieveOutputError", func() {
+			_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable 'my-important-ns/my-runnable': get output: evaluate: find results: hasnot is not found`))
+			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
 		})
-
-		It("returns a condition stating that it failed to get outputs", func() {
-			condition, outputs, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-			Expect(outputs).To(BeNil())
-
-			Expect(*condition).To(
-				MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal("RunTemplateReady"),
-					"Status":  Equal(metav1.ConditionFalse),
-					"Reason":  Equal("OutputPathNotSatisfied"),
-					"Message": Equal("get output: evaluate: find results: hasnot is not found"),
-				}),
-			)
-		})
-
 	})
 
 	Context("with an invalid ClusterRunTemplate", func() {
@@ -426,24 +337,11 @@ var _ = Describe("Realizer", func() {
 			repository.GetRunTemplateReturns(templateAPI, nil)
 		})
 
-		It("logs the error", func() {
-			_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-			Expect(out).To(Say(`"msg":"could not stamp template"`))
-			Expect(out).To(Say(`"error":"unmarshal to JSON: unexpected end of JSON input"`))
-		})
-
-		It("returns a condition stating that it failed to stamp", func() {
-			condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-			Expect(*condition).To(
-				MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal("RunTemplateReady"),
-					"Status":  Equal(metav1.ConditionFalse),
-					"Reason":  Equal("TemplateStampFailure"),
-					"Message": Equal("could not stamp template: unmarshal to JSON: unexpected end of JSON input"),
-				}),
-			)
+		It("returns StampError", func() {
+			_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(`unable to stamp object 'my-important-ns/my-runnable': 'unmarshal to JSON: unexpected end of JSON input'`))
+			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.StampError"))
 		})
 	})
 
@@ -451,34 +349,19 @@ var _ = Describe("Realizer", func() {
 		BeforeEach(func() {
 			repository.GetRunTemplateReturns(nil, errors.New("Errol mcErrorFace"))
 
-			runnable = &v1alpha1.Runnable{
-				Spec: v1alpha1.RunnableSpec{
-					RunTemplateRef: v1alpha1.TemplateReference{
-						Kind: "ClusterRunTemplate",
-						Name: "my-template",
-					},
+			runnable.Spec = v1alpha1.RunnableSpec{
+				RunTemplateRef: v1alpha1.TemplateReference{
+					Kind: "ClusterRunTemplate",
+					Name: "my-template",
 				},
 			}
 		})
 
-		It("logs the error", func() {
-			_, _, _ = rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-			Expect(out).To(Say(`"msg":"could not get ClusterRunTemplate 'my-template'"`))
-			Expect(out).To(Say(`"error":"Errol mcErrorFace"`))
-		})
-
-		It("return the condition for a missing ClusterRunTemplate", func() {
-			condition, _, _ := rlzr.Realize(context.TODO(), runnable, logger, repository)
-
-			Expect(*condition).To(
-				MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal("RunTemplateReady"),
-					"Status":  Equal(metav1.ConditionFalse),
-					"Reason":  Equal("RunTemplateNotFound"),
-					"Message": Equal("could not get ClusterRunTemplate 'my-template': Errol mcErrorFace"),
-				}),
-			)
+		It("returns GetRunTemplateError", func() {
+			_, _, err := rlzr.Realize(context.TODO(), runnable, repository)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(`unable to get runnable 'my-important-ns/my-runnable': 'Errol mcErrorFace'`))
+			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.GetRunTemplateError"))
 		})
 	})
 })

@@ -35,6 +35,7 @@ const (
 	OutputPathNotSatisfiedRunTemplateReason           = "OutputPathNotSatisfied"
 	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
 	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
+	UnknownErrorReason                                = "UnknownError"
 )
 
 // +kubebuilder:object:root=true

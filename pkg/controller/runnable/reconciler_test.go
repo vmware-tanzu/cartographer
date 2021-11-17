@@ -35,7 +35,6 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -104,7 +103,7 @@ var _ = Describe("Reconcile", func() {
 					Version: "alphabeta1",
 					Kind:    "MyThing",
 				})
-				rlzr.RealizeReturns(realizer.RunTemplateReadyCondition(), nil, stampedObject)
+				rlzr.RealizeReturns(stampedObject, nil, nil)
 
 				_, _ = reconciler.Reconcile(ctx, request)
 				Expect(dynamicTracker.WatchCallCount()).To(Equal(1))
@@ -118,7 +117,7 @@ var _ = Describe("Reconcile", func() {
 		Context("watching causes an error", func() {
 			It("logs the error message", func() {
 				stampedObject := &unstructured.Unstructured{}
-				rlzr.RealizeReturns(realizer.RunTemplateReadyCondition(), nil, stampedObject)
+				rlzr.RealizeReturns(stampedObject, nil, nil)
 
 				dynamicTracker.WatchReturns(errors.New("could not watch"))
 
@@ -131,7 +130,7 @@ var _ = Describe("Reconcile", func() {
 
 		Context("no outputs were returned from the realizer", func() {
 			BeforeEach(func() {
-				rlzr.RealizeReturns(realizer.RunTemplateReadyCondition(), nil, nil)
+				rlzr.RealizeReturns(nil, nil, nil)
 			})
 			It("fetches the runnable", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
@@ -180,13 +179,9 @@ var _ = Describe("Reconcile", func() {
 
 		Context("outputs are returned from the realizer", func() {
 			BeforeEach(func() {
-				rlzr.RealizeReturns(
-					realizer.RunTemplateReadyCondition(),
-					templates.Outputs{
-						"an-output": apiextensionsv1.JSON{Raw: []byte(`"the value"`)},
-					},
-					nil,
-				)
+				rlzr.RealizeReturns(nil, templates.Outputs{
+					"an-output": apiextensionsv1.JSON{Raw: []byte(`"the value"`)},
+				}, nil)
 			})
 
 			It("Updates the status with the outputs", func() {
@@ -205,7 +200,7 @@ var _ = Describe("Reconcile", func() {
 
 		Context("updating the status fails", func() {
 			BeforeEach(func() {
-				rlzr.RealizeReturns(realizer.RunTemplateReadyCondition(), nil, nil)
+				rlzr.RealizeReturns(nil, nil, nil)
 				repository.StatusUpdateReturns(errors.New("bad status update error"))
 			})
 
@@ -225,7 +220,7 @@ var _ = Describe("Reconcile", func() {
 
 		Context("realizer could not stamp the object", func() {
 			BeforeEach(func() {
-				rlzr.RealizeReturns(realizer.RunTemplateReadyCondition(), nil, nil)
+				rlzr.RealizeReturns(nil, nil, nil)
 			})
 
 			It("Starts and Finishes cleanly", func() {

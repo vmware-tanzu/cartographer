@@ -321,6 +321,7 @@ var _ = Describe("Resource", func() {
 				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
 				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
+
 			It("returns ApplyStampedObjectError", func() {
 				_, _, err := r.Do(context.TODO(), &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
