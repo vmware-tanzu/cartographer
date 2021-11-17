@@ -192,8 +192,6 @@ func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
 
 func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
 	submitted := obj.DeepCopy()
-	// FIXME: I'm untested. What am I for? Patch doesn't block on RV's (is this a historical artifact of .Update?)
-	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.cl.Patch(context.TODO(), obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)
 	}
