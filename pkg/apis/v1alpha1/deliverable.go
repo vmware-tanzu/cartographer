@@ -29,7 +29,6 @@ const (
 	DeliverableLabelsMissingDeliveryReason = "DeliverableLabelsMissing"
 	NotFoundDeliveryReadyReason            = "DeliveryNotFound"
 	MultipleMatchesDeliveryReadyReason     = "MultipleDeliveryMatches"
-	NotReadyDeliveryReason                 = "DeliveryNotReady"
 )
 
 const (

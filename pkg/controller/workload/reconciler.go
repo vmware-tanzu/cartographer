@@ -93,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.ResourceName(), typedErr.JsonPathExpression()))
+			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.Resource.Name, typedErr.JsonPathExpression()))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)

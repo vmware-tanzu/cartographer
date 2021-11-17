@@ -23,5 +23,5 @@ import (
 
 func TestTemplates(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "repository Suite")
+	RunSpecs(t, "Repository Suite")
 }

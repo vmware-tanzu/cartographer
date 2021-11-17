@@ -49,28 +49,17 @@ func (e StampError) Error() string {
 	return fmt.Errorf("unable to stamp object for resource '%s': %w", e.Resource.Name, e.Err).Error()
 }
 
-func NewRetrieveOutputError(resource *v1alpha1.SupplyChainResource, err error) RetrieveOutputError {
-	return RetrieveOutputError{
-		Err:      err,
-		resource: resource,
-	}
-}
-
 type RetrieveOutputError struct {
 	Err      error
-	resource *v1alpha1.SupplyChainResource
+	Resource *v1alpha1.SupplyChainResource
+}
+
+func (e RetrieveOutputError) Error() string {
+	return fmt.Errorf("unable to retrieve outputs from stamped object for resource '%s': %w", e.Resource.Name, e.Err).Error()
 }
 
 type JsonPathErrorContext interface {
 	JsonPathExpression() string
-}
-
-func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for resource '%s': %w", e.resource.Name, e.Err).Error()
-}
-
-func (e RetrieveOutputError) ResourceName() string {
-	return e.resource.Name
 }
 
 func (e RetrieveOutputError) JsonPathExpression() string {

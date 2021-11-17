@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	api_errors "k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,11 +72,11 @@ func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 
 	err := r.cl.Get(context.TODO(), key, delivery)
 
-	if err != nil && !api_errors.IsNotFound(err) {
+	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("get: %w", err)
 	}
 
-	if api_errors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
 
@@ -293,11 +293,11 @@ func (r *repository) GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, 
 	supplyChain := v1alpha1.ClusterSupplyChain{}
 
 	err := r.getObject(name, "", &supplyChain)
-	if err != nil && !api_errors.IsNotFound(err) {
+	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("get: %w", err)
 	}
 
-	if api_errors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
 
