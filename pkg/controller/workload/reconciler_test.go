@@ -106,16 +106,12 @@ var _ = Describe("Reconciler", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
 		Expect(out).To(Say(`"msg":"started"`))
-		Expect(out).To(Say(`"name":"my-workload-name"`))
-		Expect(out).To(Say(`"namespace":"my-namespace"`))
 	})
 
 	It("logs that it's finished", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
 		Expect(out).To(Say(`"msg":"finished"`))
-		Expect(out).To(Say(`"name":"my-workload-name"`))
-		Expect(out).To(Say(`"namespace":"my-namespace"`))
 	})
 
 	It("updates the status of the workload", func() {
@@ -127,7 +123,8 @@ var _ = Describe("Reconciler", func() {
 	It("updates the status.observedGeneration to equal metadata.generation", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		updatedWorkload := repo.StatusUpdateArgsForCall(0)
+		actualCtx, updatedWorkload := repo.StatusUpdateArgsForCall(0)
+		Expect(actualCtx).To(Equal(ctx))
 
 		Expect(*updatedWorkload.(*v1alpha1.Workload)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -158,7 +155,8 @@ var _ = Describe("Reconciler", func() {
 
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		updatedWorkload := repo.StatusUpdateArgsForCall(0)
+		actualCtx, updatedWorkload := repo.StatusUpdateArgsForCall(0)
+		Expect(actualCtx).To(Equal(ctx))
 
 		Expect(*updatedWorkload.(*v1alpha1.Workload)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -169,8 +167,10 @@ var _ = Describe("Reconciler", func() {
 
 	It("requests supply chains from the repo", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
+		actualCtx, workload := repo.GetSupplyChainsForWorkloadArgsForCall(0)
+		Expect(actualCtx).To(Equal(ctx))
 
-		Expect(repo.GetSupplyChainsForWorkloadArgsForCall(0)).To(Equal(wl))
+		Expect(workload).To(Equal(wl))
 	})
 
 	Context("and the repo returns a single matching supply-chain for the workload", func() {

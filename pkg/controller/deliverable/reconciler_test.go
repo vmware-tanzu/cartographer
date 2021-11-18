@@ -106,16 +106,12 @@ var _ = Describe("Reconciler", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
 		Expect(out).To(Say(`"msg":"started"`))
-		Expect(out).To(Say(`"name":"my-deliverable-name"`))
-		Expect(out).To(Say(`"namespace":"my-namespace"`))
 	})
 
 	It("logs that it's finished", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
 		Expect(out).To(Say(`"msg":"finished"`))
-		Expect(out).To(Say(`"name":"my-deliverable-name"`))
-		Expect(out).To(Say(`"namespace":"my-namespace"`))
 	})
 
 	It("updates the status of the deliverable", func() {
@@ -127,7 +123,9 @@ var _ = Describe("Reconciler", func() {
 	It("updates the status.observedGeneration to equal metadata.generation", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		updatedDeliverable := repo.StatusUpdateArgsForCall(0)
+		actualCtx, updatedDeliverable := repo.StatusUpdateArgsForCall(0)
+
+		Expect(actualCtx).To(Equal(ctx))
 
 		Expect(*updatedDeliverable.(*v1alpha1.Deliverable)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -158,7 +156,9 @@ var _ = Describe("Reconciler", func() {
 
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		updatedDeliverable := repo.StatusUpdateArgsForCall(0)
+		actualCtx, updatedDeliverable := repo.StatusUpdateArgsForCall(0)
+
+		Expect(actualCtx).To(Equal(ctx))
 
 		Expect(*updatedDeliverable.(*v1alpha1.Deliverable)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -170,7 +170,9 @@ var _ = Describe("Reconciler", func() {
 	It("requests deliveries from the repo", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		Expect(repo.GetDeliveriesForDeliverableArgsForCall(0)).To(Equal(dl))
+		actualCtx, passedDeliverable := repo.GetDeliveriesForDeliverableArgsForCall(0)
+		Expect(actualCtx).To(Equal(ctx))
+		Expect(passedDeliverable).To(Equal(dl))
 	})
 
 	Context("and the repo returns a single matching delivery for the deliverable", func() {

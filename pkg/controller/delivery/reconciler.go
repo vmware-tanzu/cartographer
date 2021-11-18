@@ -35,12 +35,11 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
-	r.logger = logr.FromContext(ctx).
-		WithValues("name", req.Name, "namespace", req.Namespace)
+	r.logger = logr.FromContext(ctx)
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	delivery, err := r.Repo.GetDelivery(req.Name)
+	delivery, err := r.Repo.GetDelivery(ctx, req.Name)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get delivery: %w", err)
 	}
@@ -52,16 +51,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 
 	r.conditionManager = conditions.NewConditionManager(v1alpha1.DeliveryReady, delivery.Status.Conditions)
 
-	err = r.reconcileDelivery(delivery)
+	err = r.reconcileDelivery(ctx, delivery)
 
-	return r.completeReconciliation(delivery, err)
+	return r.completeReconciliation(ctx, delivery, err)
 }
 
-func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error {
+func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.ClusterDelivery) error {
 	var resourcesNotFound []string
 
 	for _, resource := range delivery.Spec.Resources {
-		template, err := r.Repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+		template, err := r.Repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 		if err != nil {
 			return controller.NewUnhandledError(fmt.Errorf("get delivery cluster template: %w", err))
 		}
@@ -79,14 +78,14 @@ func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error
 	return nil
 }
 
-func (r *Reconciler) completeReconciliation(delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
 	var changed bool
 	delivery.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (delivery.Status.ObservedGeneration != delivery.Generation) {
 		delivery.Status.ObservedGeneration = delivery.Generation
-		updateErr = r.Repo.StatusUpdate(delivery)
+		updateErr = r.Repo.StatusUpdate(ctx, delivery)
 		if updateErr != nil {
 			return ctrl.Result{}, fmt.Errorf("status update: %w", updateErr)
 		}

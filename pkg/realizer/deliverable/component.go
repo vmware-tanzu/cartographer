@@ -45,7 +45,7 @@ func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repo
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetDeliveryClusterTemplateError{
 			Err:         err,
@@ -93,7 +93,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	err = r.repo.EnsureObjectExistsOnCluster(stampedObject, true)
+	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,

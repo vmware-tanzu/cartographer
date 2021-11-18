@@ -46,7 +46,7 @@ type TemplatingContext struct {
 
 func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, repository repository.Repository) (*unstructured.Unstructured, templates.Outputs, error) {
 	runnable.Spec.RunTemplateRef.Kind = "ClusterRunTemplate"
-	apiRunTemplate, err := repository.GetRunTemplate(runnable.Spec.RunTemplateRef)
+	apiRunTemplate, err := repository.GetRunTemplate(ctx, runnable.Spec.RunTemplateRef)
 
 	if err != nil {
 		return nil, nil, GetRunTemplateError{
@@ -62,7 +62,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		"carto.run/run-template-name": template.GetName(),
 	}
 
-	selected, err := resolveSelector(runnable.Spec.Selector, repository)
+	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository)
 	if err != nil {
 		return nil, nil, ResolveSelectorError{
 			Err:      err,
@@ -87,7 +87,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	err = repository.EnsureObjectExistsOnCluster(stampedObject.DeepCopy(), false)
+	err = repository.EnsureObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), false)
 	if err != nil {
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
@@ -98,7 +98,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	objectForListCall := stampedObject.DeepCopy()
 	objectForListCall.SetLabels(labels)
 
-	allRunnableStampedObjects, err := repository.ListUnstructured(objectForListCall)
+	allRunnableStampedObjects, err := repository.ListUnstructured(ctx, objectForListCall)
 	if err != nil {
 		return stampedObject, nil, ListCreatedObjectsError{
 			Err:       err,
@@ -122,7 +122,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	return stampedObject, outputs, nil
 }
 
-func resolveSelector(selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
 	if selector == nil {
 		return nil, nil
 	}
@@ -130,7 +130,7 @@ func resolveSelector(selector *v1alpha1.ResourceSelector, repository repository.
 	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
 	queryObj.SetLabels(selector.MatchingLabels)
 
-	results, err := repository.ListUnstructured(queryObj)
+	results, err := repository.ListUnstructured(ctx, queryObj)
 	if err != nil {
 		return nil, fmt.Errorf("could not list objects matching selector: %w", err)
 	}
