@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -32,7 +30,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, runnable *v1alpha1.Runnable, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured)
+	Realize(ctx context.Context, runnable *v1alpha1.Runnable, repository repository.Repository) (*unstructured.Unstructured, templates.Outputs, error)
 }
 
 func NewRealizer() Realizer {
@@ -46,15 +44,15 @@ type TemplatingContext struct {
 	Selected map[string]interface{} `json:"selected"`
 }
 
-func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, logger logr.Logger, repository repository.Repository) (*v1.Condition, templates.Outputs, *unstructured.Unstructured) {
+func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, repository repository.Repository) (*unstructured.Unstructured, templates.Outputs, error) {
 	runnable.Spec.RunTemplateRef.Kind = "ClusterRunTemplate"
 	apiRunTemplate, err := repository.GetRunTemplate(runnable.Spec.RunTemplateRef)
 
 	if err != nil {
-		errorMessage := fmt.Sprintf("could not get ClusterRunTemplate '%s'", runnable.Spec.RunTemplateRef.Name)
-		logger.Error(err, errorMessage)
-
-		return RunTemplateMissingCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
+		return nil, nil, GetRunTemplateError{
+			Err:      err,
+			Runnable: runnable,
+		}
 	}
 
 	template := templates.NewRunTemplateModel(apiRunTemplate)
@@ -66,12 +64,10 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	selected, err := resolveSelector(runnable.Spec.Selector, repository)
 	if err != nil {
-		errorMessage := fmt.Sprintf("could not resolve selector (apiVersion:%s kind:%s labels:%v)",
-			runnable.Spec.Selector.Resource.APIVersion,
-			runnable.Spec.Selector.Resource.Kind,
-			runnable.Spec.Selector.MatchingLabels)
-		logger.Error(err, errorMessage)
-		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
+		return nil, nil, ResolveSelectorError{
+			Err:      err,
+			Selector: runnable.Spec.Selector,
+		}
 	}
 
 	stampContext := templates.StamperBuilder(
@@ -85,16 +81,18 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
-		errorMessage := "could not stamp template"
-		logger.Error(err, errorMessage)
-		return TemplateStampFailureCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
+		return nil, nil, StampError{
+			Err:      err,
+			Runnable: runnable,
+		}
 	}
 
 	err = repository.EnsureObjectExistsOnCluster(stampedObject.DeepCopy(), false)
 	if err != nil {
-		errorMessage := "could not create object"
-		logger.Error(err, errorMessage)
-		return StampedObjectRejectedByAPIServerCondition(fmt.Errorf("%s: %w", errorMessage, err)), nil, nil
+		return nil, nil, ApplyStampedObjectError{
+			Err:           err,
+			StampedObject: stampedObject,
+		}
 	}
 
 	objectForListCall := stampedObject.DeepCopy()
@@ -102,22 +100,26 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	allRunnableStampedObjects, err := repository.ListUnstructured(objectForListCall)
 	if err != nil {
-		err := fmt.Errorf("could not list runnable objects: %w", err)
-		logger.Info(err.Error())
-		return FailedToListCreatedObjectsCondition(err), nil, stampedObject
+		return stampedObject, nil, ListCreatedObjectsError{
+			Err:       err,
+			Namespace: objectForListCall.GetNamespace(),
+			Labels:    objectForListCall.GetLabels(),
+		}
 	}
 
 	outputs, err := template.GetOutput(allRunnableStampedObjects)
 	if err != nil {
-		errorMessage := fmt.Sprintf("could not get output: %s", err.Error())
-		logger.Info(errorMessage)
-		return OutputPathNotSatisfiedCondition(err), nil, stampedObject
+		return stampedObject, nil, RetrieveOutputError{
+			Err:      err,
+			Runnable: runnable,
+		}
 	}
+
 	if len(outputs) == 0 {
 		outputs = runnable.Status.Outputs
 	}
 
-	return RunTemplateReadyCondition(), outputs, stampedObject
+	return stampedObject, outputs, nil
 }
 
 func resolveSelector(selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {

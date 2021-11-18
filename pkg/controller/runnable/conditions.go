@@ -22,16 +22,16 @@ import (
 
 // -- ClusterRunTemplate conditions
 
-func RunTemplateReadyCondition() *metav1.Condition {
-	return &metav1.Condition{
+func RunTemplateReadyCondition() metav1.Condition {
+	return metav1.Condition{
 		Type:   v1alpha1.RunTemplateReady,
 		Status: metav1.ConditionTrue,
 		Reason: v1alpha1.ReadyRunTemplateReason,
 	}
 }
 
-func RunTemplateMissingCondition(err error) *metav1.Condition {
-	return &metav1.Condition{
+func RunTemplateMissingCondition(err error) metav1.Condition {
+	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.NotFoundRunTemplateReason,
@@ -39,8 +39,8 @@ func RunTemplateMissingCondition(err error) *metav1.Condition {
 	}
 }
 
-func StampedObjectRejectedByAPIServerCondition(err error) *metav1.Condition {
-	return &metav1.Condition{
+func StampedObjectRejectedByAPIServerCondition(err error) metav1.Condition {
+	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.StampedObjectRejectedByAPIServerRunTemplateReason,
@@ -48,8 +48,8 @@ func StampedObjectRejectedByAPIServerCondition(err error) *metav1.Condition {
 	}
 }
 
-func OutputPathNotSatisfiedCondition(err error) *metav1.Condition {
-	return &metav1.Condition{
+func OutputPathNotSatisfiedCondition(err error) metav1.Condition {
+	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.OutputPathNotSatisfiedRunTemplateReason,
@@ -57,8 +57,8 @@ func OutputPathNotSatisfiedCondition(err error) *metav1.Condition {
 	}
 }
 
-func FailedToListCreatedObjectsCondition(err error) *metav1.Condition {
-	return &metav1.Condition{
+func FailedToListCreatedObjectsCondition(err error) metav1.Condition {
+	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.FailedToListCreatedObjectsReason,
@@ -66,11 +66,20 @@ func FailedToListCreatedObjectsCondition(err error) *metav1.Condition {
 	}
 }
 
-func TemplateStampFailureCondition(err error) *metav1.Condition {
-	return &metav1.Condition{
+func TemplateStampFailureCondition(err error) metav1.Condition {
+	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateStampFailureRunTemplateReason,
+		Message: err.Error(),
+	}
+}
+
+func UnknownErrorCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.RunTemplateReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.UnknownErrorReason,
 		Message: err.Error(),
 	}
 }

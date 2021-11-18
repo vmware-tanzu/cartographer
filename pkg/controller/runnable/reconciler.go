@@ -26,15 +26,18 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 )
 
 type Reconciler struct {
-	Repo           repository.Repository
-	Realizer       realizer.Realizer
-	DynamicTracker tracker.DynamicTracker
+	Repo                    repository.Repository
+	Realizer                realizer.Realizer
+	DynamicTracker          tracker.DynamicTracker
+	ConditionManagerBuilder conditions.ConditionManagerBuilder
+	conditionManager        conditions.ConditionManager
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -53,23 +56,59 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	condition, outputs, stampedObject := r.Realizer.Realize(ctx, runnable, logger, r.Repo)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
+
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo)
+	if err != nil {
+		switch typedErr := err.(type) {
+		case realizer.GetRunTemplateError:
+			r.conditionManager.AddPositive(RunTemplateMissingCondition(typedErr))
+			err = controller.NewUnhandledError(err)
+		case realizer.ResolveSelectorError:
+			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
+		case realizer.StampError:
+			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
+		case realizer.ApplyStampedObjectError:
+			r.conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
+			err = controller.NewUnhandledError(err)
+		case realizer.ListCreatedObjectsError:
+			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
+			err = controller.NewUnhandledError(err)
+		case realizer.RetrieveOutputError:
+			r.conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr))
+		default:
+			r.conditionManager.AddPositive(UnknownErrorCondition(typedErr))
+			err = controller.NewUnhandledError(err)
+		}
+	} else {
+		r.conditionManager.AddPositive(RunTemplateReadyCondition())
+	}
+
+	var trackingError error
 	if stampedObject != nil {
-		err = r.DynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
-		if err != nil {
+		trackingError = r.DynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
+		if trackingError != nil {
 			logger.Error(err, "dynamic tracker watch")
+			err = controller.NewUnhandledError(trackingError)
 		}
 	}
 
-	conditionManager := conditions.NewConditionManager(v1alpha1.RunnableReady, runnable.Status.Conditions)
-	conditionManager.AddPositive(*condition)
-	//TODO: deal with changed (story #84)
-	runnable.Status.Conditions, _ = conditionManager.Finalize()
-	runnable.Status.Outputs = outputs
+	var changed bool
+	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
 
-	statusUpdateError := r.Repo.StatusUpdate(runnable)
-	if statusUpdateError != nil {
-		return ctrl.Result{}, fmt.Errorf("update runnable status: %w", statusUpdateError)
+	if changed || (runnable.Status.ObservedGeneration != runnable.Generation) {
+		runnable.Status.Outputs = outputs
+		statusUpdateError := r.Repo.StatusUpdate(runnable)
+		if statusUpdateError != nil {
+			return ctrl.Result{}, fmt.Errorf("update runnable status: %w", statusUpdateError)
+		}
+	}
+
+	if err != nil {
+		if controller.IsUnhandledError(err) {
+			return ctrl.Result{}, err
+		}
+		logger.Info("handled error", "error", err)
 	}
 
 	return ctrl.Result{}, nil
