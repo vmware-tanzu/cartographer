@@ -106,16 +106,12 @@ var _ = Describe("Reconciler", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
 		Expect(out).To(Say(`"msg":"started"`))
-		Expect(out).To(Say(`"name":"my-workload-name"`))
-		Expect(out).To(Say(`"namespace":"my-namespace"`))
 	})
 
 	It("logs that it's finished", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
 		Expect(out).To(Say(`"msg":"finished"`))
-		Expect(out).To(Say(`"name":"my-workload-name"`))
-		Expect(out).To(Say(`"namespace":"my-namespace"`))
 	})
 
 	It("updates the status of the workload", func() {

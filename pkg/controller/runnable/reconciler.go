@@ -45,7 +45,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	logger.Info("started")
 	defer logger.Info("finished")
 
-	runnable, err := r.Repo.GetRunnable(request.Name, request.Namespace)
+	runnable, err := r.Repo.GetRunnable(ctx, request.Name, request.Namespace)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get runnable: %w", err)
 	}
@@ -97,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if changed || (runnable.Status.ObservedGeneration != runnable.Generation) {
 		runnable.Status.Outputs = outputs
-		statusUpdateError := r.Repo.StatusUpdate(runnable)
+		statusUpdateError := r.Repo.StatusUpdate(ctx, runnable)
 		if statusUpdateError != nil {
 			return ctrl.Result{}, fmt.Errorf("update runnable status: %w", statusUpdateError)
 		}

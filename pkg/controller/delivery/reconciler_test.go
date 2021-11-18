@@ -210,8 +210,8 @@ var _ = Describe("delivery reconciler", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(out).Should(Say(`"msg":"started","name":"my-new-delivery"`))
-			Eventually(out).Should(Say(`"msg":"finished","name":"my-new-delivery"`))
+			Eventually(out).Should(Say(`"msg":"started"`))
+			Eventually(out).Should(Say(`"msg":"finished"`))
 		})
 	})
 

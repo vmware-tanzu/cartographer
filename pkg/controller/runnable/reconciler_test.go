@@ -127,7 +127,8 @@ var _ = Describe("Reconcile", func() {
 
 			_, _ = reconciler.Reconcile(ctx, request)
 
-			updatedRunnable := repository.StatusUpdateArgsForCall(0)
+			actualCtx, updatedRunnable := repository.StatusUpdateArgsForCall(0)
+			Expect(actualCtx).To(Equal(ctx))
 
 			Expect(*updatedRunnable.(*v1alpha1.Runnable)).To(MatchFields(IgnoreExtras, Fields{
 				"Status": MatchFields(IgnoreExtras, Fields{
@@ -186,7 +187,8 @@ var _ = Describe("Reconcile", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(repository.GetRunnableCallCount()).To(Equal(1))
-				actualName, actualNamespace := repository.GetRunnableArgsForCall(0)
+				actualCtx, actualName, actualNamespace := repository.GetRunnableArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
 				Expect(actualName).To(Equal("my-runnable"))
 				Expect(actualNamespace).To(Equal("my-namespace"))
 			})
@@ -195,8 +197,8 @@ var _ = Describe("Reconcile", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(out).To(Say(`"msg":"started","name":"my-runnable","namespace":"my-namespace"`))
-				Expect(out).To(Say(`"msg":"finished","name":"my-runnable","namespace":"my-namespace"`))
+				Expect(out).To(Say(`"msg":"started"`))
+				Expect(out).To(Say(`"msg":"finished"`))
 			})
 
 			It("Updates the status with no outputs", func() {
@@ -204,7 +206,9 @@ var _ = Describe("Reconcile", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-				statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Runnable)
+				actualCtx, obj := repository.StatusUpdateArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
+				statusObject, ok := obj.(*v1alpha1.Runnable)
 				Expect(ok).To(BeTrue())
 
 				Expect(statusObject.Status.Outputs).To(HaveLen(0))
@@ -223,7 +227,9 @@ var _ = Describe("Reconcile", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-				statusObject, ok := repository.StatusUpdateArgsForCall(0).(*v1alpha1.Runnable)
+				actualCtx, obj := repository.StatusUpdateArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
+				statusObject, ok := obj.(*v1alpha1.Runnable)
 				Expect(ok).To(BeTrue())
 
 				Expect(statusObject.Status.Outputs).To(HaveLen(1))
@@ -240,8 +246,8 @@ var _ = Describe("Reconcile", func() {
 
 			It("Starts and Finishes cleanly", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
-				Expect(out).To(Say(`"msg":"started","name":"my-runnable","namespace":"my-namespace"`))
-				Expect(out).To(Say(`"msg":"finished","name":"my-runnable","namespace":"my-namespace"`))
+				Expect(out).To(Say(`"msg":"started"`))
+				Expect(out).To(Say(`"msg":"finished"`))
 			})
 
 			It("returns a status error", func() {
@@ -261,8 +267,8 @@ var _ = Describe("Reconcile", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(out).To(Say(`"msg":"started","name":"my-runnable","namespace":"my-namespace"`))
-				Expect(out).To(Say(`"msg":"finished","name":"my-runnable","namespace":"my-namespace"`))
+				Expect(out).To(Say(`"msg":"started"`))
+				Expect(out).To(Say(`"msg":"finished"`))
 			})
 
 			It("does not try to watch stampedObject", func() {
@@ -475,15 +481,15 @@ var _ = Describe("Reconcile", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(out).To(Say(`"msg":"runnable no longer exists","name":"my-runnable","namespace":"my-namespace"`))
+			Expect(out).To(Say(`"msg":"runnable no longer exists"`))
 		})
 
 		It("Starts and Finishes cleanly", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(out).Should(Say(`"msg":"started","name":"my-runnable","namespace":"my-namespace"`))
-			Eventually(out).Should(Say(`"msg":"finished","name":"my-runnable","namespace":"my-namespace"`))
+			Eventually(out).Should(Say(`"msg":"started"`))
+			Eventually(out).Should(Say(`"msg":"finished"`))
 		})
 	})
 
