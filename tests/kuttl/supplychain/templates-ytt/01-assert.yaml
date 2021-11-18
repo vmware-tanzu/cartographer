@@ -16,7 +16,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---consume-output-of-resources
+  name: responsible-ops---templates-ytt
 status:
   conditions:
     - type: TemplatesReady
