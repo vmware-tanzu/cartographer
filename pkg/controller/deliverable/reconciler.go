@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -52,12 +51,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	defer r.logger.Info("finished")
 
 	deliverable, err := r.Repo.GetDeliverable(req.Name, req.Namespace)
-	if err != nil || deliverable == nil {
-		if kerrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-
+	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get deliverable: %w", err)
+	}
+
+	if deliverable == nil {
+		r.logger.Info("deliverable no longer exists")
+		return ctrl.Result{}, nil
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.DeliverableReady, deliverable.Status.Conditions)

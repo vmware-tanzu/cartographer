@@ -71,13 +71,11 @@ func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 	}
 
 	err := r.cl.Get(context.TODO(), key, delivery)
-
-	if err != nil && !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("get: %w", err)
-	}
-
 	if kerrors.IsNotFound(err) {
 		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
 	}
 
 	return delivery, nil
@@ -161,9 +159,13 @@ func (r *repository) getTemplate(name string, kind string) (client.Object, error
 	}
 
 	err = r.getObject(name, "", apiTemplate)
+	if kerrors.IsNotFound(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
+
 	return apiTemplate, nil
 }
 
@@ -252,17 +254,24 @@ func (r *repository) getObject(name string, namespace string, obj client.Object)
 func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workload, error) {
 	workload := v1alpha1.Workload{}
 	err := r.getObject(name, namespace, &workload)
-	if err != nil {
-		return nil, err
+	if kerrors.IsNotFound(err) {
+		return nil, nil
 	}
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+
 	return &workload, nil
 }
 
 func (r *repository) GetDeliverable(name string, namespace string) (*v1alpha1.Deliverable, error) {
 	deliverable := v1alpha1.Deliverable{}
 	err := r.getObject(name, namespace, &deliverable)
+	if kerrors.IsNotFound(err) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get: %w", err)
 	}
 	return &deliverable, nil
 }
@@ -271,9 +280,11 @@ func (r *repository) GetRunnable(name string, namespace string) (*v1alpha1.Runna
 	runnable := &v1alpha1.Runnable{}
 
 	err := r.getObject(name, namespace, runnable)
-
+	if kerrors.IsNotFound(err) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, fmt.Errorf("get-runnable: %w", err)
+		return nil, fmt.Errorf("get: %w", err)
 	}
 
 	return runnable, nil
@@ -293,12 +304,11 @@ func (r *repository) GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, 
 	supplyChain := v1alpha1.ClusterSupplyChain{}
 
 	err := r.getObject(name, "", &supplyChain)
-	if err != nil && !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("get: %w", err)
-	}
-
 	if kerrors.IsNotFound(err) {
 		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
 	}
 
 	return &supplyChain, nil

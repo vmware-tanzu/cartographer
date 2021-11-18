@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -52,12 +51,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	defer r.logger.Info("finished")
 
 	workload, err := r.Repo.GetWorkload(req.Name, req.Namespace)
-	if err != nil || workload == nil {
-		if kerrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-
+	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get workload: %w", err)
+	}
+
+	if workload == nil {
+		r.logger.Info("workload no longer exists")
+		return ctrl.Result{}, nil
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.WorkloadReady, workload.Status.Conditions)

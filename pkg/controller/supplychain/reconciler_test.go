@@ -23,10 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -116,6 +114,8 @@ var _ = Describe("Reconciler", func() {
 		req = reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
 		}
+
+		repo.GetClusterTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
 	})
 
 	It("logs that it's begun", func() {
@@ -189,8 +189,8 @@ var _ = Describe("Reconciler", func() {
 
 	Context("cannot find cluster template", func() {
 		BeforeEach(func() {
-			repo.GetClusterTemplateReturnsOnCall(0, nil, nil)
-			repo.GetClusterTemplateReturnsOnCall(1, nil, kerrors.NewNotFound(schema.GroupResource{}, ""))
+			repo.GetClusterTemplateReturnsOnCall(0, &v1alpha1.ClusterTemplate{}, nil)
+			repo.GetClusterTemplateReturnsOnCall(1, nil, nil)
 		})
 
 		It("adds a positive templates NOT found condition", func() {
@@ -219,10 +219,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when the supply chain has been deleted from the apiServer", func() {
 		BeforeEach(func() {
-			repo.GetSupplyChainReturns(nil, kerrors.NewNotFound(schema.GroupResource{
-				Group:    "carto.run",
-				Resource: "ClusterSupplyChain",
-			}, "my-supply-chain"))
+			repo.GetSupplyChainReturns(nil, nil)
 		})
 
 		It("does not return an error", func() {
