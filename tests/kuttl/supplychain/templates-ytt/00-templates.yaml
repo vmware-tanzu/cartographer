@@ -16,7 +16,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: example-first---consume-output-of-resources
+  name: example-first---templates-ytt
 spec:
   ytt: |
     apiVersion: v1
@@ -33,7 +33,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: example-second---consume-output-of-resources
+  name: example-second---templates-ytt
 spec:
   ytt: |
     apiVersion: v1
@@ -50,7 +50,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterImageTemplate
 metadata:
-  name: example-image---consume-output-of-resources
+  name: example-image---templates-ytt
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -68,7 +68,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterConfigTemplate
 metadata:
-  name: example-config---consume-output-of-resources
+  name: example-config---templates-ytt
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -76,7 +76,7 @@ spec:
     apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: example-config-configmap
+      name: example-config-configmap-ytt
     data:
       favorite_color: #@ data.values.image
   configPath: data.favorite_color
@@ -85,7 +85,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: example-config---consume-output-of-resources
+  name: example-config---templates-ytt
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -93,6 +93,6 @@ spec:
     apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: example-config
+      name: example-config-ytt
     data:
       best_name: #@ data.values.config

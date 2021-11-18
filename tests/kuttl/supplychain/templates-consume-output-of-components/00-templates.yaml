@@ -66,7 +66,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterConfigTemplate
 metadata:
-  name: example-config---consume-output-of-resources
+  name: example-config---consume-output-of-resources-1
 spec:
   template:
     apiVersion: v1
@@ -81,7 +81,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: example-config---consume-output-of-resources
+  name: example-config---consume-output-of-resources-2
 spec:
   template:
     apiVersion: v1

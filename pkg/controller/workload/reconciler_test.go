@@ -380,9 +380,10 @@ var _ = Describe("Reconciler", func() {
 				var retrieveError realizer.RetrieveOutputError
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					retrieveError = realizer.NewRetrieveOutputError(
-						&v1alpha1.SupplyChainResource{Name: "some-resource"},
-						&jsonPathError)
+					retrieveError = realizer.RetrieveOutputError{
+						Err:      jsonPathError,
+						Resource: &v1alpha1.SupplyChainResource{Name: "some-resource"},
+					}
 					rlzr.RealizeReturns(nil, retrieveError)
 				})
 

@@ -25,7 +25,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: example-config-configmap
+  name: example-config-configmap-ytt
 data:
   favorite_color: knitting
 
@@ -33,6 +33,6 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: example-config
+  name: example-config-ytt
 data:
   best_name: knitting

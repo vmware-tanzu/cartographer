@@ -382,9 +382,11 @@ var _ = Describe("Reconciler", func() {
 				var wrappedError error
 
 				JustBeforeEach(func() {
-					retrieveError = realizer.NewRetrieveOutputError(
-						&v1alpha1.ClusterDeliveryResource{Name: "some-resource"},
-						wrappedError)
+					retrieveError = realizer.RetrieveOutputError{
+						Err:      wrappedError,
+						Resource: &v1alpha1.ClusterDeliveryResource{Name: "some-resource"},
+					}
+
 					rlzr.RealizeReturns(nil, retrieveError)
 				})
 

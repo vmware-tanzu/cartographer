@@ -110,7 +110,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		return stampedObject, nil, RetrieveOutputError{
 			Err:      err,
-			resource: resource,
+			Resource: resource,
 		}
 	}
 
