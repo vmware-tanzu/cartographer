@@ -210,15 +210,15 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 	stderr := bytes.NewBuffer([]byte{})
 
 	// inject each key of the template context as a ytt value
-	context := map[string]interface{}{}
+	templateContext := map[string]interface{}{}
 	b, err := json.Marshal(s.TemplatingContext)
 	if err != nil {
 		// NOTE we can ignore subsequent json errors, if there's a issue with the data it will be caught here
 		return nil, fmt.Errorf("unable to marshal template context: %w", err)
 	}
-	_ = json.Unmarshal(b, &context)
-	for k := range context {
-		raw, _ := json.Marshal(context[k])
+	_ = json.Unmarshal(b, &templateContext)
+	for k := range templateContext {
+		raw, _ := json.Marshal(templateContext[k])
 		args = append(args, "--data-value-yaml", fmt.Sprintf("%s=%s", k, raw))
 	}
 

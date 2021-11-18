@@ -16,25 +16,25 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---consume-output-of-resources
+  name: responsible-ops---templates-ytt
 spec:
   selector:
-    integration-test: "templates-consume-output-of-resources"
+    integration-test: "templates-ytt"
   resources:
     - name: source-provider-first
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-first---consume-output-of-resources
+        name: example-first---templates-ytt
 
     - name: source-provider-second
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-second---consume-output-of-resources
+        name: example-second---templates-ytt
 
     - name: built-image-provider
       templateRef:
         kind: ClusterImageTemplate
-        name: example-image---consume-output-of-resources
+        name: example-image---templates-ytt
       sources:
         - resource: source-provider-second
           name: solo-source-provider
@@ -42,7 +42,7 @@ spec:
     - name: config
       templateRef:
         kind: ClusterConfigTemplate
-        name: example-config---consume-output-of-resources
+        name: example-config---templates-ytt
       images:
         - resource: built-image-provider
           name: solo-image-provider
@@ -50,7 +50,7 @@ spec:
     - name: config
       templateRef:
         kind: ClusterTemplate
-        name: example-config---consume-output-of-resources
+        name: example-config---templates-ytt
       configs:
         - resource: config
           name: solo-config-provider

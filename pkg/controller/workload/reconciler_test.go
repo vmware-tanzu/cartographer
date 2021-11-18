@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -381,9 +380,10 @@ var _ = Describe("Reconciler", func() {
 				var retrieveError realizer.RetrieveOutputError
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					retrieveError = realizer.NewRetrieveOutputError(
-						&v1alpha1.SupplyChainResource{Name: "some-resource"},
-						&jsonPathError)
+					retrieveError = realizer.RetrieveOutputError{
+						Err:      jsonPathError,
+						Resource: &v1alpha1.SupplyChainResource{Name: "some-resource"},
+					}
 					rlzr.RealizeReturns(nil, retrieveError)
 				})
 
@@ -548,18 +548,14 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 
-	Context("workload is deleted", func() { // Todo: can we move error handling out of repo to make this more obvious?
+	Context("workload is deleted", func() {
 		BeforeEach(func() {
-			repo.GetWorkloadReturns(nil, kerrors.NewNotFound(schema.GroupResource{
-				Group:    "carto.run",
-				Resource: "workload",
-			}, "some-workload"))
+			repo.GetWorkloadReturns(nil, nil)
 		})
 		It("finishes the reconcile and does not requeue", func() {
-			result, err := reconciler.Reconcile(ctx, req)
+			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{Requeue: false}))
 		})
 	})
 })

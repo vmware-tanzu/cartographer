@@ -36,13 +36,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
-type LogLine struct {
-	Timestamp float64 `json:"ts"`
-	Message   string  `json:"msg"`
-	Name      string  `json:"name"`
-	Namespace string  `json:"namespace"`
-}
-
 var _ = Describe("WorkloadReconciler", func() {
 	var templateBytes = func() []byte {
 		configMap := &corev1.ConfigMap{

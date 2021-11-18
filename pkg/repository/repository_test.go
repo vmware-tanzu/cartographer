@@ -643,10 +643,10 @@ spec:
 			})
 
 			Context("workload doesnt exist", func() {
-				It("returns an error", func() {
-					_, err := repo.GetWorkload("workload-that-does-not-exist-name", "workload-namespace")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get:"))
+				It("returns nil workload", func() {
+					workload, err := repo.GetWorkload("workload-that-does-not-exist-name", "workload-namespace")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(workload).To(BeNil())
 				})
 			})
 		})
@@ -669,10 +669,10 @@ spec:
 			})
 
 			Context("deliverable doesnt exist", func() {
-				It("returns an error", func() {
-					_, err := repo.GetDeliverable("deliverable-that-does-not-exist-name", "deliverable-namespace")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get:"))
+				It("returns nil deliverable", func() {
+					deliverable, err := repo.GetDeliverable("deliverable-that-does-not-exist-name", "deliverable-namespace")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(deliverable).To(BeNil())
 				})
 			})
 		})
@@ -695,10 +695,10 @@ spec:
 			})
 
 			Context("runnable doesnt exist", func() {
-				It("returns an error", func() {
-					_, err := repo.GetRunnable("runnable-that-does-not-exist-name", "runnable-namespace")
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get-runnable:"))
+				It("returns nil runnable", func() {
+					runnable, err := repo.GetRunnable("runnable-that-does-not-exist-name", "runnable-namespace")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(runnable).To(BeNil())
 				})
 			})
 		})

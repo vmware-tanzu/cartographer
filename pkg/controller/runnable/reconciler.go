@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -48,18 +47,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	defer logger.Info("finished")
 
 	runnable, err := r.Repo.GetRunnable(request.Name, request.Namespace)
-
-	if kerrors.IsNotFound(err) {
-		logger.Info("runnable no longer exists")
-		return ctrl.Result{}, nil
-	}
-
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("get runnable: %w", err)
 	}
 
 	if runnable == nil {
-		return ctrl.Result{}, fmt.Errorf("get runnable: %w", err)
+		logger.Info("runnable no longer exists")
+		return ctrl.Result{}, nil
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)

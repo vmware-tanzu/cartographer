@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -47,12 +46,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	defer r.logger.Info("finished")
 
 	supplyChain, err := r.Repo.GetSupplyChain(req.Name)
-	if err != nil || supplyChain == nil {
-		if kerrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-
+	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get supply chain: %w", err)
+	}
+
+	if supplyChain == nil {
+		r.logger.Info("supply chain no longer exists")
+		return ctrl.Result{}, nil
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
@@ -86,18 +86,14 @@ func (r *Reconciler) completeReconciliation(supplyChain *v1alpha1.ClusterSupplyC
 }
 
 func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) error {
-	var (
-		err               error
-		resourcesNotFound []string
-	)
+	var resourcesNotFound []string
 
 	for _, resource := range chain.Spec.Resources {
-		_, err = r.Repo.GetClusterTemplate(resource.TemplateRef)
+		template, err := r.Repo.GetClusterTemplate(resource.TemplateRef)
 		if err != nil {
-			if !kerrors.IsNotFound(err) {
-				return controller.NewUnhandledError(fmt.Errorf("get cluster template: %w", err))
-			}
-
+			return controller.NewUnhandledError(fmt.Errorf("get cluster template: %w", err))
+		}
+		if template == nil {
 			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
 	}

@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -463,13 +462,7 @@ var _ = Describe("Reconcile", func() {
 
 	Context("the runnable goes away", func() {
 		BeforeEach(func() {
-			repository.GetRunnableReturns(nil, kerrors.NewNotFound(
-				schema.GroupResource{
-					Group:    "carto.run",
-					Resource: "Runnable",
-				},
-				"my-runnable",
-			))
+			repository.GetRunnableReturns(nil, nil)
 		})
 
 		It("considers the reconcile complete", func() {

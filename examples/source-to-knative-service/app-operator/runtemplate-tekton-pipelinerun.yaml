@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
----
 apiVersion: carto.run/v1alpha1
-kind: Workload
+kind: ClusterRunTemplate
 metadata:
-  name: petclinic
-  labels:
-    integration-test: "templates-ytt"
+  name: tekton-pipelinerun
 spec:
-  source:
-    git:
-      url: https://github.com/spring-projects/spring-petclinic.git
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      generateName: $(runnable.metadata.name)$-
+    spec:
+      taskRef: {name: $(selected.metadata.name)$}
+      params: $(runnable.spec.inputs.params)$

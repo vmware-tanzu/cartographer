@@ -12,16 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository_test
+package logger
 
 import (
-	"testing"
+	"fmt"
+	"strings"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"go.uber.org/zap/zapcore"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestTemplates(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Repository Suite")
+const (
+	ERROR = -1
+	DEBUG = 1
+	INFO  = 0
+)
+
+func SetLogLevel(logLevel string) (zap.Opts, error) {
+	var level zapcore.Level
+	switch strings.ToUpper(logLevel) {
+	case "DEBUG":
+		level = zapcore.Level(-1)
+	case "INFO":
+		level = zapcore.Level(0)
+	case "ERROR":
+		level = zapcore.Level(1)
+	default:
+		return nil, fmt.Errorf("if present, log-level must be one of {error, info, debug}")
+	}
+
+	zapOpt := zap.Options{}
+	zapOpt.Level = level
+
+	return zap.UseFlagOptions(&zapOpt), nil
 }

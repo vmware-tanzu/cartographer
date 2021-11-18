@@ -31,10 +31,12 @@ Cartographer is composed of several custom resources, some of them being cluster
 - [`ClusterImageTemplate`](#clusterimagetemplate)
 - [`ClusterConfigTemplate`](#clusterconfigtemplate)
 - [`ClusterTemplate`](#clustertemplate)
+- [`ClusterRunTemplate`](#clusterruntemplate)
 
-and one that is namespace-scoped:
+and a couple namespace-scoped:
 
 - [`Workload`](#workload)
+- [`Runnable`](#runnable)
 
 
 ### Workload
@@ -73,7 +75,7 @@ spec:
   #
   serviceClaims:
     - name: broker
-      ref: 
+      ref:
         apiVersion: services.tanzu.vmware.com/v1alpha1
         kind: RabbitMQ
         name: rabbit-broker
@@ -114,7 +116,7 @@ notes:
 
 1. labels serve as a way of indirectly selecting `ClusterSupplyChain` - `Workload`s without labels that match a `ClusterSupplyChain`'s `spec.selector` won't be reconciled and will stay in an `Errored` state.
 
-2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside. 
+2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside.
 
 _ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
 
@@ -125,7 +127,7 @@ With a `ClusterSupplyChain`, app operators describe which "shape of applications
 
 Those `Workload`s that match `spec.selector` then go through the resources specified in `spec.resources`.
 
-A resource can emit values, which the supply chain can make available to other resources. 
+A resource can emit values, which the supply chain can make available to other resources.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -162,8 +164,8 @@ spec:
 
       # a set of resources that provide source information, that is, url and
       # revision.
-      # 
-      # in a template, these can be consumed as: 
+      #
+      # in a template, these can be consumed as:
       #
       #    $(sources.<name>.url)$
       #    $(sources.<name>.revision)$
@@ -250,7 +252,7 @@ spec:
       # name of the parameter (required, unique in this list)
       #
     - name: git-implementation
-      # default value if not specified in the resource that references 
+      # default value if not specified in the resource that references
       # this templateClusterSupplyChain (required)
       #
       default: libgit2
@@ -260,7 +262,7 @@ spec:
   #
   urlPath: .status.artifact.url
 
-  # jsonpath expression to instruct where in the object templated out 
+  # jsonpath expression to instruct where in the object templated out
   # source code revision information can be found. (required)
   #
   revisionPath: .status.artifact.revision
@@ -310,7 +312,7 @@ spec:
   #
   params: []
 
-  # jsonpath expression to instruct where in the object templated out container 
+  # jsonpath expression to instruct where in the object templated out container
   # image information can be found. (required)
   #
   imagePath: .status.latestImage
@@ -335,6 +337,7 @@ spec:
 ```
 
 _ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/cluster_image_template.go)_
+
 
 ### ClusterConfigTemplate
 
@@ -408,3 +411,140 @@ spec:
 ```
 
 _ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_
+
+
+### Runnable
+
+A `Runnable` object declares the intention of having immutable objects
+submitted to Kubernetes according to a template (via ClusterRunTemplate)
+whenever any of the inputs passed to it changes. i.e., it allows us to provide
+a mutable spec that drives the creation of immutable objects whenever that spec
+changes.
+
+
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: Runnable
+metadata:
+  name: test-runner
+spec:
+  # data to be made available to the template of ClusterRunTemplate
+  # that we point at.
+  #
+  # this field takes as value an object that maps strings to values of any
+  # kind, which can then be reference in a template using jsonpath such as
+  # `$(runnable.spec.inputs.<key...>)$`.
+  #
+  # (required)
+  #
+  inputs:
+    serviceAccount: bla
+    params:
+       - name: foo
+         value: bar
+
+
+  # reference to a ClusterRunTemplate that defines how objects should be
+  # created referencing the data passed to the Runnable.
+  #
+  # (required)
+  #
+  runTemplateRef:
+    name: job-runner
+
+
+  # an optional selection rule for finding an object that should be used
+  # together with the one being stamped out by the runnable.
+  #
+  # an object found using the rules described here are made available during
+  # interpolation time via `$(selected.<...object>)$`.
+  #
+  # (optional)
+  #
+  selector:
+    resource:
+      kind: Pipeline
+      apiVersion: tekton.dev/v1beta1
+    matchingLabels:
+      pipelines.foo.bar: testing
+```
+
+
+### ClusterRunTemplate
+
+A `ClusterRunTemplate` defines how an immutable object should be stamped out
+based on data provided by a `Runnable`.
+
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata:
+  name: image-builder
+spec:
+  # data to be gathered from the objects that it interpolates once they #
+  # succeeded (based on the object presenting a condition with type 'Succeeded'
+  # and status `True`).
+  #
+  # (optional)
+  #
+  outputs:
+    # e.g., make available under the Runnable `outputs` section in `status` a
+    # field called "latestImage" that exposes the result named 'IMAGE-DIGEST'
+    # of a tekton task that builds a container image.
+    #
+    latestImage: .status.results[?(@.name=="IMAGE-DIGEST")].value
+
+
+  # definition of the object to interpolate and submit to kubernetes.
+  #
+  # data available for interpolation:
+  #   - `runnable`: the Runnable object that referenced this template.
+  #
+  #                 e.g.:  params:
+  #                        - name: revison
+  #                          value: $(runnable.spec.inputs.git-revision)$
+  #
+  #
+  #   - `selected`: a related object that got selected using the Runnable
+  #                 selector query.
+  #
+  #                 e.g.:  taskRef:
+  #                          name: $(selected.metadata.name)$
+  #                          namespace: $(selected.metadata.namespace)$
+  #
+  # (required)
+  #
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: TaskRun
+    metadata:
+      generateName: $(runnable.metadata.name)$-
+    spec:
+      serviceAccountName: $(runnable.spec.inputs.serviceAccount)$
+      taskRef: $(runnable.spec.inputs.taskRef)$
+      params: $(runnable.spec.inputs.params)$
+```
+
+It differs from supply chain templates in some aspects:
+
+- it cannot be referenced directly by a ClusterSupplyChain object (it can only
+  be reference by a Runnable)
+
+- `outputs` provide a free-form way of exposing any form of results from what
+  has been run (i.e., submitted by the Runnable) to the status of the Runnable
+  object (as opposed to typed "source", "image", and "config" from supply
+  chains)
+
+- templating context (values provided to the interpolation) is specific to the
+  Runnable: the runnable object itself and the object resulting from the
+  selection query.
+
+- templated object metadata.name should not be set. differently from
+  ClusterSupplyChain, a Runnable has the semantics of creating new objects on
+  change, rather than patching. This means that on every input set change, a new
+  name must be derived. To be sure that a name can always be generated,
+  `metadata.generateName` should be set rather than `metadata.name`.
+
+Similarly to other templates, it has a `template` field where data is taken (in
+this case, from Runnable and selected objects via `runnable.spec.selector`) and
+via `$()$` allows one to interpolate such data to form a final object.

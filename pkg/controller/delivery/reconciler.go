@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -59,18 +58,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 }
 
 func (r *Reconciler) reconcileDelivery(delivery *v1alpha1.ClusterDelivery) error {
-	var (
-		err               error
-		resourcesNotFound []string
-	)
+	var resourcesNotFound []string
 
 	for _, resource := range delivery.Spec.Resources {
-		_, err = r.Repo.GetDeliveryClusterTemplate(resource.TemplateRef)
+		template, err := r.Repo.GetDeliveryClusterTemplate(resource.TemplateRef)
 		if err != nil {
-			if !kerrors.IsNotFound(err) {
-				return controller.NewUnhandledError(fmt.Errorf("get delivery cluster template: %w", err))
-			}
-
+			return controller.NewUnhandledError(fmt.Errorf("get delivery cluster template: %w", err))
+		}
+		if template == nil {
 			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
 	}

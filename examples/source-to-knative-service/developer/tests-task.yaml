@@ -12,14 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
----
-apiVersion: carto.run/v1alpha1
-kind: Workload
+apiVersion: tekton.dev/v1beta1
+kind: Task
 metadata:
-  name: petclinic
+  name: test
   labels:
-    integration-test: "templates-ytt"
+    apps.tanzu.vmware.com/task: test
 spec:
-  source:
-    git:
-      url: https://github.com/spring-projects/spring-petclinic.git
+  params:
+    - name: blob-url
+  steps:
+    - name: test
+      image: golang
+      command:
+        - bash
+        - -cxe
+        - |-
+          set -o pipefail
+
+          cd `mktemp -d`
+          curl -SL $(params.blob-url) | tar xvzf -
+          go test -v ./...
