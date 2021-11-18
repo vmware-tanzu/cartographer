@@ -19,7 +19,7 @@ metadata:
   name: responsible-ops---templates-ytt
 spec:
   selector:
-    integration-test: "templates-templates-ytt"
+    integration-test: "templates-ytt"
   resources:
     - name: source-provider-first
       templateRef:
