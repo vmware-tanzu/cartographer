@@ -40,8 +40,7 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger = logr.FromContext(ctx).
-		WithValues("name", req.Name, "namespace", req.Namespace)
+	r.logger = logr.FromContext(ctx)
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 

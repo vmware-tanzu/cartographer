@@ -41,8 +41,7 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx).
-		WithValues("name", request.Name, "namespace", request.Namespace)
+	logger := logr.FromContext(ctx)
 	logger.Info("started")
 	defer logger.Info("finished")
 
