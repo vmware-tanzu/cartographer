@@ -57,19 +57,72 @@ var _ = Describe("Logger", func() {
 			func(loglevel int, expected bool) {
 				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
 			},
-			Entry("info", 0, true),
-			Entry("debug", 1, false),
+			Entry("error", ERROR, true),
+			Entry("info", INFO, true),
+			Entry("debug", DEBUG, false),
 		)
 
 		It("outputs info logs", func() {
 			aNicePhrase := "It's a beautiful day in the neighborhood"
-			logger.V(0).Info(aNicePhrase)
+			logger.V(INFO).Info(aNicePhrase)
+			Expect(controllerBuffer).To(gbytes.Say(aNicePhrase))
+		})
+
+		It("outputs default info logs", func() {
+			aNicePhrase := "It's a beautiful day in the neighborhood"
+			logger.Info(aNicePhrase)
 			Expect(controllerBuffer).To(gbytes.Say(aNicePhrase))
 		})
 
 		It("does not output debug logs", func() {
 			aNicePhrase := "Let's make the most of this beautiful day"
-			logger.V(1).Info(aNicePhrase)
+			logger.V(DEBUG).Info(aNicePhrase)
+			Expect(controllerBuffer).NotTo(gbytes.Say(aNicePhrase))
+		})
+
+		It("outputs error logs", func() {
+			aNiceErrorMessage := "would you be my, could you be my"
+			aNiceErrorLogMessage := "Won't you be my neighbor?"
+
+			logger.Error(fmt.Errorf(aNiceErrorMessage), aNiceErrorLogMessage)
+			Expect(controllerBuffer).To(gbytes.Say(aNiceErrorMessage))
+
+			logger.Error(fmt.Errorf(aNiceErrorMessage), aNiceErrorLogMessage)
+			Expect(controllerBuffer).To(gbytes.Say(aNiceErrorLogMessage))
+		})
+	})
+
+	When("log output level is error", func() {
+		BeforeEach(func() {
+			logOpt, err = SetLogLevel("error")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("log enabled is correct",
+			func(loglevel int, expected bool) {
+				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
+
+			},
+			Entry("error", ERROR, true),
+			Entry("info", INFO, false),
+			Entry("debug", DEBUG, false),
+		)
+
+		It("does not output info logs", func() {
+			aNicePhrase := "It's a beautiful day in the neighborhood"
+			logger.V(INFO).Info(aNicePhrase)
+			Expect(controllerBuffer).NotTo(gbytes.Say(aNicePhrase))
+		})
+
+		It("does not output default info logs", func() {
+			aNicePhrase := "It's a beautiful day in the neighborhood"
+			logger.Info(aNicePhrase)
+			Expect(controllerBuffer).NotTo(gbytes.Say(aNicePhrase))
+		})
+
+		It("does not output debug logs", func() {
+			aNicePhrase := "Let's make the most of this beautiful day"
+			logger.V(DEBUG).Info(aNicePhrase)
 			Expect(controllerBuffer).NotTo(gbytes.Say(aNicePhrase))
 		})
 
@@ -95,19 +148,26 @@ var _ = Describe("Logger", func() {
 			func(loglevel int, expected bool) {
 				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
 			},
-			Entry("info", 0, true),
-			Entry("debug", 1, true),
+			Entry("error", ERROR, true),
+			Entry("info", INFO, true),
+			Entry("debug", DEBUG, true),
 		)
 
 		It("outputs info logs", func() {
 			aNicePhrase := "It's a beautiful day in the neighborhood"
-			logger.V(0).Info(aNicePhrase)
+			logger.V(INFO).Info(aNicePhrase)
+			Expect(controllerBuffer).To(gbytes.Say(aNicePhrase))
+		})
+
+		It("outputs default info logs", func() {
+			aNicePhrase := "It's a beautiful day in the neighborhood"
+			logger.Info(aNicePhrase)
 			Expect(controllerBuffer).To(gbytes.Say(aNicePhrase))
 		})
 
 		It("outputs debug logs", func() {
 			aNicePhrase := "Let's make the most of this beautiful day"
-			logger.V(1).Info(aNicePhrase)
+			logger.V(DEBUG).Info(aNicePhrase)
 			Expect(controllerBuffer).To(gbytes.Say(aNicePhrase))
 		})
 
@@ -122,4 +182,5 @@ var _ = Describe("Logger", func() {
 			Expect(controllerBuffer).To(gbytes.Say(aNiceErrorLogMessage))
 		})
 	})
+
 })

@@ -22,6 +22,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+const (
+	ERROR = -1
+	DEBUG = 1
+	INFO  = 0
+)
+
 func SetLogLevel(logLevel string) (zap.Opts, error) {
 	var level zapcore.Level
 	switch strings.ToUpper(logLevel) {
