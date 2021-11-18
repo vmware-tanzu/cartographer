@@ -61,8 +61,12 @@ type ApplyStampedObjectError struct {
 }
 
 func (e ApplyStampedObjectError) Error() string {
+	name := e.StampedObject.GetName()
+	if name == "" {
+		name = e.StampedObject.GetGenerateName()
+	}
 	return fmt.Errorf("unable to apply stamped object '%s/%s': '%w'",
-		e.StampedObject.GetNamespace(), e.StampedObject.GetName(), e.Err).Error()
+		e.StampedObject.GetNamespace(), name, e.Err).Error()
 }
 
 type ListCreatedObjectsError struct {
