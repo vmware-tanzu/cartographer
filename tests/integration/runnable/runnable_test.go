@@ -25,11 +25,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apiserver/pkg/storage/names"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	. "github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/helpers"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
@@ -39,6 +41,20 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 		runnableDefinition    *unstructured.Unstructured
 		runTemplateDefinition *unstructured.Unstructured
 	)
+
+	var createNamespacedObject = func(ctx context.Context, objYaml, namespace string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		err := yaml.Unmarshal([]byte(objYaml), obj)
+		Expect(err).NotTo(HaveOccurred())
+		if namespace != "" {
+			obj.SetNamespace(namespace)
+		}
+
+		err = c.Create(ctx, obj, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		return obj
+	}
 
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -88,12 +104,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				testNS, testNS,
 			)
 
-			runTemplateDefinition = &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
 		})
 
 		AfterEach(func() {
@@ -119,12 +130,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					`,
 					testNS, testNS)
 
-				runnableDefinition = &unstructured.Unstructured{}
-				err := yaml.Unmarshal([]byte(runnableYaml), runnableDefinition)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = c.Create(ctx, runnableDefinition, &client.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
 			})
 
 			AfterEach(func() {
@@ -254,12 +260,294 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			})
 
 			It("Does not stamp a new Resource", func() {
-				resourceList := &v1.ConfigMapList{}
+				resourceList := &v1.ConfigMapList{} //TODO figure out if this is correct or should be a resourceQuotaList
 
 				Consistently(func() (int, error) {
 					err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 					return len(resourceList.Items), err
 				}).Should(Equal(0))
+			})
+		})
+	})
+
+	Describe("when a ClusterRunTemplate that produces a Resource leverages a Selector field", func() {
+		BeforeEach(func() {
+			runTemplateYaml := HereYamlF(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterRunTemplate
+				metadata:
+				  name: run-template---multi-label-selector
+				spec:
+				  template:
+					apiVersion: v1
+					kind: ResourceQuota
+					metadata:
+					  generateName: my-stamped-resource-
+					  namespace: %s
+					  labels:
+					    focus: something-useful
+					spec:
+					  hard:
+						cpu: "1000"
+						memory: 200Gi
+						pods: "10"
+					  scopeSelector:
+						matchExpressions:
+						- operator : In
+						  scopeName: PriorityClass
+						  values: [$(selected.spec.value.answer)$]
+				`, testNS)
+
+			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
+		})
+
+		AfterEach(func() {
+			err := c.Delete(ctx, runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("and a Runnable matches the RunTemplateRef and has a selector for a namespace scoped object", func() {
+			BeforeEach(func() {
+				runnableYaml := HereYamlF(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: Runnable
+					metadata:
+					  name: runnable---multi-label-selector
+					  labels:
+						my-label: this-is-it
+					spec:
+					  runTemplateRef:
+						name: run-template---multi-label-selector
+						namespace: %s
+					
+					  selector:
+						resource:
+						  apiVersion: test.run/v1alpha1
+						  kind: TestObj
+						matchingLabels:
+						  runnables.carto.run/group: dev---multi-label-selector
+						  runnables.carto.run/stage: production
+					`, testNS)
+
+				runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+			})
+
+			AfterEach(func() {
+				err := c.Delete(ctx, runnableDefinition)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("and only one object matches the selector in the namespace", func() {
+				var selectedDefinition *unstructured.Unstructured
+
+				BeforeEach(func() {
+					selectedYaml := HereYaml(`
+						---
+						apiVersion: test.run/v1alpha1
+						kind: TestObj
+						metadata:
+						  name: dummy-selected-2---multi-label-selector
+						  labels:
+							runnables.carto.run/group: dev---multi-label-selector
+							runnables.carto.run/stage: production
+
+						spec:
+						  value:
+							answer: polo-production-stage
+					`)
+					selectedDefinition = createNamespacedObject(ctx, selectedYaml, testNS)
+				})
+
+				AfterEach(func() {
+					err := c.Delete(ctx, selectedDefinition)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("stamps the templated object once", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(1))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}, "2s").Should(BeNumerically("<=", 1))
+
+					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+					Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("polo-production-stage"))
+				})
+
+				Context("and the Selected object is updated", func() {
+					BeforeEach(func() {
+						Expect(AlterFieldOfNestedStringMaps(selectedDefinition.Object, "spec.value.answer", "buzkashi-production-stage")).To(Succeed())
+						Expect(c.Update(ctx, selectedDefinition, &client.UpdateOptions{})).To(Succeed())
+					})
+					It("creates a second object alongside the first", func() {
+						resourceList := &v1.ResourceQuotaList{}
+
+						Eventually(func() (int, error) {
+							err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+							return len(resourceList.Items), err
+						}, "3s").Should(Equal(2))
+
+						Consistently(func() (int, error) {
+							err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+							return len(resourceList.Items), err
+						}, "2s").Should(Equal(2))
+
+						Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+						Expect(resourceList.Items[1].Name).To(ContainSubstring("my-stamped-resource-"))
+
+						id := func(element interface{}) string {
+							return element.(v1.ResourceQuota).Spec.ScopeSelector.MatchExpressions[0].Values[0]
+						}
+						Expect(resourceList.Items).To(MatchAllElements(id, Elements{
+							"polo-production-stage":     Not(BeNil()),
+							"buzkashi-production-stage": Not(BeNil()),
+						}))
+					})
+				})
+			})
+
+			Context("and an object in this namespace and another match the selector", func() {
+				var selectedDefinition1, selectedDefinition2 *unstructured.Unstructured
+				var otherNamespace string
+
+				BeforeEach(func() {
+					otherNamespace = names.SimpleNameGenerator.GenerateName("other-namespace-")
+					err := helpers.EnsureNamespace(otherNamespace, c)
+					Expect(err).ToNot(HaveOccurred())
+
+					selectedYamlTemplate := `
+						---
+						apiVersion: test.run/v1alpha1
+						kind: TestObj
+						metadata:
+						  name: dummy-selected-distractor
+						  labels:
+							runnables.carto.run/group: dev---multi-label-selector
+							runnables.carto.run/stage: production
+
+						spec:
+						  value:
+							answer: %s`
+
+					selectedYaml1 := HereYamlF(selectedYamlTemplate, "polo-production-stage")
+					selectedDefinition1 = createNamespacedObject(ctx, selectedYaml1, testNS)
+
+					selectedYaml2 := HereYamlF(selectedYamlTemplate, "a-value-not-to-be-propagated")
+					selectedDefinition2 = createNamespacedObject(ctx, selectedYaml2, otherNamespace)
+				})
+
+				AfterEach(func() {
+					err := c.Delete(ctx, selectedDefinition1)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = c.Delete(ctx, selectedDefinition2)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = helpers.DeleteNamespace(otherNamespace, c)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("stamps the templated object once", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(1))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}, "2s").Should(BeNumerically("<=", 1))
+
+					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+					Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("polo-production-stage"))
+				})
+			})
+		})
+
+		Context("and a Runnable matches the RunTemplateRef and has a selector for a cluster scoped object", func() {
+			BeforeEach(func() {
+				runnableYaml := HereYamlF(`
+					---
+					apiVersion: carto.run/v1alpha1
+					kind: Runnable
+					metadata:
+					  name: runnable---multi-label-selector
+					  labels:
+						my-label: this-is-it
+					spec:
+					  runTemplateRef:
+						name: run-template---multi-label-selector
+						namespace: %s
+
+					  selector:
+						resource:
+						  apiVersion: test.run/v1alpha1
+						  kind: ClusterTestObj
+						matchingLabels:
+						  runnables.carto.run/group: dev---multi-label-selector
+						  runnables.carto.run/stage: production
+					`, testNS)
+
+				runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+			})
+
+			AfterEach(func() {
+				err := c.Delete(ctx, runnableDefinition)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("and only one object matches the selector in the namespace", func() {
+				var selectedDefinition *unstructured.Unstructured
+
+				BeforeEach(func() {
+					selectedYaml := HereYaml(`
+						---
+						apiVersion: test.run/v1alpha1
+						kind: ClusterTestObj
+						metadata:
+						  name: dummy-selected-2---multi-label-selector
+						  labels:
+							runnables.carto.run/group: dev---multi-label-selector
+							runnables.carto.run/stage: production
+
+						spec:
+						  value:
+							answer: polo-production-stage
+					`)
+					selectedDefinition = createNamespacedObject(ctx, selectedYaml, "")
+				})
+
+				AfterEach(func() {
+					err := c.Delete(ctx, selectedDefinition)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("stamps the templated object once", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(1))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}, "2s").Should(BeNumerically("<=", 1))
+
+					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
+					Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("polo-production-stage"))
+				})
 			})
 		})
 	})
@@ -278,7 +566,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					test-status: status.conditions[?(@.type=="Ready")]
 				  template:
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  name: test-crd
 					spec:
@@ -332,9 +620,9 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				client.MatchingLabels(map[string]string{"carto.run/runnable-name": "my-runnable"}),
 			}
 
-			testsList := &resources.TestList{}
+			testsList := &resources.TestObjList{}
 
-			Eventually(func() ([]resources.Test, error) {
+			Eventually(func() ([]resources.TestObj, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))
@@ -417,6 +705,47 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 		})
 	})
 
+	Describe("when a ClusterRunTemplate that produces a Resource leverages a Selected field", func() {
+		BeforeEach(func() {
+			runTemplateYaml := HereYamlF(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterRunTemplate
+				metadata:
+				  namespace: %s
+				  name: my-run-template
+				spec:
+				  template:
+					apiVersion: v1
+					kind: ResourceQuota
+					metadata:
+					  generateName: my-stamped-resource-
+					  namespace: %s
+					  labels:
+					    focus: something-useful
+					spec:
+					  hard:
+						cpu: "1000"
+						memory: 200Gi
+						pods: "10"
+					  scopeSelector:
+						matchExpressions:
+						- operator : In
+						  scopeName: PriorityClass
+						  values: [$(selected.spec.inputs.key)$]
+				`,
+				testNS, testNS,
+			)
+
+			runTemplateDefinition = &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	Describe("Multiple objects created", func() {
 		BeforeEach(func() {
 			runnableYaml := HereYamlF(`---
@@ -454,7 +783,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					test-status: status.conditions[?(@.type=="Ready")]
 				  template:
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  generateName: test-crd-
 					  labels:
@@ -477,9 +806,9 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				client.MatchingLabels(map[string]string{"carto.run/runnable-name": "my-runnable"}),
 			}
 
-			testsList := &resources.TestList{}
+			testsList := &resources.TestObjList{}
 
-			Eventually(func() ([]resources.Test, error) {
+			Eventually(func() ([]resources.TestObj, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))
@@ -492,7 +821,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() ([]resources.Test, error) {
+			Eventually(func() ([]resources.TestObj, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(2))
@@ -506,7 +835,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() ([]resources.Test, error) {
+			Eventually(func() ([]resources.TestObj, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(3))
@@ -527,9 +856,9 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				client.MatchingLabels(map[string]string{"gen": "2"}),
 			}
 
-			testsList := &resources.TestList{}
+			testsList := &resources.TestObjList{}
 
-			Eventually(func() ([]resources.Test, error) {
+			Eventually(func() ([]resources.TestObj, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))
@@ -563,7 +892,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				client.MatchingLabels(map[string]string{"gen": "1"}),
 			}
 
-			Eventually(func() ([]resources.Test, error) {
+			Eventually(func() ([]resources.TestObj, error) {
 				err := c.List(ctx, testsList, opts...)
 				return testsList.Items, err
 			}).Should(HaveLen(1))

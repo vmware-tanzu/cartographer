@@ -62,7 +62,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		"carto.run/run-template-name": template.GetName(),
 	}
 
-	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository)
+	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository, runnable.GetNamespace())
 	if err != nil {
 		return nil, nil, ResolveSelectorError{
 			Err:      err,
@@ -122,10 +122,29 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	return stampedObject, outputs, nil
 }
 
-func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository, namespace string) (map[string]interface{}, error) {
 	if selector == nil {
 		return nil, nil
 	}
+	queryObj := &unstructured.Unstructured{}
+	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
+	queryObj.SetLabels(selector.MatchingLabels)
+	queryObj.SetNamespace(namespace)
+
+	results, err := repository.ListUnstructured(ctx, queryObj)
+	if err != nil {
+		return nil, fmt.Errorf("could not list objects matching selector: %w", err)
+	}
+
+	if len(results) == 0 {
+		return tryClusterScoped(ctx, selector, repository)
+	} else if len(results) > 1 {
+		return nil, fmt.Errorf("selector matched multiple objects")
+	}
+	return results[0].Object, nil
+}
+
+func tryClusterScoped(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
 	queryObj := &unstructured.Unstructured{}
 	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
 	queryObj.SetLabels(selector.MatchingLabels)
