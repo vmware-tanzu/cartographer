@@ -6,15 +6,15 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: tests.test.run
+  name: clustertests.test.run
 spec:
   group: test.run
   names:
-    kind: Test
-    listKind: TestList
-    plural: tests
-    singular: test
-  scope: Namespaced
+    kind: ClusterTest
+    listKind: ClusterTestList
+    plural: clustertests
+    singular: clustertest
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
