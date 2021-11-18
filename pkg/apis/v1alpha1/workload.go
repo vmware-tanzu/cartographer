@@ -34,7 +34,6 @@ const (
 	WorkloadLabelsMissingSupplyChainReason = "WorkloadLabelsMissing"
 	NotFoundSupplyChainReadyReason         = "SupplyChainNotFound"
 	MultipleMatchesSupplyChainReadyReason  = "MultipleSupplyChainMatches"
-	NotReadySupplyChainReason              = "SupplyChainNotReady"
 )
 
 // +kubebuilder:object:root=true
