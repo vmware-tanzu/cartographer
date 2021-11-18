@@ -194,6 +194,8 @@ func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.U
 
 func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
 	submitted := obj.DeepCopy()
+
+	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := r.cl.Patch(ctx, obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)
 	}
