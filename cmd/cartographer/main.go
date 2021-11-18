@@ -21,17 +21,20 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/root"
 )
 
 var devMode bool
 var port int
 var certDir string
+var verbosity string
 
 func init() {
 	flag.IntVar(&port, "Port", 9443, "Webhook server Port")
 	flag.StringVar(&certDir, "cert-dir", "", "Webhook server tls dir")
 	flag.BoolVar(&devMode, "dev", false, "Human readable logs")
+	flag.StringVar(&verbosity, "log-level", "info", "Log levels")
 	flag.Parse()
 }
 
@@ -40,14 +43,19 @@ func main() {
 
 	defer cancel()
 
+	loggerOpt, err := logger.SetLogLevel(verbosity)
+	if err != nil {
+		panic(err)
+	}
+
 	cmd := root.Command{
 		Port:    port,
 		CertDir: certDir,
 		Context: ctx,
-		Logger:  zap.New(zap.UseDevMode(devMode)),
+		Logger:  zap.New(zap.UseDevMode(devMode), loggerOpt),
 	}
 
-	if err := cmd.Execute(); err != nil {
+	if err = cmd.Execute(); err != nil {
 		panic(err)
 	}
 }
