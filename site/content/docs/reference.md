@@ -438,10 +438,10 @@ spec:
   # (required)
   #
   inputs:
-    git-url: https://github.com/vmware-tanzu/cartographer
-    git-revision: f397a1f349146442c46051099d7e32ebaec79623
-
-    foo: [{bar: 123}]
+    serviceAccount: bla
+    params:
+       - name: foo
+         value: bar
 
 
   # reference to a ClusterRunTemplate that defines how objects should be
