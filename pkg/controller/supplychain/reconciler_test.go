@@ -143,7 +143,8 @@ var _ = Describe("Reconciler", func() {
 	It("updates the status.observedGeneration to equal metadata.generation", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
+		actualCtx, updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
+		Expect(actualCtx).To(Equal(ctx))
 
 		Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -155,7 +156,8 @@ var _ = Describe("Reconciler", func() {
 	It("updates the conditions based on the output of the conditionManager", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
+		actualCtx, updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
+		Expect(actualCtx).To(Equal(ctx))
 
 		Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{

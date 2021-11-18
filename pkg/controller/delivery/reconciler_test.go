@@ -102,12 +102,17 @@ var _ = Describe("delivery reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repo.GetDeliveryCallCount()).To(Equal(1))
+				actualCtx, name := repo.GetDeliveryArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
 
-				name := repo.GetDeliveryArgsForCall(0)
 				Expect(name).To(Equal("my-new-delivery"))
 
 				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
-				deliveryObject, ok := repo.StatusUpdateArgsForCall(0).(*v1alpha1.ClusterDelivery)
+
+				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
+				deliveryObject, ok := obj.(*v1alpha1.ClusterDelivery)
+
 				Expect(ok).To(BeTrue())
 
 				Expect(deliveryObject).To(Equal(apiDelivery))
@@ -134,7 +139,8 @@ var _ = Describe("delivery reconciler", func() {
 			It("updates the status.observedGeneration to equal metadata.generation", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
-				updatedDelivery := repo.StatusUpdateArgsForCall(0)
+				actualCtx, updatedDelivery := repo.StatusUpdateArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
 
 				Expect(*updatedDelivery.(*v1alpha1.ClusterDelivery)).To(MatchFields(IgnoreExtras, Fields{
 					"Status": MatchFields(IgnoreExtras, Fields{
@@ -168,7 +174,10 @@ var _ = Describe("delivery reconciler", func() {
 			It("adds a positive templates NOT found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
-				deliveryObject, ok := repo.StatusUpdateArgsForCall(0).(*v1alpha1.ClusterDelivery)
+				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
+				Expect(actualCtx).To(Equal(ctx))
+
+				deliveryObject, ok := obj.(*v1alpha1.ClusterDelivery)
 				Expect(ok).To(BeTrue())
 
 				Expect(deliveryObject.Status.Conditions).To(ContainElements(

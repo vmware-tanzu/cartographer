@@ -45,7 +45,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	supplyChain, err := r.Repo.GetSupplyChain(req.Name)
+	supplyChain, err := r.Repo.GetSupplyChain(ctx, req.Name)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get supply chain: %w", err)
 	}
@@ -57,19 +57,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
 
-	err = r.reconcileSupplyChain(supplyChain)
+	err = r.reconcileSupplyChain(ctx, supplyChain)
 
-	return r.completeReconciliation(supplyChain, err)
+	return r.completeReconciliation(ctx, supplyChain, err)
 }
 
-func (r *Reconciler) completeReconciliation(supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
 	var changed bool
 	supplyChain.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (supplyChain.Status.ObservedGeneration != supplyChain.Generation) {
 		supplyChain.Status.ObservedGeneration = supplyChain.Generation
-		updateErr = r.Repo.StatusUpdate(supplyChain)
+		updateErr = r.Repo.StatusUpdate(ctx, supplyChain)
 		if updateErr != nil {
 			return ctrl.Result{}, fmt.Errorf("update supply chain status: %w", updateErr)
 		}
@@ -85,11 +85,11 @@ func (r *Reconciler) completeReconciliation(supplyChain *v1alpha1.ClusterSupplyC
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) reconcileSupplyChain(chain *v1alpha1.ClusterSupplyChain) error {
+func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain) error {
 	var resourcesNotFound []string
 
 	for _, resource := range chain.Spec.Resources {
-		template, err := r.Repo.GetClusterTemplate(resource.TemplateRef)
+		template, err := r.Repo.GetClusterTemplate(ctx, resource.TemplateRef)
 		if err != nil {
 			return controller.NewUnhandledError(fmt.Errorf("get cluster template: %w", err))
 		}

@@ -50,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	deliverable, err := r.Repo.GetDeliverable(req.Name, req.Namespace)
+	deliverable, err := r.Repo.GetDeliverable(ctx, req.Name, req.Namespace)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get deliverable: %w", err)
 	}
@@ -62,14 +62,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.DeliverableReady, deliverable.Status.Conditions)
 
-	delivery, err := r.getDeliveriesForDeliverable(deliverable)
+	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
-		return r.completeReconciliation(deliverable, err)
+		return r.completeReconciliation(ctx, deliverable, err)
 	}
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
-		return r.completeReconciliation(deliverable, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
+		return r.completeReconciliation(ctx, deliverable, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
 
 	deliverable.Status.DeliveryRef.Kind = deliveryGVK.Kind
@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if !r.isDeliveryReady(delivery) {
 		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
-		return r.completeReconciliation(deliverable, fmt.Errorf("delivery is not in ready state"))
+		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("delivery is not in ready state"))
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
@@ -124,17 +124,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	return r.completeReconciliation(deliverable, err)
+	return r.completeReconciliation(ctx, deliverable, err)
 }
 
-func (r *Reconciler) completeReconciliation(deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) {
 		deliverable.Status.ObservedGeneration = deliverable.Generation
-		updateErr = r.Repo.StatusUpdate(deliverable)
+		updateErr = r.Repo.StatusUpdate(ctx, deliverable)
 		if updateErr != nil {
 			return ctrl.Result{}, fmt.Errorf("update deliverable status: %w", updateErr)
 		}
@@ -164,13 +164,13 @@ func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condit
 	return metav1.Condition{}
 }
 
-func (r *Reconciler) getDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
+func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
 	if len(deliverable.Labels) == 0 {
 		r.conditionManager.AddPositive(DeliverableMissingLabelsCondition())
 		return nil, fmt.Errorf("deliverable is missing required labels")
 	}
 
-	deliveries, err := r.Repo.GetDeliveriesForDeliverable(deliverable)
+	deliveries, err := r.Repo.GetDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
 		return nil, controller.NewUnhandledError(fmt.Errorf("get delivery by label: %w", err))
 	}

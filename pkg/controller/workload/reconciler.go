@@ -46,11 +46,10 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.logger = logr.FromContext(ctx).
 		WithValues("name", req.Name, "namespace", req.Namespace)
-	ctx = logr.NewContext(ctx, r.logger)
 	r.logger.Info("started")
 	defer r.logger.Info("finished")
 
-	workload, err := r.Repo.GetWorkload(req.Name, req.Namespace)
+	workload, err := r.Repo.GetWorkload(ctx, req.Name, req.Namespace)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("get workload: %w", err)
 	}
@@ -62,14 +61,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.WorkloadReady, workload.Status.Conditions)
 
-	supplyChain, err := r.getSupplyChainsForWorkload(workload)
+	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
-		return r.completeReconciliation(workload, err)
+		return r.completeReconciliation(ctx, workload, err)
 	}
 
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
-		return r.completeReconciliation(workload, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
+		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("get object gvk: %w", err)))
 	}
 
 	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
@@ -77,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if !r.isSupplyChainReady(supplyChain) {
 		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
-		return r.completeReconciliation(workload, fmt.Errorf("supply chain is not in ready state"))
+		return r.completeReconciliation(ctx, workload, fmt.Errorf("supply chain is not in ready state"))
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
@@ -113,17 +112,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	return r.completeReconciliation(workload, err)
+	return r.completeReconciliation(ctx, workload, err)
 }
 
-func (r *Reconciler) completeReconciliation(workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
 	var changed bool
 	workload.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (workload.Status.ObservedGeneration != workload.Generation) {
 		workload.Status.ObservedGeneration = workload.Generation
-		updateErr = r.Repo.StatusUpdate(workload)
+		updateErr = r.Repo.StatusUpdate(ctx, workload)
 		if updateErr != nil {
 			return ctrl.Result{}, fmt.Errorf("update workload status: %w", updateErr)
 		}
@@ -153,13 +152,13 @@ func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) meta
 	return metav1.Condition{}
 }
 
-func (r *Reconciler) getSupplyChainsForWorkload(workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
+func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
 	if len(workload.Labels) == 0 {
 		r.conditionManager.AddPositive(WorkloadMissingLabelsCondition())
 		return nil, fmt.Errorf("workload is missing required labels")
 	}
 
-	supplyChains, err := r.Repo.GetSupplyChainsForWorkload(workload)
+	supplyChains, err := r.Repo.GetSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
 		return nil, controller.NewUnhandledError(fmt.Errorf("get supply chain for workload: %w", err))
 	}

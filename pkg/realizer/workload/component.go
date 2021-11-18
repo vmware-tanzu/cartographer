@@ -45,7 +45,7 @@ func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	apiTemplate, err := r.repo.GetClusterTemplate(resource.TemplateRef)
+	apiTemplate, err := r.repo.GetClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetClusterTemplateError{
 			Err:         err,
@@ -96,7 +96,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	err = r.repo.EnsureObjectExistsOnCluster(stampedObject, true)
+	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,

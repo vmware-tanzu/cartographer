@@ -33,20 +33,20 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error
-	GetClusterTemplate(reference v1alpha1.ClusterTemplateReference) (client.Object, error)
-	GetDeliveryClusterTemplate(reference v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
-	GetRunTemplate(reference v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
-	GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
-	GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
-	GetWorkload(name string, namespace string) (*v1alpha1.Workload, error)
-	GetDeliverable(name string, namespace string) (*v1alpha1.Deliverable, error)
-	GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error)
-	StatusUpdate(object client.Object) error
+	EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error
+	GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error)
+	GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
+	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
+	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
+	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
+	GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error)
+	GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error)
+	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
+	StatusUpdate(ctx context.Context, object client.Object) error
+	GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error)
+	ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
-	GetRunnable(name string, namespace string) (*v1alpha1.Runnable, error)
-	ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
-	GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 }
 
 type repository struct {
@@ -63,14 +63,14 @@ func NewRepository(client client.Client, repoCache RepoCache, logger Logger) Rep
 	}
 }
 
-func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error) {
+func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error) {
 	delivery := &v1alpha1.ClusterDelivery{}
 
 	key := client.ObjectKey{
 		Name: name,
 	}
 
-	err := r.cl.Get(context.TODO(), key, delivery)
+	err := r.cl.Get(ctx, key, delivery)
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -81,8 +81,8 @@ func (r *repository) GetDelivery(name string) (*v1alpha1.ClusterDelivery, error)
 	return delivery, nil
 }
 
-func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured, allowUpdate bool) error {
-	unstructuredList, err := r.ListUnstructured(obj)
+func (r *repository) EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error {
+	unstructuredList, err := r.ListUnstructured(ctx, obj)
 
 	var names []string
 	for _, considered := range unstructuredList {
@@ -107,10 +107,10 @@ func (r *repository) EnsureObjectExistsOnCluster(obj *unstructured.Unstructured,
 
 	if outdatedObject != nil {
 		r.logger.Info("patching object", "name", obj.GetName(), "namespace", obj.GetNamespace(), "kind", obj.GetKind())
-		return r.patchUnstructured(outdatedObject, obj)
+		return r.patchUnstructured(ctx, outdatedObject, obj)
 	} else {
 		r.logger.Info("creating object", "name", obj.GetName(), "namespace", obj.GetNamespace(), "kind", obj.GetKind())
-		return r.createUnstructured(obj)
+		return r.createUnstructured(ctx, obj)
 	}
 }
 
@@ -123,7 +123,7 @@ func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates
 	return nil
 }
 
-func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (r *repository) ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	unstructuredList := &unstructured.UnstructuredList{}
 	unstructuredList.SetGroupVersionKind(obj.GroupVersionKind())
 
@@ -131,7 +131,7 @@ func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstru
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(obj.GetLabels()),
 	}
-	err := r.cl.List(context.TODO(), unstructuredList, opts...)
+	err := r.cl.List(ctx, unstructuredList, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("list: %w", err)
 	}
@@ -144,21 +144,21 @@ func (r *repository) ListUnstructured(obj *unstructured.Unstructured) ([]*unstru
 	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetClusterTemplate(ref v1alpha1.ClusterTemplateReference) (client.Object, error) {
-	return r.getTemplate(ref.Name, ref.Kind)
+func (r *repository) GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error) {
+	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }
 
-func (r *repository) GetDeliveryClusterTemplate(ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
-	return r.getTemplate(ref.Name, ref.Kind)
+func (r *repository) GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
+	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }
 
-func (r *repository) getTemplate(name string, kind string) (client.Object, error) {
+func (r *repository) getTemplate(ctx context.Context, name string, kind string) (client.Object, error) {
 	apiTemplate, err := v1alpha1.GetAPITemplate(kind)
 	if err != nil {
 		return nil, fmt.Errorf("get api template: %w", err)
 	}
 
-	err = r.getObject(name, "", apiTemplate)
+	err = r.getObject(ctx, name, "", apiTemplate)
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -169,10 +169,10 @@ func (r *repository) getTemplate(name string, kind string) (client.Object, error
 	return apiTemplate, nil
 }
 
-func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
+func (r *repository) GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
 	runTemplate := &v1alpha1.ClusterRunTemplate{}
 
-	err := r.cl.Get(context.TODO(), client.ObjectKey{
+	err := r.cl.Get(ctx, client.ObjectKey{
 		Name: ref.Name,
 	}, runTemplate)
 	if err != nil {
@@ -182,9 +182,9 @@ func (r *repository) GetRunTemplate(ref v1alpha1.TemplateReference) (*v1alpha1.C
 	return runTemplate, nil
 }
 
-func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
+func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.Unstructured) error {
 	submitted := obj.DeepCopy()
-	if err := r.cl.Create(context.TODO(), obj); err != nil {
+	if err := r.cl.Create(ctx, obj); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 
@@ -192,9 +192,9 @@ func (r *repository) createUnstructured(obj *unstructured.Unstructured) error {
 	return nil
 }
 
-func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
+func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
 	submitted := obj.DeepCopy()
-	if err := r.cl.Patch(context.TODO(), obj, client.MergeFrom(existingObj)); err != nil {
+	if err := r.cl.Patch(ctx, obj, client.MergeFrom(existingObj)); err != nil {
 		return fmt.Errorf("patch: %w", err)
 	}
 
@@ -202,9 +202,9 @@ func (r *repository) patchUnstructured(existingObj *unstructured.Unstructured, o
 	return nil
 }
 
-func (r *repository) GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
+func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
 	list := &v1alpha1.ClusterSupplyChainList{}
-	if err := r.cl.List(context.TODO(), list); err != nil {
+	if err := r.cl.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list supply chains: %w", err)
 	}
 
@@ -218,9 +218,9 @@ func (r *repository) GetSupplyChainsForWorkload(workload *v1alpha1.Workload) ([]
 	return clusterSupplyChains, nil
 }
 
-func (r *repository) GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error) {
+func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error) {
 	list := &v1alpha1.ClusterDeliveryList{}
-	if err := r.cl.List(context.TODO(), list); err != nil {
+	if err := r.cl.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list deliveries: %w", err)
 	}
 
@@ -234,8 +234,8 @@ func (r *repository) GetDeliveriesForDeliverable(deliverable *v1alpha1.Deliverab
 	return clusterDeliveries, nil
 }
 
-func (r *repository) getObject(name string, namespace string, obj client.Object) error {
-	err := r.cl.Get(context.TODO(),
+func (r *repository) getObject(ctx context.Context, name string, namespace string, obj client.Object) error {
+	err := r.cl.Get(ctx,
 		client.ObjectKey{
 			Name:      name,
 			Namespace: namespace,
@@ -249,9 +249,9 @@ func (r *repository) getObject(name string, namespace string, obj client.Object)
 	return nil
 }
 
-func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workload, error) {
+func (r *repository) GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error) {
 	workload := v1alpha1.Workload{}
-	err := r.getObject(name, namespace, &workload)
+	err := r.getObject(ctx, name, namespace, &workload)
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -262,22 +262,22 @@ func (r *repository) GetWorkload(name string, namespace string) (*v1alpha1.Workl
 	return &workload, nil
 }
 
-func (r *repository) GetDeliverable(name string, namespace string) (*v1alpha1.Deliverable, error) {
+func (r *repository) GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error) {
 	deliverable := v1alpha1.Deliverable{}
-	err := r.getObject(name, namespace, &deliverable)
+	err := r.getObject(ctx, name, namespace, &deliverable)
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		return nil, fmt.Errorf("could not get object for deliverable `name/namespace`: %w", err)
 	}
 	return &deliverable, nil
 }
 
-func (r *repository) GetRunnable(name string, namespace string) (*v1alpha1.Runnable, error) {
+func (r *repository) GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error) {
 	runnable := &v1alpha1.Runnable{}
 
-	err := r.getObject(name, namespace, runnable)
+	err := r.getObject(ctx, name, namespace, runnable)
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -298,10 +298,10 @@ func selectorMatchesLabels(selector map[string]string, labels map[string]string)
 	return true
 }
 
-func (r *repository) GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, error) {
+func (r *repository) GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error) {
 	supplyChain := v1alpha1.ClusterSupplyChain{}
 
-	err := r.getObject(name, "", &supplyChain)
+	err := r.getObject(ctx, name, "", &supplyChain)
 	if kerrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -312,8 +312,8 @@ func (r *repository) GetSupplyChain(name string) (*v1alpha1.ClusterSupplyChain, 
 	return &supplyChain, nil
 }
 
-func (r *repository) StatusUpdate(object client.Object) error {
-	return r.cl.Status().Update(context.TODO(), object)
+func (r *repository) StatusUpdate(ctx context.Context, object client.Object) error {
+	return r.cl.Status().Update(ctx, object)
 }
 
 func (r *repository) GetScheme() *runtime.Scheme {
