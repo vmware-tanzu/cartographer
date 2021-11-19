@@ -1,5 +1,13 @@
 # Source to Knative Service
 
+**before you proceed**: the example in this directory illustrates the use of
+the latest components and functionality of Cartographer (including some that
+may not have been included in the latest release yet). Make sure to check out
+the version of this document in a tag that matches the latest version (for
+instance, https://github.com/vmware-tanzu/cartographer/tree/v0.0.7/examples).
+
+---
+
 This example illustrates how an App Operator group could set up a software
 supply chain such that source code gets continuously built using the best
 practices from [buildpacks] via [kpack/Image] and deployed to the cluster using
@@ -33,7 +41,6 @@ objects would be set by the different personas in the system:
           ├── ...                                       that an app-dev submits
           └── workload.yaml
 ```
-
 
 ## Prerequisites
 
