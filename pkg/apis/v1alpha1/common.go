@@ -33,6 +33,11 @@ type Param struct {
 	Value apiextensionsv1.JSON `json:"value"`
 }
 
+type OverridableParam struct {
+	Param `json:",inline"`
+	OverridableFlag bool `json:"overridable"`
+}
+
 type ResourceReference struct {
 	Name     string `json:"name"`
 	Resource string `json:"resource"`

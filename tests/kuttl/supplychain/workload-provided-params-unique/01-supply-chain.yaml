@@ -15,54 +15,54 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---workload-provided-params
+  name: responsible-ops---workload-provided-params-unique
 spec:
   selector:
-    integration-test: "workload-provided-params"
+    integration-test: "workload-provided-params-unique"
   params:
     - name: not-on-template
       value: never-present
       overridable: true
-    - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
-      value: not-me
+    - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: not-me-supply-chain
       overridable: true
-    - name: ovrdbl-supply-chain-ovrdbl-component-not-on-workload
-      value: not-me
+    - name: ovrdbl-supply-chain-ovrdbl-resource-not-on-workload
+      value: not-me-supply-chain
       overridable: true
     - name: ovrdbl-supply-chain-on-workload
-      value: not-me
+      value: not-me-supply-chain
       overridable: true
-    - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
-      value: not-me
+    - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
+      value: not-me-supply-chain
       overridable: true
-    - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
-      value: me
+    - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: not-me-supply-chain
       overridable: false
-    - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
-      value: not-me
+    - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
+      value: not-me-supply-chain
       overridable: false
   resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
-        name: git-template---workload-provided-params
+        name: git-template---workload-provided-params-unique
       params:
-        - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
-          value: not-me
+        - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
+          value: not-me-resource
           overridable: true
-        - name: ovrdbl-supply-chain-ovrdbl-component-not-on-workload
+        - name: ovrdbl-supply-chain-ovrdbl-resource-not-on-workload
           value: me
           overridable: true
-        - name: ovrdbl-component-on-workload
-          value: not-me
+        - name: ovrdbl-resource-on-workload
+          value: not-me-resource
           overridable: true
-        - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
-          value: not-me
+        - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
+          value: me
           overridable: false
-        - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
-          value: not-me
+        - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload
+          value: not-me-resource
           overridable: true
-        - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
+        - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
           value: me
           overridable: false
         - name: not-on-template

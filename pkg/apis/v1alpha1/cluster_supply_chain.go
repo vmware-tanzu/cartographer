@@ -151,12 +151,13 @@ func GetSelectorsFromObject(o client.Object) []string {
 type SupplyChainSpec struct {
 	Resources []SupplyChainResource `json:"resources"`
 	Selector  map[string]string     `json:"selector"`
+	Params    []OverridableParam    `json:"params,omitempty"`
 }
 
 type SupplyChainResource struct {
 	Name        string                   `json:"name"`
 	TemplateRef ClusterTemplateReference `json:"templateRef"`
-	Params      []Param                  `json:"params,omitempty"`
+	Params      []OverridableParam       `json:"params,omitempty"`
 	Sources     []ResourceReference      `json:"sources,omitempty"`
 	Images      []ResourceReference      `json:"images,omitempty"`
 	Configs     []ResourceReference      `json:"configs,omitempty"`

@@ -41,7 +41,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 	for i := range supplyChain.Spec.Resources {
 		resource := supplyChain.Spec.Resources[i]
-		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
+		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, supplyChain.Spec.Params, outs)
 		if stampedObject != nil {
 			stampedObjects = append(stampedObjects, stampedObject)
 		}

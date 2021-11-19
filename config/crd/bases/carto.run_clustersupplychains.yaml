@@ -48,6 +48,21 @@ spec:
             type: object
           spec:
             properties:
+              params:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    overridable:
+                      type: boolean
+                    value:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - name
+                  - overridable
+                  - value
+                  type: object
+                type: array
               resources:
                 items:
                   properties:
@@ -82,10 +97,13 @@ spec:
                         properties:
                           name:
                             type: string
+                          overridable:
+                            type: boolean
                           value:
                             x-kubernetes-preserve-unknown-fields: true
                         required:
                         - name
+                        - overridable
                         - value
                         type: object
                       type: array

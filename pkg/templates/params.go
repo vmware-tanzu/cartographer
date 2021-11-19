@@ -22,18 +22,45 @@ import (
 
 type Params map[string]apiextensionsv1.JSON
 
-func ParamsBuilder(defaultParams v1alpha1.DefaultParams, resourceParams []v1alpha1.Param) Params {
+func ParamsBuilder(
+	templateParams v1alpha1.DefaultParams,
+	resourceParams []v1alpha1.OverridableParam,
+	supplyChainParams []v1alpha1.OverridableParam,
+	workloadParams []v1alpha1.Param,
+	) Params {
 	newParams := Params{}
-	for _, param := range defaultParams {
+	for _, param := range templateParams {
 		newParams[param.Name] = param.DefaultValue
 	}
 
+	overridableByWorkload := make(map[string]bool)
+
 	for key := range newParams {
-		for _, override := range resourceParams {
-			if key == override.Name {
-				newParams[key] = override.Value
+		for _, supplyChainOverride := range supplyChainParams {
+			if key == supplyChainOverride.Name {
+				newParams[key] = supplyChainOverride.Value
+				overridableByWorkload[key] = supplyChainOverride.OverridableFlag
+			}
+		}
+
+		for _, resourceOverride := range resourceParams {
+			if key == resourceOverride.Name {
+				newParams[key] = resourceOverride.Value
+				overridableByWorkload[key] = resourceOverride.OverridableFlag
+			}
+		}
+
+		for _, workloadOverride := range workloadParams {
+			if key == workloadOverride.Name && workloadCanOverride(overridableByWorkload, key) {
+				newParams[key] = workloadOverride.Value
 			}
 		}
 	}
+
 	return newParams
+}
+
+func workloadCanOverride(isOverridable map[string]bool, key string) bool {
+	overridable, written := isOverridable[key]
+	return written && overridable
 }

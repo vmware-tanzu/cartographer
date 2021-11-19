@@ -17,23 +17,23 @@ kind: Workload
 metadata:
   name: petclinic
   labels:
-    integration-test: "workload-provided-params"
+    integration-test: "workload-provided-params-unique"
 spec:
   params:
-    - name: template-and-workload-but-not-supply-chain-nor-component
-      value: not-me
-    - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
-      default: me
+    - name: template-and-workload-but-not-supply-chain-nor-resource
+      value: not-me-workload
+    - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: me
     - name: ovrdbl-supply-chain-on-workload
-      default: me
-    - name: ovrdbl-component-on-workload
-      default: me
-    - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
-      default: not-me
-    - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
-      default: not-me
-    - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
-      default: not-me
+      value: me
+    - name: ovrdbl-resource-on-workload
+      value: me
+    - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
+      value: not-me-workload
+    - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: me
+    - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
+      value: not-me-workload
     - name: not-on-template
       value: never-present
 
