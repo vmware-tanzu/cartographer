@@ -64,6 +64,15 @@ supplychain, forms something powerful.
 
 In this example, we leverage the following dependencies:
 
+- [tekton], for providing a mechanism to create pipelines (for application testing, scanning, etc)
+
+```bash
+TEKTON_VERSION=0.30.0
+
+kapp deploy --yes -a tekton \
+	-f https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.30.0/release.yaml
+```
+
 - [kpack], for providing an opinionated way of continuously building container
   images using buildpacks
 
@@ -857,3 +866,4 @@ same ideas here, but adds [knative] and [kapp-controller] to the mix.
 [reference]: ../../site/content/docs/reference.md
 [source-controller]: https://github.com/fluxcd/source-controller
 [ytt]: https://carvel.dev/ytt
+[tekton]: https://github.com/tektoncd/pipeline
