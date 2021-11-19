@@ -12,13 +12,14 @@ import (
 )
 
 type FakeResourceRealizer struct {
-	DoStub        func(context.Context, *v1alpha1.ClusterDeliveryResource, string, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	DoStub        func(context.Context, *v1alpha1.ClusterDeliveryResource, string, []v1alpha1.OverridableParam, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 context.Context
 		arg2 *v1alpha1.ClusterDeliveryResource
 		arg3 string
-		arg4 deliverable.Outputs
+		arg4 []v1alpha1.OverridableParam
+		arg5 deliverable.Outputs
 	}
 	doReturns struct {
 		result1 *unstructured.Unstructured
@@ -34,21 +35,27 @@ type FakeResourceRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 *v1alpha1.ClusterDeliveryResource, arg3 string, arg4 deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 *v1alpha1.ClusterDeliveryResource, arg3 string, arg4 []v1alpha1.OverridableParam, arg5 deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+	var arg4Copy []v1alpha1.OverridableParam
+	if arg4 != nil {
+		arg4Copy = make([]v1alpha1.OverridableParam, len(arg4))
+		copy(arg4Copy, arg4)
+	}
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
 		arg1 context.Context
 		arg2 *v1alpha1.ClusterDeliveryResource
 		arg3 string
-		arg4 deliverable.Outputs
-	}{arg1, arg2, arg3, arg4})
+		arg4 []v1alpha1.OverridableParam
+		arg5 deliverable.Outputs
+	}{arg1, arg2, arg3, arg4Copy, arg5})
 	stub := fake.DoStub
 	fakeReturns := fake.doReturns
-	fake.recordInvocation("Do", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Do", []interface{}{arg1, arg2, arg3, arg4Copy, arg5})
 	fake.doMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -62,17 +69,17 @@ func (fake *FakeResourceRealizer) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, *v1alpha1.ClusterDeliveryResource, string, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)) {
+func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, *v1alpha1.ClusterDeliveryResource, string, []v1alpha1.OverridableParam, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
 }
 
-func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.ClusterDeliveryResource, string, deliverable.Outputs) {
+func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.ClusterDeliveryResource, string, []v1alpha1.OverridableParam, deliverable.Outputs) {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	argsForCall := fake.doArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeResourceRealizer) DoReturns(result1 *unstructured.Unstructured, result2 *templates.Output, result3 error) {

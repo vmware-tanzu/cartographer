@@ -70,7 +70,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	inputs := outputs.GenerateInputs(resource)
 	templatingContext := map[string]interface{}{
 		"deliverable": r.deliverable,
-		"params":      templates.ParamsBuilder(template.GetDefaultParams(), resource.Params, deliveryParams, r.deliverable.Spec.Params),
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), deliveryParams, resource.Params, r.deliverable.Spec.Params),
 		"sources":     inputs.Sources,
 		"configs":     inputs.Configs,
 		"deployment":  inputs.Deployment,

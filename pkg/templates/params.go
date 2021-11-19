@@ -23,9 +23,9 @@ import (
 type Params map[string]apiextensionsv1.JSON
 
 func ParamsBuilder(
-	templateParams v1alpha1.DefaultParams,
-	resourceParams []v1alpha1.OverridableParam,
+	templateParams []v1alpha1.TemplateParam,
 	blueprintParams []v1alpha1.OverridableParam,
+	resourceParams []v1alpha1.OverridableParam,
 	orderParams []v1alpha1.Param,
 ) Params {
 	newParams := Params{}

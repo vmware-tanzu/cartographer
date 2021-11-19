@@ -74,6 +74,6 @@ func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }
 
-func (t *clusterSourceTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterSourceTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 	return t.template.Spec.Params
 }

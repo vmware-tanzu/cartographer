@@ -60,7 +60,7 @@ var _ = Describe("Realize", func() {
 
 		var executedResourceOrder []string
 
-		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, supplyChainParams []v1alpha1.OverridableParam, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 			executedResourceOrder = append(executedResourceOrder, resource.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
 			if resource.Name == "resource1" {

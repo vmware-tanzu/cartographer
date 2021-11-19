@@ -70,7 +70,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	inputs := outputs.GenerateInputs(resource)
 	workloadTemplatingContext := map[string]interface{}{
 		"workload": r.workload,
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), resource.Params, supplyChainParams, r.workload.Spec.Params),
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), supplyChainParams, resource.Params, r.workload.Spec.Params),
 		"sources":  inputs.Sources,
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,

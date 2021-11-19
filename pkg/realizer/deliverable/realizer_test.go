@@ -60,7 +60,7 @@ var _ = Describe("Realize", func() {
 
 		var executedResourceOrder []string
 
-		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, deliveryParams []v1alpha1.OverridableParam, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 			executedResourceOrder = append(executedResourceOrder, resource.Name)
 			Expect(deliveryName).To(Equal("greatest-delivery"))
 			if resource.Name == "resource1" {

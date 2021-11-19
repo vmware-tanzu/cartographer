@@ -21,9 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type DefaultParams []DefaultParam
+type TemplateParams []TemplateParam
 
-type DefaultParam struct {
+type TemplateParam struct {
 	Name         string               `json:"name"`
 	DefaultValue apiextensionsv1.JSON `json:"default"`
 }
