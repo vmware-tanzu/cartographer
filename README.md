@@ -19,24 +19,36 @@ Detailed documentation for Cartographer can be found in the `site` folder of thi
 * [Examples](examples/source-to-knative-service/README.md): Contains an example of using Cartographer to create a supply chain that takes a repository, creates and image and deploys it to a cluster
 * [Spec Reference](site/content/docs/reference.md): Detailed descriptions of the CRD Specs for Cartographer
 
+## Installation
+
+
+### Pre requisites
+1. Administrative capabilities in a Kubernetes cluster (1.19+)
+2. [cert-manager](https://cartographer.sh/docs/v0.0.7/install/) 1.5.3 installed
+
+The quickest method to install Cartographer leverages the `cartographer.yaml` file provided with each release:
+
+1. Create the namespace where the controller will be installed:
+
+```bash
+kubectl create namespace cartographer-system
+```
+2. Submit the objects included in the release:
+
+```bash
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+```
+<img src="site/themes/template/static/img/Carto-install-yaml.gif">
+
+And you're done!
+
+Additional installation methods are detailed in the documentation at [cartographer.sh/docs/install](http://cartographer.sh/docs/install)
 ## Getting Started
 
 An example of using Cartographer to define a Supply Chain that pulls code from a repository, builds an image for the code and deploys it the the same cluster can be found in the [examples folder of this repository](examples/source-to-knative-service/README.md)
 
 
-## Installation
 
-Installation details are provided in the documentation at [cartographer.sh/docs/install](http://cartographer.sh/docs/install)
-
-
-## Uninstall
-
-Uninstallation details are provided in the documentation at [cartographer.sh/docs/uninstall](http://cartographer.sh/docs/uninstall)
-
-
-### Running Tests
-
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on running tests.
 
 ## 🤗 Community, discussion, contribution, and support
 
