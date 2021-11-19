@@ -137,11 +137,12 @@ type FakeRepository struct {
 	getSchemeReturnsOnCall map[int]struct {
 		result1 *runtime.Scheme
 	}
-	GetServiceAccountSecretStub        func(string, string) (*v1.Secret, error)
+	GetServiceAccountSecretStub        func(context.Context, string, string) (*v1.Secret, error)
 	getServiceAccountSecretMutex       sync.RWMutex
 	getServiceAccountSecretArgsForCall []struct {
-		arg1 string
+		arg1 context.Context
 		arg2 string
+		arg3 string
 	}
 	getServiceAccountSecretReturns struct {
 		result1 *v1.Secret
@@ -797,19 +798,20 @@ func (fake *FakeRepository) GetSchemeReturnsOnCall(i int, result1 *runtime.Schem
 	}{result1}
 }
 
-func (fake *FakeRepository) GetServiceAccountSecret(arg1 string, arg2 string) (*v1.Secret, error) {
+func (fake *FakeRepository) GetServiceAccountSecret(arg1 context.Context, arg2 string, arg3 string) (*v1.Secret, error) {
 	fake.getServiceAccountSecretMutex.Lock()
 	ret, specificReturn := fake.getServiceAccountSecretReturnsOnCall[len(fake.getServiceAccountSecretArgsForCall)]
 	fake.getServiceAccountSecretArgsForCall = append(fake.getServiceAccountSecretArgsForCall, struct {
-		arg1 string
+		arg1 context.Context
 		arg2 string
-	}{arg1, arg2})
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.GetServiceAccountSecretStub
 	fakeReturns := fake.getServiceAccountSecretReturns
-	fake.recordInvocation("GetServiceAccountSecret", []interface{}{arg1, arg2})
+	fake.recordInvocation("GetServiceAccountSecret", []interface{}{arg1, arg2, arg3})
 	fake.getServiceAccountSecretMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -823,17 +825,17 @@ func (fake *FakeRepository) GetServiceAccountSecretCallCount() int {
 	return len(fake.getServiceAccountSecretArgsForCall)
 }
 
-func (fake *FakeRepository) GetServiceAccountSecretCalls(stub func(string, string) (*v1.Secret, error)) {
+func (fake *FakeRepository) GetServiceAccountSecretCalls(stub func(context.Context, string, string) (*v1.Secret, error)) {
 	fake.getServiceAccountSecretMutex.Lock()
 	defer fake.getServiceAccountSecretMutex.Unlock()
 	fake.GetServiceAccountSecretStub = stub
 }
 
-func (fake *FakeRepository) GetServiceAccountSecretArgsForCall(i int) (string, string) {
+func (fake *FakeRepository) GetServiceAccountSecretArgsForCall(i int) (context.Context, string, string) {
 	fake.getServiceAccountSecretMutex.RLock()
 	defer fake.getServiceAccountSecretMutex.RUnlock()
 	argsForCall := fake.getServiceAccountSecretArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeRepository) GetServiceAccountSecretReturns(result1 *v1.Secret, result2 error) {

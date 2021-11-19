@@ -80,16 +80,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	secret, err := r.Repo.GetServiceAccountSecret(workload.Spec.ServiceAccountName, req.Namespace)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, workload.Spec.ServiceAccountName, req.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err))
+		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err)))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(ctx, secret, workload, r.Repo)
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("build resource realizer: %w", err))
+		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
 	}
 
 	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)

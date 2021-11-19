@@ -56,16 +56,7 @@ rules:
   - apiGroups:
       - carto.run
     resources:
-      - clustersupplychains
-      - clusterdeliveries
-      - clusterimagetemplates
-      - clusterruntemplates
-      - clustersourcetemplates
-      - clusterconfigtemplates
-      - clusterdeploymenttemplates
-      - clustertemplates
-      - deliverables
-      - runnables
+      - '*'
     verbs:
       - watch
       - get

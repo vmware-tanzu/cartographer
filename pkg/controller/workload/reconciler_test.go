@@ -245,7 +245,7 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 			Expect(serviceAccountName).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
@@ -498,9 +498,11 @@ var _ = Describe("Reconciler", func() {
 				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ServiceAccountSecretNotFoundCondition(repoError)))
 			})
 
-			It("does not return an error", func() {
+			It("returns an unhandled error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).To(HaveOccurred())
+
+				Expect(err.Error()).To(ContainSubstring("get secret for service account 'alternate-service-account-name': some error"))
 			})
 		})
 
@@ -509,14 +511,16 @@ var _ = Describe("Reconciler", func() {
 				resourceRealizerBuilderError = errors.New("some error")
 			})
 
-			It("calls the condition manager to add a service account secret not found condition", func() {
+			It("calls the condition manager to add a resource realizer builder error condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
 			})
 
-			It("does not return an error", func() {
+			It("returns an unhandled error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).To(HaveOccurred())
+
+				Expect(err.Error()).To(ContainSubstring("build resource realizer: some error"))
 			})
 		})
 	})

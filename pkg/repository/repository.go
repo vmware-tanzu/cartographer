@@ -50,7 +50,7 @@ type Repository interface {
 	ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
-	GetServiceAccountSecret(serviceAccountName, ns string) (*corev1.Secret, error)
+	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
 }
 
 type RepositoryBuilder func(client client.Client, repoCache RepoCache, logger Logger) Repository
@@ -67,7 +67,7 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	}
 }
 
-func (r *repository) GetServiceAccountSecret(serviceAccountName, ns string) (*corev1.Secret, error) {
+func (r *repository) GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error) {
 	serviceAccount := &corev1.ServiceAccount{}
 
 	key := client.ObjectKey{
@@ -75,7 +75,7 @@ func (r *repository) GetServiceAccountSecret(serviceAccountName, ns string) (*co
 		Namespace: ns,
 	}
 
-	err := r.cl.Get(context.TODO(), key, serviceAccount)
+	err := r.cl.Get(ctx, key, serviceAccount)
 
 	if err != nil {
 		return nil, fmt.Errorf("getting service account: %w", err)
@@ -93,7 +93,7 @@ func (r *repository) GetServiceAccountSecret(serviceAccountName, ns string) (*co
 			Namespace: ns,
 		}
 
-		err = r.cl.Get(context.TODO(), secretKey, secret)
+		err = r.cl.Get(ctx, secretKey, secret)
 		if err != nil {
 			return nil, fmt.Errorf("getting service account secret: %w", err)
 		}
