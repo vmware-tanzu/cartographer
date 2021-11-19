@@ -26,5 +26,5 @@ spec:
       ref:
         branch: prod
   params:
-    - name: spooky
+    - name: uses-deliverable
       value: ghosts

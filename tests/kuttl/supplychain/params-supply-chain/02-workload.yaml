@@ -26,8 +26,12 @@ spec:
       value: me
     - name: ovrdbl-supply-chain-on-workload
       value: me
+    - name: notovrdbl-supply-chain-on-workload
+      value: not-me-workload
     - name: ovrdbl-resource-on-workload
       value: me
+    - name: notovrdbl-resource-on-workload
+      value: not-me-workload
     - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
       value: not-me-workload
     - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload

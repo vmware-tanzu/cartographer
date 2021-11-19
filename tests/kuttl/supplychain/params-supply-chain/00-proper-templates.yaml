@@ -36,6 +36,10 @@ spec:
       default: not-me-template
     - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
       default: not-me-template
+    - name: notovrdbl-supply-chain-on-workload
+      default: not-me-template
+    - name: notovrdbl-resource-on-workload
+      default: not-me-template
   urlPath: .spec.value.far-be-it-from
   revisionPath: .spec.value.beats
   template:
@@ -54,3 +58,5 @@ spec:
         who: $(params.ovrdbl-supply-chain-notovrdbl-resource-on-workload)$
         woe-is: $(params.notovrdbl-supply-chain-ovrdbl-resource-on-workload)$
         bite: $(params.notovrdbl-supply-chain-notovrdbl-resource-on-workload)$
+        so-help: $(params.notovrdbl-supply-chain-on-workload)$
+        mercy: $(params.notovrdbl-resource-on-workload)$

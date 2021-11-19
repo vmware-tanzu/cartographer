@@ -32,6 +32,9 @@ spec:
     - name: ovrdbl-supply-chain-on-workload
       value: not-me-supply-chain
       overridable: true
+    - name: notovrdbl-supply-chain-on-workload
+      value: me
+      overridable: false
     - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
       value: not-me-supply-chain
       overridable: true
@@ -56,6 +59,9 @@ spec:
         - name: ovrdbl-resource-on-workload
           value: not-me-resource
           overridable: true
+        - name: notovrdbl-resource-on-workload
+          value: me
+          overridable: false
         - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
           value: me
           overridable: false

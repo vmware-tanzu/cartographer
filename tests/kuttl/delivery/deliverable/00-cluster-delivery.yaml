@@ -32,8 +32,10 @@ spec:
       params:
         - name: uses-delivery
           value: spiders
+          overridable: false
         - name: uses-deliverable
-          value: $(deliverable.spec.params[?(@.name=="spooky")].value)$
+          value: some-value
+          overridable: true
     - name: deployer
       templateRef:
         kind: ClusterDeploymentTemplate
