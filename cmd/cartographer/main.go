@@ -15,10 +15,10 @@
 package main
 
 import (
-	"context"
 	"flag"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
@@ -39,9 +39,6 @@ func init() {
 }
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	loggerOpt, err := logger.SetLogLevel(verbosity)
 	if err != nil {
 		panic(err)
@@ -53,7 +50,7 @@ func main() {
 		Logger:  zap.New(zap.UseDevMode(devMode), loggerOpt),
 	}
 
-	if err = cmd.Execute(ctx); err != nil {
+	if err = cmd.Execute(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
 	}
 }
