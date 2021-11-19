@@ -312,7 +312,7 @@ func registerRunnableController(mgr manager.Manager) error {
 	return nil
 }
 
-func IndexResources(mgr manager.Manager, ctx context.Context) error {
+func IndexResources(ctx context.Context, mgr manager.Manager) error {
 	fieldIndexer := mgr.GetFieldIndexer()
 
 	if err := indexSupplyChains(ctx, fieldIndexer); err != nil {
