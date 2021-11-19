@@ -286,3 +286,32 @@ func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.C
 
 	return ref.Kind == "ClusterRunTemplate" || ref.Kind == ""
 }
+
+func (mapper *Mapper) ServiceAccountToWorkloadRequests(object client.Object) []reconcile.Request {
+	list := &v1alpha1.WorkloadList{}
+
+	err := mapper.Client.List(context.TODO(), list)
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to workload requests: list workloads")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, workload := range list.Items {
+		if mapper.serviceAccountMatch(&workload, object) {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      workload.Name,
+					Namespace: workload.Namespace,
+				},
+			})
+		}
+	}
+
+	return requests
+}
+
+func (mapper *Mapper) serviceAccountMatch(workload *v1alpha1.Workload, object client.Object) bool {
+	return workload.Namespace == object.GetNamespace() && workload.Spec.ServiceAccountName == object.GetName()
+}
+

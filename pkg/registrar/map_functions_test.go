@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -1146,6 +1147,139 @@ var _ = Describe("MapFunctions", func() {
 				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
 				Expect(err).To(MatchError(ContainSubstring("missing apiVersion or kind: my-template")))
 				Expect(msg).To(Equal("could not get GVK for template: my-template"))
+			})
+		})
+	})
+
+	Describe("ServiceAccountToWorkloadRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		BeforeEach(func() {
+			fakeLogger = &registrarfakes.FakeLogger{}
+			fakeClient = &registrarfakes.FakeClient{}
+
+			m = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			scheme := runtime.NewScheme()
+			err := v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeClient.SchemeReturns(scheme)
+		})
+
+		Context("client.list does not return errors", func() {
+			Context("there are no workloads", func() {
+				BeforeEach(func() {
+					existingList := v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("returns an empty request list", func() {
+					sa := &corev1.ServiceAccount{}
+					reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("there are multiple workloads", func() {
+				BeforeEach(func() {
+					existingWorkload1 := &v1alpha1.Workload{
+						Spec: v1alpha1.WorkloadSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingWorkload2 := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-workload",
+							Namespace: "some-namespace",
+						},
+						Spec: v1alpha1.WorkloadSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingList := v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{*existingWorkload1, *existingWorkload2},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				Context("there is a matching workload", func() {
+
+					It("returns requests for only the matching workload", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-workload"))
+					})
+				})
+
+				Context("there is no matching workload", func() {
+					It("returns an empty request list", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-other-service-account",
+								Namespace: "some-other-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+			})
+		})
+
+		Context("client.list errors", func() {
+			var (
+				listErr error
+			)
+			BeforeEach(func() {
+				listErr = fmt.Errorf("some error")
+
+				fakeClient.ListReturns(listErr)
+			})
+
+			It("returns the error", func() {
+				sa := &corev1.ServiceAccount{}
+				reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+				Expect(reqs).To(HaveLen(0))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(listErr))
+				Expect(msg).To(Equal("service account to workload requests: list workloads"))
 			})
 		})
 	})
