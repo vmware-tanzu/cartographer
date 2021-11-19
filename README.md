@@ -49,7 +49,6 @@ An example of using Cartographer to define a Supply Chain that pulls code from a
 
 
 
-
 ## 🤗 Community, discussion, contribution, and support
 
 Cartographer is developed in the open and is constantly improved by our users, contributors and maintainers. It is because of you that we are able to configure Kubernetes resources into reusable Supply Chains.
