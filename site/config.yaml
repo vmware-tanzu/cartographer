@@ -37,15 +37,6 @@ menu:
   docs:
   - name: Overview
     url: /docs/
-  #   weight: 100
-  # - name: Architecture
-  #   url: /docs/architecture/
-  #   name: Demo
-  #   url: /docs/demo/
-  # - name: Scope
-  #   url: /docs/scope/
-  # - name: Update Images
-  #   url: /docs/contributing/
 params:
   twitter_url: "https://twitter.com/OssCartographer"
   github_url: "https://github.com/vmware-tanzu/cartographer"
@@ -59,7 +50,7 @@ params:
   docs_versioning: true
   docs_latest: v0.0.7
   docs_versions:
-    - main
+    - development
     - v0.0.7
     - v0.0.6
 mediaTypes:
