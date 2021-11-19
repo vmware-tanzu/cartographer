@@ -15,10 +15,10 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---workload-provided-params-unique
+  name: responsible-ops---params-supply-chain
 spec:
   selector:
-    integration-test: "workload-provided-params-unique"
+    integration-test: "params-supply-chain"
   params:
     - name: not-on-template
       value: never-present
@@ -45,7 +45,7 @@ spec:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
-        name: git-template---workload-provided-params-unique
+        name: git-template---params-supply-chain
       params:
         - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
           value: not-me-resource

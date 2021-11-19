@@ -15,7 +15,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: git-template---workload-provided-params-unique
+  name: git-template---params-supply-chain
 spec:
   params:
     - name: on-template

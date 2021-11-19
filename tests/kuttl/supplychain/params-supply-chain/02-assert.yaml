@@ -46,5 +46,5 @@ status:
       status: "True"
       reason: Ready
   supplyChainRef:
-    name: responsible-ops---workload-provided-params-unique
+    name: responsible-ops---params-supply-chain
     kind: ClusterSupplyChain
