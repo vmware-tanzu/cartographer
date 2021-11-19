@@ -34,5 +34,6 @@ spec:
         - resource: source-provider
           name: source-provider
       params:
-        - name: expected-param
-          value: $(workload.spec.params[0].value)$
+        - name: a-config-map
+          value: ""
+          overridable: true

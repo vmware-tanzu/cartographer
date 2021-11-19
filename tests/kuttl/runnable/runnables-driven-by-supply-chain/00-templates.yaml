@@ -40,7 +40,7 @@ spec:
   revisionPath: .spec.runTemplateRef.name
 
   params:
-    - name: expected-param
+    - name: a-config-map
       default:
         key: value
 
@@ -58,4 +58,4 @@ spec:
       inputs:
         source-url: $(source.url)$
         source-revision: $(source.revision)$
-        definition: $(params.expected-param)$
+        definition: $(params.a-config-map)$
