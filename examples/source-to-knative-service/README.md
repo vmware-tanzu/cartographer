@@ -114,12 +114,6 @@ kapp deploy --yes -a gitops-toolkit \
   Kubernetes objects as a single unit
 
 ```bash
-# THIS CLUSTERROLEBINDING IS FOR DEMO PURPOSES ONLY - THIS WILL GRANT MORE PERMISSIONS THAN NECESSARY
-#
-kubectl create clusterrolebinding default-admin \
-  --clusterrole=cluster-admin \
-  --serviceaccount=default:default
-
 KAPP_CONTROLLER_VERSION=0.30.0
 
 kapp deploy --yes -a kapp-controller \
