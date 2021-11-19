@@ -43,7 +43,7 @@ type TemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template *runtime.RawExtension `json:"template,omitempty"`
 	Ytt      string                `json:"ytt,omitempty"`
-	Params   DefaultParams         `json:"params,omitempty"`
+	Params   TemplateParams        `json:"params,omitempty"`
 }
 
 type TemplateStatus struct {

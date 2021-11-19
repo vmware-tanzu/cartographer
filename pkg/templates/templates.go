@@ -26,7 +26,7 @@ import (
 
 type Template interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec
-	GetDefaultParams() v1alpha1.DefaultParams
+	GetDefaultParams() v1alpha1.TemplateParams
 	GetOutput() (*Output, error)
 	SetInputs(*Inputs)
 	SetStampedObject(stampedObject *unstructured.Unstructured)

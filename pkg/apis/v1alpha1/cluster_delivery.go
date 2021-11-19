@@ -54,6 +54,7 @@ func (c *ClusterDelivery) GetSelector() map[string]string {
 type ClusterDeliverySpec struct {
 	Resources []ClusterDeliveryResource `json:"resources"`
 	Selector  map[string]string         `json:"selector"`
+	Params    []DelegatableParam        `json:"params,omitempty"`
 }
 
 type ClusterDeliveryStatus struct {
@@ -64,7 +65,7 @@ type ClusterDeliveryStatus struct {
 type ClusterDeliveryResource struct {
 	Name        string                           `json:"name"`
 	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
-	Params      []Param                          `json:"params,omitempty"`
+	Params      []DelegatableParam               `json:"params,omitempty"`
 	Sources     []ResourceReference              `json:"sources,omitempty"`
 	Deployment  *DeploymentReference             `json:"deployment,omitempty"`
 	Configs     []ResourceReference              `json:"configs,omitempty"`
@@ -108,6 +109,10 @@ func (c *ClusterDelivery) ValidateDelete() error {
 }
 
 func (c *ClusterDelivery) validateNewState() error {
+	if err := c.validateParams(); err != nil {
+		return err
+	}
+
 	if err := c.validateResourceNamesUnique(); err != nil {
 		return err
 	}
@@ -150,6 +155,26 @@ func (c *ClusterDelivery) validateDeploymentTemplateDidNotReceiveConfig() error 
 			return fmt.Errorf("spec.resources['%s'] is a ClusterDeploymentTemplate and must not receive config", resource.Name)
 		}
 	}
+	return nil
+}
+
+func (c *ClusterDelivery) validateParams() error {
+	for _, param := range c.Spec.Params {
+		err := param.validateDelegatableParams()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, resource := range c.Spec.Resources {
+		for _, param := range resource.Params {
+			err := param.validateDelegatableParams()
+			if err != nil {
+				return fmt.Errorf("invalid resource '%s': %w", resource.Name, err)
+			}
+		}
+	}
+
 	return nil
 }
 

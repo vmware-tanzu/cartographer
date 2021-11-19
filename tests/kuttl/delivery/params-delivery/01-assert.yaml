@@ -12,19 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: test-deliverable-source
+spec:
+  value:
+    for-the-life-of: me
+    far-be-it-from: me
+    do-re: me
+    pardon: me
+    kiss: me
+    beats: me
+    who: me
+    woe-is: me
+    bite: me
+
 ---
 apiVersion: carto.run/v1alpha1
 kind: Deliverable
 metadata:
   name: my-app
-  labels:
-    app.tanzu.vmware.com/deliverable-type: web---deliverable
-spec:
-  source:
-    git:
-      url: https://github.com/ekcasey/hello-world-ops
-      ref:
-        branch: prod
-  params:
-    - name: uses-deliverable
-      value: ghosts
+status:
+  conditions:
+    - type: DeliveryReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  deliveryRef:
+    name: delivery---params-delivery
+    kind: ClusterDelivery

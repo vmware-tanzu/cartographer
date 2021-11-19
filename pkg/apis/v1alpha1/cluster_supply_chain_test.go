@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
 
@@ -116,327 +117,316 @@ var _ = Describe("ClusterSupplyChain", func() {
 	})
 
 	Describe("Webhook Validation", func() {
-		Describe("#Create", func() {
-			Context("Well formed supply chain", func() {
-				var wellFormedSupplyChain *v1alpha1.ClusterSupplyChain
-				BeforeEach(func() {
-					wellFormedSupplyChain = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
-								{
-									Name: "other-source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
-							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
-						},
-					}
-				})
-				It("does not return an error", func() {
-					Expect(wellFormedSupplyChain.ValidateCreate()).NotTo(HaveOccurred())
-				})
-			})
+		var (
+			supplyChain    *v1alpha1.ClusterSupplyChain
+			oldSupplyChain *v1alpha1.ClusterSupplyChain
+		)
 
-			Context("Supply chain with a resource reference that does not exist", func() {
-				var supplyChain *v1alpha1.ClusterSupplyChain
-
-				BeforeEach(func() {
-					supplyChain = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "some-resource",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "some-template",
-									},
-								},
-								{
-									Name: "other-resource",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterTemplate",
-										Name: "some-other-template",
-									},
-									Sources: []v1alpha1.ResourceReference{
-										{
-											Name:     "some-source",
-											Resource: "some-nonexistent-resource",
-										},
-									},
-								},
+		BeforeEach(func() {
+			supplyChain = &v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "responsible-ops---default-params",
+					Namespace: "default",
+				},
+				Spec: v1alpha1.SupplyChainSpec{
+					Resources: []v1alpha1.SupplyChainResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.ClusterTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "git-template---default-params",
 							},
 						},
-					}
-				})
-
-				It("returns an error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
-						"invalid sources for resource 'other-resource': 'some-source' is provided by unknown resource 'some-nonexistent-resource'",
-					))
-				})
-			})
-
-			Context("Two resources with the same name", func() {
-				var supplyChainWithDuplicateResourceNames *v1alpha1.ClusterSupplyChain
-				BeforeEach(func() {
-					supplyChainWithDuplicateResourceNames = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
-								{
-									Name: "source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
+						{
+							Name: "other-source-provider",
+							TemplateRef: v1alpha1.ClusterTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "git-template---default-params",
 							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
 						},
-					}
-				})
-
-				It("rejects the Resource", func() {
-					err := supplyChainWithDuplicateResourceNames.ValidateCreate()
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
-				})
-			})
-
-			Describe("Template inputs must reference a resource with a matching type", func() {
-				var supplyChain *v1alpha1.ClusterSupplyChain
-				var consumerToProviderMapping = map[string]string{
-					"Source": "ClusterSourceTemplate",
-					"Config": "ClusterConfigTemplate",
-					"Image":  "ClusterImageTemplate",
-				}
-				BeforeEach(func() {
-					supplyChain = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "input-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Name: "output-template",
-									},
-								},
-								{
-									Name: "input-consumer",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterTemplate",
-										Name: "consuming-template",
-									},
-								},
-							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
-						},
-					}
-				})
-				DescribeTable("template input does not match template type",
-					func(firstResourceKind string, inputReferenceType string, happy bool) {
-						supplyChain.Spec.Resources[0].TemplateRef.Kind = firstResourceKind
-
-						reference := v1alpha1.ResourceReference{
-							Name:     "input-name",
-							Resource: "input-provider",
-						}
-
-						switch inputReferenceType {
-						case "Source":
-							supplyChain.Spec.Resources[1].Sources = []v1alpha1.ResourceReference{reference}
-						case "Image":
-							supplyChain.Spec.Resources[1].Images = []v1alpha1.ResourceReference{reference}
-						case "Config":
-							supplyChain.Spec.Resources[1].Configs = []v1alpha1.ResourceReference{reference}
-						}
-
-						err := supplyChain.ValidateCreate()
-
-						if happy {
-							Expect(err).NotTo(HaveOccurred())
-						} else {
-							Expect(err).To(HaveOccurred())
-							Expect(err).To(MatchError(fmt.Sprintf(
-								"invalid %ss for resource 'input-consumer': resource 'input-provider' providing 'input-name' must reference a %s",
-								strings.ToLower(inputReferenceType),
-								consumerToProviderMapping[inputReferenceType]),
-							))
-						}
-
 					},
-					Entry("Config cannot be a source provider", "ClusterTemplate", "Source", false),
-					Entry("Config cannot be a image provider", "ClusterTemplate", "Image", false),
-					Entry("Config cannot be an config provider", "ClusterTemplate", "Config", false),
-					Entry("Build cannot be a source provider", "ClusterImageTemplate", "Source", false),
-					Entry("Build can be a image provider", "ClusterImageTemplate", "Image", true),
-					Entry("Build cannot be a config provider", "ClusterImageTemplate", "Config", false),
-					Entry("Source can be a source provider", "ClusterSourceTemplate", "Source", true),
-					Entry("Source cannot be a image provider", "ClusterSourceTemplate", "Image", false),
-					Entry("Source cannot be a config provider", "ClusterSourceTemplate", "Config", false),
-					Entry("Config cannot be a source provider", "ClusterConfigTemplate", "Source", false),
-					Entry("Config cannot be a image provider", "ClusterConfigTemplate", "Image", false),
-					Entry("Config can be a config provider", "ClusterConfigTemplate", "Config", true),
-				)
+					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					Params: []v1alpha1.DelegatableParam{
+						{
+							Name:  "some-param",
+							Value: &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+						},
+					},
+				},
+			}
+		})
+
+		Context("Well formed supply chain", func() {
+			It("creates without error", func() {
+				Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("updates without error", func() {
+				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
 			})
 		})
 
-		Describe("#Update", func() {
-			var oldSupplyChain *v1alpha1.ClusterSupplyChain
-			Context("Well formed supply chain", func() {
-				var wellFormedSupplyChain *v1alpha1.ClusterSupplyChain
-				BeforeEach(func() {
-					wellFormedSupplyChain = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
-								{
-									Name: "other-source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
+		Context("Supply chain with a resource reference that does not exist", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources[1].Sources = []v1alpha1.ResourceReference{
+					{
+						Name:     "some-source",
+						Resource: "some-nonexistent-resource",
+					},
+				}
+			})
+
+			It("on create, returns an error", func() {
+				Expect(supplyChain.ValidateCreate()).To(MatchError(
+					"invalid sources for resource 'other-source-provider': 'some-source' is provided by unknown resource 'some-nonexistent-resource'",
+				))
+			})
+
+			It("on update, returns an error", func() {
+				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					"invalid sources for resource 'other-source-provider': 'some-source' is provided by unknown resource 'some-nonexistent-resource'",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("Two resources with the same name", func() {
+			BeforeEach(func() {
+				for i := range supplyChain.Spec.Resources {
+					supplyChain.Spec.Resources[i].Name = "some-duplicate-name"
+				}
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateCreate()).To(MatchError(
+					"duplicate resource name 'some-duplicate-name' found in clustersupplychain 'responsible-ops---default-params'",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					"duplicate resource name 'some-duplicate-name' found in clustersupplychain 'responsible-ops---default-params'",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("SupplyChain with malformed params", func() {
+			Context("Top level params are malformed", func() {
+				Context("param does not specify a value or default", func() {
+					BeforeEach(func() {
+						supplyChain.Spec.Params = []v1alpha1.DelegatableParam{
+							{
+								Name: "some-param",
 							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
-						},
-					}
+						}
+					})
+					It("on create, returns an error", func() {
+						Expect(supplyChain.ValidateCreate()).To(MatchError(
+							"invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("on update, returns an error", func() {
+						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+							"invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					})
 				})
-				It("does not return an error", func() {
-					Expect(wellFormedSupplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+
+				Context("param specifies both a value and a default", func() {
+					BeforeEach(func() {
+						supplyChain.Spec.Params = []v1alpha1.DelegatableParam{
+							{
+								Name:         "some-param",
+								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+								DefaultValue: &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+							},
+						}
+					})
+
+					It("on create, returns an error", func() {
+						Expect(supplyChain.ValidateCreate()).To(MatchError(
+							"invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("on update, returns an error", func() {
+						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+							"invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					})
 				})
 			})
 
-			Context("Two resources with the same name", func() {
-				var supplyChainWithDuplicateResourceNames *v1alpha1.ClusterSupplyChain
-				BeforeEach(func() {
-					supplyChainWithDuplicateResourceNames = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
-								{
-									Name: "source-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterSourceTemplate",
-										Name: "git-template---default-params",
-									},
-								},
+			Context("Params of an individual resource are malformed", func() {
+				Context("param does not specify a value or default", func() {
+					BeforeEach(func() {
+						supplyChain.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+							{
+								Name: "some-param",
 							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
-						},
-					}
+						}
+					})
+					It("on create, returns an error", func() {
+						Expect(supplyChain.ValidateCreate()).To(MatchError(
+							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("on update, returns an error", func() {
+						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					})
 				})
 
-				It("rejects the Resource", func() {
-					err := supplyChainWithDuplicateResourceNames.ValidateUpdate(oldSupplyChain)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
-				})
-			})
-
-			Context("Template inputs do not reference a resource with a matching type", func() {
-				var invalidSupplyChain *v1alpha1.ClusterSupplyChain
-				BeforeEach(func() {
-					invalidSupplyChain = &v1alpha1.ClusterSupplyChain{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "responsible-ops---default-params",
-							Namespace: "default",
-						},
-						Spec: v1alpha1.SupplyChainSpec{
-							Resources: []v1alpha1.SupplyChainResource{
-								{
-									Name: "image-provider",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Name: "image-output-template",
-										Kind: "ClusterImageTemplate",
-									},
-								},
-								{
-									Name: "input-consumer",
-									TemplateRef: v1alpha1.ClusterTemplateReference{
-										Kind: "ClusterTemplate",
-										Name: "consuming-template",
-									},
-									Sources: []v1alpha1.ResourceReference{
-										{
-											Name:     "source-name",
-											Resource: "image-provider",
-										},
-									},
-								},
+				Context("param specifies both a value and a default", func() {
+					BeforeEach(func() {
+						supplyChain.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+							{
+								Name:         "some-param",
+								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+								DefaultValue: &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
 							},
-							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
-						},
-					}
-				})
-				It("validates on update as well", func() {
-					err := invalidSupplyChain.ValidateUpdate(&v1alpha1.ClusterSupplyChain{})
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("invalid sources for resource 'input-consumer': resource 'image-provider' providing 'source-name' must reference a ClusterSourceTemplate"))
+						}
+					})
+					It("on create, returns an error", func() {
+						Expect(supplyChain.ValidateCreate()).To(MatchError(
+							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("on update, returns an error", func() {
+						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					})
 				})
 			})
 		})
 
-		Describe("#Delete", func() {
-			Context("Any supply chain", func() {
-				var anyOldSupplyChain *v1alpha1.ClusterSupplyChain
-				It("does not return an error", func() {
-					Expect(anyOldSupplyChain.ValidateDelete()).NotTo(HaveOccurred())
-				})
+		Describe("Template inputs must reference a resource with a matching type", func() {
+			var consumerToProviderMapping = map[string]string{
+				"Source": "ClusterSourceTemplate",
+				"Config": "ClusterConfigTemplate",
+				"Image":  "ClusterImageTemplate",
+			}
+			BeforeEach(func() {
+				supplyChain = &v1alpha1.ClusterSupplyChain{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "responsible-ops---default-params",
+						Namespace: "default",
+					},
+					Spec: v1alpha1.SupplyChainSpec{
+						Resources: []v1alpha1.SupplyChainResource{
+							{
+								Name: "input-provider",
+								TemplateRef: v1alpha1.ClusterTemplateReference{
+									Name: "output-template",
+								},
+							},
+							{
+								Name: "input-consumer",
+								TemplateRef: v1alpha1.ClusterTemplateReference{
+									Kind: "ClusterTemplate",
+									Name: "consuming-template",
+								},
+							},
+						},
+						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					},
+				}
 			})
-		})
+			DescribeTable("template input does not match template type",
+				func(firstResourceKind string, inputReferenceType string, happy bool) {
+					supplyChain.Spec.Resources[0].TemplateRef.Kind = firstResourceKind
 
+					reference := v1alpha1.ResourceReference{
+						Name:     "input-name",
+						Resource: "input-provider",
+					}
+
+					switch inputReferenceType {
+					case "Source":
+						supplyChain.Spec.Resources[1].Sources = []v1alpha1.ResourceReference{reference}
+					case "Image":
+						supplyChain.Spec.Resources[1].Images = []v1alpha1.ResourceReference{reference}
+					case "Config":
+						supplyChain.Spec.Resources[1].Configs = []v1alpha1.ResourceReference{reference}
+					}
+
+					// Create
+					createErr := supplyChain.ValidateCreate()
+
+					// Update
+					updateErr := supplyChain.ValidateUpdate(oldSupplyChain)
+
+					// Delete
+					deleteErr := supplyChain.ValidateDelete()
+
+					if happy {
+						Expect(createErr).NotTo(HaveOccurred())
+						Expect(updateErr).NotTo(HaveOccurred())
+						Expect(deleteErr).NotTo(HaveOccurred())
+					} else {
+						Expect(createErr).To(HaveOccurred())
+						Expect(createErr).To(MatchError(fmt.Sprintf(
+							"invalid %ss for resource 'input-consumer': resource 'input-provider' providing 'input-name' must reference a %s",
+							strings.ToLower(inputReferenceType),
+							consumerToProviderMapping[inputReferenceType]),
+						))
+
+						Expect(updateErr).To(HaveOccurred())
+						Expect(updateErr).To(MatchError(fmt.Sprintf(
+							"invalid %ss for resource 'input-consumer': resource 'input-provider' providing 'input-name' must reference a %s",
+							strings.ToLower(inputReferenceType),
+							consumerToProviderMapping[inputReferenceType]),
+						))
+
+						Expect(deleteErr).NotTo(HaveOccurred())
+					}
+				},
+				Entry("Config cannot be a source provider", "ClusterTemplate", "Source", false),
+				Entry("Config cannot be a image provider", "ClusterTemplate", "Image", false),
+				Entry("Config cannot be an config provider", "ClusterTemplate", "Config", false),
+				Entry("Build cannot be a source provider", "ClusterImageTemplate", "Source", false),
+				Entry("Build can be a image provider", "ClusterImageTemplate", "Image", true),
+				Entry("Build cannot be a config provider", "ClusterImageTemplate", "Config", false),
+				Entry("Source can be a source provider", "ClusterSourceTemplate", "Source", true),
+				Entry("Source cannot be a image provider", "ClusterSourceTemplate", "Image", false),
+				Entry("Source cannot be a config provider", "ClusterSourceTemplate", "Config", false),
+				Entry("Config cannot be a source provider", "ClusterConfigTemplate", "Source", false),
+				Entry("Config cannot be a image provider", "ClusterConfigTemplate", "Image", false),
+				Entry("Config can be a config provider", "ClusterConfigTemplate", "Config", true),
+			)
+		})
 	})
 
 	Describe("GetSelectorsFromObject", func() {

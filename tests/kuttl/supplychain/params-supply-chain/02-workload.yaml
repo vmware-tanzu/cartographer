@@ -17,13 +17,29 @@ kind: Workload
 metadata:
   name: petclinic
   labels:
-    integration-test: "default-params"
+    integration-test: "params-supply-chain"
 spec:
   params:
-    - name: waciuma-com/quality
-      value: beta
-    - name: waciuma-com/java-version
-      value: 11
+    - name: template-and-workload-but-not-supply-chain-nor-resource
+      value: not-me-workload
+    - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: me
+    - name: ovrdbl-supply-chain-on-workload
+      value: me
+    - name: notovrdbl-supply-chain-on-workload
+      value: not-me-workload
+    - name: ovrdbl-resource-on-workload
+      value: me
+    - name: notovrdbl-resource-on-workload
+      value: not-me-workload
+    - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
+      value: not-me-workload
+    - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: me
+    - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
+      value: not-me-workload
+    - name: not-on-template
+      value: never-present
 
   source:
     git:

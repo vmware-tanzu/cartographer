@@ -18,7 +18,7 @@ kind: Deliverable
 metadata:
   name: my-app
   labels:
-    app.tanzu.vmware.com/deliverable-type: web---deliverable
+    app.tanzu.vmware.com/deliverable-type: web---params-delivery
 spec:
   source:
     git:
@@ -26,5 +26,19 @@ spec:
       ref:
         branch: prod
   params:
-    - name: uses-deliverable
-      value: ghosts
+    - name: template-and-deliverable-but-not-delivery-nor-resource
+      value: not-me-deliverable
+    - name: ovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: me
+    - name: ovrdbl-delivery-on-deliverable
+      value: me
+    - name: ovrdbl-resource-on-deliverable
+      value: me
+    - name: ovrdbl-delivery-notovrdbl-resource-on-deliverable
+      value: not-me-deliverable
+    - name: notovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: me
+    - name: notovrdbl-delivery-notovrdbl-resource-on-deliverable
+      value: not-me-deliverable
+    - name: not-on-template
+      value: never-present

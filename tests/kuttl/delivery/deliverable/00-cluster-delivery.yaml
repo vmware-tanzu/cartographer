@@ -33,7 +33,7 @@ spec:
         - name: uses-delivery
           value: spiders
         - name: uses-deliverable
-          value: $(deliverable.spec.params[?(@.name=="spooky")].value)$
+          default: some-value
     - name: deployer
       templateRef:
         kind: ClusterDeploymentTemplate

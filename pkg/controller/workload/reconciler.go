@@ -79,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(workload, r.Repo), supplyChain)
+	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(workload, r.Repo, supplyChain.Spec.Params), supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetClusterTemplateError:
