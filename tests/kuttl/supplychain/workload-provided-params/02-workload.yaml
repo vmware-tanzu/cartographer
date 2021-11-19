@@ -20,14 +20,22 @@ metadata:
     integration-test: "workload-provided-params"
 spec:
   params:
-    - name: waciuma-com/quality
-      value: beta
-    - name: waciuma-com/java-version
-      value: 11
-    - name: number-of-cat-lives
-      value: 1
-    - name: subject-of-problem
-      value: "screw"
+    - name: template-and-workload-but-not-supply-chain-nor-component
+      value: not-me
+    - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
+      default: me
+    - name: ovrdbl-supply-chain-on-workload
+      default: me
+    - name: ovrdbl-component-on-workload
+      default: me
+    - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
+      default: not-me
+    - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
+      default: not-me
+    - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
+      default: not-me
+    - name: not-on-template
+      value: never-present
 
   source:
     git:

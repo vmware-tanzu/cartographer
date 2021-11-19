@@ -18,14 +18,26 @@ metadata:
   name: git-template---workload-provided-params
 spec:
   params:
-    - name: broodx-cicadas-per-acre
-      default: 1400000
-    - name: number-of-cat-lives
-      default: 9
-    - name: every-problem
-      default: "nail"
-  urlPath: .spec.value.cat-lives
-  revisionPath: .spec.value.critters
+    - name: on-template
+      default: me
+    - name: template-and-workload-but-not-supply-chain-nor-component
+      default: me
+    - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
+      default: not-me
+    - name: ovrdbl-supply-chain-ovrdbl-component-not-on-workload
+      default: not-me
+    - name: ovrdbl-supply-chain-on-workload
+      default: not-me
+    - name: ovrdbl-component-on-workload
+      default: not-me
+    - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
+      default: not-me
+    - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
+      default: not-me
+    - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
+      default: not-me
+  urlPath: .spec.value.far-be-it-from
+  revisionPath: .spec.value.beats
   template:
     apiVersion: test.run/v1alpha1
     kind: Test
@@ -33,6 +45,12 @@ spec:
       name: test-deliverable-source
     spec:
       value:
-        cat-lives: $(params.number-of-cat-lives)$
-        critters: $(params.broodx-cicadas-per-acre)$
-        every-problem: $(params.every-problem)$
+        for-the-life-of: $(params.on-template)$
+        far-be-it-from: $(params.template-and-workload-but-not-supply-chain-nor-component)$
+        do-re: $(params.ovrdbl-supply-chain-ovrdbl-component-on-workload)$
+        pardon: $(params.ovrdbl-supply-chain-on-workload)$
+        kiss: $(params.ovrdbl-component-on-workload)$
+        beats: $(params.ovrdbl-supply-chain-ovrdbl-component-not-on-workload)$
+        who: $(params.ovrdbl-supply-chain-notovrdbl-component-on-workload)$
+        woe-is: $(params.notovrdbl-supply-chain-ovrdbl-component-on-workload)$
+        bite: $(params.notovrdbl-supply-chain-notovrdbl-component-on-workload)$

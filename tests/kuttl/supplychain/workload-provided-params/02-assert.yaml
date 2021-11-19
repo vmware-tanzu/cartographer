@@ -18,9 +18,15 @@ metadata:
   name: test-deliverable-source
 spec:
   value:
-    cat-lives: 1
-    critters: 1400000
-    every-problem: "screw"
+    for-the-life-of: me
+    far-be-it-from: me
+    do-re: me
+    pardon: me
+    kiss: me
+    beats: me
+    who: me
+    woe-is: me
+    bite: me
 
 ---
 

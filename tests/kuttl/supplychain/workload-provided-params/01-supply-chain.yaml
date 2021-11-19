@@ -19,15 +19,52 @@ metadata:
 spec:
   selector:
     integration-test: "workload-provided-params"
+  params:
+    - name: not-on-template
+      value: never-present
+      overridable: true
+    - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
+      value: not-me
+      overridable: true
+    - name: ovrdbl-supply-chain-ovrdbl-component-not-on-workload
+      value: not-me
+      overridable: true
+    - name: ovrdbl-supply-chain-on-workload
+      value: not-me
+      overridable: true
+    - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
+      value: not-me
+      overridable: true
+    - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
+      value: me
+      overridable: false
+    - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
+      value: not-me
+      overridable: false
   resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
         name: git-template---workload-provided-params
       params:
-        - name: number-of-cat-lives
-          value: $(workload.spec.params[2].value)$
-        - name: interesting-fact
-          value: "human head weighs 5 pounds"
-        - name: every-problem
-          value: $(workload.spec.params[?(@.name=="subject-of-problem")].value)$
+        - name: ovrdbl-supply-chain-ovrdbl-component-on-workload
+          value: not-me
+          overridable: true
+        - name: ovrdbl-supply-chain-ovrdbl-component-not-on-workload
+          value: me
+          overridable: true
+        - name: ovrdbl-component-on-workload
+          value: not-me
+          overridable: true
+        - name: ovrdbl-supply-chain-notovrdbl-component-on-workload
+          value: not-me
+          overridable: false
+        - name: notovrdbl-supply-chain-ovrdbl-component-on-workload
+          value: not-me
+          overridable: true
+        - name: notovrdbl-supply-chain-notovrdbl-component-on-workload
+          value: me
+          overridable: false
+        - name: not-on-template
+          value: never-present
+          overridable: true
