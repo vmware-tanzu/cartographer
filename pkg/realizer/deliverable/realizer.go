@@ -18,7 +18,8 @@ package deliverable
 
 import (
 	"context"
-
+	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -36,19 +37,30 @@ func NewRealizer() Realizer {
 }
 
 func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]*unstructured.Unstructured, error) {
+	log := logr.FromContext(ctx)
+	log.V(logger.DEBUG).Info("Realize")
+
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
 
 	for i := range delivery.Spec.Resources {
 		resource := delivery.Spec.Resources[i]
+		log = log.WithValues("resource", resource.Name)
+		ctx = logr.NewContext(ctx, log)
 		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, delivery.Name, outs)
 		if stampedObject != nil {
+			log.V(logger.DEBUG).Info("realized resource as object",
+				"object", stampedObject)
 			stampedObjects = append(stampedObjects, stampedObject)
 		}
 		if err != nil {
+			log.Error(err, "failed to realize resource")
 			return stampedObjects, err
 		}
 
+		// TODO: Could we be leaking secrets?
+		//log.V(logger.DEBUG).Info("realized resource with output",
+		//	"output", out)
 		outs.AddOutput(resource.Name, out)
 	}
 

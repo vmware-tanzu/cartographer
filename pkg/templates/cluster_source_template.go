@@ -50,7 +50,8 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
-			Err:        fmt.Errorf("evaluate source url json path: %w", err),
+			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
+				t.template.Spec.URLPath, err),
 			expression: t.template.Spec.URLPath,
 		}
 	}
@@ -58,7 +59,8 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
-			Err:        fmt.Errorf("evaluate source revision json path: %w", err),
+			Err: fmt.Errorf("failed to evaluate the revision path [%s]: %w",
+				t.template.Spec.RevisionPath, err),
 			expression: t.template.Spec.RevisionPath,
 		}
 	}

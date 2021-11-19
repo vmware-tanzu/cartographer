@@ -23,6 +23,6 @@ crdDir: config/crd/bases
 manifestDirs:
   - tests/resources/crds
 commands:
-  - command: build/cartographer
+  - command: build/cartographer --log-level debug
     background: true
 timeout: 10

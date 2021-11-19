@@ -58,7 +58,7 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 
 	originalSource, ok := t.templatingContext["deployment"].(SourceInput)
 	if !ok {
-		return nil, fmt.Errorf("deployment not found in upstream template: %v", t.templatingContext)
+		return nil, fmt.Errorf("deployment not found in upstream template")
 	}
 
 	output.Source.URL = originalSource.URL
@@ -88,20 +88,20 @@ func (t *clusterDeploymentTemplate) observedMatchesReady(stampedObject *unstruct
 		input, err := t.evaluator.EvaluateJsonPath(match.Input, stampedObject.UnstructuredContent())
 		if err != nil {
 			return DeploymentConditionError{
-				Err: fmt.Errorf("could not find value at key '%s': %w", match.Input, err),
+				Err: fmt.Errorf("could not find value on input [%s]: %w", match.Input, err),
 			}
 		}
 
 		output, err := t.evaluator.EvaluateJsonPath(match.Output, stampedObject.UnstructuredContent())
 		if err != nil {
 			return DeploymentConditionError{
-				Err: fmt.Errorf("could not find value at key '%s': %w", match.Output, err),
+				Err: fmt.Errorf("could not find value on output [%s]: %w", match.Output, err),
 			}
 		}
 
 		if input != output {
 			return DeploymentConditionError{
-				Err: fmt.Errorf("expected '%s' to match '%s'", input, output),
+				Err: fmt.Errorf("input [%s] and output [%s] do not match: %s != %s", match.Input, match.Output, input, output),
 			}
 		}
 	}
@@ -113,44 +113,50 @@ func (t *clusterDeploymentTemplate) observedCompletionReady(stampedObject *unstr
 	generation, err := t.evaluator.EvaluateJsonPath("metadata.generation", stampedObject.UnstructuredContent())
 	if err != nil {
 		return JsonPathError{
-			Err:        fmt.Errorf("generation json path: %w", err),
+			Err:        fmt.Errorf("failed to evaluate metadata.generation: %w", err),
 			expression: "metadata.generation",
 		}
 	}
 
-	observedGeneration, err := t.evaluator.EvaluateJsonPath("status.observedGeneration", stampedObject.UnstructuredContent())
+	observedGeneration, err := t.evaluator.EvaluateJsonPath("status.observedGeneration",
+		stampedObject.UnstructuredContent())
 	if err != nil {
 		return ObservedGenerationError{
-			Err: fmt.Errorf("observed generation json path: %w", err),
+			Err: fmt.Errorf("failed to evaluate status.observedGeneration: %w", err),
 		}
 	}
 
 	if observedGeneration != generation {
 		return DeploymentConditionError{
-			Err: fmt.Errorf("observedGeneration does not equal generation"),
+			Err: fmt.Errorf("status.observedGeneration does not equal metadata.generation: %s != %s",
+				observedGeneration, generation),
 		}
 	}
 
+	observedCompletion := t.template.Spec.ObservedCompletion
 	if t.template.Spec.ObservedCompletion.FailedCondition != nil {
-		failedObserved, _ := t.evaluator.EvaluateJsonPath(t.template.Spec.ObservedCompletion.FailedCondition.Key, stampedObject.UnstructuredContent())
+		failedObserved, _ := t.evaluator.EvaluateJsonPath(observedCompletion.FailedCondition.Key, stampedObject.UnstructuredContent())
 
-		if failedObserved == t.template.Spec.ObservedCompletion.FailedCondition.Value {
+		if failedObserved == observedCompletion.FailedCondition.Value {
 			return DeploymentFailedConditionMetError{
-				Err: fmt.Errorf("'%s' was '%s'", t.template.Spec.ObservedCompletion.FailedCondition.Key, failedObserved),
+				Err: fmt.Errorf("deployment failure condition [%s] was: %s",
+					observedCompletion.FailedCondition.Key, failedObserved),
 			}
 		}
 	}
 
-	succeededObserved, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ObservedCompletion.SucceededCondition.Key, stampedObject.UnstructuredContent())
+	succeededObserved, err := t.evaluator.EvaluateJsonPath(observedCompletion.SucceededCondition.Key, stampedObject.UnstructuredContent())
 	if err != nil {
 		return DeploymentConditionError{
-			Err: fmt.Errorf("could not find value at key '%s': %w", t.template.Spec.ObservedCompletion.SucceededCondition.Key, err),
+			Err: fmt.Errorf("failed to evaluate succeededCondition.Key [%s]: %w",
+				observedCompletion.SucceededCondition.Key, err),
 		}
 	}
 
-	if succeededObserved != t.template.Spec.ObservedCompletion.SucceededCondition.Value {
+	if succeededObserved != observedCompletion.SucceededCondition.Value {
 		return DeploymentConditionError{
-			Err: fmt.Errorf("expected '%s' to be '%s' but found '%s'", t.template.Spec.ObservedCompletion.SucceededCondition.Key, t.template.Spec.ObservedCompletion.SucceededCondition.Value, succeededObserved),
+			Err: fmt.Errorf("deployment success condition [%s] was: %s, expected: %s",
+				observedCompletion.SucceededCondition.Key, succeededObserved, observedCompletion.SucceededCondition.Value),
 		}
 	}
 
