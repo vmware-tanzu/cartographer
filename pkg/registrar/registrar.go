@@ -135,6 +135,13 @@ func registerWorkloadController(mgr manager.Manager) error {
 		}
 	}
 
+	if err := ctrl.Watch(
+		&source.Kind{Type: &corev1.ServiceAccount{}},
+		handler.EnqueueRequestsFromMapFunc(mapper.ServiceAccountToWorkloadRequests),
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
+
 	return nil
 }
 

@@ -83,6 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, workload.Spec.ServiceAccountName, req.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		//TODO don't throw unhandled once informers are complete
 		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err)))
 	}
 
@@ -100,6 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			err = controller.NewUnhandledError(err)
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
+		// TODO split behavior- if error because no permission, don't throw unhandled error
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 			err = controller.NewUnhandledError(err)
