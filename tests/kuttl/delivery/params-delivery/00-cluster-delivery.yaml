@@ -1,0 +1,71 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDelivery
+metadata:
+  name: delivery---params-delivery
+spec:
+  selector:
+    app.tanzu.vmware.com/deliverable-type: web---params-delivery
+  params:
+    - name: not-on-template
+      value: never-present
+      overridable: true
+    - name: ovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: not-me-delivery
+      overridable: true
+    - name: ovrdbl-delivery-ovrdbl-resource-not-on-deliverable
+      value: not-me-delivery
+      overridable: true
+    - name: ovrdbl-delivery-on-deliverable
+      value: not-me-delivery
+      overridable: true
+    - name: ovrdbl-delivery-notovrdbl-resource-on-deliverable
+      value: not-me-delivery
+      overridable: true
+    - name: notovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: not-me-delivery
+      overridable: false
+    - name: notovrdbl-delivery-notovrdbl-resource-on-deliverable
+      value: not-me-delivery
+      overridable: false
+  resources:
+    - name: config-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: source---params-delivery
+      params:
+        - name: ovrdbl-delivery-ovrdbl-resource-on-deliverable
+          value: not-me-resource
+          overridable: true
+        - name: ovrdbl-delivery-ovrdbl-resource-not-on-deliverable
+          value: me
+          overridable: true
+        - name: ovrdbl-resource-on-deliverable
+          value: not-me-resource
+          overridable: true
+        - name: ovrdbl-delivery-notovrdbl-resource-on-deliverable
+          value: me
+          overridable: false
+        - name: notovrdbl-delivery-ovrdbl-resource-on-deliverable
+          value: not-me-resource
+          overridable: true
+        - name: notovrdbl-delivery-notovrdbl-resource-on-deliverable
+          value: me
+          overridable: false
+        - name: not-on-template
+          value: never-present
+          overridable: true

@@ -25,9 +25,9 @@ type Params map[string]apiextensionsv1.JSON
 func ParamsBuilder(
 	templateParams v1alpha1.DefaultParams,
 	resourceParams []v1alpha1.OverridableParam,
-	supplyChainParams []v1alpha1.OverridableParam,
-	workloadParams []v1alpha1.Param,
-	) Params {
+	blueprintParams []v1alpha1.OverridableParam,
+	orderParams []v1alpha1.Param,
+) Params {
 	newParams := Params{}
 	for _, param := range templateParams {
 		newParams[param.Name] = param.DefaultValue
@@ -36,7 +36,7 @@ func ParamsBuilder(
 	overridableByWorkload := make(map[string]bool)
 
 	for key := range newParams {
-		for _, supplyChainOverride := range supplyChainParams {
+		for _, supplyChainOverride := range blueprintParams {
 			if key == supplyChainOverride.Name {
 				newParams[key] = supplyChainOverride.Value
 				overridableByWorkload[key] = supplyChainOverride.OverridableFlag
@@ -50,7 +50,7 @@ func ParamsBuilder(
 			}
 		}
 
-		for _, workloadOverride := range workloadParams {
+		for _, workloadOverride := range orderParams {
 			if key == workloadOverride.Name && workloadCanOverride(overridableByWorkload, key) {
 				newParams[key] = workloadOverride.Value
 			}

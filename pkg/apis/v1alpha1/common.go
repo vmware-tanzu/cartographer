@@ -34,7 +34,7 @@ type Param struct {
 }
 
 type OverridableParam struct {
-	Param `json:",inline"`
+	Param           `json:",inline"`
 	OverridableFlag bool `json:"overridable"`
 }
 

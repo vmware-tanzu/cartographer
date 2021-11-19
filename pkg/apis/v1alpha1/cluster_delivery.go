@@ -50,6 +50,7 @@ type ClusterDelivery struct {
 type ClusterDeliverySpec struct {
 	Resources []ClusterDeliveryResource `json:"resources"`
 	Selector  map[string]string         `json:"selector"`
+	Params    []OverridableParam        `json:"params,omitempty"`
 }
 
 type ClusterDeliveryStatus struct {
@@ -60,7 +61,7 @@ type ClusterDeliveryStatus struct {
 type ClusterDeliveryResource struct {
 	Name        string                           `json:"name"`
 	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
-	Params      []Param                          `json:"params,omitempty"`
+	Params      []OverridableParam               `json:"params,omitempty"`
 	Sources     []ResourceReference              `json:"sources,omitempty"`
 	Deployment  *DeploymentReference             `json:"deployment,omitempty"`
 	Configs     []ResourceReference              `json:"configs,omitempty"`

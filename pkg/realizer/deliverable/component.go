@@ -29,7 +29,7 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, deliveryParams []v1alpha1.OverridableParam, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -44,7 +44,7 @@ func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repo
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, deliveryParams []v1alpha1.OverridableParam, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetDeliveryClusterTemplateError{
@@ -70,7 +70,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	inputs := outputs.GenerateInputs(resource)
 	templatingContext := map[string]interface{}{
 		"deliverable": r.deliverable,
-		//"params":      templates.ParamsBuilder(template.GetDefaultParams(), resource.Params),
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), resource.Params, deliveryParams, r.deliverable.Spec.Params),
 		"sources":     inputs.Sources,
 		"configs":     inputs.Configs,
 		"deployment":  inputs.Deployment,

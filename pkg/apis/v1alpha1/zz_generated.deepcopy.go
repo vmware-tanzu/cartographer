@@ -136,7 +136,7 @@ func (in *ClusterDeliveryResource) DeepCopyInto(out *ClusterDeliveryResource) {
 	out.TemplateRef = in.TemplateRef
 	if in.Params != nil {
 		in, out := &in.Params, &out.Params
-		*out = make([]Param, len(*in))
+		*out = make([]OverridableParam, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -183,6 +183,13 @@ func (in *ClusterDeliverySpec) DeepCopyInto(out *ClusterDeliverySpec) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.Params != nil {
+		in, out := &in.Params, &out.Params
+		*out = make([]OverridableParam, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
