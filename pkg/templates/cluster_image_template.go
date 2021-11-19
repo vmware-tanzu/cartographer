@@ -42,7 +42,7 @@ func (t *clusterImageTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t *clusterImageTemplate) SetTemplatingContext(_ map[string]interface{}) {}
+func (t *clusterImageTemplate) SetInputs(_ *Inputs) {}
 
 func (t *clusterImageTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
 	t.stampedObject = stampedObject

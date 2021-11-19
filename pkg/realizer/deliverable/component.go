@@ -101,7 +101,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	template.SetTemplatingContext(templatingContext)
+	template.SetInputs(inputs)
 	template.SetStampedObject(stampedObject)
 
 	output, err := template.GetOutput()
