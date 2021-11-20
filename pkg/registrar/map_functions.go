@@ -19,7 +19,7 @@ package registrar
 import (
 	"context"
 	"fmt"
-
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -287,7 +287,7 @@ func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.C
 	return ref.Kind == "ClusterRunTemplate" || ref.Kind == ""
 }
 
-func (mapper *Mapper) ServiceAccountToWorkloadRequests(object client.Object) []reconcile.Request {
+func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject client.Object) []reconcile.Request {
 	list := &v1alpha1.WorkloadList{}
 
 	err := mapper.Client.List(context.TODO(), list)
@@ -298,7 +298,7 @@ func (mapper *Mapper) ServiceAccountToWorkloadRequests(object client.Object) []r
 
 	var requests []reconcile.Request
 	for _, workload := range list.Items {
-		if mapper.serviceAccountMatch(&workload, object) {
+		if mapper.serviceAccountMatch(&workload, serviceAccountObject) {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      workload.Name,
@@ -315,3 +315,118 @@ func (mapper *Mapper) serviceAccountMatch(workload *v1alpha1.Workload, object cl
 	return workload.Namespace == object.GetNamespace() && workload.Spec.ServiceAccountName == object.GetName()
 }
 
+func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Object) []reconcile.Request {
+	roleBinding, ok := roleBindingObject.(*rbacv1.RoleBinding)
+	if !ok {
+		mapper.Logger.Error(nil, "role binding to workload requests: cast to RoleBinding failed")
+		return nil
+	}
+
+	for _, subject := range roleBinding.Subjects {
+		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
+			var serviceAccountObject client.Object
+			serviceAccountKey := client.ObjectKey{
+				Namespace: subject.Name,
+				Name:      subject.Namespace,
+			}
+			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
+			if err != nil {
+				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to workload requests: get service account")
+			}
+			return mapper.ServiceAccountToWorkloadRequests(serviceAccountObject)
+		}
+	}
+
+	return []reconcile.Request{}
+}
+
+func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
+	clusterRoleBinding, ok := clusterRoleBindingObject.(*rbacv1.ClusterRoleBinding)
+	if !ok {
+		mapper.Logger.Error(nil, "cluster role binding to workload requests: cast to ClusterRoleBinding failed")
+		return nil
+	}
+
+	for _, subject := range clusterRoleBinding.Subjects {
+		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
+			var serviceAccountObject client.Object
+			serviceAccountKey := client.ObjectKey{
+				Namespace: subject.Name,
+				Name:      subject.Namespace,
+			}
+			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
+			if err != nil {
+				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to workload requests: get service account")
+			}
+			return mapper.ServiceAccountToWorkloadRequests(serviceAccountObject)
+		}
+	}
+
+	return []reconcile.Request{}
+}
+
+func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconcile.Request {
+	role, ok := roleObject.(*rbacv1.Role)
+	if !ok {
+		mapper.Logger.Error(nil, "role to workload requests: cast to Role failed")
+		return nil
+	}
+
+	list := &rbacv1.RoleBindingList{}
+
+	err := mapper.Client.List(context.TODO(), list)
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "role to workload requests: list role bindings")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, roleBinding := range list.Items {
+		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name && roleBinding.Namespace == role.Namespace {
+			requests = append(requests, mapper.RoleBindingToWorkloadRequests(&roleBinding)...)
+		}
+		return requests
+	}
+
+	return []reconcile.Request{}
+}
+
+func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Object) []reconcile.Request {
+	clusterRole, ok := clusterRoleObject.(*rbacv1.Role)
+	if !ok {
+		mapper.Logger.Error(nil, "cluster role to workload requests: cast to ClusterRole failed")
+		return nil
+	}
+
+	clusterRoleBindingList := &rbacv1.ClusterRoleBindingList{}
+
+	err := mapper.Client.List(context.TODO(), clusterRoleBindingList)
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "cluster role to workload requests: list cluster role bindings")
+		return nil
+	}
+
+	var requests []reconcile.Request
+
+	for _, clusterRoleBinding := range clusterRoleBindingList.Items {
+		if clusterRoleBinding.RoleRef.APIGroup == "" && clusterRoleBinding.RoleRef.Kind == "ClusterRole" && clusterRoleBinding.RoleRef.Name == clusterRole.Name {
+			requests = append(requests, mapper.ClusterRoleBindingToWorkloadRequests(&clusterRoleBinding)...)
+		}
+	}
+
+	roleBindingList := &rbacv1.RoleBindingList{}
+
+	err = mapper.Client.List(context.TODO(), roleBindingList)
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "cluster role role to workload requests: list role bindings")
+		return nil
+	}
+
+	for _, roleBinding := range roleBindingList.Items {
+		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "ClusterRole" && roleBinding.RoleRef.Name == clusterRole.Name {
+			requests = append(requests, mapper.RoleBindingToWorkloadRequests(&roleBinding)...)
+		}
+	}
+
+	return requests
+}
