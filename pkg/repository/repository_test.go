@@ -589,7 +589,7 @@ spec:
 				})
 
 				It("returns the secret associated with the specified service account", func() {
-					secret, err := repo.GetServiceAccountSecret(serviceAccountName, "")
+					secret, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(secret).To(Equal(serviceAccountSecret))
@@ -602,7 +602,7 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret("some-service-account", "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring("getting service account"))
@@ -645,7 +645,7 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring("getting service account secret"))
@@ -681,7 +681,7 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any secrets", serviceAccountName)))
@@ -734,7 +734,7 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any token secrets", serviceAccountName)))

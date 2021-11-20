@@ -19,6 +19,7 @@ package registrar
 import (
 	"context"
 	"fmt"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,8 +56,13 @@ func AddToScheme(scheme *runtime.Scheme) error {
 	}
 
 	if err := corev1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("core corev1 add to scheme: %w", err)
+		return fmt.Errorf("core v1 add to scheme: %w", err)
 	}
+
+	if err := rbacv1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("rbac v1 add to scheme: %w", err)
+	}
+
 	return nil
 }
 
@@ -119,27 +125,24 @@ func registerWorkloadController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("workload"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterSupplyChain{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.ClusterSupplyChainToWorkloadRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterSupplyChain{}: mapper.ClusterSupplyChainToWorkloadRequests,
+		&corev1.ServiceAccount{}:       mapper.ServiceAccountToWorkloadRequests,
+		&rbacv1.Role{}:                 mapper.RoleToWorkloadRequests,
+		&rbacv1.RoleBinding{}:          mapper.RoleBindingToWorkloadRequests,
+		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToWorkloadRequests,
+		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToWorkloadRequests,
 	}
-
 	for _, template := range v1alpha1.ValidSupplyChainTemplates {
-		if err := ctrl.Watch(
-			&source.Kind{Type: template},
-			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToWorkloadRequests),
-		); err != nil {
-			return fmt.Errorf("watch template: %w", err)
-		}
+		watches[template] = mapper.TemplateToWorkloadRequests
 	}
-
-	if err := ctrl.Watch(
-		&source.Kind{Type: &corev1.ServiceAccount{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.ServiceAccountToWorkloadRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	for kindType, mapFunc := range watches {
+		if err := ctrl.Watch(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		); err != nil {
+			return fmt.Errorf("watch %T: %w", kindType, err)
+		}
 	}
 
 	return nil
