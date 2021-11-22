@@ -23,10 +23,10 @@ import (
 )
 
 type clusterDeploymentTemplate struct {
-	template          *v1alpha1.ClusterDeploymentTemplate
-	evaluator         evaluator
-	templatingContext map[string]interface{}
-	stampedObject     *unstructured.Unstructured
+	template      *v1alpha1.ClusterDeploymentTemplate
+	evaluator     evaluator
+	inputs        *Inputs
+	stampedObject *unstructured.Unstructured
 }
 
 func (t *clusterDeploymentTemplate) GetKind() string {
@@ -41,8 +41,8 @@ func (t *clusterDeploymentTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t *clusterDeploymentTemplate) SetTemplatingContext(templatingContext map[string]interface{}) {
-	t.templatingContext = templatingContext
+func (t *clusterDeploymentTemplate) SetInputs(inputs *Inputs) {
+	t.inputs = inputs
 }
 
 func (t *clusterDeploymentTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
@@ -56,13 +56,12 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 
 	output := &Output{Source: &Source{}}
 
-	originalSource, ok := t.templatingContext["deployment"].(SourceInput)
-	if !ok {
+	if t.inputs.Deployment == nil {
 		return nil, fmt.Errorf("deployment not found in upstream template")
 	}
 
-	output.Source.URL = originalSource.URL
-	output.Source.Revision = originalSource.Revision
+	output.Source.URL = t.inputs.Deployment.URL
+	output.Source.Revision = t.inputs.Deployment.Revision
 
 	return output, nil
 }
