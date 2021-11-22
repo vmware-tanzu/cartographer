@@ -277,7 +277,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(dynamicTracker.WatchCallCount()).To(Equal(2))
 			_, obj, hndl := dynamicTracker.WatchArgsForCall(0)
 
-			Expect(obj).To(Equal(stampedObject))
+			Expect(obj).To(Equal(stampedObject1))
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
 
 			_, obj, hndl = dynamicTracker.WatchArgsForCall(1)
@@ -425,13 +425,13 @@ var _ = Describe("Reconciler", func() {
 						Reason:   metav1.StatusReasonForbidden,
 						Code:     403,
 					}
-					stampedObject = &unstructured.Unstructured{}
-					stampedObject.SetNamespace("a-namespace")
-					stampedObject.SetName("a-name")
+					stampedObject1 = &unstructured.Unstructured{}
+					stampedObject1.SetNamespace("a-namespace")
+					stampedObject1.SetName("a-name")
 
 					stampedObjectError = realizer.ApplyStampedObjectError{
 						Err:           kerrors.FromObject(status),
-						StampedObject: stampedObject,
+						StampedObject: stampedObject1,
 					}
 
 					rlzr.RealizeReturns(nil, stampedObjectError)
