@@ -77,7 +77,7 @@ kapp deploy --yes -a tekton \
   images using buildpacks
 
 ```bash
-KPACK_VERSION=0.4.1
+KPACK_VERSION=0.4.2
 
 kapp deploy --yes -a kpack \
 	-f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
@@ -113,7 +113,7 @@ kubectl create clusterrolebinding default-admin \
   --clusterrole=cluster-admin \
   --serviceaccount=default:default
 
-KAPP_CONTROLLER_VERSION=0.29.0
+KAPP_CONTROLLER_VERSION=0.30.0
 
 kapp deploy --yes -a kapp-controller \
 	-f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml
