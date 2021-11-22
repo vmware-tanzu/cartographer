@@ -203,7 +203,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 	Context("a supply chain with a template that has stamped a test crd", func() {
 		var (
-			test *resources.Test
+			test *resources.TestObj
 		)
 
 		BeforeEach(func() {
@@ -217,7 +217,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				  configPath: status.conditions[?(@.type=="Ready")]
 			      template:
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  name: test-resource
 					spec:
@@ -272,7 +272,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			err = c.Create(ctx, workload, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			test = &resources.Test{}
+			test = &resources.TestObj{}
 
 			// FIXME: make this more obvious
 			Eventually(func() ([]metav1.Condition, error) {
