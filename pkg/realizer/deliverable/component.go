@@ -90,9 +90,6 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		templatingContext["source"] = inputs.OnlySource()
 	}
 
-	// TODO: Could we be leaking secrets? Should we just print the keys
-	//log.V(logger.DEBUG).Info("using context for stamper", "context", templatingContext)
-
 	stampContext := templates.StamperBuilder(r.deliverable, templatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {

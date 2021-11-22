@@ -28,6 +28,14 @@ The Cartographer project team welcomes contributions from the community. If you 
 [`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 
 ## Error handling and logging
+### Best practices
+Do not use `fmt.Sprintf` in log messages. Use key-value pairs.
+See [Logging messages](https://github.com/kubernetes-sigs/controller-runtime/blob/master/TMP-LOGGING.md#logging-messages).
+
+When logging kubernetes objects, you can log the object as a value. Only name, namespace, apiVersion and kind will be printed.
+See [Logging Kubernetes Objects](https://github.com/kubernetes-sigs/controller-runtime/blob/master/TMP-LOGGING.md#logging-kubernetes-objects).
+
+### Error types
 There are many kinds of 'error':
 - an exception: "This code should not be reached, but no one likes a panic". Use: Log.Error and return an unhandled error 
 (retry-with-backoff)
@@ -36,8 +44,6 @@ There are many kinds of 'error':
 Use: Status.Conditions (primary form of user comms), Log.Info, and return nil or a handled error (will not retry-with-backoff)
 - a message that we consider recoverable with a retry: "something is not ready yet". Use: Status.Conditions, Log.Info and return
 nil or a handled error (will not retry-with-backoff)
-  
-Log.V(logger.DEBUG).Info is not necessarily tied to errors, but is there to provide noisy context for debugging.
 
 ## Contribution workflow
 

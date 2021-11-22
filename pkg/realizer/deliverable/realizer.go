@@ -59,9 +59,6 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			return stampedObjects, err
 		}
 
-		// TODO: Could we be leaking secrets?
-		//log.V(logger.DEBUG).Info("realized resource with output",
-		//	"output", out)
 		outs.AddOutput(resource.Name, out)
 	}
 
