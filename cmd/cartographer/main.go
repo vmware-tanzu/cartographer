@@ -40,7 +40,6 @@ func init() {
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	defer cancel()
 
 	loggerOpt, err := logger.SetLogLevel(verbosity)
@@ -51,11 +50,10 @@ func main() {
 	cmd := root.Command{
 		Port:    port,
 		CertDir: certDir,
-		Context: ctx,
 		Logger:  zap.New(zap.UseDevMode(devMode), loggerOpt),
 	}
 
-	if err = cmd.Execute(); err != nil {
+	if err = cmd.Execute(ctx); err != nil {
 		panic(err)
 	}
 }
