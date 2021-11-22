@@ -40,8 +40,6 @@ const (
 	UnknownErrorResourcesSubmittedReason                   = "UnknownError"
 	DeploymentConditionNotMetResourcesSubmittedReason      = "ConditionNotMet"
 	DeploymentFailedConditionMetResourcesSubmittedReason   = "FailedConditionMet"
-	ServiceAccountSecretErrorResourcesSubmittedReason      = "ServiceAccountSecretError"
-	ResourceRealizerBuilderErrorResourcesSubmittedReason   = "ResourceRealizerBuilderError"
 )
 
 // +kubebuilder:object:root=true
