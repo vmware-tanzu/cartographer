@@ -25,7 +25,7 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require go.uber.org/zap v1.19.0
+require go.uber.org/zap v1.19.1
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect
