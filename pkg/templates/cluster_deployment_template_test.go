@@ -56,10 +56,10 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 	Describe("GetOutput", func() {
 		var (
-			output            *templates.Output
-			stampedObject     *unstructured.Unstructured
-			evaluator         *templatesfakes.FakeEvaluator
-			templatingContext map[string]interface{}
+			output        *templates.Output
+			stampedObject *unstructured.Unstructured
+			evaluator     *templatesfakes.FakeEvaluator
+			inputs        *templates.Inputs
 		)
 
 		BeforeEach(func() {
@@ -70,7 +70,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 		JustBeforeEach(func() {
 			clusterDeploymentTemplateModel := templates.NewClusterDeploymentTemplateModel(deploymentTemplate, evaluator)
 			clusterDeploymentTemplateModel.SetStampedObject(stampedObject)
-			clusterDeploymentTemplateModel.SetTemplatingContext(templatingContext)
+			clusterDeploymentTemplateModel.SetInputs(inputs)
 			output, err = clusterDeploymentTemplateModel.GetOutput()
 		})
 
@@ -96,8 +96,8 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 					When("templating context includes a deployment", func() {
 						BeforeEach(func() {
-							templatingContext = map[string]interface{}{
-								"deployment": templates.SourceInput{
+							inputs = &templates.Inputs{
+								Deployment: &templates.SourceInput{
 									URL:      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 									Revision: "prod",
 								},
@@ -155,8 +155,8 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 					When("templating context includes an incomplete deployment", func() {
 						BeforeEach(func() {
-							templatingContext = map[string]interface{}{
-								"deployment": templates.SourceInput{
+							inputs = &templates.Inputs{
+								Deployment: &templates.SourceInput{
 									Revision: "prod",
 								},
 							}
@@ -171,7 +171,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 					When("templating context does not include a deployment", func() {
 						BeforeEach(func() {
-							templatingContext = map[string]interface{}{}
+							inputs = &templates.Inputs{}
 						})
 						ItReturnsAHelpfulError("deployment not found in upstream template")
 					})
@@ -249,8 +249,8 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 				When("templating context includes a deployment", func() {
 					BeforeEach(func() {
-						templatingContext = map[string]interface{}{
-							"deployment": templates.SourceInput{
+						inputs = &templates.Inputs{
+							Deployment: &templates.SourceInput{
 								URL:      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 								Revision: "prod",
 							},
@@ -269,8 +269,8 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 				When("templating context includes an incomplete deployment", func() {
 					BeforeEach(func() {
-						templatingContext = map[string]interface{}{
-							"deployment": templates.SourceInput{
+						inputs = &templates.Inputs{
+							Deployment: &templates.SourceInput{
 								Revision: "prod",
 							},
 						}
@@ -285,7 +285,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 				When("templating context does not include a deployment", func() {
 					BeforeEach(func() {
-						templatingContext = map[string]interface{}{}
+						inputs = &templates.Inputs{}
 					})
 					ItReturnsAHelpfulError("deployment not found in upstream template")
 				})
