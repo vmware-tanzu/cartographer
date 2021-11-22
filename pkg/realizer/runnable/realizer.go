@@ -137,14 +137,14 @@ func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, r
 	}
 
 	if len(results) == 0 {
-		return tryClusterScoped(ctx, selector, repository)
+		return resolveClusterScopedSelector(ctx, selector, repository)
 	} else if len(results) > 1 {
 		return nil, fmt.Errorf("selector matched multiple objects")
 	}
 	return results[0].Object, nil
 }
 
-func tryClusterScoped(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+func resolveClusterScopedSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
 	queryObj := &unstructured.Unstructured{}
 	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
 	queryObj.SetLabels(selector.MatchingLabels)
