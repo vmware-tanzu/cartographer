@@ -141,7 +141,7 @@ spec:
     metadata:
       name: $(workload.metadata.name)$
     spec:
-      serviceAccountName: default
+      serviceAccountName: service-account
       fetch:
         - inline:
             paths:
@@ -179,13 +179,12 @@ spec:
                       annotations:
                         autoscaling.knative.dev/minScale: "1"
                     spec:
+                      serviceAccountName: service-account
                       containers:
                         - name: workload
                           image: $(images.image.image)$
                           securityContext:
                             runAsUser: 1000
-                      imagePullSecrets:
-                        - name: registry-credentials
       template:
         - ytt: {}
       deploy:
