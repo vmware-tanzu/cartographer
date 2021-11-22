@@ -1283,4 +1283,9 @@ var _ = Describe("MapFunctions", func() {
 			})
 		})
 	})
+
+	//TODO: RoleToWorkloadRequests
+	//TODO: ClusterRoleToWorkloadRequests
+	//TODO: RoleBindingToWorkloadRequests
+	//TODO: ClusterRoleBindingToWorkloadRequests
 })

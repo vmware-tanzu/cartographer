@@ -357,6 +357,7 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
 				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to workload requests: get service account")
+				return []reconcile.Request{}
 			}
 			return mapper.ServiceAccountToWorkloadRequests(serviceAccountObject)
 		}
