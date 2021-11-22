@@ -35,6 +35,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
 type Labels map[string]string
@@ -101,7 +102,7 @@ func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetect
 
 		stampedLeafNode, err := InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, []byte(typedJSONValue), stamperTagInterpolator)
 		if err != nil {
-			return nil, fmt.Errorf("interpolating: %w", err)
+			return nil, fmt.Errorf("failed to interpolate leaf node: %w", err)
 		}
 		if jsonValue == stampedLeafNode {
 			return stampedLeafNode, nil
@@ -113,7 +114,7 @@ func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetect
 		for key, value := range typedJSONValue {
 			stampedValue, err := s.recursivelyEvaluateTemplates(value, loopDetector)
 			if err != nil {
-				return nil, fmt.Errorf("interpolating map value %v: %w", value, err)
+				return nil, fmt.Errorf("failed to interpolate map value [%v]: %w", value, err)
 			}
 			stampedMap[key] = stampedValue
 		}
@@ -123,7 +124,7 @@ func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetect
 		for _, sliceElement := range typedJSONValue {
 			stampedElement, err := s.recursivelyEvaluateTemplates(sliceElement, loopDetector)
 			if err != nil {
-				return nil, fmt.Errorf("interpolating map value %v: %w", sliceElement, err)
+				return nil, fmt.Errorf("failed to interpolate array value [%v]: %w", sliceElement, err)
 			}
 			stampedSlice = append(stampedSlice, stampedElement)
 		}
@@ -169,21 +170,21 @@ func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateS
 	return stampedObject, nil
 }
 
-func (s *Stamper) applyTemplate(resourceTemplate []byte) (*unstructured.Unstructured, error) {
-	var resourceTemplateJSON interface{}
-	err := json.Unmarshal(resourceTemplate, &resourceTemplateJSON)
+func (s *Stamper) applyTemplate(resourceTemplateJSON []byte) (*unstructured.Unstructured, error) {
+	var resourceTemplate interface{}
+	err := json.Unmarshal(resourceTemplateJSON, &resourceTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal to JSON: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal json resource template: %w", err)
 	}
 
-	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplateJSON, loopDetector{})
+	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplate, loopDetector{})
 	if err != nil {
-		return nil, fmt.Errorf("recursively stamp json values: %w", err)
+		return nil, fmt.Errorf("failed to recursively evaluate template: %w", err)
 	}
 
 	unstructuredContent, ok := stampedObjectJSON.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("stamped resource is not a map[string]interface{}: %+v", stampedObjectJSON)
+		return nil, fmt.Errorf("stamped resource is not a map[string]interface{}, stamped resource: %+v", stampedObjectJSON)
 	}
 	stampedObject := &unstructured.Unstructured{}
 	stampedObject.SetUnstructuredContent(unstructuredContent)
@@ -192,7 +193,7 @@ func (s *Stamper) applyTemplate(resourceTemplate []byte) (*unstructured.Unstruct
 }
 
 func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.Unstructured, error) {
-	logger := logr.FromContextOrDiscard(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 
 	// limit execution duration to protect against infinite loops or cpu wasting templates
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -227,7 +228,7 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	logger.V(1).Info("ytt call", "args", args, "input", template)
+	log.V(logger.DEBUG).Info("ytt call", "args", args, "input", template)
 	if err := cmd.Run(); err != nil {
 		msg := stderr.String()
 		if msg == "" {
@@ -236,7 +237,7 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 		return nil, fmt.Errorf("unable to apply ytt template: %s", msg)
 	}
 	output := stdout.String()
-	logger.V(1).Info("ytt result", "output", output)
+	log.V(logger.DEBUG).Info("ytt result", "output", output)
 
 	stampedObject := &unstructured.Unstructured{}
 	if err := yaml.Unmarshal([]byte(output), stampedObject); err != nil {

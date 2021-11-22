@@ -50,7 +50,8 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
-			Err:        fmt.Errorf("evaluate config url json path: %w", err),
+			Err: fmt.Errorf("failed to evaluate spec.configPath [%s]: %w",
+				t.template.Spec.ConfigPath, err),
 			expression: t.template.Spec.ConfigPath,
 		}
 	}

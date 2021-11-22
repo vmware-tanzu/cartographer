@@ -103,7 +103,7 @@ func getCreationTimestamp(stampedObject *unstructured.Unstructured, evaluator ev
 	}
 	creationTime, err := time.Parse(time.RFC3339, creationTimeString)
 	if err != nil {
-		return nil, fmt.Errorf("parse creation timestamp: %w", err)
+		return nil, fmt.Errorf("failed to parse creation metadata.creationTimestamp: %w", err)
 	}
 	return &creationTime, nil
 }
@@ -114,13 +114,13 @@ func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedO
 	for key, path := range t.template.Spec.Outputs {
 		output, err := evaluator.EvaluateJsonPath(path, stampedObject.UnstructuredContent())
 		if err != nil {
-			objectErr = fmt.Errorf("get output: %w", err)
+			objectErr = fmt.Errorf("failed to evaluate path [%s]: %w", path, err)
 			continue
 		}
 
 		result, err := json.Marshal(output)
 		if err != nil {
-			objectErr = fmt.Errorf("get output could not marshal jsonpath output: %w", err)
+			objectErr = fmt.Errorf("failed to marshal output for key [%s]: %w", key, err)
 			continue
 		}
 

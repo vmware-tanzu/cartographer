@@ -122,8 +122,7 @@ var _ = Describe("Resource", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				actualCtx, stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 
 				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
@@ -167,7 +166,7 @@ var _ = Describe("Resource", func() {
 				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("unable to get template 'source-template-1'"))
+				Expect(err.Error()).To(ContainSubstring("unable to get template [source-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetDeliveryClusterTemplateError"))
 			})
@@ -191,7 +190,7 @@ var _ = Describe("Resource", func() {
 			It("returns a helpful error", func() {
 				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("new model from api:"))
+				Expect(err.Error()).To(ContainSubstring("failed to get delivery cluster template [{Kind:ClusterSourceTemplate Name:source-template-1}]: resource does not match a known template"))
 			})
 		})
 
@@ -219,7 +218,7 @@ var _ = Describe("Resource", func() {
 			It("returns StampError", func() {
 				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource 'resource-1'"))
+				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.StampError"))
 			})
 		})

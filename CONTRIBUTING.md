@@ -27,6 +27,33 @@ The Cartographer project team welcomes contributions from the community. If you 
 [`shellcheck`]: https://github.com/koalaman/shellcheck
 [`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 
+## Error handling and logging
+### Best practices
+Do not use `fmt.Sprintf` in log messages. Use key-value pairs.
+See [Logging messages](https://github.com/kubernetes-sigs/controller-runtime/blob/master/TMP-LOGGING.md#logging-messages).
+
+When logging kubernetes objects, you can log the object as a value. Only name, namespace, apiVersion and kind will be printed.
+See [Logging Kubernetes Objects](https://github.com/kubernetes-sigs/controller-runtime/blob/master/TMP-LOGGING.md#logging-kubernetes-objects).
+
+### Rules of thumb
+- When an error occurs, think about what debug will improve our ability to debug issues related to the error.
+- Do not blindly add logs at every call site.
+- With values that will provide context in higher abstractions, add them as soon as you can, for example "supplychain",
+supplychain in the workload reconciler. Do not add them if they're only going to be useful locally (eg stampedObject in
+- our reconcilers will mean nothing to callee's).
+- Place context on errors and describe the error in 'local' terms. Eg: for a get to the api server: "failed to get
+supply-chain from api server" but for the same error in the reconciler "failed to get supply-chain". There will still 
+be a lot of repetition, but the changing context gives the duplicate messages a reason to exist.
+
+### Error types
+There are many kinds of 'error':
+- an exception: "This code should not be reached, but no one likes a panic". Use: Log.Error and return an unhandled error 
+(retry-with-backoff)
+- a recoverable error: async/external comms usually. Use: Log.Error and return an unhandled erorr (retry-with-backoff)
+- a message that we consider recoverable by user action: "I tried to stamp but couldn't" (often these are deeper user validations). 
+Use: Status.Conditions (primary form of user comms), Log.Info, and return nil or a handled error (will not retry-with-backoff)
+- a message that we consider recoverable with a retry: "something is not ready yet". Use: Status.Conditions, Log.Info and return
+nil or a handled error (will not retry-with-backoff)
 
 ## Contribution workflow
 

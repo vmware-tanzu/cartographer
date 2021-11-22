@@ -84,7 +84,6 @@ func registerWorkloadController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
-		mgr.GetLogger().WithName("workload-repo"),
 	)
 
 	reconciler := &workload.Reconciler{
@@ -137,7 +136,6 @@ func registerSupplyChainController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("supply-chain-repo-cache")),
-		mgr.GetLogger().WithName("supply-chain-repo"),
 	)
 
 	reconciler := &supplychain.Reconciler{
@@ -179,7 +177,6 @@ func registerDeliveryController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("delivery-repo-cache")),
-		mgr.GetLogger().WithName("delivery-repo"),
 	)
 
 	reconciler := &delivery.Reconciler{
@@ -220,7 +217,6 @@ func registerDeliverableController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),
-		mgr.GetLogger().WithName("deliverable-repo"),
 	)
 
 	reconciler := &deliverable.Reconciler{
@@ -273,7 +269,6 @@ func registerRunnableController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
-		mgr.GetLogger().WithName("runnable-repo"),
 	)
 
 	reconciler := &runnable.Reconciler{
