@@ -30,10 +30,12 @@ const (
 )
 
 const (
-	ReadySupplyChainReason                 = "Ready"
-	WorkloadLabelsMissingSupplyChainReason = "WorkloadLabelsMissing"
-	NotFoundSupplyChainReadyReason         = "SupplyChainNotFound"
-	MultipleMatchesSupplyChainReadyReason  = "MultipleSupplyChainMatches"
+	ReadySupplyChainReason                               = "Ready"
+	WorkloadLabelsMissingSupplyChainReason               = "WorkloadLabelsMissing"
+	NotFoundSupplyChainReadyReason                       = "SupplyChainNotFound"
+	MultipleMatchesSupplyChainReadyReason                = "MultipleSupplyChainMatches"
+	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )
 
 // +kubebuilder:object:root=true
