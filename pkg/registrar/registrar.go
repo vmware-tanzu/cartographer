@@ -19,7 +19,10 @@ package registrar
 import (
 	"context"
 	"fmt"
+
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,7 +103,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	reconciler := &workload.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
-		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerworkload.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
+		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
 		Realizer:                realizerworkload.NewRealizer(),
 	}
 

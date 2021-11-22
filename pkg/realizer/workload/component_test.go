@@ -21,7 +21,6 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -381,49 +380,4 @@ var _ = Describe("Resource", func() {
 		})
 	})
 
-	Describe("AddBearerToken", func() {
-		var (
-			oldConfig *rest.Config
-			secret    *corev1.Secret
-			newToken  string
-			oldToken  string
-			tokenFile string
-		)
-
-		BeforeEach(func() {
-			oldToken = "some-old-token"
-			tokenFile = "some-file-path"
-			oldConfig = &rest.Config{
-				Host:            "some-host",
-				BearerToken:     oldToken,
-				BearerTokenFile: tokenFile,
-			}
-
-			newToken = "some-new-token"
-
-			secret = &corev1.Secret{
-				Data: map[string][]byte{
-					corev1.ServiceAccountTokenKey: []byte(newToken),
-				},
-			}
-		})
-
-		It("overwrites the BearerToken in the config and removes the BearerTokenFile (because it supersedes BearerToken)", func() {
-			newConfig, err := realizer.AddBearerToken(secret, oldConfig)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(newConfig.BearerToken).To(Equal(newToken))
-			Expect(newConfig.BearerTokenFile).To(Equal(""))
-		})
-
-		It("preserves the rest of the config", func() {
-			newConfig, err := realizer.AddBearerToken(secret, oldConfig)
-			Expect(err).NotTo(HaveOccurred())
-
-			newConfig.BearerToken = oldToken
-			newConfig.BearerTokenFile = tokenFile
-
-			Expect(newConfig).To(Equal(oldConfig))
-		})
-	})
 })
