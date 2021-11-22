@@ -19,8 +19,8 @@ package workload
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -83,8 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, workload.Spec.ServiceAccountName, req.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		//TODO don't throw unhandled once informers are complete
-		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err)))
+		return r.completeReconciliation(ctx, workload, fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(ctx, secret, workload, r.Repo)
@@ -101,10 +100,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			err = controller.NewUnhandledError(err)
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		// TODO split behavior- if error because no permission, don't throw unhandled error
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			if !kerrors.IsForbidden(typedErr.Err) {
+				err = controller.NewUnhandledError(err)
+			}
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.Resource.Name, typedErr.JsonPathExpression()))
 		default:

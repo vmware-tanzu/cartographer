@@ -17,11 +17,11 @@ package workload_test
 import (
 	"context"
 	"errors"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -204,7 +204,7 @@ var _ = Describe("Reconciler", func() {
 		var (
 			supplyChainName string
 			supplyChain     v1alpha1.ClusterSupplyChain
-			stampedObject1  *unstructured.Unstructured
+			stampedObject1   *unstructured.Unstructured
 			stampedObject2  *unstructured.Unstructured
 		)
 		BeforeEach(func() {
@@ -277,7 +277,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(dynamicTracker.WatchCallCount()).To(Equal(2))
 			_, obj, hndl := dynamicTracker.WatchArgsForCall(0)
 
-			Expect(obj).To(Equal(stampedObject1))
+			Expect(obj).To(Equal(stampedObject))
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
 
 			_, obj, hndl = dynamicTracker.WatchArgsForCall(1)
@@ -417,6 +417,41 @@ var _ = Describe("Reconciler", func() {
 				})
 			})
 
+			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
+				var stampedObjectError realizer.ApplyStampedObjectError
+				BeforeEach(func() {
+					status := &metav1.Status{
+						Message:  "fantastic error",
+						Reason:   metav1.StatusReasonForbidden,
+						Code:     403,
+					}
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetNamespace("a-namespace")
+					stampedObject.SetName("a-name")
+
+					stampedObjectError = realizer.ApplyStampedObjectError{
+						Err:           kerrors.FromObject(status),
+						StampedObject: stampedObject,
+					}
+
+					rlzr.RealizeReturns(nil, stampedObjectError)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+				})
+
+				It("handles the error and logs it", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"error":"unable to apply object 'a-namespace/a-name': fantastic error"`))
+				})
+			})
+
+
 			Context("of type RetrieveOutputError", func() {
 				var retrieveError realizer.RetrieveOutputError
 				BeforeEach(func() {
@@ -498,11 +533,12 @@ var _ = Describe("Reconciler", func() {
 				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ServiceAccountSecretNotFoundCondition(repoError)))
 			})
 
-			It("returns an unhandled error", func() {
+			It("handles the error and logs it", func() {
 				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("get secret for service account 'alternate-service-account-name': some error"))
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"error":"get secret for service account 'alternate-service-account-name': some error"`))
 			})
 		})
 
