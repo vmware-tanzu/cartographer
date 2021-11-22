@@ -18,11 +18,12 @@ package deliverable
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
 //counterfeiter:generate . Realizer
@@ -37,7 +38,7 @@ func NewRealizer() Realizer {
 }
 
 func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]*unstructured.Unstructured, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()

@@ -330,7 +330,7 @@ var _ = Describe("Realizer", func() {
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, repository)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable 'my-important-ns/my-runnable': get output: evaluate: find results: hasnot is not found`))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable 'my-important-ns/my-runnable': failed to evaluate path [data.hasnot]: evaluate: find results: hasnot is not found`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
 		})
 	})
@@ -348,7 +348,7 @@ var _ = Describe("Realizer", func() {
 		It("returns StampError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, repository)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to stamp object 'my-important-ns/my-runnable': 'unmarshal to JSON: unexpected end of JSON input'`))
+			Expect(err.Error()).To(ContainSubstring(`unable to stamp object 'my-important-ns/my-runnable': 'failed to unmarshal json resource template: unexpected end of JSON input'`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.StampError"))
 		})
 	})

@@ -17,6 +17,7 @@ package deliverable
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -45,7 +46,7 @@ func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repo
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	log := logr.FromContext(ctx).WithValues("template", resource.TemplateRef)
+	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
 	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)

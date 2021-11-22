@@ -19,9 +19,8 @@ package deliverable
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/logger"
 
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -29,6 +28,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -45,7 +45,7 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
 
@@ -55,7 +55,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deliverable, err := r.Repo.GetDeliverable(ctx, req.Name, req.Namespace)
 	if err != nil {
 		log.Error(err, "failed to get deliverable")
-		return ctrl.Result{}, fmt.Errorf("failed to get deliverable [%s]: %w", err, req.NamespacedName)
+		return ctrl.Result{}, fmt.Errorf("failed to get deliverable [%s]: %w", req.NamespacedName, err)
 	}
 
 	if deliverable == nil {
@@ -135,11 +135,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			trackingError = r.DynamicTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
 			if trackingError != nil {
 				log.Error(err, "failed to add informer for object",
-					"object", fmt.Sprintf("%s/%s", stampedObject.GetNamespace(), stampedObject.GetName()))
+					"object", stampedObject)
 				err = controller.NewUnhandledError(trackingError)
 			} else {
 				log.V(logger.DEBUG).Info("added informer for object",
-					"object", fmt.Sprintf("%s/%s", stampedObject.GetNamespace(), stampedObject.GetName()))
+					"object", stampedObject)
 			}
 		}
 	}
@@ -148,7 +148,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, err error) (ctrl.Result, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
@@ -188,7 +188,7 @@ func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condit
 }
 
 func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	if len(deliverable.Labels) == 0 {
 		r.conditionManager.AddPositive(DeliverableMissingLabelsCondition())
 		log.Info("deliverable is missing required labels")
@@ -214,12 +214,21 @@ func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverabl
 	if len(deliveries) > 1 {
 		r.conditionManager.AddPositive(TooManyDeliveryMatchesCondition())
 		log.Info("more than one delivery selected for deliverable",
-			"deliveries", deliveries)
-		return nil, fmt.Errorf("more than one delivery selected for deliverable [%s/%s]: %v",
-			deliverable.Namespace, deliverable.Name, deliveries)
+			"deliveries", getDeliveryNames(deliveries))
+		return nil, fmt.Errorf("more than one delivery selected for deliverable [%s/%s]: %+v",
+			deliverable.Namespace, deliverable.Name, getDeliveryNames(deliveries))
 	}
 
 	delivery := &deliveries[0]
 	log.V(logger.DEBUG).Info("delivery matched for deliverable", "delivery", delivery.Name)
 	return delivery, nil
+}
+
+func getDeliveryNames(objs []v1alpha1.ClusterDelivery) []string {
+	var names []string
+	for _, obj := range objs {
+		names = append(names, obj.GetName())
+	}
+
+	return names
 }

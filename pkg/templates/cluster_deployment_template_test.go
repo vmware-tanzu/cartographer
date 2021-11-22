@@ -126,7 +126,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 									evaluator.EvaluateJsonPathReturnsOnCall(2, "some sad path value", nil)
 								})
 
-								ItReturnsAHelpfulError("'failure.path' was 'some sad path value'")
+								ItReturnsAHelpfulError("deployment failure condition [failure.path] was: some sad path value")
 							})
 
 							When("failure criterion path exists but is not met", func() {
@@ -182,7 +182,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						evaluator.EvaluateJsonPathReturnsOnCall(2, "some sad path value", nil)
 					})
 
-					ItReturnsAHelpfulError("expected 'completion.path' to be 'All Good' but found 'some sad path value'")
+					ItReturnsAHelpfulError("deployment success condition [completion.path] was: some sad path value, expected: All Good")
 				})
 
 				When("success criterion path does not exist", func() {
@@ -210,7 +210,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(1, 99, nil)
 				})
 
-				ItReturnsAHelpfulError("observedGeneration does not equal generation")
+				ItReturnsAHelpfulError("status.observedGeneration does not equal metadata.generation: %!s(int=99) != %!s(int=100)")
 			})
 
 			When("stampedObject does not have a generation)", func() {
@@ -218,7 +218,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(0, 0, fmt.Errorf("some error"))
 				})
 
-				ItReturnsAHelpfulError("generation json path")
+				ItReturnsAHelpfulError("evaluate json path 'metadata.generation': failed to evaluate metadata.generation: some error")
 			})
 
 			When("stampedObject does not have an observedGeneration)", func() {
@@ -227,7 +227,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(1, 0, fmt.Errorf("some error"))
 				})
 
-				ItReturnsAHelpfulError("observed generation json path")
+				ItReturnsAHelpfulError("failed to evaluate status.observedGeneration: some error")
 			})
 		})
 
@@ -294,21 +294,21 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 				BeforeEach(func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(0, "", fmt.Errorf("some-error"))
 				})
-				ItReturnsAHelpfulError("could not find value at key 'input.path'")
+				ItReturnsAHelpfulError("could not find value on input [input.path]: some-error")
 			})
 			When("input but not output can be found", func() {
 				BeforeEach(func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(0, "we could have had something beautiful", nil)
 					evaluator.EvaluateJsonPathReturnsOnCall(1, "", fmt.Errorf("some-error"))
 				})
-				ItReturnsAHelpfulError("could not find value at key 'output.path'")
+				ItReturnsAHelpfulError("could not find value on output [output.path]: some-error")
 			})
 			When("values at input and output do not match", func() {
 				BeforeEach(func() {
 					evaluator.EvaluateJsonPathReturnsOnCall(0, "we could have had something beautiful", nil)
 					evaluator.EvaluateJsonPathReturnsOnCall(1, "but it wasn't meant to be", nil)
 				})
-				ItReturnsAHelpfulError("expected 'we could have had something beautiful' to match 'but it wasn't meant to be'")
+				ItReturnsAHelpfulError("input [input.path] and output [output.path] do not match: we could have had something beautiful != but it wasn't meant to be")
 			})
 		})
 	})

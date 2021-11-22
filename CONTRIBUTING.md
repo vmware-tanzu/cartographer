@@ -27,6 +27,17 @@ The Cartographer project team welcomes contributions from the community. If you 
 [`shellcheck`]: https://github.com/koalaman/shellcheck
 [`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
 
+## Error handling and logging
+There are many kinds of 'error':
+- an exception: "This code should not be reached, but no one likes a panic". Use: Log.Error and return an unhandled error 
+(retry-with-backoff)
+- a recoverable error: async/external comms usually. Use: Log.Error and return an unhandled erorr (retry-with-backoff)
+- a message that we consider recoverable by user action: "I tried to stamp but couldn't" (often these are deeper user validations). 
+Use: Status.Conditions (primary form of user comms), Log.Info, and return nil or a handled error (will not retry-with-backoff)
+- a message that we consider recoverable with a retry: "something is not ready yet". Use: Status.Conditions, Log.Info and return
+nil or a handled error (will not retry-with-backoff)
+  
+Log.V(logger.DEBUG).Info is not necessarily tied to errors, but is there to provide noisy context for debugging.
 
 ## Contribution workflow
 

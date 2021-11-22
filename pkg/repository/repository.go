@@ -17,14 +17,15 @@ package repository
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -80,16 +81,14 @@ func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.Cl
 }
 
 func (r *repository) EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("EnsureObjectExistsOnCluster")
 
 	unstructuredList, err := r.ListUnstructured(ctx, obj)
 
-	var names []string
 	for _, considered := range unstructuredList {
 		log.V(logger.DEBUG).Info("considering objects from api server",
 			"considered", considered)
-		names = append(names, considered.GetName())
 	}
 
 	if err != nil {
@@ -151,14 +150,14 @@ func (r *repository) GetClusterTemplate(ctx context.Context, ref v1alpha1.Cluste
 }
 
 func (r *repository) GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetDeliveryClusterTemplate")
 
 	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }
 
 func (r *repository) getTemplate(ctx context.Context, name string, kind string) (client.Object, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("getTemplate")
 
 	apiTemplate, err := v1alpha1.GetAPITemplate(kind)
@@ -174,7 +173,7 @@ func (r *repository) getTemplate(ctx context.Context, name string, kind string) 
 	}
 	if err != nil {
 		log.Error(err, "failed to get template object from api server")
-		return nil, fmt.Errorf("failed to get template object from api server [%s/%s]: %w", err, kind, name)
+		return nil, fmt.Errorf("failed to get template object from api server [%s/%s]: %w", kind, name, err)
 	}
 
 	return apiTemplate, nil
@@ -232,7 +231,7 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 }
 
 func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetDeliveriesForDeliverable")
 
 	list := &v1alpha1.ClusterDeliveryList{}
@@ -282,7 +281,7 @@ func (r *repository) GetWorkload(ctx context.Context, name string, namespace str
 }
 
 func (r *repository) GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error) {
-	log := logr.FromContext(ctx)
+	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetDeliverable")
 
 	deliverable := v1alpha1.Deliverable{}
@@ -294,7 +293,7 @@ func (r *repository) GetDeliverable(ctx context.Context, name string, namespace 
 
 	if err != nil {
 		log.Error(err, "failed to get deliverable object from api server")
-		return nil, fmt.Errorf("failed to get deliverable object from api server [%s/%s]: %w", err, namespace, name)
+		return nil, fmt.Errorf("failed to get deliverable object from api server [%s/%s]: %w", namespace, name, err)
 	}
 	return &deliverable, nil
 }

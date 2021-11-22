@@ -548,7 +548,6 @@ var _ = Describe("Deliveries", func() {
 						"Status": Equal(metav1.ConditionStatus("True")),
 					}),
 				))
-				Expect(false).To(BeTrue())
 			})
 		})
 	})
