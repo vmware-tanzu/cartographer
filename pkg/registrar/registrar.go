@@ -19,6 +19,7 @@ package registrar
 import (
 	"context"
 	"fmt"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +39,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	realizerrunnable "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
@@ -100,7 +102,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	reconciler := &workload.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
-		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerworkload.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
+		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
 		Realizer:                realizerworkload.NewRealizer(),
 	}
 
@@ -294,6 +296,8 @@ func registerRunnableController(mgr manager.Manager) error {
 	reconciler := &runnable.Reconciler{
 		Repo:                    repo,
 		Realizer:                realizerrunnable.NewRealizer(),
+		RunnableCache: repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache")),
+		ClientBuilder:           realizerclient.NewClientBuilder(mgr.GetConfig()),
 		ConditionManagerBuilder: conditions.NewConditionManager,
 	}
 	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{

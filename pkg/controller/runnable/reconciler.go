@@ -21,12 +21,14 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
@@ -38,12 +40,15 @@ type Reconciler struct {
 	DynamicTracker          tracker.DynamicTracker
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
+	ClientBuilder           realizerclient.ClientBuilder
+	RunnableCache           repository.RepoCache
+	logger                  logr.Logger
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx)
-	logger.Info("started")
-	defer logger.Info("finished")
+	r.logger = logr.FromContext(ctx)
+	r.logger.Info("started")
+	defer r.logger.Info("finished")
 
 	runnable, err := r.Repo.GetRunnable(ctx, request.Name, request.Namespace)
 	if err != nil {
@@ -51,13 +56,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if runnable == nil {
-		logger.Info("runnable no longer exists")
+		r.logger.Info("runnable no longer exists")
 		return ctrl.Result{}, nil
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, runnable.Spec.ServiceAccountName, request.Namespace)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		// TODO is this how we should pass outputs? should we pass nil? maybe check if nil in completeReconciliation?
+		return r.completeReconciliation(ctx, runnable, runnable.Status.Outputs, fmt.Errorf("get secret for service account '%s': %w", runnable.Spec.ServiceAccountName, err))
+	}
+
+	runnableClient, err := r.ClientBuilder(secret)
+	if err != nil {
+		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
+		// TODO is this how we should pass outputs? should we pass nil? maybe check if nil in completeReconciliation?
+		return r.completeReconciliation(ctx, runnable, runnable.Status.Outputs, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
+	}
+
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, repository.NewRepository(runnableClient, r.RunnableCache, r.logger))
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetRunTemplateError:
@@ -85,13 +104,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	var trackingError error
 	if stampedObject != nil {
-		trackingError = r.DynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
+		trackingError = r.DynamicTracker.Watch(r.logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if trackingError != nil {
-			logger.Error(err, "dynamic tracker watch")
+			r.logger.Error(err, "dynamic tracker watch")
 			err = controller.NewUnhandledError(trackingError)
 		}
 	}
 
+	return r.completeReconciliation(ctx, runnable, outputs, err)
+}
+
+func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, err error) (ctrl.Result, error) {
 	var changed bool
 	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
 
@@ -107,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if controller.IsUnhandledError(err) {
 			return ctrl.Result{}, err
 		}
-		logger.Info("handled error", "error", err)
+		r.logger.Info("handled error", "error", err)
 	}
 
 	return ctrl.Result{}, nil

@@ -52,8 +52,6 @@ type Repository interface {
 	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
 }
 
-type RepositoryBuilder func(client client.Client, repoCache RepoCache, logger Logger) Repository
-
 type repository struct {
 	rc     RepoCache
 	cl     client.Client
