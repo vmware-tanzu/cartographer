@@ -36,21 +36,24 @@ type Reconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
-	logger                  logr.Logger
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger = logr.FromContext(ctx)
-	r.logger.Info("started")
-	defer r.logger.Info("finished")
+	log := logr.FromContextOrDiscard(ctx)
+	log.Info("started")
+	defer log.Info("finished")
+
+	log = log.WithValues("supply chain", req.NamespacedName)
+	ctx = logr.NewContext(ctx, log)
 
 	supplyChain, err := r.Repo.GetSupplyChain(ctx, req.Name)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get supply chain: %w", err)
+		log.Error(err, "failed to get supply chain")
+		return ctrl.Result{}, fmt.Errorf("failed to get supply chain [%s]: %w", req.NamespacedName, err)
 	}
 
 	if supplyChain == nil {
-		r.logger.Info("supply chain no longer exists")
+		log.Info("supply chain no longer exists")
 		return ctrl.Result{}, nil
 	}
 
@@ -62,6 +65,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	var changed bool
 	supplyChain.Status.Conditions, changed = r.conditionManager.Finalize()
 
@@ -70,29 +75,34 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 		supplyChain.Status.ObservedGeneration = supplyChain.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, supplyChain)
 		if updateErr != nil {
-			return ctrl.Result{}, fmt.Errorf("update supply chain status: %w", updateErr)
+			log.Error(err, "failed to update status for supply chain")
+			return ctrl.Result{}, fmt.Errorf("failed to update status for supply chain: %w", updateErr)
 		}
 	}
 
 	if err != nil {
 		if controller.IsUnhandledError(err) {
+			log.Error(err, "unhandled error reconciling supply chain")
 			return ctrl.Result{}, err
 		}
-		r.logger.Info("handled error", "error", err)
+		log.Info("handled error reconciling supply chain", "handled error", err)
 	}
 
 	return ctrl.Result{}, nil
 }
 
 func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain) error {
+	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
 	for _, resource := range chain.Spec.Resources {
 		template, err := r.Repo.GetClusterTemplate(ctx, resource.TemplateRef)
 		if err != nil {
-			return controller.NewUnhandledError(fmt.Errorf("get cluster template: %w", err))
+			log.Error(err, "failed to get cluster template", "template", resource.TemplateRef)
+			return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
 		}
 		if template == nil {
+			log.Info("cluster template does not exist", "template", resource.TemplateRef)
 			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
 	}

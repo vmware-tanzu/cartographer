@@ -55,7 +55,8 @@ var _ = Describe("delivery reconciler", func() {
 
 		req = reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name: "my-new-delivery",
+				Name:      "my-new-delivery",
+				Namespace: "default",
 			},
 		}
 	})
@@ -102,15 +103,13 @@ var _ = Describe("delivery reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repo.GetDeliveryCallCount()).To(Equal(1))
-				actualCtx, name := repo.GetDeliveryArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, name := repo.GetDeliveryArgsForCall(0)
 
 				Expect(name).To(Equal("my-new-delivery"))
 
 				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
 
-				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, obj := repo.StatusUpdateArgsForCall(0)
 				deliveryObject, ok := obj.(*v1alpha1.ClusterDelivery)
 
 				Expect(ok).To(BeTrue())
@@ -139,8 +138,7 @@ var _ = Describe("delivery reconciler", func() {
 			It("updates the status.observedGeneration to equal metadata.generation", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
-				actualCtx, updatedDelivery := repo.StatusUpdateArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, updatedDelivery := repo.StatusUpdateArgsForCall(0)
 
 				Expect(*updatedDelivery.(*v1alpha1.ClusterDelivery)).To(MatchFields(IgnoreExtras, Fields{
 					"Status": MatchFields(IgnoreExtras, Fields{
@@ -174,8 +172,7 @@ var _ = Describe("delivery reconciler", func() {
 			It("adds a positive templates NOT found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
-				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, obj := repo.StatusUpdateArgsForCall(0)
 
 				deliveryObject, ok := obj.(*v1alpha1.ClusterDelivery)
 				Expect(ok).To(BeTrue())
@@ -221,7 +218,7 @@ var _ = Describe("delivery reconciler", func() {
 
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("get delivery: repo.GetDelivery failed"))
+			Expect(err.Error()).To(ContainSubstring("failed to get delivery [default/my-new-delivery]: repo.GetDelivery failed"))
 		})
 	})
 
@@ -233,7 +230,7 @@ var _ = Describe("delivery reconciler", func() {
 
 			_, err := reconciler.Reconcile(ctx, req)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("status update: repo.StatusUpdate failed"))
+			Expect(err.Error()).To(ContainSubstring("failed to update status for delivery: repo.StatusUpdate failed"))
 		})
 	})
 
