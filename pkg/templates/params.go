@@ -26,33 +26,33 @@ func ParamsBuilder(
 	templateParams []v1alpha1.TemplateParam,
 	blueprintParams []v1alpha1.OverridableParam,
 	resourceParams []v1alpha1.OverridableParam,
-	orderParams []v1alpha1.Param,
+	ownerParams []v1alpha1.Param,
 ) Params {
 	newParams := Params{}
 	for _, param := range templateParams {
 		newParams[param.Name] = param.DefaultValue
 	}
 
-	overridableByWorkload := make(map[string]bool)
+	overridableByOwner := make(map[string]bool)
 
 	for key := range newParams {
-		for _, supplyChainOverride := range blueprintParams {
-			if key == supplyChainOverride.Name {
-				newParams[key] = supplyChainOverride.Value
-				overridableByWorkload[key] = supplyChainOverride.OverridableFlag
+		for _, blueprintOverride := range blueprintParams {
+			if key == blueprintOverride.Name {
+				newParams[key] = blueprintOverride.Value
+				overridableByOwner[key] = blueprintOverride.OverridableFlag
 			}
 		}
 
 		for _, resourceOverride := range resourceParams {
 			if key == resourceOverride.Name {
 				newParams[key] = resourceOverride.Value
-				overridableByWorkload[key] = resourceOverride.OverridableFlag
+				overridableByOwner[key] = resourceOverride.OverridableFlag
 			}
 		}
 
-		for _, workloadOverride := range orderParams {
-			if key == workloadOverride.Name && workloadCanOverride(overridableByWorkload, key) {
-				newParams[key] = workloadOverride.Value
+		for _, ownerOverride := range ownerParams {
+			if key == ownerOverride.Name && ownerCanOverride(overridableByOwner, key) {
+				newParams[key] = ownerOverride.Value
 			}
 		}
 	}
@@ -60,7 +60,7 @@ func ParamsBuilder(
 	return newParams
 }
 
-func workloadCanOverride(isOverridable map[string]bool, key string) bool {
+func ownerCanOverride(isOverridable map[string]bool, key string) bool {
 	overridable, written := isOverridable[key]
 	return written && overridable
 }

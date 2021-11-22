@@ -80,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
-	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.Repo), delivery)
+	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.Repo, delivery.Spec.Params), delivery)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetDeliveryClusterTemplateError:

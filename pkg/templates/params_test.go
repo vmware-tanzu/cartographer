@@ -25,17 +25,37 @@ import (
 )
 
 var _ = Describe("Params", func() {
+	resourceParam := v1alpha1.Param{
+		Name:  "target-name",
+		Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
+	}
+
+	templateParam := &v1alpha1.TemplateParam{
+		Name:         "target-name",
+		DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
+	}
+
+	blueprintParam := v1alpha1.Param{
+		Name:  "target-name",
+		Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
+	}
+
+	ownerParam := &v1alpha1.Param{
+		Name:  "target-name",
+		Value: apiextensionsv1.JSON{Raw: []byte("from the owner")},
+	}
+
 	DescribeTable("ParamsBuilder",
 		func(templateParam *v1alpha1.TemplateParam,
 			blueprintParam *v1alpha1.OverridableParam,
 			resourceParam *v1alpha1.OverridableParam,
-			orderParam *v1alpha1.Param,
+			ownerParam *v1alpha1.Param,
 			expected string) {
 			var (
 				templateParams  []v1alpha1.TemplateParam
 				resourceParams  []v1alpha1.OverridableParam
 				blueprintParams []v1alpha1.OverridableParam
-				orderParams     []v1alpha1.Param
+				ownerParams     []v1alpha1.Param
 			)
 
 			if templateParam != nil {
@@ -47,15 +67,15 @@ var _ = Describe("Params", func() {
 			if blueprintParam != nil {
 				blueprintParams = append(blueprintParams, *blueprintParam)
 			}
-			if orderParam != nil {
-				orderParams = append(orderParams, *orderParam)
+			if ownerParam != nil {
+				ownerParams = append(ownerParams, *ownerParam)
 			}
 
 			actual := templates.ParamsBuilder(
 				templateParams,
 				blueprintParams,
 				resourceParams,
-				orderParams)
+				ownerParams)
 
 			if expected == "" {
 				Expect(actual).To(BeEmpty())
@@ -67,10 +87,7 @@ var _ = Describe("Params", func() {
 		},
 
 		Entry("value only in template",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
+			templateParam,
 			&v1alpha1.OverridableParam{},
 			&v1alpha1.OverridableParam{},
 			&v1alpha1.Param{},
@@ -78,227 +95,79 @@ var _ = Describe("Params", func() {
 
 		Entry("no value on template, values elsewhere",
 			nil,
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: false,
-			},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: false},
 			&v1alpha1.OverridableParam{},
 			&v1alpha1.Param{},
 			""),
 
-		Entry("value in template, resource, and workload; resource is not overridable",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
+		Entry("value in template, resource, and owner; resource is not overridable",
+			templateParam,
 			&v1alpha1.OverridableParam{},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: false,
-			},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: false},
+			ownerParam,
 			"from the resource"),
 
-		Entry("value in template, blueprint, resource, and workload; blueprint and resource are not overridable",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: false,
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: false,
-			},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
+		Entry("value in template, blueprint, resource, and owner; blueprint and resource are not overridable",
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: false},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: false},
+			ownerParam,
 			"from the resource"),
 
-		Entry("value in template, blueprint, and workload; blueprint is not overridable",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: false,
-			},
+		Entry("value in template, blueprint, and owner; blueprint is not overridable",
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: false},
 			&v1alpha1.OverridableParam{},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
+			ownerParam,
 			"from the blueprint"),
 
-		Entry("value in template, blueprint, resource, and workload; blueprint is not overridable, resource is",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: false,
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: true,
-			},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
-			"from the workload"),
+		Entry("value in template, blueprint, resource, and owner; blueprint is not overridable, resource is",
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: false},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: true},
+			ownerParam,
+			"from the owner"),
 
-		Entry("value in template, resource, and workload; resource is not overridable",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
+		Entry("value in template, resource, and owner; resource is not overridable",
+			templateParam,
 			&v1alpha1.OverridableParam{},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: true,
-			},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
-			"from the workload"),
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: true},
+			ownerParam,
+			"from the owner"),
 
-		Entry("value in template, blueprint, resource, and workload; blueprint is overridable, resource is not",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: true,
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: false,
-			},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
+		Entry("value in template, blueprint, resource, and owner; blueprint is overridable, resource is not",
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: true},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: false},
+			ownerParam,
 			"from the resource"),
 
-		Entry("value in template, blueprint, and workload; blueprint is overridable",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: true,
-			},
+		Entry("value in template, blueprint, and owner; blueprint is overridable",
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: true},
 			&v1alpha1.OverridableParam{},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
-			"from the workload"),
+			ownerParam,
+			"from the owner"),
 
 		Entry("value in template, blueprint, resource; blueprint and resource are overridable",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: true,
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: true,
-			},
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: true},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: true},
 			&v1alpha1.Param{},
 			"from the resource"),
 
-		Entry("value in template, blueprint, resource, and workload; blueprint and resource are overridable"+
-			"ovrdbl-supply-chain-ovrdbl-resource-on-workload",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
-				},
-				OverridableFlag: true,
-			},
-			&v1alpha1.OverridableParam{
-				Param: v1alpha1.Param{
-					Name:  "target-name",
-					Value: apiextensionsv1.JSON{Raw: []byte("from the resource")},
-				},
-				OverridableFlag: true,
-			},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
-			"from the workload"),
+		Entry("value in template, blueprint, resource, and owner; blueprint and resource are overridable",
+			templateParam,
+			&v1alpha1.OverridableParam{Param: blueprintParam, OverridableFlag: true},
+			&v1alpha1.OverridableParam{Param: resourceParam, OverridableFlag: true},
+			ownerParam,
+			"from the owner"),
 
-		Entry("value in template and workload",
-			&v1alpha1.TemplateParam{
-				Name:         "target-name",
-				DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
-			},
+		Entry("value in template and owner",
+			templateParam,
 			&v1alpha1.OverridableParam{},
 			&v1alpha1.OverridableParam{},
-			&v1alpha1.Param{
-				Name:  "target-name",
-				Value: apiextensionsv1.JSON{Raw: []byte("from the workload")},
-			},
+			ownerParam,
 			"from the template"),
 	)
 })

@@ -29,22 +29,24 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, supplyChainParams []v1alpha1.OverridableParam, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
-	workload *v1alpha1.Workload
-	repo     repository.Repository
+	workload          *v1alpha1.Workload
+	repo              repository.Repository
+	supplyChainParams []v1alpha1.OverridableParam
 }
 
-func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository) ResourceRealizer {
+func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository, supplyChainParams []v1alpha1.OverridableParam) ResourceRealizer {
 	return &resourceRealizer{
 		workload: workload,
 		repo:     repo,
+		supplyChainParams: supplyChainParams,
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, supplyChainParams []v1alpha1.OverridableParam, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 	apiTemplate, err := r.repo.GetClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetClusterTemplateError{
@@ -70,7 +72,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	inputs := outputs.GenerateInputs(resource)
 	workloadTemplatingContext := map[string]interface{}{
 		"workload": r.workload,
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), supplyChainParams, resource.Params, r.workload.Spec.Params),
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
 		"sources":  inputs.Sources,
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,
