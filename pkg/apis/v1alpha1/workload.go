@@ -68,7 +68,7 @@ type WorkloadSpec struct {
 	ServiceClaims      []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
 	Env                []corev1.EnvVar              `json:"env,omitempty"`
 	Resources          *corev1.ResourceRequirements `json:"resources,omitempty"`
-	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
+	ServiceAccountName string                       `json:"serviceAccountName"`
 }
 
 type WorkloadStatus struct {
