@@ -17,6 +17,7 @@ package workload_test
 import (
 	"context"
 	"errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
@@ -204,7 +205,7 @@ var _ = Describe("Reconciler", func() {
 		var (
 			supplyChainName string
 			supplyChain     v1alpha1.ClusterSupplyChain
-			stampedObject1   *unstructured.Unstructured
+			stampedObject1  *unstructured.Unstructured
 			stampedObject2  *unstructured.Unstructured
 		)
 		BeforeEach(func() {
@@ -421,9 +422,9 @@ var _ = Describe("Reconciler", func() {
 				var stampedObjectError realizer.ApplyStampedObjectError
 				BeforeEach(func() {
 					status := &metav1.Status{
-						Message:  "fantastic error",
-						Reason:   metav1.StatusReasonForbidden,
-						Code:     403,
+						Message: "fantastic error",
+						Reason:  metav1.StatusReasonForbidden,
+						Code:    403,
 					}
 					stampedObject1 = &unstructured.Unstructured{}
 					stampedObject1.SetNamespace("a-namespace")
@@ -450,7 +451,6 @@ var _ = Describe("Reconciler", func() {
 					Expect(out).To(Say(`"error":"unable to apply object 'a-namespace/a-name': fantastic error"`))
 				})
 			})
-
 
 			Context("of type RetrieveOutputError", func() {
 				var retrieveError realizer.RetrieveOutputError
