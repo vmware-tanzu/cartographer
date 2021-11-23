@@ -24,6 +24,7 @@ status:
     - type: ResourcesSubmitted
       status: "Unknown"
       reason: MissingValueAtPath
+      message: "Waiting to read value '.spec.value.urlThereNotHere' from resource [default/test-deliverable-source], type [Test]"
     - type: Ready
       status: "Unknown"
       reason: MissingValueAtPath

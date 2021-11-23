@@ -16,8 +16,10 @@ package workload
 
 import (
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -87,12 +89,14 @@ func TemplateObjectRetrievalFailureCondition(err error) metav1.Condition {
 	}
 }
 
-func MissingValueAtPathCondition(resourceName, expression string) metav1.Condition {
+func MissingValueAtPathCondition(obj *unstructured.Unstructured, expression string) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourceSubmitted,
-		Status:  metav1.ConditionUnknown,
-		Reason:  v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("Resource '%s' is waiting to read value '%s'", resourceName, expression),
+		Type:   v1alpha1.WorkloadResourceSubmitted,
+		Status: metav1.ConditionUnknown,
+		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
+		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s] of kind [%s.%s]",
+			expression, obj.GetNamespace(), obj.GetName(), strings.ToLower(obj.GetKind()),
+			obj.GetObjectKind().GroupVersionKind().Group),
 	}
 }
 
