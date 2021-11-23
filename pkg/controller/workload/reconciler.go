@@ -172,5 +172,5 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("too many supply chains match the workload selector")
 	}
 
-	return &supplyChains[0], nil
+	return supplyChains[0], nil
 }

@@ -219,12 +219,12 @@ func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverabl
 			deliverable.Namespace, deliverable.Name, getDeliveryNames(deliveries))
 	}
 
-	delivery := &deliveries[0]
+	delivery := deliveries[0]
 	log.V(logger.DEBUG).Info("delivery matched for deliverable", "delivery", delivery.Name)
 	return delivery, nil
 }
 
-func getDeliveryNames(objs []v1alpha1.ClusterDelivery) []string {
+func getDeliveryNames(objs []*v1alpha1.ClusterDelivery) []string {
 	var names []string
 	for _, obj := range objs {
 		names = append(names, obj.GetName())

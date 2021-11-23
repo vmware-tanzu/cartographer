@@ -47,6 +47,10 @@ type ClusterDelivery struct {
 	Status            ClusterDeliveryStatus `json:"status,omitempty"`
 }
 
+func (c *ClusterDelivery) GetSelector() map[string]string {
+	return c.Spec.Selector
+}
+
 type ClusterDeliverySpec struct {
 	Resources []ClusterDeliveryResource `json:"resources"`
 	Selector  map[string]string         `json:"selector"`

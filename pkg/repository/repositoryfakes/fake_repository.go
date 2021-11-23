@@ -55,18 +55,18 @@ type FakeRepository struct {
 		result1 *v1alpha1.Deliverable
 		result2 error
 	}
-	GetDeliveriesForDeliverableStub        func(context.Context, *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
+	GetDeliveriesForDeliverableStub        func(context.Context, *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
 	getDeliveriesForDeliverableMutex       sync.RWMutex
 	getDeliveriesForDeliverableArgsForCall []struct {
 		arg1 context.Context
 		arg2 *v1alpha1.Deliverable
 	}
 	getDeliveriesForDeliverableReturns struct {
-		result1 []v1alpha1.ClusterDelivery
+		result1 []*v1alpha1.ClusterDelivery
 		result2 error
 	}
 	getDeliveriesForDeliverableReturnsOnCall map[int]struct {
-		result1 []v1alpha1.ClusterDelivery
+		result1 []*v1alpha1.ClusterDelivery
 		result2 error
 	}
 	GetDeliveryStub        func(context.Context, string) (*v1alpha1.ClusterDelivery, error)
@@ -150,18 +150,18 @@ type FakeRepository struct {
 		result1 *v1alpha1.ClusterSupplyChain
 		result2 error
 	}
-	GetSupplyChainsForWorkloadStub        func(context.Context, *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
+	GetSupplyChainsForWorkloadStub        func(context.Context, *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
 	getSupplyChainsForWorkloadMutex       sync.RWMutex
 	getSupplyChainsForWorkloadArgsForCall []struct {
 		arg1 context.Context
 		arg2 *v1alpha1.Workload
 	}
 	getSupplyChainsForWorkloadReturns struct {
-		result1 []v1alpha1.ClusterSupplyChain
+		result1 []*v1alpha1.ClusterSupplyChain
 		result2 error
 	}
 	getSupplyChainsForWorkloadReturnsOnCall map[int]struct {
-		result1 []v1alpha1.ClusterSupplyChain
+		result1 []*v1alpha1.ClusterSupplyChain
 		result2 error
 	}
 	GetWorkloadStub        func(context.Context, string, string) (*v1alpha1.Workload, error)
@@ -403,7 +403,7 @@ func (fake *FakeRepository) GetDeliverableReturnsOnCall(i int, result1 *v1alpha1
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetDeliveriesForDeliverable(arg1 context.Context, arg2 *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error) {
+func (fake *FakeRepository) GetDeliveriesForDeliverable(arg1 context.Context, arg2 *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error) {
 	fake.getDeliveriesForDeliverableMutex.Lock()
 	ret, specificReturn := fake.getDeliveriesForDeliverableReturnsOnCall[len(fake.getDeliveriesForDeliverableArgsForCall)]
 	fake.getDeliveriesForDeliverableArgsForCall = append(fake.getDeliveriesForDeliverableArgsForCall, struct {
@@ -429,7 +429,7 @@ func (fake *FakeRepository) GetDeliveriesForDeliverableCallCount() int {
 	return len(fake.getDeliveriesForDeliverableArgsForCall)
 }
 
-func (fake *FakeRepository) GetDeliveriesForDeliverableCalls(stub func(context.Context, *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)) {
+func (fake *FakeRepository) GetDeliveriesForDeliverableCalls(stub func(context.Context, *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)) {
 	fake.getDeliveriesForDeliverableMutex.Lock()
 	defer fake.getDeliveriesForDeliverableMutex.Unlock()
 	fake.GetDeliveriesForDeliverableStub = stub
@@ -442,28 +442,28 @@ func (fake *FakeRepository) GetDeliveriesForDeliverableArgsForCall(i int) (conte
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeRepository) GetDeliveriesForDeliverableReturns(result1 []v1alpha1.ClusterDelivery, result2 error) {
+func (fake *FakeRepository) GetDeliveriesForDeliverableReturns(result1 []*v1alpha1.ClusterDelivery, result2 error) {
 	fake.getDeliveriesForDeliverableMutex.Lock()
 	defer fake.getDeliveriesForDeliverableMutex.Unlock()
 	fake.GetDeliveriesForDeliverableStub = nil
 	fake.getDeliveriesForDeliverableReturns = struct {
-		result1 []v1alpha1.ClusterDelivery
+		result1 []*v1alpha1.ClusterDelivery
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetDeliveriesForDeliverableReturnsOnCall(i int, result1 []v1alpha1.ClusterDelivery, result2 error) {
+func (fake *FakeRepository) GetDeliveriesForDeliverableReturnsOnCall(i int, result1 []*v1alpha1.ClusterDelivery, result2 error) {
 	fake.getDeliveriesForDeliverableMutex.Lock()
 	defer fake.getDeliveriesForDeliverableMutex.Unlock()
 	fake.GetDeliveriesForDeliverableStub = nil
 	if fake.getDeliveriesForDeliverableReturnsOnCall == nil {
 		fake.getDeliveriesForDeliverableReturnsOnCall = make(map[int]struct {
-			result1 []v1alpha1.ClusterDelivery
+			result1 []*v1alpha1.ClusterDelivery
 			result2 error
 		})
 	}
 	fake.getDeliveriesForDeliverableReturnsOnCall[i] = struct {
-		result1 []v1alpha1.ClusterDelivery
+		result1 []*v1alpha1.ClusterDelivery
 		result2 error
 	}{result1, result2}
 }
@@ -847,7 +847,7 @@ func (fake *FakeRepository) GetSupplyChainReturnsOnCall(i int, result1 *v1alpha1
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetSupplyChainsForWorkload(arg1 context.Context, arg2 *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
+func (fake *FakeRepository) GetSupplyChainsForWorkload(arg1 context.Context, arg2 *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	ret, specificReturn := fake.getSupplyChainsForWorkloadReturnsOnCall[len(fake.getSupplyChainsForWorkloadArgsForCall)]
 	fake.getSupplyChainsForWorkloadArgsForCall = append(fake.getSupplyChainsForWorkloadArgsForCall, struct {
@@ -873,7 +873,7 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadCallCount() int {
 	return len(fake.getSupplyChainsForWorkloadArgsForCall)
 }
 
-func (fake *FakeRepository) GetSupplyChainsForWorkloadCalls(stub func(context.Context, *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)) {
+func (fake *FakeRepository) GetSupplyChainsForWorkloadCalls(stub func(context.Context, *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	defer fake.getSupplyChainsForWorkloadMutex.Unlock()
 	fake.GetSupplyChainsForWorkloadStub = stub
@@ -886,28 +886,28 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadArgsForCall(i int) (contex
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeRepository) GetSupplyChainsForWorkloadReturns(result1 []v1alpha1.ClusterSupplyChain, result2 error) {
+func (fake *FakeRepository) GetSupplyChainsForWorkloadReturns(result1 []*v1alpha1.ClusterSupplyChain, result2 error) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	defer fake.getSupplyChainsForWorkloadMutex.Unlock()
 	fake.GetSupplyChainsForWorkloadStub = nil
 	fake.getSupplyChainsForWorkloadReturns = struct {
-		result1 []v1alpha1.ClusterSupplyChain
+		result1 []*v1alpha1.ClusterSupplyChain
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, result1 []v1alpha1.ClusterSupplyChain, result2 error) {
+func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, result1 []*v1alpha1.ClusterSupplyChain, result2 error) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	defer fake.getSupplyChainsForWorkloadMutex.Unlock()
 	fake.GetSupplyChainsForWorkloadStub = nil
 	if fake.getSupplyChainsForWorkloadReturnsOnCall == nil {
 		fake.getSupplyChainsForWorkloadReturnsOnCall = make(map[int]struct {
-			result1 []v1alpha1.ClusterSupplyChain
+			result1 []*v1alpha1.ClusterSupplyChain
 			result2 error
 		})
 	}
 	fake.getSupplyChainsForWorkloadReturnsOnCall[i] = struct {
-		result1 []v1alpha1.ClusterSupplyChain
+		result1 []*v1alpha1.ClusterSupplyChain
 		result2 error
 	}{result1, result2}
 }
