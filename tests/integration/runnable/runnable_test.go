@@ -381,37 +381,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
 					Expect(resourceList.Items[0].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("polo-production-stage"))
 				})
-
-				Context("and the Selected object is updated", func() {
-					BeforeEach(func() {
-						Expect(AlterFieldOfNestedStringMaps(selectedDefinition.Object, "spec.value.answer", "buzkashi-production-stage")).To(Succeed())
-						Expect(c.Update(ctx, selectedDefinition, &client.UpdateOptions{})).To(Succeed())
-					})
-					It("creates a second object alongside the first", func() {
-						resourceList := &v1.ResourceQuotaList{}
-
-						Eventually(func() (int, error) {
-							err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
-							return len(resourceList.Items), err
-						}, "3s").Should(Equal(2))
-
-						Consistently(func() (int, error) {
-							err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
-							return len(resourceList.Items), err
-						}, "2s").Should(Equal(2))
-
-						Expect(resourceList.Items[0].Name).To(ContainSubstring("my-stamped-resource-"))
-						Expect(resourceList.Items[1].Name).To(ContainSubstring("my-stamped-resource-"))
-
-						id := func(element interface{}) string {
-							return element.(v1.ResourceQuota).Spec.ScopeSelector.MatchExpressions[0].Values[0]
-						}
-						Expect(resourceList.Items).To(MatchAllElements(id, Elements{
-							"polo-production-stage":     Not(BeNil()),
-							"buzkashi-production-stage": Not(BeNil()),
-						}))
-					})
-				})
 			})
 
 			Context("and an object in this namespace and another match the selector", func() {
