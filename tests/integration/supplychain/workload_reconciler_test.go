@@ -92,20 +92,18 @@ var _ = Describe("WorkloadReconciler", func() {
 	var (
 		ctx                    context.Context
 		cleanups               []client.Object
-		myServiceAccount       *corev1.ServiceAccount
-		myServiceAccountSecret *corev1.Secret
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		myServiceAccountSecret = &corev1.Secret{
+		myServiceAccountSecret := &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "my-service-account-secret",
 				Namespace: testNS,
 				Annotations: map[string]string{
-					"kubernetes.io/service-account.name": "service-account-name",
+					"kubernetes.io/service-account.name": "my-service-account",
 				},
 			},
 			Data: map[string][]byte{
@@ -114,7 +112,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Type: corev1.SecretTypeServiceAccountToken,
 		}
 
-		myServiceAccount = &corev1.ServiceAccount{
+		myServiceAccount := &corev1.ServiceAccount{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "my-service-account",

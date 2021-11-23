@@ -60,6 +60,8 @@ spec:
                   - value
                   type: object
                 type: array
+              serviceAccountName:
+                type: string
               source:
                 properties:
                   git:
@@ -83,6 +85,8 @@ spec:
                   subPath:
                     type: string
                 type: object
+            required:
+            - serviceAccountName
             type: object
           status:
             properties:

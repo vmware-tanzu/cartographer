@@ -240,7 +240,12 @@ func registerDeliverableController(mgr manager.Manager) error {
 	reconciler := &deliverable.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
-		Realizer:                realizerdeliverable.NewRealizer(),
+		ResourceRealizerBuilder: realizerdeliverable.NewResourceRealizerBuilder(
+			repository.NewRepository,
+			realizerclient.NewClientBuilder(mgr.GetConfig()),
+			repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")),
+		),
+		Realizer: realizerdeliverable.NewRealizer(),
 	}
 
 	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{

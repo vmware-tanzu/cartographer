@@ -17,6 +17,8 @@ package deliverable
 import (
 	"context"
 	"fmt"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,14 +36,25 @@ type ResourceRealizer interface {
 }
 
 type resourceRealizer struct {
-	deliverable *v1alpha1.Deliverable
-	repo        repository.Repository
+	deliverable     *v1alpha1.Deliverable
+	systemRepo      repository.Repository
+	deliverableRepo repository.Repository
 }
 
-func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repository) ResourceRealizer {
-	return &resourceRealizer{
-		deliverable: deliverable,
-		repo:        repo,
+type ResourceRealizerBuilder func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, repo repository.Repository) (ResourceRealizer, error)
+
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+	return func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository) (ResourceRealizer, error) {
+		client, err := clientBuilder(secret)
+		if err != nil {
+			return nil, fmt.Errorf("can't build client: %w", err)
+		}
+		deliverableRepo := repositoryBuilder(client, cache)
+		return &resourceRealizer{
+			deliverable:     deliverable,
+			systemRepo:      systemRepo,
+			deliverableRepo: deliverableRepo,
+		}, nil
 	}
 }
 
@@ -49,7 +62,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
+	apiTemplate, err := r.systemRepo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
 		return nil, nil, GetDeliveryClusterTemplateError{
@@ -100,7 +113,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
+	err = r.deliverableRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{

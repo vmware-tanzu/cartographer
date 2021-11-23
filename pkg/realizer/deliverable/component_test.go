@@ -18,13 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
@@ -35,13 +36,20 @@ import (
 var _ = Describe("Resource", func() {
 
 	var (
-		ctx          context.Context
-		resource     v1alpha1.ClusterDeliveryResource
-		deliverable  v1alpha1.Deliverable
-		outputs      realizer.Outputs
-		deliveryName string
-		fakeRepo     repositoryfakes.FakeRepository
-		r            realizer.ResourceRealizer
+		ctx                      context.Context
+		resource                 v1alpha1.ClusterDeliveryResource
+		deliverable              v1alpha1.Deliverable
+		outputs                  realizer.Outputs
+		deliveryName             string
+		fakeSystemRepo           repositoryfakes.FakeRepository
+		fakeDeliverableRepo      repositoryfakes.FakeRepository
+		clientForBuiltRepository client.Client
+		cacheForBuiltRepository  repository.RepoCache
+		repoCache                repository.RepoCache
+		builtClient              client.Client
+		theSecret                *corev1.Secret
+		secretForBuiltClient     *corev1.Secret
+		r                        realizer.ResourceRealizer
 	)
 
 	BeforeEach(func() {
@@ -58,9 +66,40 @@ var _ = Describe("Resource", func() {
 
 		outputs = realizer.NewOutputs()
 
-		fakeRepo = repositoryfakes.FakeRepository{}
+		fakeSystemRepo = repositoryfakes.FakeRepository{}
+		fakeDeliverableRepo = repositoryfakes.FakeRepository{}
+
+		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache) repository.Repository {
+			clientForBuiltRepository = client
+			cacheForBuiltRepository = repoCache
+			return &fakeDeliverableRepo
+		}
+
+		builtClient = &repositoryfakes.FakeClient{}
+		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
+			secretForBuiltClient = secret
+			return builtClient, nil
+		}
+
+		repoCache = &repositoryfakes.FakeRepoCache{} //TODO: can we verify right cache used?
+		resourceRealizerBuilder := realizer.NewResourceRealizerBuilder(repositoryBuilder, clientBuilder, repoCache)
+
 		deliverable = v1alpha1.Deliverable{}
-		r = realizer.NewResourceRealizer(&deliverable, &fakeRepo)
+
+		theSecret = &corev1.Secret{StringData: map[string]string{"blah": "blah"}}
+
+		var err error
+		r, err = resourceRealizerBuilder(theSecret, &deliverable, &fakeSystemRepo)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("creates a resource realizer with the existing client, as well as one with the the supplied secret mixed in", func() {
+		Expect(secretForBuiltClient).To(Equal(theSecret))
+		Expect(clientForBuiltRepository).To(Equal(builtClient))
+	})
+
+	It("creates a resource realizer with the existing cache", func() {
+		Expect(cacheForBuiltRepository).To(Equal(repoCache))
 	})
 
 	Describe("Do", func() {
@@ -114,15 +153,15 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
-				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
+				fakeDeliverableRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object and returns the outputs and stampedObjects", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				_, stampedObject, allowUpdate := fakeRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stampedObject, allowUpdate := fakeDeliverableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 
 				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
@@ -157,9 +196,9 @@ var _ = Describe("Resource", func() {
 			})
 		})
 
-		When("unable to get the template ref from repo", func() {
+		When("unable to get the template ref from systemRepo", func() {
 			BeforeEach(func() {
-				fakeRepo.GetDeliveryClusterTemplateReturns(nil, errors.New("bad template"))
+				fakeSystemRepo.GetDeliveryClusterTemplateReturns(nil, errors.New("bad template"))
 			})
 
 			It("returns GetDeliveryClusterTemplateError", func() {
@@ -184,7 +223,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeRepo.GetClusterTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns a helpful error", func() {
@@ -212,7 +251,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
@@ -260,8 +299,8 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
-				fakeRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
+				fakeDeliverableRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -321,8 +360,8 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
-				fakeRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
+				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
+				fakeDeliverableRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 
 			It("returns ApplyStampedObjectError", func() {
