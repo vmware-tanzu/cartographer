@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -51,12 +50,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
 
-		logger := logr.FromContext(ctx)
-
-		workloadRepo := repositoryBuilder(workloadClient,
-			cache,
-			logger.WithName("workload-stamping-repo"),
-		)
+		workloadRepo := repositoryBuilder(workloadClient, cache)
 
 		return &resourceRealizer{
 			workload:     workload,

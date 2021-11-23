@@ -19,3 +19,4 @@ kind: Test
 spec:
   value:
     some-value-from-selected: polo-production-stage
+    some-value-from-runnable: its-a-source-url

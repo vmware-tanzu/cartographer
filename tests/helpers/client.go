@@ -39,3 +39,17 @@ func EnsureNamespace(namespace string, client client.Client) error {
 	}
 	return err
 }
+
+func DeleteNamespace(namespace string, client client.Client) error {
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Namespace",
+			APIVersion: "v1",
+		},
+	}
+	err := client.Delete(context.TODO(), &ns)
+	return err
+}

@@ -85,7 +85,7 @@ var _ = Describe("DeliverableReconciler", func() {
 	}
 
 	var updateObservedGenerationOfTest = func(ctx context.Context, name string) {
-		testToUpdate := &resources.Test{}
+		testToUpdate := &resources.TestObj{}
 
 		Eventually(func() error {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: testNS}, testToUpdate)
@@ -98,7 +98,7 @@ var _ = Describe("DeliverableReconciler", func() {
 	}
 
 	var setConditionOfTest = func(ctx context.Context, name, conditionType string, conditionStatus metav1.ConditionStatus) {
-		testToUpdate := &resources.Test{}
+		testToUpdate := &resources.TestObj{}
 
 		Eventually(func() error {
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: testNS}, testToUpdate)
@@ -308,7 +308,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					
 					  template:
 						apiVersion: test.run/v1alpha1
-						kind: Test
+						kind: TestObj
 						metadata:
 						  name: $(deliverable.metadata.name)$
 						spec:
@@ -330,7 +330,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					spec:
 					  template:
 						apiVersion: test.run/v1alpha1
-						kind: Test
+						kind: TestObj
 						metadata:
 						  name: $(deliverable.metadata.name)$-merge
 						spec:
@@ -391,7 +391,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						  value: "True"
 					  template:
 						apiVersion: test.run/v1alpha1
-						kind: Test
+						kind: TestObj
 						metadata:
 						  name: $(deliverable.metadata.name)$-1
 						spec:
@@ -405,7 +405,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 				Context("and the object does not have an observedGeneration", func() {
 					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
-						resourceNotYetStamped := &resources.Test{}
+						resourceNotYetStamped := &resources.TestObj{}
 
 						Consistently(func() error {
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
@@ -439,7 +439,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						setConditionOfTest(ctx, "deliverable-bob-1", "Succeeded", metav1.ConditionFalse)
 					})
 					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
-						resourceNotYetStamped := &resources.Test{}
+						resourceNotYetStamped := &resources.TestObj{}
 
 						Consistently(func() error {
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
@@ -460,7 +460,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Reason":  Equal("ConditionNotMet"),
-								"Message": ContainSubstring("resource 'deployer' condition not met: expected 'status.conditions[?(@.type==\"Succeeded\")].status' to be 'True' but found 'False'"),
+								"Message": ContainSubstring("resource 'deployer' condition not met: deployment success condition [status.conditions[?(@.type==\"Succeeded\")].status] was: False, expected: True"),
 							}),
 						}))
 					})
@@ -471,7 +471,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						updateObservedGenerationOfTest(ctx, "deliverable-bob-1")
 					})
 					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
-						resourceNotYetStamped := &resources.Test{}
+						resourceNotYetStamped := &resources.TestObj{}
 
 						Consistently(func() error {
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
@@ -492,7 +492,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Reason":  Equal("ConditionNotMet"),
-								"Message": ContainSubstring(`resource 'deployer' condition not met: could not find value at key 'status.conditions[?(@.type=="Succeeded")].status'`),
+								"Message": ContainSubstring(`resource 'deployer' condition not met: failed to evaluate succeededCondition.Key [status.conditions[?(@.type=="Succeeded")].status]: evaluate: find results: conditions is not found`),
 							}),
 						}))
 					})
@@ -508,7 +508,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
 							---
 							apiVersion: test.run/v1alpha1
-							kind: Test
+							kind: TestObj
 							metadata:
 							  name: deliverable-bob-merge
 							spec:
@@ -539,7 +539,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
 					---
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  name: deliverable-bob
 					spec:
@@ -552,7 +552,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
 					---
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  name: deliverable-bob-1
 					spec:
@@ -581,7 +581,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						  value: "True"
 					  template:
 						apiVersion: test.run/v1alpha1
-						kind: Test
+						kind: TestObj
 						metadata:
 						  name: $(deliverable.metadata.name)$-1
 						spec:
@@ -601,7 +601,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					})
 
 					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
-						resourceNotYetStamped := &resources.Test{}
+						resourceNotYetStamped := &resources.TestObj{}
 
 						Consistently(func() error {
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
@@ -623,7 +623,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
 								"Reason":  Equal("FailedConditionMet"),
-								"Message": ContainSubstring("resource 'deployer' failed condition met: 'status.conditions[?(@.type==\"Failed\")].status' was 'True'"),
+								"Message": ContainSubstring("resource 'deployer' failed condition met: deployment failure condition [status.conditions[?(@.type==\"Failed\")].status] was: True"),
 							}),
 						}))
 					})
@@ -637,7 +637,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					})
 
 					It("cannot find the objects stamped from templates consuming the deployment outputs", func() {
-						resourceNotYetStamped := &resources.Test{}
+						resourceNotYetStamped := &resources.TestObj{}
 
 						Consistently(func() error {
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob-merge", Namespace: testNS}, resourceNotYetStamped)
@@ -659,7 +659,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
 								"Reason":  Equal("FailedConditionMet"),
-								"Message": ContainSubstring("resource 'deployer' failed condition met: 'status.conditions[?(@.type==\"Failed\")].status' was 'True'"),
+								"Message": ContainSubstring("resource 'deployer' failed condition met: deployment failure condition [status.conditions[?(@.type==\"Failed\")].status] was: True"),
 							}),
 						}))
 					})
@@ -676,7 +676,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						assertObjectExistsWithCorrectSpec(ctx, utils.HereYaml(`
 					---
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  name: deliverable-bob-merge
 					spec:

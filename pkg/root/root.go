@@ -32,11 +32,10 @@ import (
 type Command struct {
 	Port    int
 	CertDir string
-	Context context.Context
 	Logger  logr.Logger
 }
 
-func (cmd *Command) Execute() error {
+func (cmd *Command) Execute(ctx context.Context) error {
 	log.SetLogger(cmd.Logger)
 	l := log.Log.WithName("cartographer")
 
@@ -65,7 +64,7 @@ func (cmd *Command) Execute() error {
 		return fmt.Errorf("register controllers: %w", err)
 	}
 
-	if err := registrar.IndexResources(mgr, cmd.Context); err != nil {
+	if err := registrar.IndexResources(ctx, mgr); err != nil {
 		return fmt.Errorf("index resources: %w", err)
 	}
 
@@ -109,7 +108,7 @@ func (cmd *Command) Execute() error {
 		}
 	}
 
-	if err := mgr.Start(cmd.Context); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("manager start: %w", err)
 	}
 

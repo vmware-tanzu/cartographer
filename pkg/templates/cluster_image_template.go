@@ -42,7 +42,7 @@ func (t *clusterImageTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t *clusterImageTemplate) SetTemplatingContext(_ map[string]interface{}) {}
+func (t *clusterImageTemplate) SetInputs(_ *Inputs) {}
 
 func (t *clusterImageTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
 	t.stampedObject = stampedObject
@@ -52,7 +52,8 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, t.stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
-			Err:        fmt.Errorf("evaluate image json path: %w", err),
+			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
+				t.template.Spec.ImagePath, err),
 			expression: t.template.Spec.ImagePath,
 		}
 	}

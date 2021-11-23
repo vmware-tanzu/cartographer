@@ -20,41 +20,30 @@ package resources
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
-type TestObj struct {
+type ClusterTestObj struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              TestSpec   `json:"spec"`
 	Status            TestStatus `json:"status,omitempty"`
 }
 
-type TestStatus struct {
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-}
-
-type TestSpec struct {
-	Foo string `json:"foo,omitempty"`
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Value runtime.RawExtension `json:"value,omitempty"`
-}
-
 // +kubebuilder:object:root=true
 
-type TestObjList struct {
+type ClusterTestObjList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TestObj `json:"items"`
+	Items           []ClusterTestObj `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(
-		&TestObj{},
-		&TestObjList{},
+		&ClusterTestObj{},
+		&ClusterTestObjList{},
 	)
 }

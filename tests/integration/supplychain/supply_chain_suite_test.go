@@ -106,11 +106,10 @@ var _ = BeforeSuite(func() {
 		controller = &root.Command{
 			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
 			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-			Context: ctx,
 			Logger:  logger,
 		}
 
-		controllerError <- controller.Execute()
+		controllerError <- controller.Execute(ctx)
 	}()
 
 	// Can take a long time to start serving

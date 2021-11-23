@@ -84,7 +84,7 @@ var _ = Describe("Deliveries", func() {
 					  revisionPath: .spec.value.foo
 					  template:
 					    apiVersion: test.run/v1alpha1
-					    kind: Test
+					    kind: TestObj
 					    metadata:
 					      name: test-deliverable-source
 					    spec:
@@ -397,7 +397,7 @@ var _ = Describe("Deliveries", func() {
 
 	Context("a delivery with a template that has stamped a test crd", func() {
 		var (
-			test *resources.Test
+			test *resources.TestObj
 		)
 
 		BeforeEach(func() {
@@ -412,7 +412,7 @@ var _ = Describe("Deliveries", func() {
 				  revisionPath: status.conditions[?(@.type=="Succeeded")]
 			      template:
 					apiVersion: test.run/v1alpha1
-					kind: Test
+					kind: TestObj
 					metadata:
 					  name: test-resource
 					spec:
@@ -466,7 +466,7 @@ var _ = Describe("Deliveries", func() {
 			err = c.Create(ctx, deliverable, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			test = &resources.Test{}
+			test = &resources.TestObj{}
 
 			Eventually(func() ([]metav1.Condition, error) {
 				err := c.Get(ctx, client.ObjectKey{Name: "test-resource", Namespace: testNS}, test)

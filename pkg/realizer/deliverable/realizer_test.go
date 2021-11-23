@@ -36,8 +36,11 @@ var _ = Describe("Realize", func() {
 		resource1        v1alpha1.ClusterDeliveryResource
 		resource2        v1alpha1.ClusterDeliveryResource
 		rlzr             realizer.Realizer
+		ctx              context.Context
 	)
 	BeforeEach(func() {
+		ctx = context.Background()
+
 		rlzr = realizer.NewRealizer()
 
 		resourceRealizer = &deliverablefakes.FakeResourceRealizer{}
@@ -77,7 +80,7 @@ var _ = Describe("Realize", func() {
 			return &unstructured.Unstructured{}, &templates.Output{}, nil
 		})
 
-		stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, delivery)
+		stampedObjects, err := rlzr.Realize(ctx, resourceRealizer, delivery)
 		Expect(err).To(Succeed())
 
 		Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
@@ -87,7 +90,7 @@ var _ = Describe("Realize", func() {
 
 	It("returns any error encountered realizing a resource", func() {
 		resourceRealizer.DoReturns(nil, nil, errors.New("realizing is hard"))
-		stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, delivery)
+		stampedObjects, err := rlzr.Realize(ctx, resourceRealizer, delivery)
 		Expect(err).To(MatchError("realizing is hard"))
 		Expect(stampedObjects).To(HaveLen(0))
 	})

@@ -77,7 +77,7 @@ var _ = Describe("Resource", func() {
 		fakeWorkloadRepo = repositoryfakes.FakeRepository{}
 		workload = v1alpha1.Workload{}
 
-		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache, logger repository.Logger) repository.Repository {
+		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache) repository.Repository {
 			clientForBuiltRepository = client
 			cacheForBuiltRepository = repoCache
 			return &fakeWorkloadRepo

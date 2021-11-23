@@ -12,18 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
----
-apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
 metadata:
-  name: run-template---multi-label-selector
-spec:
-  template:
-    apiVersion: test.run/v1alpha1
-    kind: Test
-    metadata:
-      generateName: stamped-run-template---multi-label-selector
-    spec:
-      value:
-        some-value-from-selected: $(selected.spec.value.answer)$
-        some-value-from-runnable: $(runnable.spec.inputs.source-url)$
+  name: kapp-permissions
+rules:
+- apiGroups:
+  - serving.knative.dev
+  resources: ['services']
+  verbs: ['*']
+- apiGroups: [""]
+  resources: ['configmaps']
+  verbs: ['*']
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kapp-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kapp-permissions
+subjects:
+  - kind: ServiceAccount
+    name: service-account

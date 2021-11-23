@@ -68,7 +68,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		"carto.run/run-template-name": template.GetName(),
 	}
 
-	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository)
+	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository, runnable.GetNamespace())
 	if err != nil {
 		log.Error(err, "failed to resolve selector", "selector", runnable.Spec.Selector)
 		return nil, nil, ResolveSelectorError{
@@ -138,12 +138,36 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	return stampedObject, outputs, nil
 }
 
-func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository, namespace string) (map[string]interface{}, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	if selector == nil {
 		return nil, nil
 	}
+	queryObj := &unstructured.Unstructured{}
+	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
+	queryObj.SetLabels(selector.MatchingLabels)
+	queryObj.SetNamespace(namespace)
+
+	results, err := repository.ListUnstructured(ctx, queryObj)
+	if err != nil {
+		log.Error(err, "failed to list objects matching selector", "selector", selector.MatchingLabels)
+		return nil, fmt.Errorf("failed to list objects matching selector [%+v]: %w", selector.MatchingLabels, err)
+	}
+
+	if len(results) == 0 {
+		log.V(logger.DEBUG).Info("selector did not match any objects, checking resolveClusterScopedSelector")
+		return resolveClusterScopedSelector(ctx, selector, repository)
+	} else if len(results) > 1 {
+		log.V(logger.DEBUG).Info("selector matched multiple objects")
+		return nil, fmt.Errorf("selector matched multiple objects")
+	}
+	return results[0].Object, nil
+}
+
+func resolveClusterScopedSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	queryObj := &unstructured.Unstructured{}
 	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
 	queryObj.SetLabels(selector.MatchingLabels)
