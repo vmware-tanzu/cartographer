@@ -66,43 +66,39 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	}
 }
 
-func (r *repository) GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error) {
-	serviceAccount := &corev1.ServiceAccount{}
+func (r *repository) GetServiceAccountSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
+	log := logr.FromContextOrDiscard(ctx).WithValues("service account", fmt.Sprintf("%s/%s", namespace, name))
+	ctx = logr.NewContext(ctx, log)
+	log.V(logger.DEBUG).Info("GetServiceAccountSecret")
 
-	key := client.ObjectKey{
-		Name:      serviceAccountName,
-		Namespace: ns,
-	}
-
-	err := r.cl.Get(ctx, key, serviceAccount)
-
+	serviceAccount := corev1.ServiceAccount{}
+	err := r.getObject(ctx, name, namespace, &serviceAccount)
 	if err != nil {
-		return nil, fmt.Errorf("getting service account: %w", err)
+		log.Error(err, "failed to get service account object from api server")
+		return nil, fmt.Errorf("failed to get service account object from api server [%s/%s]: %w", namespace, name, err)
 	}
 
 	if len(serviceAccount.Secrets) == 0 {
-		return nil, fmt.Errorf("service account '%s' does not have any secrets", serviceAccountName)
+		log.V(logger.DEBUG).Info("service account does not have any secrets")
+		return nil, fmt.Errorf("service account [%s/%s] does not have any secrets", namespace, name)
 	}
 
 	for _, secretRef := range serviceAccount.Secrets {
-		secret := &corev1.Secret{}
-
-		secretKey := client.ObjectKey{
-			Name:      secretRef.Name,
-			Namespace: ns,
-		}
-
-		err = r.cl.Get(ctx, secretKey, secret)
+		secret := corev1.Secret{}
+		err := r.getObject(ctx, secretRef.Name, namespace, &secret)
 		if err != nil {
-			return nil, fmt.Errorf("getting service account secret: %w", err)
+			log.Error(err, "failed to get secret object from api server",
+				"secret", fmt.Sprintf("%s/%s", namespace, secretRef.Name))
+			return nil, fmt.Errorf("failed to get secret object from api server: %w", err)
 		}
 
 		if secret.Type == corev1.SecretTypeServiceAccountToken {
-			return secret, nil
+			return &secret, nil
 		}
 	}
 
-	return nil, fmt.Errorf("service account '%s' does not have any token secrets", serviceAccountName)
+	log.V(logger.DEBUG).Info("service account does not have any token secrets")
+	return nil, fmt.Errorf("service account [%s/%s] does not have any token secrets", namespace, name)
 }
 
 func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error) {
@@ -275,14 +271,20 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 }
 
 func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetSupplyChainsForWorkload")
+
 	list := &v1alpha1.ClusterSupplyChainList{}
 	if err := r.cl.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list supply chains: %w", err)
+		log.Error(err, "unable to list supply chains from api server")
+		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
 	var clusterSupplyChains []v1alpha1.ClusterSupplyChain
 	for _, supplyChain := range list.Items {
 		if selectorMatchesLabels(supplyChain.Spec.Selector, workload.Labels) {
+			log.V(logger.DEBUG).Info("supply chain matched workload",
+				"workload", workload)
 			clusterSupplyChains = append(clusterSupplyChains, supplyChain)
 		}
 	}
@@ -303,16 +305,19 @@ func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverabl
 	var clusterDeliveries []v1alpha1.ClusterDelivery
 	for _, delivery := range list.Items {
 		if selectorMatchesLabels(delivery.Spec.Selector, deliverable.Labels) {
+			log.V(logger.DEBUG).Info("delivery matched deliverable",
+				"delivery", delivery)
 			clusterDeliveries = append(clusterDeliveries, delivery)
 		}
 	}
 
-	log.V(logger.DEBUG).Info("deliveries matched deliverable",
-		"deliveries", clusterDeliveries)
 	return clusterDeliveries, nil
 }
 
 func (r *repository) getObject(ctx context.Context, name string, namespace string, obj client.Object) error {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("getObject")
+
 	err := r.cl.Get(ctx,
 		client.ObjectKey{
 			Name:      name,
@@ -321,20 +326,26 @@ func (r *repository) getObject(ctx context.Context, name string, namespace strin
 		obj,
 	)
 	if err != nil {
-		return fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get object from api server", "object", fmt.Sprintf("%s/%s", namespace, name))
+		return fmt.Errorf("failed to get object from api server [%s/%s]: %w", namespace, name, err)
 	}
 
 	return nil
 }
 
 func (r *repository) GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetWorkload")
+
 	workload := v1alpha1.Workload{}
 	err := r.getObject(ctx, name, namespace, &workload)
 	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("workload is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get workload object from api server")
+		return nil, fmt.Errorf("failed to get workload object from api server [%s/%s]: %w", namespace, name, err)
 	}
 
 	return &workload, nil

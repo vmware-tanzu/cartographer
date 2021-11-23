@@ -398,7 +398,7 @@ spec:
 			It("attempts to list the object from the apiServer", func() {
 				_, err := repo.GetSupplyChainsForWorkload(ctx, &v1alpha1.Workload{})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("list supply chains:"))
+				Expect(err.Error()).To(ContainSubstring("unable to list supply chains from api server: some list error"))
 			})
 		})
 
@@ -438,7 +438,7 @@ spec:
 					}
 					_, err := repo.GetClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get:"))
+					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object from api server [/image-template]: some bad get error"))
 				})
 			})
 		})
@@ -467,7 +467,7 @@ spec:
 					}
 					_, err := repo.GetDeliveryClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get:"))
+					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object from api server [/image-template]: some bad get error"))
 				})
 			})
 		})
@@ -608,7 +608,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring("getting service account"))
+					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object from api server [/some-service-account]: some error"))
 				})
 			})
 
@@ -651,7 +651,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring("getting service account secret"))
+					Expect(err.Error()).To(ContainSubstring("failed to get secret object from api server: "))
 				})
 			})
 
@@ -687,7 +687,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any secrets", serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [/%s] does not have any secrets", serviceAccountName)))
 				})
 			})
 
@@ -740,7 +740,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any token secrets", serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [/%s] does not have any token secrets", serviceAccountName)))
 				})
 			})
 		})

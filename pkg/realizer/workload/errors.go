@@ -28,7 +28,7 @@ type GetClusterTemplateError struct {
 }
 
 func (e GetClusterTemplateError) Error() string {
-	return fmt.Errorf("unable to get template '%s': %w", e.TemplateRef.Name, e.Err).Error()
+	return fmt.Errorf("unable to get template [%s]: %w", e.TemplateRef.Name, e.Err).Error()
 }
 
 type ApplyStampedObjectError struct {
@@ -37,7 +37,7 @@ type ApplyStampedObjectError struct {
 }
 
 func (e ApplyStampedObjectError) Error() string {
-	return fmt.Errorf("unable to apply object '%s/%s': %w", e.StampedObject.GetNamespace(), e.StampedObject.GetName(), e.Err).Error()
+	return fmt.Errorf("unable to apply object [%s/%s]: %w", e.StampedObject.GetNamespace(), e.StampedObject.GetName(), e.Err).Error()
 }
 
 type StampError struct {
@@ -46,7 +46,7 @@ type StampError struct {
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object for resource '%s': %w", e.Resource.Name, e.Err).Error()
+	return fmt.Errorf("unable to stamp object for resource [%s]: %w", e.Resource.Name, e.Err).Error()
 }
 
 type RetrieveOutputError struct {
@@ -55,7 +55,7 @@ type RetrieveOutputError struct {
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for resource '%s': %w", e.Resource.Name, e.Err).Error()
+	return fmt.Errorf("unable to retrieve outputs from stamped object for resource [%s]: %w", e.Resource.Name, e.Err).Error()
 }
 
 type JsonPathErrorContext interface {

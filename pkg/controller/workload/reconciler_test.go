@@ -122,6 +122,8 @@ var _ = Describe("Reconciler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 1,
 				Labels:     workloadLabels,
+				Name:       "my-workload",
+				Namespace:  "my-ns",
 			},
 			Spec: v1alpha1.WorkloadSpec{
 				ServiceAccountName: serviceAccountName,
@@ -151,8 +153,7 @@ var _ = Describe("Reconciler", func() {
 	It("updates the status.observedGeneration to equal metadata.generation", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		actualCtx, updatedWorkload := repo.StatusUpdateArgsForCall(0)
-		Expect(actualCtx).To(Equal(ctx))
+		_, updatedWorkload := repo.StatusUpdateArgsForCall(0)
 
 		Expect(*updatedWorkload.(*v1alpha1.Workload)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -183,9 +184,7 @@ var _ = Describe("Reconciler", func() {
 
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		actualCtx, updatedWorkload := repo.StatusUpdateArgsForCall(0)
-		Expect(actualCtx).To(Equal(ctx))
-
+		_, updatedWorkload := repo.StatusUpdateArgsForCall(0)
 		Expect(*updatedWorkload.(*v1alpha1.Workload)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
 				"Conditions": Equal(someConditions),
@@ -195,9 +194,7 @@ var _ = Describe("Reconciler", func() {
 
 	It("requests supply chains from the repo", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
-		actualCtx, workload := repo.GetSupplyChainsForWorkloadArgsForCall(0)
-		Expect(actualCtx).To(Equal(ctx))
-
+		_, workload := repo.GetSupplyChainsForWorkloadArgsForCall(0)
 		Expect(workload).To(Equal(wl))
 	})
 
@@ -294,7 +291,7 @@ var _ = Describe("Reconciler", func() {
 			It("returns an unhandled error and requeues", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 
-				Expect(err.Error()).To(ContainSubstring("get object gvk: "))
+				Expect(err.Error()).To(ContainSubstring("failed to get object gvk for supply chain [some-supply-chain]: "))
 			})
 		})
 
@@ -333,8 +330,8 @@ var _ = Describe("Reconciler", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"msg":"handled error"`))
-				Expect(out).To(Say(`"error":"supply chain is not in ready state"`))
+				Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+				Expect(out).To(Say(`"handled error":"supply chain \[some-supply-chain\] is not in ready state"`))
 			})
 		})
 
@@ -391,8 +388,8 @@ var _ = Describe("Reconciler", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"msg":"handled error"`))
-					Expect(out).To(Say(`"error":"unable to stamp object for resource 'some-name': some error"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\]: some error"`))
 				})
 			})
 
@@ -448,7 +445,7 @@ var _ = Describe("Reconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"error":"unable to apply object 'a-namespace/a-name': fantastic error"`))
+					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\]: fantastic error"`))
 				})
 			})
 
@@ -477,8 +474,8 @@ var _ = Describe("Reconciler", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"msg":"handled error"`))
-					Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': evaluate json path 'this.wont.find.anything': some error"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object for resource \[some-resource\]: evaluate json path 'this.wont.find.anything': some error"`))
 				})
 			})
 
@@ -511,7 +508,7 @@ var _ = Describe("Reconciler", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
 				Expect(out).To(Say(`"level":"error"`))
-				Expect(out).To(Say(`"msg":"dynamic tracker watch"`))
+				Expect(out).To(Say(`"msg":"failed to add informer for object"`))
 			})
 
 			It("returns an unhandled error and requeues", func() {
@@ -538,7 +535,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"error":"get secret for service account 'alternate-service-account-name': some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get service account secret \[alternate-service-account-name\]: some error"`))
 			})
 		})
 
@@ -579,8 +576,8 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(out).To(Say(`"level":"info"`))
-			Expect(out).To(Say(`"msg":"handled error"`))
-			Expect(out).To(Say(`"error":"workload is missing required labels"`))
+			Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+			Expect(out).To(Say(`"handled error":"workload \[my-ns/my-workload\] is missing required labels"`))
 		})
 	})
 
@@ -599,8 +596,8 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(out).To(Say(`"level":"info"`))
-			Expect(out).To(Say(`"msg":"handled error"`))
-			Expect(out).To(Say(`"error":"no supply chain found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
+			Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+			Expect(out).To(Say(`"handled error":"no supply chain \[my-ns/my-workload\] found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
 		})
 	})
 
@@ -611,13 +608,15 @@ var _ = Describe("Reconciler", func() {
 
 		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("get supply chain for workload: some error"))
+			Expect(err.Error()).To(ContainSubstring("failed to get supply chains for workload [my-ns/my-workload]: some error"))
 		})
 	})
 
 	Context("and the repo returns multiple supply chains", func() {
 		BeforeEach(func() {
-			supplyChain := v1alpha1.ClusterSupplyChain{}
+			supplyChain := v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-supply-chain"},
+			}
 			repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain, supplyChain}, nil)
 		})
 
@@ -635,8 +634,8 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(out).To(Say(`"level":"info"`))
-			Expect(out).To(Say(`"msg":"handled error"`))
-			Expect(out).To(Say(`"error":"too many supply chains match the workload selector"`))
+			Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+			Expect(out).To(Say(`"handled error":"more than one supply chain selected for workload \[my-ns/my-workload\]: \[my-supply-chain my-supply-chain\]"`))
 		})
 	})
 
@@ -647,7 +646,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err).To(MatchError(ContainSubstring("update workload status: ")))
+			Expect(err).To(MatchError(ContainSubstring("failed to update status for workload: ")))
 		})
 	})
 
