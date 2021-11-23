@@ -26,3 +26,4 @@ spec:
     spec:
       value:
         some-value-from-selected: $(selected.spec.value.answer)$
+        some-value-from-runnable: $(runnable.spec.inputs.source-url)$

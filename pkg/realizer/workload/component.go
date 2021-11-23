@@ -18,13 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -45,19 +43,14 @@ type resourceRealizer struct {
 type ResourceRealizerBuilder func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
-func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder client.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error) {
 		workloadClient, err := clientBuilder(secret)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
 
-		logger := logr.FromContext(ctx)
-
-		workloadRepo := repositoryBuilder(workloadClient,
-			cache,
-			logger.WithName("workload-stamping-repo"),
-		)
+		workloadRepo := repositoryBuilder(workloadClient, cache)
 
 		return &resourceRealizer{
 			workload:     workload,

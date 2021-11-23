@@ -84,7 +84,7 @@ var _ = Describe("Reconcile", func() {
 			return conditionManager
 		}
 
-		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache, logger repository.Logger) repository.Repository {
+		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache) repository.Repository {
 			clientForBuiltRepository = &client
 			cacheForBuiltRepository = &repoCache
 			return fakeRunnabeRepo

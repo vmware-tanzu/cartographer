@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -45,8 +46,12 @@ func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repo
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
+	ctx = logr.NewContext(ctx, log)
+
 	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
+		log.Error(err, "failed to get delivery cluster template")
 		return nil, nil, GetDeliveryClusterTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
@@ -55,7 +60,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
-		return nil, nil, fmt.Errorf("new model from api: %w", err)
+		log.Error(err, "failed to get delivery cluster template")
+		return nil, nil, fmt.Errorf("failed to get delivery cluster template [%+v]: %w", resource.TemplateRef, err)
 	}
 
 	labels := map[string]string{
@@ -87,6 +93,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	stampContext := templates.StamperBuilder(r.deliverable, templatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
+		log.Error(err, "failed to stamp resource")
 		return nil, nil, StampError{
 			Err:      err,
 			Resource: resource,
@@ -95,17 +102,19 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 
 	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
+		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
 		}
 	}
 
-	template.SetTemplatingContext(templatingContext)
+	template.SetInputs(inputs)
 	template.SetStampedObject(stampedObject)
 
 	output, err := template.GetOutput()
 	if err != nil {
+		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return stampedObject, nil, RetrieveOutputError{
 			Err:      err,
 			Resource: resource,

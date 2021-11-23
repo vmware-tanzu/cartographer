@@ -20,9 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/external"
@@ -96,7 +95,6 @@ func registerWorkloadController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
-		mgr.GetLogger().WithName("workload-repo"),
 	)
 
 	reconciler := &workload.Reconciler{
@@ -154,7 +152,6 @@ func registerSupplyChainController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("supply-chain-repo-cache")),
-		mgr.GetLogger().WithName("supply-chain-repo"),
 	)
 
 	reconciler := &supplychain.Reconciler{
@@ -196,7 +193,6 @@ func registerDeliveryController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("delivery-repo-cache")),
-		mgr.GetLogger().WithName("delivery-repo"),
 	)
 
 	reconciler := &delivery.Reconciler{
@@ -237,7 +233,6 @@ func registerDeliverableController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),
-		mgr.GetLogger().WithName("deliverable-repo"),
 	)
 
 	reconciler := &deliverable.Reconciler{
@@ -290,7 +285,6 @@ func registerRunnableController(mgr manager.Manager) error {
 	repo := repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
-		mgr.GetLogger().WithName("runnable-repo"),
 	)
 
 	reconciler := &runnable.Reconciler{
@@ -332,7 +326,7 @@ func registerRunnableController(mgr manager.Manager) error {
 	return nil
 }
 
-func IndexResources(mgr manager.Manager, ctx context.Context) error {
+func IndexResources(ctx context.Context, mgr manager.Manager) error {
 	fieldIndexer := mgr.GetFieldIndexer()
 
 	if err := indexSupplyChains(ctx, fieldIndexer); err != nil {

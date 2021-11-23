@@ -31,12 +31,12 @@ readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
 readonly CERT_MANAGER_VERSION=1.5.3
-readonly KAPP_CONTROLLER_VERSION=0.29.0
+readonly KAPP_CONTROLLER_VERSION=0.30.0
 readonly KNATIVE_SERVING_VERSION=0.26.0
-readonly KPACK_VERSION=0.4.1
+readonly KPACK_VERSION=0.4.2
 readonly SECRETGEN_CONTROLLER_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
-readonly TEKTON_VERSION=0.29.0
+readonly TEKTON_VERSION=0.30.0
 
 main() {
         test $# -eq 0 && show_usage_help

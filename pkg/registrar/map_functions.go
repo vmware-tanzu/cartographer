@@ -19,6 +19,7 @@ package registrar
 import (
 	"context"
 	"fmt"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -386,10 +387,9 @@ func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconci
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name && roleBinding.Namespace == role.Namespace {
 			requests = append(requests, mapper.RoleBindingToWorkloadRequests(&roleBinding)...)
 		}
-		return requests
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Object) []reconcile.Request {

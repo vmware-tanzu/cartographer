@@ -29,10 +29,9 @@ gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
 .PHONY: gen-manifests
 gen-manifests: config/crd/bases/*.yaml
 
-test_crd_sources := $(wildcard tests/resources/*.go)
-test_object_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(test_crd_sources))
+test_crd_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(wildcard tests/resources/*.go))
 
-tests/resources/zz_generated.deepcopy.go: $(test_object_sources)
+tests/resources/zz_generated.deepcopy.go: $(test_crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
                 paths=./tests/resources
@@ -40,18 +39,17 @@ tests/resources/zz_generated.deepcopy.go: $(test_object_sources)
 .PHONY: test-gen-objects
 test-gen-objects: tests/resources/zz_generated.deepcopy.go
 
-test_crds := tests/resources/test.go
-tests/resources/crds/test.run_tests.yaml: $(test_crds) tests/resources/groupversion_info.go
+tests/resources/crds/*.yaml: $(test_crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
 		paths=./tests/resources \
-		output:crd:artifacts:config=./tests/resources/crds
+		output:crd:artifacts:config=tests/resources/crds
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \
-		./tests/resources/crds
+		tests/resources/crds
 
 .PHONY: test-gen-manifests
-test-gen-manifests: tests/resources/crds/*
+test-gen-manifests: tests/resources/crds/*.yaml
 
 .PHONY: clean-fakes
 clean-fakes:

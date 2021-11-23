@@ -41,14 +41,15 @@ import (
 
 var _ = Describe("repository", func() {
 	var (
-		repo   repository.Repository
-		cache  *repositoryfakes.FakeRepoCache
-		logger *repositoryfakes.FakeLogger
+		repo  repository.Repository
+		cache *repositoryfakes.FakeRepoCache
+		ctx   context.Context
 	)
 
 	BeforeEach(func() {
+		ctx = context.Background()
+
 		cache = &repositoryfakes.FakeRepoCache{}
-		logger = &repositoryfakes.FakeLogger{}
 	})
 
 	Describe("tests using counterfeiter client", func() {
@@ -56,7 +57,7 @@ var _ = Describe("repository", func() {
 
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
-			repo = repository.NewRepository(cl, cache, logger)
+			repo = repository.NewRepository(cl, cache)
 		})
 
 		Context("EnsureObjectExistsOnCluster", func() {
@@ -85,7 +86,7 @@ spec:
 			})
 
 			It("attempts to get the object from the apiServer", func() {
-				Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+				Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 
 				Expect(cl.ListCallCount()).To(Equal(1))
 
@@ -108,18 +109,18 @@ spec:
 				})
 
 				It("returns a helpful error", func() {
-					err := repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+					err := repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 					Expect(err).To(MatchError(ContainSubstring("list: some-error")))
 				})
 
 				It("does not create or patch any objects", func() {
-					_ = repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+					_ = repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 					Expect(cl.CreateCallCount()).To(Equal(0))
 					Expect(cl.PatchCallCount()).To(Equal(0))
 				})
 
 				It("does not write to the submitted or persisted cache", func() {
-					_ = repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+					_ = repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 					Expect(cache.SetCallCount()).To(Equal(0))
 				})
 			})
@@ -129,7 +130,7 @@ spec:
 					// default behavior is empty list - no need to stub
 				})
 				It("attempts to create the object", func() {
-					Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+					Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 
 					Expect(cl.CreateCallCount()).To(Equal(1))
 					_, createCallObj, _ := cl.CreateArgsForCall(0)
@@ -142,12 +143,12 @@ spec:
 					})
 
 					It("returns a helpful error", func() {
-						err := repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+						err := repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 						Expect(err).To(MatchError(ContainSubstring("create: some-error")))
 					})
 
 					It("does not write to the submitted or persisted cache", func() {
-						_ = repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+						_ = repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 						Expect(cache.SetCallCount()).To(Equal(0))
 					})
 				})
@@ -167,13 +168,13 @@ spec:
 					})
 
 					It("does not return an error", func() {
-						Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 					})
 
 					It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(1))
 						submitted, persisted := cache.SetArgsForCall(0)
 						Expect(*submitted).To(Equal(*originalStampedObj))
@@ -207,7 +208,7 @@ spec:
 				})
 
 				It("the cache is consulted to see if there was a change since the last time the cache was updated", func() {
-					Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+					Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 					Expect(cache.UnchangedSinceCachedCallCount()).To(Equal(1))
 
 					submitted, persisted := cache.UnchangedSinceCachedArgsForCall(0)
@@ -221,20 +222,20 @@ spec:
 					})
 
 					It("does not create or patch any objects", func() {
-						Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 						Expect(cl.CreateCallCount()).To(Equal(0))
 						Expect(cl.PatchCallCount()).To(Equal(0))
 					})
 
 					It("does not write to the submitted or persisted cache", func() {
-						Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+						Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(0))
 					})
 
 					It("populates the object passed into the function with the object in apiServer", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
-						_ = repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+						_ = repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
@@ -249,7 +250,7 @@ spec:
 					Context("and allowUpdate is true", func() {
 						Context("list has exactly one object", func() {
 							It("patches the object", func() {
-								Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+								Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 								Expect(cl.PatchCallCount()).To(Equal(1))
 							})
 
@@ -269,13 +270,13 @@ spec:
 								})
 
 								It("does not return an error", func() {
-									Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+									Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 								})
 
 								It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
 									originalStampedObj := stampedObj.DeepCopy()
 
-									Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+									Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 									Expect(cache.SetCallCount()).To(Equal(1))
 									submitted, persisted := cache.SetArgsForCall(0)
 									Expect(*submitted).To(Equal(*originalStampedObj))
@@ -288,12 +289,12 @@ spec:
 									cl.PatchReturns(errors.New("some-error"))
 								})
 								It("returns a helpful error", func() {
-									err := repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+									err := repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 									Expect(err).To(MatchError(ContainSubstring("patch: some-error")))
 								})
 
 								It("does not write to the submitted or persisted cache", func() {
-									_ = repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
+									_ = repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
 									Expect(cache.SetCallCount()).To(Equal(0))
 								})
 							})
@@ -310,7 +311,7 @@ spec:
 								})
 
 								It("it patches", func() {
-									Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+									Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 									Expect(cl.PatchCallCount()).To(Equal(1))
 								})
 							})
@@ -326,7 +327,7 @@ spec:
 									}
 								})
 								It("it creates", func() {
-									Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)).To(Succeed())
+									Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)).To(Succeed())
 									Expect(cl.CreateCallCount()).To(Equal(1))
 								})
 							})
@@ -335,7 +336,7 @@ spec:
 
 					Context("and allowUpate is false", func() {
 						It("creates a new object", func() {
-							Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, false)).To(Succeed())
+							Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, false)).To(Succeed())
 							Expect(cl.PatchCallCount()).To(Equal(0))
 							Expect(cl.CreateCallCount()).To(Equal(1))
 						})
@@ -356,13 +357,13 @@ spec:
 							})
 
 							It("does not return an error", func() {
-								Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, false)).To(Succeed())
+								Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, false)).To(Succeed())
 							})
 
 							It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
 								originalStampedObj := stampedObj.DeepCopy()
 
-								Expect(repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, false)).To(Succeed())
+								Expect(repo.EnsureObjectExistsOnCluster(ctx, stampedObj, false)).To(Succeed())
 								Expect(cache.SetCallCount()).To(Equal(1))
 								submitted, persisted := cache.SetArgsForCall(0)
 								Expect(*submitted).To(Equal(*originalStampedObj))
@@ -375,12 +376,12 @@ spec:
 								cl.CreateReturns(errors.New("some-error"))
 							})
 							It("returns a helpful error", func() {
-								err := repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, false)
+								err := repo.EnsureObjectExistsOnCluster(ctx, stampedObj, false)
 								Expect(err).To(MatchError(ContainSubstring("create: some-error")))
 							})
 
 							It("does not write to the submitted or persisted cache", func() {
-								_ = repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, false)
+								_ = repo.EnsureObjectExistsOnCluster(ctx, stampedObj, false)
 								Expect(cache.SetCallCount()).To(Equal(0))
 							})
 						})
@@ -395,7 +396,7 @@ spec:
 			})
 
 			It("attempts to list the object from the apiServer", func() {
-				_, err := repo.GetSupplyChainsForWorkload(context.Background(), &v1alpha1.Workload{})
+				_, err := repo.GetSupplyChainsForWorkload(ctx, &v1alpha1.Workload{})
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("list supply chains:"))
 			})
@@ -407,7 +408,7 @@ spec:
 			})
 
 			It("attempts to get the object from the apiServer", func() {
-				_, err := repo.GetSupplyChain(context.Background(), "sc-name")
+				_, err := repo.GetSupplyChain(ctx, "sc-name")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("get:"))
 			})
@@ -418,10 +419,11 @@ spec:
 				It("returns a helpful error", func() {
 					reference := v1alpha1.ClusterTemplateReference{
 						Kind: "some-unsupported-kind",
+						Name: "my-template",
 					}
-					_, err := repo.GetClusterTemplate(context.Background(), reference)
+					_, err := repo.GetClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get api template:"))
+					Expect(err.Error()).To(ContainSubstring("unable to get api template [some-unsupported-kind/my-template]: resource does not have valid kind: some-unsupported-kind"))
 				})
 			})
 
@@ -434,7 +436,7 @@ spec:
 						Kind: "ClusterImageTemplate",
 						Name: "image-template",
 					}
-					_, err := repo.GetClusterTemplate(context.Background(), reference)
+					_, err := repo.GetClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("get:"))
 				})
@@ -446,10 +448,11 @@ spec:
 				It("returns a helpful error", func() {
 					reference := v1alpha1.DeliveryClusterTemplateReference{
 						Kind: "some-unsupported-kind",
+						Name: "my-template",
 					}
-					_, err := repo.GetDeliveryClusterTemplate(context.Background(), reference)
+					_, err := repo.GetDeliveryClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("get api template:"))
+					Expect(err.Error()).To(ContainSubstring("unable to get api template [some-unsupported-kind/my-template]: resource does not have valid kind: some-unsupported-kind"))
 				})
 			})
 
@@ -462,7 +465,7 @@ spec:
 						Kind: "ClusterImageTemplate",
 						Name: "image-template",
 					}
-					_, err := repo.GetDeliveryClusterTemplate(context.Background(), reference)
+					_, err := repo.GetDeliveryClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("get:"))
 				})
@@ -477,7 +480,7 @@ spec:
 					cl.GetReturns(apiError)
 				})
 				It("returns the error", func() {
-					_, err := repo.GetDelivery(context.Background(), "my-delivery")
+					_, err := repo.GetDelivery(ctx, "my-delivery")
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring(apiError.Error()))
 				})
@@ -496,7 +499,7 @@ spec:
 					cl.GetReturns(apiError)
 				})
 				It("returns a nil result without error", func() {
-					delivery, err := repo.GetDelivery(context.Background(), "my-delivery")
+					delivery, err := repo.GetDelivery(ctx, "my-delivery")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(delivery).To(BeNil())
 				})
@@ -515,7 +518,7 @@ spec:
 				})
 
 				It("asks for the delivery by name", func() {
-					_, err := repo.GetDelivery(context.Background(), "my-delivery")
+					_, err := repo.GetDelivery(ctx, "my-delivery")
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(cl.GetCallCount()).To(Equal(1))
@@ -527,7 +530,7 @@ spec:
 				})
 
 				It("returns the delivery without error", func() {
-					delivery, err := repo.GetDelivery(context.Background(), "my-delivery")
+					delivery, err := repo.GetDelivery(ctx, "my-delivery")
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(delivery).To(Equal(apiDelivery))
@@ -762,7 +765,7 @@ spec:
 			fakeClientBuilder = fake.NewClientBuilder().WithScheme(scheme).WithObjects(clientObjects...)
 			cl = fakeClientBuilder.Build()
 
-			repo = repository.NewRepository(cl, cache, logger)
+			repo = repository.NewRepository(cl, cache)
 		})
 
 		Context("GetClusterTemplate", func() {
@@ -780,7 +783,7 @@ spec:
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetClusterTemplate(context.Background(), templateRef)
+				template, err := repo.GetClusterTemplate(ctx, templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})
@@ -801,7 +804,7 @@ spec:
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetDeliveryClusterTemplate(context.Background(), templateRef)
+				template, err := repo.GetDeliveryClusterTemplate(ctx, templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})
@@ -827,7 +830,7 @@ spec:
 					Kind: "ClusterRunTemplate",
 					Name: "second-template",
 				}
-				template, err := repo.GetRunTemplate(context.Background(), templateRef)
+				template, err := repo.GetRunTemplate(ctx, templateRef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("second-template"))
 			})
@@ -845,14 +848,14 @@ spec:
 			})
 
 			It("gets the workload successfully", func() {
-				workload, err := repo.GetWorkload(context.Background(), "workload-name", "workload-namespace")
+				workload, err := repo.GetWorkload(ctx, "workload-name", "workload-namespace")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(workload.GetName()).To(Equal("workload-name"))
 			})
 
 			Context("workload doesnt exist", func() {
 				It("returns nil workload", func() {
-					workload, err := repo.GetWorkload(context.Background(), "workload-that-does-not-exist-name", "workload-namespace")
+					workload, err := repo.GetWorkload(ctx, "workload-that-does-not-exist-name", "workload-namespace")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(workload).To(BeNil())
 				})
@@ -871,14 +874,14 @@ spec:
 			})
 
 			It("gets the deliverable successfully", func() {
-				workload, err := repo.GetDeliverable(context.Background(), "deliverable-name", "deliverable-namespace")
+				workload, err := repo.GetDeliverable(ctx, "deliverable-name", "deliverable-namespace")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(workload.GetName()).To(Equal("deliverable-name"))
 			})
 
 			Context("deliverable doesnt exist", func() {
 				It("returns nil deliverable", func() {
-					deliverable, err := repo.GetDeliverable(context.Background(), "deliverable-that-does-not-exist-name", "deliverable-namespace")
+					deliverable, err := repo.GetDeliverable(ctx, "deliverable-that-does-not-exist-name", "deliverable-namespace")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(deliverable).To(BeNil())
 				})
@@ -897,14 +900,14 @@ spec:
 			})
 
 			It("gets the runnable successfully", func() {
-				runnable, err := repo.GetRunnable(context.Background(), "runnable-name", "runnable-namespace")
+				runnable, err := repo.GetRunnable(ctx, "runnable-name", "runnable-namespace")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(runnable.GetName()).To(Equal("runnable-name"))
 			})
 
 			Context("runnable doesnt exist", func() {
 				It("returns nil runnable", func() {
-					runnable, err := repo.GetRunnable(context.Background(), "runnable-that-does-not-exist-name", "runnable-namespace")
+					runnable, err := repo.GetRunnable(ctx, "runnable-that-does-not-exist-name", "runnable-namespace")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(runnable).To(BeNil())
 				})
@@ -922,14 +925,14 @@ spec:
 			})
 
 			It("gets the supply chain successfully", func() {
-				sc, err := repo.GetSupplyChain(context.Background(), "sc-name")
+				sc, err := repo.GetSupplyChain(ctx, "sc-name")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(sc.GetName()).To(Equal("sc-name"))
 			})
 
 			Context("supply chain doesnt exist", func() {
 				It("returns no error", func() {
-					sc, err := repo.GetSupplyChain(context.Background(), "sc-that-does-not-exist-name")
+					sc, err := repo.GetSupplyChain(ctx, "sc-that-does-not-exist-name")
 					Expect(err).ToNot(HaveOccurred())
 					Expect(sc).To(BeNil())
 				})
@@ -961,7 +964,7 @@ spec:
 						Spec:   v1alpha1.WorkloadSpec{},
 						Status: v1alpha1.WorkloadStatus{},
 					}
-					supplyChains, err := repo.GetSupplyChainsForWorkload(context.Background(), workload)
+					supplyChains, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(1))
 					Expect(supplyChains[0].Name).To(Equal("supplychain-name"))
@@ -1001,7 +1004,7 @@ spec:
 						Spec:   v1alpha1.WorkloadSpec{},
 						Status: v1alpha1.WorkloadStatus{},
 					}
-					supplyChains, err := repo.GetSupplyChainsForWorkload(context.Background(), workload)
+					supplyChains, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(1))
 					Expect(supplyChains[0].Name).To(Equal("supplychain-name"))
@@ -1017,7 +1020,7 @@ spec:
 						Spec:   v1alpha1.WorkloadSpec{},
 						Status: v1alpha1.WorkloadStatus{},
 					}
-					supplyChains, err := repo.GetSupplyChainsForWorkload(context.Background(), workload)
+					supplyChains, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(0))
 				})

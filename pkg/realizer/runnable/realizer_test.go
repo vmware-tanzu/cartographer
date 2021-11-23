@@ -68,9 +68,9 @@ var _ = Describe("Realizer", func() {
 
 	Context("with a valid ClusterRunTemplate", func() {
 		BeforeEach(func() {
-			testObj := resources.Test{
+			testObj := resources.TestObj{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       "Test",
+					Kind:       "TestObj",
 					APIVersion: "test.run/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +139,7 @@ var _ = Describe("Realizer", func() {
 						"generateName": Equal("my-stamped-resource-"),
 					}),
 					"apiVersion": Equal("test.run/v1alpha1"),
-					"kind":       Equal("Test"),
+					"kind":       Equal("TestObj"),
 					"spec": MatchKeys(IgnoreExtras, Keys{
 						"foo": Equal("is a string"),
 					}),
@@ -164,7 +164,7 @@ var _ = Describe("Realizer", func() {
 				"value": nil,
 			}))
 			Expect(stampedObject.Object["apiVersion"]).To(Equal("test.run/v1alpha1"))
-			Expect(stampedObject.Object["kind"]).To(Equal("Test"))
+			Expect(stampedObject.Object["kind"]).To(Equal("TestObj"))
 		})
 
 		Context("error on EnsureObjectExistsOnCluster", func() {
@@ -226,7 +226,7 @@ var _ = Describe("Realizer", func() {
 							"generateName": Equal("my-stamped-resource-"),
 						}),
 						"apiVersion": Equal("test.run/v1alpha1"),
-						"kind":       Equal("Test"),
+						"kind":       Equal("TestObj"),
 						"spec": MatchKeys(IgnoreExtras, Keys{
 							"value": MatchKeys(IgnoreExtras, Keys{
 								"useful-value": Equal("from-selected-object"),
@@ -332,7 +332,7 @@ var _ = Describe("Realizer", func() {
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable 'my-important-ns/my-runnable': get output: evaluate: find results: hasnot is not found`))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable 'my-important-ns/my-runnable': failed to evaluate path [data.hasnot]: evaluate: find results: hasnot is not found`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
 		})
 	})
@@ -350,7 +350,7 @@ var _ = Describe("Realizer", func() {
 		It("returns StampError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to stamp object 'my-important-ns/my-runnable': 'unmarshal to JSON: unexpected end of JSON input'`))
+			Expect(err.Error()).To(ContainSubstring(`unable to stamp object 'my-important-ns/my-runnable': 'failed to unmarshal json resource template: unexpected end of JSON input'`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.StampError"))
 		})
 	})

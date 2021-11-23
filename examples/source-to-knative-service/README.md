@@ -1,5 +1,13 @@
 # Source to Knative Service
 
+**before you proceed**: the example in this directory illustrates the use of
+the latest components and functionality of Cartographer (including some that
+may not have been included in the latest release yet). Make sure to check out
+the version of this document in a tag that matches the latest version (for
+instance, https://github.com/vmware-tanzu/cartographer/tree/v0.0.7/examples).
+
+---
+
 This example illustrates how an App Operator group could set up a software
 supply chain such that source code gets continuously built using the best
 practices from [buildpacks] via [kpack/Image] and deployed to the cluster using
@@ -33,7 +41,6 @@ objects would be set by the different personas in the system:
           ├── ...                                       that an app-dev submits
           └── workload.yaml
 ```
-
 
 ## Prerequisites
 
@@ -77,7 +84,7 @@ kapp deploy --yes -a tekton \
   images using buildpacks
 
 ```bash
-KPACK_VERSION=0.4.1
+KPACK_VERSION=0.4.2
 
 kapp deploy --yes -a kpack \
 	-f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
@@ -107,13 +114,7 @@ kapp deploy --yes -a gitops-toolkit \
   Kubernetes objects as a single unit
 
 ```bash
-# THIS CLUSTERROLEBINDING IS FOR DEMO PURPOSES ONLY - THIS WILL GRANT MORE PERMISSIONS THAN NECESSARY
-#
-kubectl create clusterrolebinding default-admin \
-  --clusterrole=cluster-admin \
-  --serviceaccount=default:default
-
-KAPP_CONTROLLER_VERSION=0.29.0
+KAPP_CONTROLLER_VERSION=0.30.0
 
 kapp deploy --yes -a kapp-controller \
 	-f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml

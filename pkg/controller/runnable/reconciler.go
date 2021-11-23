@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
 	}
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache, r.logger))
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache))
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetRunTemplateError:
