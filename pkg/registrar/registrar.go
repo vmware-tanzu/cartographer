@@ -269,19 +269,23 @@ func registerDeliverableController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("deliverable"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterDelivery{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.ClusterDeliveryToDeliverableRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterDelivery{}:  mapper.ClusterDeliveryToDeliverableRequests,
+		&corev1.ServiceAccount{}:     mapper.ServiceAccountToDeliverableRequests,
+		&rbacv1.Role{}:               mapper.RoleToDeliverableRequests,
+		&rbacv1.RoleBinding{}:        mapper.RoleBindingToDeliverableRequests,
+		&rbacv1.ClusterRole{}:        mapper.ClusterRoleToDeliverableRequests,
+		&rbacv1.ClusterRoleBinding{}: mapper.ClusterRoleBindingToDeliverableRequests,
 	}
-
 	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		watches[template] = mapper.TemplateToDeliverableRequests
+	}
+	for kindType, mapFunc := range watches {
 		if err := ctrl.Watch(
-			&source.Kind{Type: template},
-			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliverableRequests),
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		); err != nil {
-			return fmt.Errorf("watch template: %w", err)
+			return fmt.Errorf("watch %T: %w", kindType, err)
 		}
 	}
 
