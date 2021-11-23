@@ -20,7 +20,6 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -90,14 +89,13 @@ var _ = Describe("Resource", func() {
 		}
 		out = NewBuffer()
 		logger := zap.New(zap.WriteTo(out))
-		ctx := logr.NewContext(context.TODO(), logger)
 
 		repoCache = repository.NewCache(logger)
 		resourceRealizerBuilder := realizer.NewResourceRealizerBuilder(repositoryBuilder, clientBuilder, repoCache)
 
 		theSecret = &corev1.Secret{StringData: map[string]string{"blah": "blah"}}
 
-		r, err = resourceRealizerBuilder(ctx, theSecret, &workload, &fakeSystemRepo)
+		r, err = resourceRealizerBuilder(theSecret, &workload, &fakeSystemRepo)
 
 		Expect(err).NotTo(HaveOccurred())
 	})

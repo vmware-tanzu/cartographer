@@ -90,10 +90,11 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
+		serviceAccountSecret = &corev1.Secret{Data: map[string][]byte{ "token": []byte(`blahblah`)}}
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -116,7 +117,7 @@ var _ = Describe("Reconciler", func() {
 
 		workloadLabels = map[string]string{"some-key": "some-val"}
 
-		serviceAccountName = "alternate-service-account-name"
+		serviceAccountName = "workload-service-account-name"
 
 		wl = &v1alpha1.Workload{
 			ObjectMeta: metav1.ObjectMeta{
@@ -246,8 +247,8 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(serviceAccountName).To(Equal(serviceAccountName))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
 
@@ -538,7 +539,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"error":"get secret for service account 'alternate-service-account-name': some error"`))
+				Expect(out).To(Say(`"error":"get secret for service account 'workload-service-account-name': some error"`))
 			})
 		})
 

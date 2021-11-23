@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(ctx, workload, fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(ctx, secret, workload, r.Repo)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo)
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
