@@ -20,6 +20,8 @@ metadata:
     my-label: this-is-it
     my-other-label: bye
 spec:
+  serviceAccountName: my-service-account
+
   runTemplateRef:
     name: my-run-template-inputs
 

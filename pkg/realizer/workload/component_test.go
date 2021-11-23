@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -50,12 +51,13 @@ var _ = Describe("Resource", func() {
 		supplyChainName                 string
 		fakeSystemRepo                  repositoryfakes.FakeRepository
 		fakeWorkloadRepo                repositoryfakes.FakeRepository
-		clientForBuiltRepository        client.Client
+		clientForBuiltRepository        *client.Client
 		cacheForBuiltRepository         repository.RepoCache
 		theSecret, secretForBuiltClient *corev1.Secret
 		r                               realizer.ResourceRealizer
 		out                             *Buffer
 		repoCache                       repository.RepoCache
+		builtClient                     *repositoryfakes.FakeClient
 	)
 
 	BeforeEach(func() {
@@ -79,12 +81,12 @@ var _ = Describe("Resource", func() {
 		workload = v1alpha1.Workload{}
 
 		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache, logger repository.Logger) repository.Repository {
-			clientForBuiltRepository = client
+			clientForBuiltRepository = &client
 			cacheForBuiltRepository = repoCache
 			return &fakeWorkloadRepo
 		}
 
-		builtClient := &repositoryfakes.FakeClient{}
+		builtClient = &repositoryfakes.FakeClient{}
 		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
 			secretForBuiltClient = secret
 			return builtClient, nil
@@ -105,7 +107,7 @@ var _ = Describe("Resource", func() {
 
 	It("creates a resource realizer with the existing client, as well as one with the the supplied secret mixed in", func() {
 		Expect(secretForBuiltClient).To(Equal(theSecret))
-		Expect(clientForBuiltRepository).To(Equal(clientForBuiltRepository))
+		Expect(*clientForBuiltRepository).To(Equal(builtClient))
 	})
 
 	It("creates a resource realizer with the existing cache", func() {
@@ -409,7 +411,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("overwrites the BearerToken in the config and removes the BearerTokenFile (because it supersedes BearerToken)", func() {
-			newConfig, err := realizer.AddBearerToken(secret, oldConfig)
+			newConfig, err := realizerclient.AddBearerToken(secret, oldConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(newConfig.BearerToken).To(Equal(newToken))
@@ -417,7 +419,7 @@ var _ = Describe("Resource", func() {
 		})
 
 		It("preserves the rest of the config", func() {
-			newConfig, err := realizer.AddBearerToken(secret, oldConfig)
+			newConfig, err := realizerclient.AddBearerToken(secret, oldConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			newConfig.BearerToken = oldToken

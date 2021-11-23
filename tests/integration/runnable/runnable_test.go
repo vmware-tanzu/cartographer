@@ -38,10 +38,52 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 		ctx                   context.Context
 		runnableDefinition    *unstructured.Unstructured
 		runTemplateDefinition *unstructured.Unstructured
+		serviceAccountName string
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
+
+		serviceAccountName = "my-service-account"
+
+		serviceAccountSecretYaml := HereYamlF(`---
+					apiVersion: v1
+					kind: Secret
+					metadata:
+					  namespace: %s
+					  name: my-service-account-secret
+					  annotations:
+						kubernetes.io/service-account.name: my-service-account
+					data:
+					  token: ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU=
+					type: kubernetes.io/service-account-token
+					`,
+			testNS)
+
+		serviceAccountSecretDefinition := &unstructured.Unstructured{}
+		err := yaml.Unmarshal([]byte(serviceAccountSecretYaml), serviceAccountSecretDefinition)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = c.Create(ctx, serviceAccountSecretDefinition, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		serviceAccountYaml := HereYamlF(`---
+					apiVersion: v1
+					kind: ServiceAccount
+					metadata:
+					  namespace: %s
+					  name: %s
+					secrets:
+					- name: my-service-account-secret
+					`,
+			testNS, serviceAccountName)
+
+		serviceAccountDefinition := &unstructured.Unstructured{}
+		err = yaml.Unmarshal([]byte(serviceAccountYaml), serviceAccountDefinition)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = c.Create(ctx, serviceAccountDefinition, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	getRunnableTestStatus := func() (metav1.Condition, error) {
@@ -110,6 +152,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  namespace: %s
 					  name: my-runnable
 					spec:
+					  serviceAccountName: %s
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
@@ -117,7 +160,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  inputs:
 					    key: val
 					`,
-					testNS, testNS)
+					testNS, serviceAccountName, testNS)
 
 				runnableDefinition = &unstructured.Unstructured{}
 				err := yaml.Unmarshal([]byte(runnableYaml), runnableDefinition)
@@ -233,12 +276,13 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  namespace: %s
 					  name: my-runnable
 					spec:
+					  serviceAccountName: %s
 					  runTemplateRef: 
 					    name: my-run-template-does-not-match
 					    namespace: %s
 					    kind: ClusterRunTemplate
 					`,
-					testNS, testNS)
+					testNS, serviceAccountName, testNS)
 
 				runnableDefinition = &unstructured.Unstructured{}
 				err := yaml.Unmarshal([]byte(runnableYaml), runnableDefinition)
@@ -303,12 +347,13 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  labels:
 					    some-val: first
 					spec:
+					  serviceAccountName: %s
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
 					    kind: ClusterRunTemplate
 					`,
-				testNS, testNS)
+				testNS, serviceAccountName, testNS)
 
 			runnableDefinition = &unstructured.Unstructured{}
 			err = yaml.Unmarshal([]byte(runnableYaml), runnableDefinition)
@@ -428,12 +473,13 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  labels:
 					    some-val: first
 					spec:
+					  serviceAccountName: %s
 					  runTemplateRef: 
 					    name: my-run-template
 					    namespace: %s
 					    kind: ClusterRunTemplate
 					`,
-				testNS, testNS)
+				testNS, serviceAccountName, testNS)
 
 			runnableDefinition = &unstructured.Unstructured{}
 			err := yaml.Unmarshal([]byte(runnableYaml), runnableDefinition)
