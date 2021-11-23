@@ -90,7 +90,7 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		serviceAccountSecret = &corev1.Secret{Data: map[string][]byte{ "token": []byte(`blahblah`)}}
+		serviceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`blahblah`)}}
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil

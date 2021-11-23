@@ -16,8 +16,9 @@ package delivery_test
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -486,7 +487,6 @@ var _ = Describe("Deliveries", func() {
 			cleanups = append(cleanups, myServiceAccount)
 			err = c.Create(ctx, myServiceAccount, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-
 
 			deliverable := &v1alpha1.Deliverable{
 				TypeMeta: metav1.TypeMeta{},

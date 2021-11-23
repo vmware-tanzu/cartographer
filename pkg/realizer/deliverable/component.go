@@ -17,8 +17,10 @@ package deliverable
 import (
 	"context"
 	"fmt"
-	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+
 	corev1 "k8s.io/api/core/v1"
+
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

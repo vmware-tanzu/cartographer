@@ -90,8 +90,8 @@ var _ = Describe("WorkloadReconciler", func() {
 	}
 
 	var (
-		ctx                    context.Context
-		cleanups               []client.Object
+		ctx      context.Context
+		cleanups []client.Object
 	)
 
 	BeforeEach(func() {
