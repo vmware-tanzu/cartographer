@@ -215,6 +215,7 @@ func (r *repository) getTemplate(ctx context.Context, name string, kind string) 
 	}
 
 	err = r.getObject(ctx, name, "", apiTemplate)
+	//TODO: Remove IsNotFound check, this should just be an error, breaks kuttl test
 	if kerrors.IsNotFound(err) {
 		log.V(logger.DEBUG).Info("template is not found on api server")
 		return nil, nil
@@ -236,10 +237,6 @@ func (r *repository) GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateRe
 	err := r.cl.Get(ctx, client.ObjectKey{
 		Name: ref.Name,
 	}, runTemplate)
-	if kerrors.IsNotFound(err) {
-		log.V(logger.DEBUG).Info("run template is not found on api server")
-		return nil, nil
-	}
 	if err != nil {
 		log.Error(err, "failed to get run template object from api server")
 		return nil, fmt.Errorf("failed to get run template object from api server [%s/%s]: %w", ref.Kind, ref.Name, err)
