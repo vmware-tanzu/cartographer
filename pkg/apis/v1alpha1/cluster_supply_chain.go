@@ -134,6 +134,10 @@ func (c *ClusterSupplyChain) ValidateDelete() error {
 	return nil
 }
 
+func (c *ClusterSupplyChain) GetSelector() map[string]string {
+	return c.Spec.Selector
+}
+
 func GetSelectorsFromObject(o client.Object) []string {
 	var res []string
 	res = []string{}
