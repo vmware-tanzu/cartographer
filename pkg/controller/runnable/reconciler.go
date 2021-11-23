@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -87,7 +88,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			if !kerrors.IsForbidden(typedErr.Err) {
+				err = controller.NewUnhandledError(err)
+			}
 		case realizer.ListCreatedObjectsError:
 			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
 			err = controller.NewUnhandledError(err)

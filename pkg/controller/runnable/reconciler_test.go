@@ -26,6 +26,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -440,6 +441,45 @@ var _ = Describe("Reconcile", func() {
 					_, err := reconciler.Reconcile(ctx, request)
 
 					Expect(err.Error()).To(ContainSubstring("unable to apply stamped object"))
+				})
+			})
+
+			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
+				var stampedObjectError realizer.ApplyStampedObjectError
+				BeforeEach(func() {
+					status := &metav1.Status{
+						Message: "fantastic error",
+						Reason:  metav1.StatusReasonForbidden,
+						Code:    403,
+					}
+					stampedObject := &unstructured.Unstructured{}
+					stampedObject.SetGroupVersionKind(schema.GroupVersionKind{
+						Group:   "thing.io",
+						Version: "alphabeta1",
+						Kind:    "MyThing",
+					})
+					stampedObject.SetNamespace("a-namespace")
+					stampedObject.SetName("a-name")
+
+					stampedObjectError = realizer.ApplyStampedObjectError{
+						Err:           kerrors.FromObject(status),
+						StampedObject: stampedObject,
+					}
+
+					rlzr.RealizeReturns(nil, nil, stampedObjectError)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.StampedObjectRejectedByAPIServerCondition(stampedObjectError)))
+				})
+
+				It("handles the error and logs it", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"error":"unable to apply stamped object 'a-namespace/a-name': 'fantastic error'"`))
 				})
 			})
 

@@ -44,6 +44,7 @@ rules:
       - workloads
       - workloads/status
       - clustersupplychains/status
+      - runnables/status
     verbs:
       - get
       - list

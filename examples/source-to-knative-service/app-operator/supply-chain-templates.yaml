@@ -61,7 +61,7 @@ kind: ClusterSourceTemplate
 metadata:
   name: test
 spec:
-  urlPath: .spec.inputs.source.url
+  urlPath: .status.outputs.url
   revisionPath: .spec.inputs.source.revision
 
   template:
@@ -70,6 +70,8 @@ spec:
     metadata:
       name: $(workload.metadata.name)$
     spec:
+      serviceAccountName: $(workload.spec.serviceAccountName)$
+
       runTemplateRef:
         name: tekton-pipelinerun
 
