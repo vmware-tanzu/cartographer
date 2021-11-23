@@ -118,8 +118,7 @@ var _ = Describe("Realizer", func() {
 			_, _, _ = rlzr.Realize(ctx, runnable, repository)
 
 			Expect(repository.GetRunTemplateCallCount()).To(Equal(1))
-			actualCtx, actualTemplate := repository.GetRunTemplateArgsForCall(0)
-			Expect(actualCtx).To(Equal(ctx))
+			_, actualTemplate := repository.GetRunTemplateArgsForCall(0)
 			Expect(actualTemplate).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Kind": Equal("ClusterRunTemplate"),
@@ -128,8 +127,7 @@ var _ = Describe("Realizer", func() {
 			))
 
 			Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
-			actualCtx, stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
-			Expect(actualCtx).To(Equal(ctx))
+			_, stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
 			Expect(allowUpdate).To(BeFalse())
 			Expect(stamped.Object).To(
 				MatchKeys(IgnoreExtras, Keys{
@@ -207,16 +205,14 @@ var _ = Describe("Realizer", func() {
 				_, _, _ = rlzr.Realize(ctx, runnable, repository)
 
 				Expect(repository.ListUnstructuredCallCount()).To(Equal(2))
-				actualCtx, clientQueryObjectForSelector := repository.ListUnstructuredArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, clientQueryObjectForSelector := repository.ListUnstructuredArgsForCall(0)
 
 				Expect(clientQueryObjectForSelector.GetAPIVersion()).To(Equal("apiversion-to-be-selected"))
 				Expect(clientQueryObjectForSelector.GetKind()).To(Equal("kind-to-be-selected"))
 				Expect(clientQueryObjectForSelector.GetLabels()).To(Equal(map[string]string{"expected-label": "expected-value"}))
 
 				Expect(repository.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
-				actualCtx, stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, stamped, allowUpdate := repository.EnsureObjectExistsOnClusterArgsForCall(0)
 				Expect(allowUpdate).To(BeFalse())
 				Expect(stamped.Object).To(
 					MatchKeys(IgnoreExtras, Keys{
@@ -250,7 +246,7 @@ var _ = Describe("Realizer", func() {
 			It("returns ResolveSelectorError", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, repository)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector '(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value])': 'selector matched multiple objects'`))
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: selector matched multiple objects`))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
@@ -270,7 +266,7 @@ var _ = Describe("Realizer", func() {
 			It("returns ResolveSelectorError", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, repository)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector '(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value])': 'selector did not match any objects'`))
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: selector did not match any objects`))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
@@ -290,7 +286,7 @@ var _ = Describe("Realizer", func() {
 			It("returns ResolveSelectorError", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, repository)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector '(apiVersion:apiversion-to-be-selected kind:kind-to-be-selected labels:map[expected-label:expected-value])': 'could not list objects matching selector: listing unstructured is hard'`))
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: failed to list objects matching selector [map[expected-label:expected-value]]: listing unstructured is hard`))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
@@ -330,7 +326,7 @@ var _ = Describe("Realizer", func() {
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, repository)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable 'my-important-ns/my-runnable': get output: evaluate: find results: hasnot is not found`))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object for runnable [my-important-ns/my-runnable]: failed to evaluate path [data.hasnot]: evaluate: find results: hasnot is not found`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
 		})
 	})
@@ -348,7 +344,7 @@ var _ = Describe("Realizer", func() {
 		It("returns StampError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, repository)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to stamp object 'my-important-ns/my-runnable': 'unmarshal to JSON: unexpected end of JSON input'`))
+			Expect(err.Error()).To(ContainSubstring(`unable to stamp object [my-important-ns/my-runnable]: unmarshal to JSON: unexpected end of JSON input`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.StampError"))
 		})
 	})
@@ -368,7 +364,7 @@ var _ = Describe("Realizer", func() {
 		It("returns GetRunTemplateError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, repository)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to get runnable 'my-important-ns/my-runnable': 'Errol mcErrorFace'`))
+			Expect(err.Error()).To(ContainSubstring(`unable to get runnable [my-important-ns/my-runnable]: Errol mcErrorFace`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.GetRunTemplateError"))
 		})
 	})

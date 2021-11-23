@@ -27,6 +27,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
@@ -40,18 +41,22 @@ type Reconciler struct {
 	conditionManager        conditions.ConditionManager
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := logr.FromContext(ctx)
-	logger.Info("started")
-	defer logger.Info("finished")
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.Info("started")
+	defer log.Info("finished")
 
-	runnable, err := r.Repo.GetRunnable(ctx, request.Name, request.Namespace)
+	log = log.WithValues("runnable", req.NamespacedName)
+	ctx = logr.NewContext(ctx, log)
+
+	runnable, err := r.Repo.GetRunnable(ctx, req.Name, req.Namespace)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get runnable: %w", err)
+		log.Error(err, "failed to get runnable")
+		return ctrl.Result{}, fmt.Errorf("failed to get runnable [%s]: %w", req.NamespacedName, err)
 	}
 
 	if runnable == nil {
-		logger.Info("runnable no longer exists")
+		log.Info("runnable no longer exists")
 		return ctrl.Result{}, nil
 	}
 
@@ -59,6 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo)
 	if err != nil {
+		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
 		case realizer.GetRunTemplateError:
 			r.conditionManager.AddPositive(RunTemplateMissingCondition(typedErr))
@@ -80,15 +86,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			err = controller.NewUnhandledError(err)
 		}
 	} else {
+		log.V(logger.DEBUG).Info("realized object", "object", stampedObject)
 		r.conditionManager.AddPositive(RunTemplateReadyCondition())
 	}
 
 	var trackingError error
 	if stampedObject != nil {
-		trackingError = r.DynamicTracker.Watch(logger, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
+		trackingError = r.DynamicTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if trackingError != nil {
-			logger.Error(err, "dynamic tracker watch")
+			log.Error(err, "failed to add informer for object", "object", stampedObject)
 			err = controller.NewUnhandledError(trackingError)
+		} else {
+			log.V(logger.DEBUG).Info("added informer for object", "object", stampedObject)
 		}
 	}
 
@@ -99,15 +108,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		runnable.Status.Outputs = outputs
 		statusUpdateError := r.Repo.StatusUpdate(ctx, runnable)
 		if statusUpdateError != nil {
-			return ctrl.Result{}, fmt.Errorf("update runnable status: %w", statusUpdateError)
+			return ctrl.Result{}, fmt.Errorf("failed to update status for runnable: %w", statusUpdateError)
 		}
 	}
 
 	if err != nil {
 		if controller.IsUnhandledError(err) {
+			log.Error(err, "unhandled error reconciling runnable")
 			return ctrl.Result{}, err
 		}
-		logger.Info("handled error", "error", err)
+		log.Info("handled error reconciling runnable", "handled error", err)
 	}
 
 	return ctrl.Result{}, nil

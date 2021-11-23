@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -45,10 +47,14 @@ type TemplatingContext struct {
 }
 
 func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, repository repository.Repository) (*unstructured.Unstructured, templates.Outputs, error) {
+	log := logr.FromContextOrDiscard(ctx).WithValues("template", runnable.Spec.RunTemplateRef)
+	ctx = logr.NewContext(ctx, log)
+
 	runnable.Spec.RunTemplateRef.Kind = "ClusterRunTemplate"
 	apiRunTemplate, err := repository.GetRunTemplate(ctx, runnable.Spec.RunTemplateRef)
 
 	if err != nil {
+		log.Error(err, "failed to get runnable cluster template")
 		return nil, nil, GetRunTemplateError{
 			Err:      err,
 			Runnable: runnable,
@@ -64,6 +70,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository)
 	if err != nil {
+		log.Error(err, "failed to resolve selector", "selector", runnable.Spec.Selector)
 		return nil, nil, ResolveSelectorError{
 			Err:      err,
 			Selector: runnable.Spec.Selector,
@@ -81,14 +88,17 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
+		log.Error(err, "failed to stamp resource")
 		return nil, nil, StampError{
 			Err:      err,
 			Runnable: runnable,
 		}
 	}
 
+	// FIXME: why are we taking a DeepCopy?
 	err = repository.EnsureObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), false)
 	if err != nil {
+		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
@@ -100,6 +110,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	allRunnableStampedObjects, err := repository.ListUnstructured(ctx, objectForListCall)
 	if err != nil {
+		log.Error(err, "failed to list objects")
 		return stampedObject, nil, ListCreatedObjectsError{
 			Err:       err,
 			Namespace: objectForListCall.GetNamespace(),
@@ -109,6 +120,10 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	outputs, err := template.GetOutput(allRunnableStampedObjects)
 	if err != nil {
+		for _, obj := range allRunnableStampedObjects {
+			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
+		}
+		log.Error(err, "failed to retrieve output from object")
 		return stampedObject, nil, RetrieveOutputError{
 			Err:      err,
 			Runnable: runnable,
@@ -116,6 +131,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	}
 
 	if len(outputs) == 0 {
+		log.V(logger.DEBUG).Info("no outputs retrieved, getting outputs from runnable.Status.Outputs")
 		outputs = runnable.Status.Outputs
 	}
 
@@ -123,6 +139,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 }
 
 func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	if selector == nil {
 		return nil, nil
 	}
@@ -132,12 +150,15 @@ func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, r
 
 	results, err := repository.ListUnstructured(ctx, queryObj)
 	if err != nil {
-		return nil, fmt.Errorf("could not list objects matching selector: %w", err)
+		log.Error(err, "failed to list objects matching selector", "selector", selector.MatchingLabels)
+		return nil, fmt.Errorf("failed to list objects matching selector [%+v]: %w", selector.MatchingLabels, err)
 	}
 
 	if len(results) == 0 {
+		log.V(logger.DEBUG).Info("selector did not match any objects")
 		return nil, fmt.Errorf("selector did not match any objects")
 	} else if len(results) > 1 {
+		log.V(logger.DEBUG).Info("selector matched multiple objects")
 		return nil, fmt.Errorf("selector matched multiple objects")
 	}
 	return results[0].Object, nil

@@ -109,7 +109,7 @@ spec:
 
 				It("returns a helpful error", func() {
 					err := repo.EnsureObjectExistsOnCluster(context.Background(), stampedObj, true)
-					Expect(err).To(MatchError(ContainSubstring("list: some-error")))
+					Expect(err).To(MatchError(ContainSubstring("unable to list from api server: some-error")))
 				})
 
 				It("does not create or patch any objects", func() {

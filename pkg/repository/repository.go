@@ -19,14 +19,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -168,6 +169,9 @@ func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates
 }
 
 func (r *repository) ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("ListUnstructured")
+
 	unstructuredList := &unstructured.UnstructuredList{}
 	unstructuredList.SetGroupVersionKind(obj.GroupVersionKind())
 
@@ -175,14 +179,20 @@ func (r *repository) ListUnstructured(ctx context.Context, obj *unstructured.Uns
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(obj.GetLabels()),
 	}
+	log.V(logger.DEBUG).Info("list unstructured with namespace and labels",
+		"namespace", obj.GetNamespace(), "labels", obj.GetLabels())
 	err := r.cl.List(ctx, unstructuredList, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("list: %w", err)
+		log.Error(err, "unable to list from api server")
+		return nil, fmt.Errorf("unable to list from api server: %w", err)
 	}
 
 	pointersToUnstructureds := make([]*unstructured.Unstructured, len(unstructuredList.Items))
 
+	//FIXME: why are we taking a deep copy?
 	for i, item := range unstructuredList.Items {
+		log.V(logger.DEBUG).Info("unstructured that matched",
+			"namespace", obj.GetNamespace(), "labels", obj.GetLabels(), "unstructured", item)
 		pointersToUnstructureds[i] = item.DeepCopy()
 	}
 	return pointersToUnstructureds, nil
@@ -214,13 +224,21 @@ func (r *repository) getTemplate(ctx context.Context, name string, kind string) 
 }
 
 func (r *repository) GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetRunTemplate")
+
 	runTemplate := &v1alpha1.ClusterRunTemplate{}
 
 	err := r.cl.Get(ctx, client.ObjectKey{
 		Name: ref.Name,
 	}, runTemplate)
+	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("run template is not found on api server")
+		return nil, nil
+	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get run template object from api server")
+		return nil, fmt.Errorf("failed to get run template object from api server [%s/%s]: %w", ref.Kind, ref.Name, err)
 	}
 
 	return runTemplate, nil
@@ -321,14 +339,19 @@ func (r *repository) GetDeliverable(ctx context.Context, name string, namespace 
 }
 
 func (r *repository) GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetDeliverable")
+
 	runnable := &v1alpha1.Runnable{}
 
 	err := r.getObject(ctx, name, namespace, runnable)
 	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("runnable is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get runnable object from api server")
+		return nil, fmt.Errorf("failed to get runnable object from api server [%s/%s]: %w", namespace, name, err)
 	}
 
 	return runnable, nil
