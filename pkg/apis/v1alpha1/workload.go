@@ -65,7 +65,12 @@ type WorkloadSpec struct {
 	Image         *string                      `json:"image,omitempty"`
 	ServiceClaims []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
 	Env           []corev1.EnvVar              `json:"env,omitempty"`
+	Build         WorkloadBuild                `json:"build,omitempty"`
 	Resources     *corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type WorkloadBuild struct {
+	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 type WorkloadStatus struct {
