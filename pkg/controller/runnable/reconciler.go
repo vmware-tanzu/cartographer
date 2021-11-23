@@ -40,6 +40,7 @@ type Reconciler struct {
 	DynamicTracker          tracker.DynamicTracker
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
+	RepositoryBuilder       repository.RepositoryBuilder
 	ClientBuilder           realizerclient.ClientBuilder
 	RunnableCache           repository.RepoCache
 	logger                  logr.Logger
@@ -65,18 +66,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, runnable.Spec.ServiceAccountName, request.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		// TODO is this how we should pass outputs? should we pass nil? maybe check if nil in completeReconciliation?
-		return r.completeReconciliation(ctx, runnable, runnable.Status.Outputs, fmt.Errorf("get secret for service account '%s': %w", runnable.Spec.ServiceAccountName, err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("get secret for service account '%s': %w", runnable.Spec.ServiceAccountName, err))
 	}
 
 	runnableClient, err := r.ClientBuilder(secret)
 	if err != nil {
 		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
-		// TODO is this how we should pass outputs? should we pass nil? maybe check if nil in completeReconciliation?
-		return r.completeReconciliation(ctx, runnable, runnable.Status.Outputs, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
+		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
 	}
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, repository.NewRepository(runnableClient, r.RunnableCache, r.logger))
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache, r.logger))
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetRunTemplateError:

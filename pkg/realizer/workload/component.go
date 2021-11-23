@@ -45,7 +45,7 @@ type resourceRealizer struct {
 type ResourceRealizerBuilder func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
-func NewResourceRealizerBuilder(clientBuilder client.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder client.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error) {
 		workloadClient, err := clientBuilder(secret)
 		if err != nil {
@@ -54,7 +54,7 @@ func NewResourceRealizerBuilder(clientBuilder client.ClientBuilder, cache reposi
 
 		logger := logr.FromContext(ctx)
 
-		workloadRepo := repository.NewRepository(workloadClient,
+		workloadRepo := repositoryBuilder(workloadClient,
 			cache,
 			logger.WithName("workload-stamping-repo"),
 		)

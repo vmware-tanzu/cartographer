@@ -102,7 +102,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	reconciler := &workload.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
-		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
+		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
 		Realizer:                realizerworkload.NewRealizer(),
 	}
 
@@ -296,7 +296,8 @@ func registerRunnableController(mgr manager.Manager) error {
 	reconciler := &runnable.Reconciler{
 		Repo:                    repo,
 		Realizer:                realizerrunnable.NewRealizer(),
-		RunnableCache: repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache")),
+		RunnableCache:           repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache")),
+		RepositoryBuilder:       repository.NewRepository,
 		ClientBuilder:           realizerclient.NewClientBuilder(mgr.GetConfig()),
 		ConditionManagerBuilder: conditions.NewConditionManager,
 	}
