@@ -90,13 +90,19 @@ func TemplateObjectRetrievalFailureCondition(err error) metav1.Condition {
 }
 
 func MissingValueAtPathCondition(obj *unstructured.Unstructured, expression string) metav1.Condition {
+	var fullyQualifiedType string
+	if obj.GetObjectKind().GroupVersionKind().Group == "" {
+		fullyQualifiedType = strings.ToLower(obj.GetKind())
+	} else {
+		fullyQualifiedType = fmt.Sprintf("%s.%s", strings.ToLower(obj.GetKind()),
+			obj.GetObjectKind().GroupVersionKind().Group)
+	}
 	return metav1.Condition{
 		Type:   v1alpha1.WorkloadResourceSubmitted,
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s] of kind [%s.%s]",
-			expression, obj.GetNamespace(), obj.GetName(), strings.ToLower(obj.GetKind()),
-			obj.GetObjectKind().GroupVersionKind().Group),
+		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s] of type [%s]",
+			expression, obj.GetNamespace(), obj.GetName(), fullyQualifiedType),
 	}
 }
 
