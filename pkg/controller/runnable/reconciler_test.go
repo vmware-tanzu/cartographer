@@ -476,7 +476,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"error":"unable to apply stamped object 'a-namespace/a-name': 'fantastic error'"`))
+					Expect(out).To(Say(`"handled error":"unable to apply stamped object \[a-namespace/a-name\]: fantastic error"`))
 				})
 			})
 

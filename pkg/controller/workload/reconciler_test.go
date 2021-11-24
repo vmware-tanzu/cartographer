@@ -549,7 +549,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"handled error":"failed to get service account secret \[alternate-service-account-name\]: some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get service account secret \[workload-service-account-name\]: some error"`))
 			})
 		})
 
@@ -591,7 +591,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-			Expect(out).To(Say(`"handled error":"workload \[my-ns/my-workload\] is missing required labels"`))
+			Expect(out).To(Say(`"handled error":"workload \[my-namespace/my-workload-name\] is missing required labels"`))
 		})
 	})
 
@@ -611,7 +611,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-			Expect(out).To(Say(`"handled error":"no supply chain \[my-ns/my-workload\] found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
+			Expect(out).To(Say(`"handled error":"no supply chain \[my-namespace/my-workload-name\] found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
 		})
 	})
 
@@ -622,7 +622,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("failed to get supply chains for workload [my-ns/my-workload]: some error"))
+			Expect(err.Error()).To(ContainSubstring("failed to get supply chains for workload [my-namespace/my-workload-name]: some error"))
 		})
 	})
 
@@ -649,7 +649,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-			Expect(out).To(Say(`"handled error":"more than one supply chain selected for workload \[my-ns/my-workload\]: \[my-supply-chain my-supply-chain\]"`))
+			Expect(out).To(Say(`"handled error":"more than one supply chain selected for workload \[my-namespace/my-workload-name\]: \[my-supply-chain my-supply-chain\]"`))
 		})
 	})
 

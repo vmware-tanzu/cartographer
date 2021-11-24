@@ -29,8 +29,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
-	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
@@ -73,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		serviceAccountName = runnable.Spec.ServiceAccountName
 	}
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, request.Namespace)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("get secret for service account '%s': %w", serviceAccountName, err))
@@ -130,6 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, err error) (ctrl.Result, error) {
+	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
 

@@ -338,8 +338,15 @@ func (r *repository) getObject(ctx context.Context, name string, namespace strin
 		obj,
 	)
 	if err != nil {
-		log.Error(err, "failed to get object from api server", "object", fmt.Sprintf("%s/%s", namespace, name))
-		return fmt.Errorf("failed to get object from api server [%s/%s]: %w", namespace, name, err)
+		//TODO: use namespacedName everywhere in repo, not everything has a namespace
+		var namespacedName string
+		if namespace == "" {
+			namespacedName = name
+		} else {
+			namespacedName = fmt.Sprintf("%s/%s", namespace, name)
+		}
+		log.Error(err, "failed to get object from api server", "object", namespacedName)
+		return fmt.Errorf("failed to get object [%s] from api server: %w", namespacedName, err)
 	}
 
 	return nil

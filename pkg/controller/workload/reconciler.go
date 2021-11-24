@@ -232,12 +232,11 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 			workload.Namespace, workload.Name, getSupplyChainNames(supplyChains))
 	}
 
-	supplyChain := &supplyChains[0]
-	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChain.Name)
-	return supplyChain, nil
+	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].Name)
+	return supplyChains[0], nil
 }
 
-func getSupplyChainNames(objs []v1alpha1.ClusterSupplyChain) []string {
+func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
 	var names []string
 	for _, obj := range objs {
 		names = append(names, obj.GetName())

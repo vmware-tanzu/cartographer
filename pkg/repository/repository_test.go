@@ -410,7 +410,7 @@ spec:
 			It("attempts to get the object from the apiServer", func() {
 				_, err := repo.GetSupplyChain(ctx, "sc-name")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to get supply chain object from api server [sc-name]: failed to get object [/sc-name]: some get error"))
+				Expect(err.Error()).To(ContainSubstring("failed to get supply chain object from api server [sc-name]: failed to get object [sc-name] from api server: some get error"))
 			})
 		})
 
@@ -438,7 +438,7 @@ spec:
 					}
 					_, err := repo.GetClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object from api server [/image-template]: some bad get error"))
+					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
 			})
 		})
@@ -467,7 +467,7 @@ spec:
 					}
 					_, err := repo.GetDeliveryClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object from api server [/image-template]: some bad get error"))
+					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
 			})
 		})
@@ -608,7 +608,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object from api server [/some-service-account]: some error"))
+					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object [some-service-account] from api server: some error"))
 				})
 			})
 
