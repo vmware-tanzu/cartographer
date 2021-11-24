@@ -355,7 +355,7 @@ spec:
   # same data available for interpolation as any other `*Template`. (required)
   #
   template:
-    apiVersion: kpack.io/v1alpha1
+    apiVersion: kpack.io/v1alpha2
     kind: Image
     metadata:
       name: $(workload.metadata.name)$-image

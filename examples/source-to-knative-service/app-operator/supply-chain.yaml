@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#@ load("@ytt:data", "data")
+---
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
@@ -44,6 +46,9 @@ spec:
       templateRef:
         kind: ClusterImageTemplate
         name: image
+      params:
+        - name: image_prefix
+          value: #@ data.values.image_prefix
       sources:
         - resource: source-tester
           name: source
