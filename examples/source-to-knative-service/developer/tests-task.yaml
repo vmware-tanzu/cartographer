@@ -21,6 +21,7 @@ metadata:
 spec:
   params:
     - name: blob-url
+    - name: blob-revision
   steps:
     - name: test
       image: golang
@@ -29,6 +30,8 @@ spec:
         - -cxe
         - |-
           set -o pipefail
+
+          echo $(params.blob-revision)
 
           cd `mktemp -d`
           curl -SL $(params.blob-url) | tar xvzf -

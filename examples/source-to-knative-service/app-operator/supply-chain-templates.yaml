@@ -62,7 +62,7 @@ metadata:
   name: test
 spec:
   urlPath: .status.outputs.url
-  revisionPath: .spec.inputs.source.revision
+  revisionPath: .status.outputs.revision
 
   template:
     apiVersion: carto.run/v1alpha1
@@ -87,6 +87,8 @@ spec:
         params:
           - name: blob-url
             value: $(source.url)$
+          - name: blob-revision
+            value: $(source.revision)$
 
 
 ---

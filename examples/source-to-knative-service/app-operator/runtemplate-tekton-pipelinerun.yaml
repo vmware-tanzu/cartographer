@@ -19,6 +19,7 @@ metadata:
 spec:
   outputs:
     url: spec.params[?(@.name=="blob-url")].value
+    revision: spec.params[?(@.name=="blob-revision")].value
   template:
     apiVersion: tekton.dev/v1beta1
     kind: TaskRun
