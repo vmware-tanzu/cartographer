@@ -30,6 +30,7 @@ spec:
       workload_git_ref_branch: $(workload.spec.source.git.ref.branch)$
       workload_services_first_kind: $(workload.spec.serviceClaims[0].ref.kind)$
       workload_env: $(workload.spec.env[?(@.name=="SPRING_PROFILES_ACTIVE")].value)$
+      workload_build_env: $(workload.spec.build.env[?(@.name=="SOME_BUILD_ENV")].value)$
       workload_resources_requests_cpu: $(workload.spec.resources.requests.cpu)$
 
 ---

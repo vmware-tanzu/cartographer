@@ -84,7 +84,7 @@ kapp deploy --yes -a tekton \
   images using buildpacks
 
 ```bash
-KPACK_VERSION=0.4.2
+KPACK_VERSION=0.4.3
 
 kapp deploy --yes -a kpack \
 	-f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
@@ -328,7 +328,7 @@ images built based on a branch with the following [kpack/Image] definition:
 
 
 ```yaml
-apiVersion: kpack.io/v1alpha1
+apiVersion: kpack.io/v1alpha2
 kind: Image
 metadata:
   name: hello-world
@@ -350,7 +350,7 @@ reference to the image that has been built and pushed to a registry.
 
 
 ```yaml
-apiVersion: kpack.io/v1alpha1
+apiVersion: kpack.io/v1alpha2
 kind: Image
 metadata:
   name: hello-world
@@ -379,7 +379,7 @@ instance, by specifying which revision to use:
 
 
 ```yaml
-apiVersion: kpack.io/v1alpha1
+apiVersion: kpack.io/v1alpha2
 kind: Image
 metadata:
   name: hello-world
@@ -399,7 +399,7 @@ i.e., it'd be great if we could somehow express:
 
 
 ```yaml
-apiVersion: kpack.io/v1alpha1
+apiVersion: kpack.io/v1alpha2
 kind: Image
 metadata:
   name: hello-world
@@ -416,7 +416,7 @@ any developer wanting to have their code built, could _"just"_ get it done
 without having to know the details of `kpack`, something like
 
 ```yaml
-apiVersion: kpack.io/v1alpha1
+apiVersion: kpack.io/v1alpha2
 kind: Image
 metadata:
   name: $(name_of_the_project)
@@ -509,7 +509,7 @@ status:                                                       outputting source
                                                       |     |
 ---                                                   |     |
 kind: Image                                           |     |  outputting image
-apiVersion: kpack.io/v1alpha1                         |     |    information to
+apiVersion: kpack.io/v1alpha2                         |     |    information to
 spec:                                                 |     |            others
   source:                                             |     |
     git:                                              |     |
@@ -587,7 +587,7 @@ spec:
                                     #  the reference to the image that it built
                                     #  and pushed to a container image registry
   template:
-    apiVersion: kpack.io/v1alpha1
+    apiVersion: kpack.io/v1alpha2
     kind: Image
     metadata:
       name: $(workload.name)$
@@ -718,7 +718,7 @@ status:                                                       outputting source
                                                       |     |
 ---                                                   |     |
 kind: Image                                           |     |  outputting image
-apiVersion: kpack.io/v1alpha1                         |     |    information to
+apiVersion: kpack.io/v1alpha2                         |     |    information to
 spec:                                                 |     |            others
   source:                                             |     |
     git:                                              |     |
