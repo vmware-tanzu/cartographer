@@ -41,12 +41,13 @@ type resourceRealizer struct {
 	deliverable     *v1alpha1.Deliverable
 	systemRepo      repository.Repository
 	deliverableRepo repository.Repository
+	deliveryParams  []v1alpha1.DelegatableParam
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, repo repository.Repository) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, repo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (ResourceRealizer, error)
 
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository) (ResourceRealizer, error) {
+	return func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (ResourceRealizer, error) {
 		client, err := clientBuilder(secret)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -56,6 +57,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 			deliverable:     deliverable,
 			systemRepo:      systemRepo,
 			deliverableRepo: deliverableRepo,
+			deliveryParams:  deliveryParams,
 		}, nil
 	}
 }
@@ -91,7 +93,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	inputs := outputs.GenerateInputs(resource)
 	templatingContext := map[string]interface{}{
 		"deliverable": r.deliverable,
-		"params":      templates.ParamsBuilder(template.GetDefaultParams(), resource.Params),
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.deliveryParams, resource.Params, r.deliverable.Spec.Params),
 		"sources":     inputs.Sources,
 		"configs":     inputs.Configs,
 		"deployment":  inputs.Deployment,

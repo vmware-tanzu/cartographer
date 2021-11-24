@@ -70,7 +70,7 @@ func (t *clusterDeploymentTemplate) GetResourceTemplate() v1alpha1.TemplateSpec 
 	return t.template.Spec.TemplateSpec
 }
 
-func (t *clusterDeploymentTemplate) GetDefaultParams() v1alpha1.DefaultParams {
+func (t *clusterDeploymentTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 	return t.template.Spec.Params
 }
 

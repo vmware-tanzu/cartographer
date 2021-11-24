@@ -1,0 +1,62 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: git-template---params-supply-chain
+spec:
+  params:
+    - name: on-template
+      default: me
+    - name: template-and-workload-but-not-supply-chain-nor-resource
+      default: me
+    - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
+      default: not-me-template
+    - name: ovrdbl-supply-chain-ovrdbl-resource-not-on-workload
+      default: not-me-template
+    - name: ovrdbl-supply-chain-on-workload
+      default: not-me-template
+    - name: ovrdbl-resource-on-workload
+      default: not-me-template
+    - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
+      default: not-me-template
+    - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload
+      default: not-me-template
+    - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
+      default: not-me-template
+    - name: notovrdbl-supply-chain-on-workload
+      default: not-me-template
+    - name: notovrdbl-resource-on-workload
+      default: not-me-template
+  urlPath: .spec.value.far-be-it-from
+  revisionPath: .spec.value.beats
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: test-deliverable-source
+    spec:
+      value:
+        for-the-life-of: $(params.on-template)$
+        far-be-it-from: $(params.template-and-workload-but-not-supply-chain-nor-resource)$
+        do-re: $(params.ovrdbl-supply-chain-ovrdbl-resource-on-workload)$
+        pardon: $(params.ovrdbl-supply-chain-on-workload)$
+        kiss: $(params.ovrdbl-resource-on-workload)$
+        beats: $(params.ovrdbl-supply-chain-ovrdbl-resource-not-on-workload)$
+        who: $(params.ovrdbl-supply-chain-notovrdbl-resource-on-workload)$
+        woe-is: $(params.notovrdbl-supply-chain-ovrdbl-resource-on-workload)$
+        bite: $(params.notovrdbl-supply-chain-notovrdbl-resource-on-workload)$
+        so-help: $(params.notovrdbl-supply-chain-on-workload)$
+        mercy: $(params.notovrdbl-resource-on-workload)$

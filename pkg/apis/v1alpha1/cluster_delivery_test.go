@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
 
@@ -27,36 +28,35 @@ import (
 
 var _ = Describe("Delivery Validation", func() {
 	Describe("#Create", func() {
-		Context("Well formed delivery", func() {
-			var delivery *v1alpha1.ClusterDelivery
+		var delivery *v1alpha1.ClusterDelivery
 
-			BeforeEach(func() {
-				delivery = &v1alpha1.ClusterDelivery{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "delivery-resource",
-						Namespace: "default",
-					},
-					Spec: v1alpha1.ClusterDeliverySpec{
-						Resources: []v1alpha1.ClusterDeliveryResource{
-							{
-								Name: "source-provider",
-								TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
-									Kind: "ClusterSourceTemplate",
-									Name: "source-template",
-								},
+		BeforeEach(func() {
+			delivery = &v1alpha1.ClusterDelivery{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "delivery-resource",
+					Namespace: "default",
+				},
+				Spec: v1alpha1.ClusterDeliverySpec{
+					Resources: []v1alpha1.ClusterDeliveryResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "source-template",
 							},
-							{
-								Name: "other-source-provider",
-								TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
-									Kind: "ClusterSourceTemplate",
-									Name: "source-template",
-								},
+						},
+						{
+							Name: "other-source-provider",
+							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "source-template",
 							},
 						},
 					},
-				}
-			})
-
+				},
+			}
+		})
+		Context("Well formed delivery", func() {
 			It("does not return an error", func() {
 				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
 			})
@@ -64,41 +64,86 @@ var _ = Describe("Delivery Validation", func() {
 		})
 
 		Context("Duplicate resource names", func() {
-			var delivery *v1alpha1.ClusterDelivery
-
 			BeforeEach(func() {
-				delivery = &v1alpha1.ClusterDelivery{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "delivery-resource",
-						Namespace: "default",
-					},
-					Spec: v1alpha1.ClusterDeliverySpec{
-						Resources: []v1alpha1.ClusterDeliveryResource{
-							{
-								Name: "source-provider",
-								TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
-									Kind: "ClusterSourceTemplate",
-									Name: "source-template",
-								},
-							},
-							{
-								Name: "source-provider",
-								TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
-									Kind: "ClusterSourceTemplate",
-									Name: "source-template",
-								},
-							},
-						},
-					},
+				for i := range delivery.Spec.Resources {
+					delivery.Spec.Resources[i].Name = "source-provider"
 				}
 			})
 
-			It("does not return an error", func() {
-				err := delivery.ValidateCreate()
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring(`spec.resources[1].name "source-provider" cannot appear twice`)))
+			It("returns an error", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(`spec.resources[1].name "source-provider" cannot appear twice`))
+			})
+		})
+
+		Context("Delivery with malformed params", func() {
+			Context("Top level params are malformed", func() {
+				Context("param does not specify a value or default", func() {
+					BeforeEach(func() {
+						delivery.Spec.Params = []v1alpha1.DelegatableParam{
+							{
+								Name: "some-param",
+							},
+						}
+					})
+					It("returns an error", func() {
+						Expect(delivery.ValidateCreate()).To(MatchError(
+							"invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+				})
+
+				Context("param specifies both a value and a default", func() {
+					BeforeEach(func() {
+						delivery.Spec.Params = []v1alpha1.DelegatableParam{
+							{
+								Name:         "some-param",
+								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+								DefaultValue: &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+							},
+						}
+					})
+
+					It("returns an error", func() {
+						Expect(delivery.ValidateCreate()).To(MatchError(
+							"invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+				})
 			})
 
+			Context("Params of an individual resource are malformed", func() {
+				Context("param does not specify a value or default", func() {
+					BeforeEach(func() {
+						delivery.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+							{
+								Name: "some-param",
+							},
+						}
+					})
+					It("returns an error", func() {
+						Expect(delivery.ValidateCreate()).To(MatchError(
+							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+				})
+
+				Context("param specifies both a value and a default", func() {
+					BeforeEach(func() {
+						delivery.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+							{
+								Name:         "some-param",
+								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+								DefaultValue: &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
+							},
+						}
+					})
+					It("returns an error", func() {
+						Expect(delivery.ValidateCreate()).To(MatchError(
+							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+						))
+					})
+				})
+			})
 		})
 	})
 
@@ -158,7 +203,7 @@ var _ = Describe("Delivery Validation", func() {
 				})
 			})
 
-			It("does not return an error", func() {
+			It("returns an error", func() {
 				err := newDelivery.ValidateUpdate(previousDelivery)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring(`spec.resources[2].name "other-source-provider" cannot appear twice`)))

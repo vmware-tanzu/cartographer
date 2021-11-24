@@ -35,16 +35,17 @@ type ResourceRealizer interface {
 }
 
 type resourceRealizer struct {
-	workload     *v1alpha1.Workload
-	systemRepo   repository.Repository
-	workloadRepo repository.Repository
+	workload          *v1alpha1.Workload
+	systemRepo        repository.Repository
+	workloadRepo      repository.Repository
+	supplyChainParams []v1alpha1.DelegatableParam
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (ResourceRealizer, error) {
+	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (ResourceRealizer, error) {
 		workloadClient, err := clientBuilder(secret)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -53,9 +54,10 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 		workloadRepo := repositoryBuilder(workloadClient, cache)
 
 		return &resourceRealizer{
-			workload:     workload,
-			systemRepo:   systemRepo,
-			workloadRepo: workloadRepo,
+			workload:          workload,
+			systemRepo:        systemRepo,
+			workloadRepo:      workloadRepo,
+			supplyChainParams: supplyChainParams,
 		}, nil
 	}
 }
@@ -86,7 +88,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	inputs := outputs.GenerateInputs(resource)
 	workloadTemplatingContext := map[string]interface{}{
 		"workload": r.workload,
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), resource.Params),
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
 		"sources":  inputs.Sources,
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,

@@ -54,6 +54,7 @@ var _ = Describe("Resource", func() {
 		r                               realizer.ResourceRealizer
 		out                             *Buffer
 		repoCache                       repository.RepoCache
+		supplyChainParams               []v1alpha1.DelegatableParam
 	)
 
 	BeforeEach(func() {
@@ -69,6 +70,7 @@ var _ = Describe("Resource", func() {
 		}
 
 		supplyChainName = "supply-chain-name"
+		supplyChainParams = []v1alpha1.DelegatableParam{}
 
 		outputs = realizer.NewOutputs()
 
@@ -95,7 +97,7 @@ var _ = Describe("Resource", func() {
 
 		theSecret = &corev1.Secret{StringData: map[string]string{"blah": "blah"}}
 
-		r, err = resourceRealizerBuilder(theSecret, &workload, &fakeSystemRepo)
+		r, err = resourceRealizerBuilder(theSecret, &workload, &fakeSystemRepo, supplyChainParams)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -377,5 +379,4 @@ var _ = Describe("Resource", func() {
 			})
 		})
 	})
-
 })

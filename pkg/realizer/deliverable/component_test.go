@@ -52,6 +52,7 @@ var _ = Describe("Resource", func() {
 		theSecret                *corev1.Secret
 		secretForBuiltClient     *corev1.Secret
 		r                        realizer.ResourceRealizer
+		deliveryParams           []v1alpha1.DelegatableParam
 	)
 
 	BeforeEach(func() {
@@ -65,6 +66,8 @@ var _ = Describe("Resource", func() {
 		}
 
 		deliveryName = "delivery-name"
+
+		deliveryParams = []v1alpha1.DelegatableParam{}
 
 		outputs = realizer.NewOutputs()
 
@@ -91,7 +94,7 @@ var _ = Describe("Resource", func() {
 		theSecret = &corev1.Secret{StringData: map[string]string{"blah": "blah"}}
 
 		var err error
-		r, err = resourceRealizerBuilder(theSecret, &deliverable, &fakeSystemRepo)
+		r, err = resourceRealizerBuilder(theSecret, &deliverable, &fakeSystemRepo, deliveryParams)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

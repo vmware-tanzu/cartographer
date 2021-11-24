@@ -40,8 +40,8 @@ type Repository interface {
 	GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error)
 	GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
-	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error)
-	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error)
+	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
+	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
 	GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error)
 	GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error)
 	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
@@ -107,6 +107,9 @@ func (r *repository) GetServiceAccountSecret(ctx context.Context, serviceAccount
 }
 
 func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetDelivery")
+
 	delivery := &v1alpha1.ClusterDelivery{}
 
 	key := client.ObjectKey{
@@ -115,10 +118,12 @@ func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.Cl
 
 	err := r.cl.Get(ctx, key, delivery)
 	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("delivery is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get delivery object from api server")
+		return nil, fmt.Errorf("failed to get delivery object from api server [%s]: %w", name, err)
 	}
 
 	return delivery, nil
@@ -258,23 +263,27 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 	return nil
 }
 
-func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]v1alpha1.ClusterSupplyChain, error) {
+func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error) {
 	list := &v1alpha1.ClusterSupplyChainList{}
 	if err := r.cl.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list supply chains: %w", err)
 	}
 
-	var clusterSupplyChains []v1alpha1.ClusterSupplyChain
-	for _, supplyChain := range list.Items {
-		if selectorMatchesLabels(supplyChain.Spec.Selector, workload.Labels) {
-			clusterSupplyChains = append(clusterSupplyChains, supplyChain)
-		}
+	selectorGetters := []SelectorGetter{}
+	for _, item := range list.Items {
+		item := item
+		selectorGetters = append(selectorGetters, &item)
 	}
 
-	return clusterSupplyChains, nil
+	supplyChains := []*v1alpha1.ClusterSupplyChain{}
+	for _, matchingObject := range BestLabelMatches(workload, selectorGetters) {
+		supplyChains = append(supplyChains, matchingObject.(*v1alpha1.ClusterSupplyChain))
+	}
+
+	return supplyChains, nil
 }
 
-func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]v1alpha1.ClusterDelivery, error) {
+func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetDeliveriesForDeliverable")
 
@@ -284,16 +293,20 @@ func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverabl
 		return nil, fmt.Errorf("unable to list deliveries from api server: %w", err)
 	}
 
-	var clusterDeliveries []v1alpha1.ClusterDelivery
-	for _, delivery := range list.Items {
-		if selectorMatchesLabels(delivery.Spec.Selector, deliverable.Labels) {
-			clusterDeliveries = append(clusterDeliveries, delivery)
-		}
+	selectorGetters := []SelectorGetter{}
+	for _, item := range list.Items {
+		item := item
+		selectorGetters = append(selectorGetters, &item)
+	}
+
+	deliveries := []*v1alpha1.ClusterDelivery{}
+	for _, matchingObject := range BestLabelMatches(deliverable, selectorGetters) {
+		deliveries = append(deliveries, matchingObject.(*v1alpha1.ClusterDelivery))
 	}
 
 	log.V(logger.DEBUG).Info("deliveries matched deliverable",
-		"deliveries", clusterDeliveries)
-	return clusterDeliveries, nil
+		"deliveries", deliveries)
+	return deliveries, nil
 }
 
 func (r *repository) getObject(ctx context.Context, name string, namespace string, obj client.Object) error {
@@ -305,7 +318,7 @@ func (r *repository) getObject(ctx context.Context, name string, namespace strin
 		obj,
 	)
 	if err != nil {
-		return fmt.Errorf("get: %w", err)
+		return fmt.Errorf("failed to get object [%s/%s]: %w", namespace, name, err)
 	}
 
 	return nil
@@ -356,25 +369,20 @@ func (r *repository) GetRunnable(ctx context.Context, name string, namespace str
 	return runnable, nil
 }
 
-func selectorMatchesLabels(selector map[string]string, labels map[string]string) bool {
-	for key, value := range selector {
-		if labels[key] != value {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (r *repository) GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetSupplyChain")
+
 	supplyChain := v1alpha1.ClusterSupplyChain{}
 
 	err := r.getObject(ctx, name, "", &supplyChain)
 	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("supply chain is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get supply chain object from api server")
+		return nil, fmt.Errorf("failed to get supply chain object from api server [%s]: %w", name, err)
 	}
 
 	return &supplyChain, nil

@@ -94,7 +94,7 @@ var _ = Describe("Reconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -229,7 +229,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 			}
-			repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain}, nil)
+			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 			stampedObject1 = &unstructured.Unstructured{}
 			stampedObject1.SetGroupVersionKind(schema.GroupVersionKind{
 				Group:   "thing.io",
@@ -326,7 +326,7 @@ var _ = Describe("Reconciler", func() {
 						Message: "some informative message",
 					},
 				}
-				repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain}, nil)
+				repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 			})
 
 			It("does not return an error", func() {
@@ -636,7 +636,7 @@ var _ = Describe("Reconciler", func() {
 	Context("and the repo returns multiple supply chains", func() {
 		BeforeEach(func() {
 			supplyChain := v1alpha1.ClusterSupplyChain{}
-			repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain, supplyChain}, nil)
+			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain, &supplyChain}, nil)
 		})
 
 		It("calls the condition manager to report too mane supply chains matched", func() {

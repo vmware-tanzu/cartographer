@@ -96,7 +96,7 @@ var _ = Describe("Reconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -228,7 +228,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 			}
-			repo.GetDeliveriesForDeliverableReturns([]v1alpha1.ClusterDelivery{delivery}, nil)
+			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 			stampedObject1 = &unstructured.Unstructured{}
 			stampedObject1.SetGroupVersionKind(schema.GroupVersionKind{
 				Group:   "thing.io",
@@ -330,7 +330,7 @@ var _ = Describe("Reconciler", func() {
 						Message: "some informative message",
 					},
 				}
-				repo.GetDeliveriesForDeliverableReturns([]v1alpha1.ClusterDelivery{delivery}, nil)
+				repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 			})
 
 			It("does not return an error", func() {
@@ -773,7 +773,7 @@ var _ = Describe("Reconciler", func() {
 				Version: "alphabeta1",
 				Kind:    "MyThing",
 			})
-			repo.GetDeliveriesForDeliverableReturns([]v1alpha1.ClusterDelivery{delivery, delivery}, nil)
+			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery, &delivery}, nil)
 		})
 
 		It("does not return an error", func() {

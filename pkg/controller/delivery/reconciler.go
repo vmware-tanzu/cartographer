@@ -31,21 +31,24 @@ import (
 type Reconciler struct {
 	Repo             repository.Repository
 	conditionManager conditions.ConditionManager
-	logger           logr.Logger
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
-	r.logger = logr.FromContext(ctx)
-	r.logger.Info("started")
-	defer r.logger.Info("finished")
+	log := logr.FromContextOrDiscard(ctx)
+	log.Info("started")
+	defer log.Info("finished")
+
+	log = log.WithValues("delivery", req.NamespacedName)
+	ctx = logr.NewContext(ctx, log)
 
 	delivery, err := r.Repo.GetDelivery(ctx, req.Name)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get delivery: %w", err)
+		log.Error(err, "failed to get delivery")
+		return ctrl.Result{}, fmt.Errorf("failed to get delivery [%s]: %w", req.NamespacedName, err)
 	}
 
 	if delivery == nil {
-		r.logger.Info("delivery no longer exists")
+		log.Info("delivery no longer exists")
 		return ctrl.Result{}, nil
 	}
 
@@ -57,14 +60,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 }
 
 func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.ClusterDelivery) error {
+	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
 	for _, resource := range delivery.Spec.Resources {
 		template, err := r.Repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 		if err != nil {
-			return controller.NewUnhandledError(fmt.Errorf("get delivery cluster template: %w", err))
+			log.Error(err, "failed to get delivery cluster template", "template", resource.TemplateRef)
+			return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
 		}
 		if template == nil {
+			log.Info("delivery cluster template does not exist", "template", resource.TemplateRef)
 			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
 	}
@@ -79,6 +85,8 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 }
 
 func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
+	log := logr.FromContextOrDiscard(ctx)
+
 	var changed bool
 	delivery.Status.Conditions, changed = r.conditionManager.Finalize()
 
@@ -87,15 +95,17 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alp
 		delivery.Status.ObservedGeneration = delivery.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, delivery)
 		if updateErr != nil {
-			return ctrl.Result{}, fmt.Errorf("status update: %w", updateErr)
+			log.Error(err, "failed to update status for delivery")
+			return ctrl.Result{}, fmt.Errorf("failed to update status for delivery: %w", updateErr)
 		}
 	}
 
 	if err != nil {
 		if controller.IsUnhandledError(err) {
+			log.Error(err, "unhandled error reconciling delivery")
 			return ctrl.Result{}, err
 		}
-		r.logger.Info("handled error", "error", err)
+		log.Info("handled error reconciling delivery", "handled error", err)
 	}
 
 	return ctrl.Result{}, nil
