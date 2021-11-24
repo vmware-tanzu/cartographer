@@ -123,6 +123,8 @@ var _ = Describe("Reconciler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 1,
 				Labels:     workloadLabels,
+				Name: "my-workload-name",
+				Namespace: "my-namespace",
 			},
 			Spec: v1alpha1.WorkloadSpec{
 				ServiceAccountName: serviceAccountName,
@@ -249,6 +251,21 @@ var _ = Describe("Reconciler", func() {
 			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
 			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
+			Expect(serviceAccountNS).To(Equal("my-namespace"))
+			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+		})
+
+		It("uses the default service account in the workloads namespace if there is no service account specified", func() {
+			wl.Spec.ServiceAccountName = ""
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal("default"))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
 

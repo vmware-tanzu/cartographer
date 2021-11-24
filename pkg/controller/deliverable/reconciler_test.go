@@ -262,6 +262,21 @@ var _ = Describe("Reconciler", func() {
 			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
+		It("uses the default service account in the deliverables namespace if there is no service account specified", func() {
+			dl.Spec.ServiceAccountName = ""
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal("default"))
+			Expect(serviceAccountNS).To(Equal("my-ns"))
+			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+		})
+
 		It("sets the DeliveryRef", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 

@@ -81,7 +81,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, workload.Spec.ServiceAccountName, req.Namespace)
+	serviceAccountName := "default"
+	if len(workload.Spec.ServiceAccountName) > 0 {
+		serviceAccountName = workload.Spec.ServiceAccountName
+	}
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, workload.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, workload, fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err))

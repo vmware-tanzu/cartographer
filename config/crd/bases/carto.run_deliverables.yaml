@@ -85,8 +85,6 @@ spec:
                   subPath:
                     type: string
                 type: object
-            required:
-            - serviceAccountName
             type: object
           status:
             properties:
