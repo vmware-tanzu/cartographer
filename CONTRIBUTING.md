@@ -40,7 +40,7 @@ See [Logging Kubernetes Objects](https://github.com/kubernetes-sigs/controller-r
 - Do not blindly add logs at every call site.
 - With values that will provide context in higher abstractions, add them as soon as you can, for example "supplychain",
 supplychain in the workload reconciler. Do not add them if they're only going to be useful locally (eg stampedObject in
-- our reconcilers will mean nothing to callee's).
+our reconcilers will mean nothing to callee's).
 - Place context on errors and describe the error in 'local' terms. Eg: for a get to the api server: "failed to get
 supply-chain from api server" but for the same error in the reconciler "failed to get supply-chain". There will still 
 be a lot of repetition, but the changing context gives the duplicate messages a reason to exist.

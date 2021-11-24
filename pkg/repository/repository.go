@@ -63,6 +63,9 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 }
 
 func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetDelivery")
+
 	delivery := &v1alpha1.ClusterDelivery{}
 
 	key := client.ObjectKey{
@@ -71,10 +74,12 @@ func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.Cl
 
 	err := r.cl.Get(ctx, key, delivery)
 	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("delivery is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get delivery object from api server")
+		return nil, fmt.Errorf("failed to get delivery object from api server [%s]: %w", name, err)
 	}
 
 	return delivery, nil
@@ -269,7 +274,7 @@ func (r *repository) getObject(ctx context.Context, name string, namespace strin
 		obj,
 	)
 	if err != nil {
-		return fmt.Errorf("get: %w", err)
+		return fmt.Errorf("failed to get object [%s/%s]: %w", namespace, name, err)
 	}
 
 	return nil
@@ -321,14 +326,19 @@ func (r *repository) GetRunnable(ctx context.Context, name string, namespace str
 }
 
 func (r *repository) GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetSupplyChain")
+
 	supplyChain := v1alpha1.ClusterSupplyChain{}
 
 	err := r.getObject(ctx, name, "", &supplyChain)
 	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("supply chain is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		log.Error(err, "failed to get supply chain object from api server")
+		return nil, fmt.Errorf("failed to get supply chain object from api server [%s]: %w", name, err)
 	}
 
 	return &supplyChain, nil

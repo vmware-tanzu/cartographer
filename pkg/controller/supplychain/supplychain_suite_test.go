@@ -23,5 +23,5 @@ import (
 
 func TestSupplychain(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Supplychain Suite")
+	RunSpecs(t, "Supply Chain Suite")
 }

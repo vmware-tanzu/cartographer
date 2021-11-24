@@ -139,8 +139,7 @@ var _ = Describe("Reconciler", func() {
 	It("updates the status.observedGeneration to equal metadata.generation", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		actualCtx, updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
-		Expect(actualCtx).To(Equal(ctx))
+		_, updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
 
 		Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -152,8 +151,7 @@ var _ = Describe("Reconciler", func() {
 	It("updates the conditions based on the output of the conditionManager", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		actualCtx, updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
-		Expect(actualCtx).To(Equal(ctx))
+		_, updatedSupplyChain := repo.StatusUpdateArgsForCall(0)
 
 		Expect(*updatedSupplyChain.(*v1alpha1.ClusterSupplyChain)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
@@ -210,7 +208,7 @@ var _ = Describe("Reconciler", func() {
 		It("returns an error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
-			Expect(err).To(MatchError(ContainSubstring("update supply chain status")))
+			Expect(err).To(MatchError(ContainSubstring("failed to update status for supply chain")))
 			Expect(err).To(MatchError(ContainSubstring("updating is hard")))
 		})
 	})
@@ -236,7 +234,7 @@ var _ = Describe("Reconciler", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("get supply chain: "))
+			Expect(err.Error()).To(ContainSubstring("failed to get supply chain [my-namespace/my-supply-chain]: some error"))
 			Expect(err.Error()).To(ContainSubstring("some error"))
 		})
 	})
