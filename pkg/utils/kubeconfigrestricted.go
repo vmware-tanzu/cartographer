@@ -6,7 +6,7 @@ package utils
 import (
 	"fmt"
 
-	"github.com/ghodss/yaml"
+	"github.com/go-yaml/yaml"
 	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 

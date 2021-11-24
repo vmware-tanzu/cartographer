@@ -265,7 +265,7 @@ teardown_example() {
 test_example() {
         log "testing"
 
-        for i in {1..5}; do
+        for _ in {1..5}; do
                 for sleep_duration in {15..1}; do
                         local deployed_pods
                         deployed_pods=$(kubectl get pods \
