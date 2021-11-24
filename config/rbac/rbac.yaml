@@ -44,8 +44,8 @@ rules:
       - workloads/status
       - clustersupplychains/status
       - runnables/status
-      - delivery/status
-      - deliverable/status
+      - deliveries/status
+      - deliverables/status
     verbs:
       - create
       - update
