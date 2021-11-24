@@ -97,12 +97,17 @@ func MissingValueAtPathCondition(obj *unstructured.Unstructured, expression stri
 		fullyQualifiedType = fmt.Sprintf("%s.%s", strings.ToLower(obj.GetKind()),
 			obj.GetObjectKind().GroupVersionKind().Group)
 	}
+
+	var namespaceMsg string
+	if obj.GetNamespace() != "" {
+		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
+	}
 	return metav1.Condition{
 		Type:   v1alpha1.WorkloadResourceSubmitted,
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s] of type [%s]",
-			expression, obj.GetNamespace(), obj.GetName(), fullyQualifiedType),
+		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s]%s",
+			expression, fullyQualifiedType, obj.GetName(), namespaceMsg),
 	}
 }
 
