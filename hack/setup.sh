@@ -265,20 +265,25 @@ teardown_example() {
 test_example() {
         log "testing"
 
-        for i in {15..1}; do
-                echo "- attempt $i"
+        for i in {1..5}; do
+                for sleep_duration in {15..1}; do
+                        echo "- attempt $i"
 
-                local deployed_pods
-                deployed_pods=$(kubectl get pods \
-                        -l 'serving.knative.dev/configuration=dev' \
-                        -o name)
+                        local deployed_pods
+                        deployed_pods=$(kubectl get pods \
+                                -l 'serving.knative.dev/configuration=dev' \
+                                -o name)
 
-                if [[ -n "$deployed_pods" ]]; then
-                        log 'SUCCEEDED! sweet'
-                        exit 0
-                fi
+                        if [[ -n "$deployed_pods" ]]; then
+                                log 'SUCCEEDED! sweet'
+                                exit 0
+                        fi
 
-                sleep "$i"
+                        echo "- waiting $sleep_duration seconds"
+                        sleep "$sleep_duration"
+                done
+
+                kubectl tree workload dev
         done
 
         log 'FAILED :('
