@@ -48,6 +48,19 @@ spec:
             type: object
           spec:
             properties:
+              params:
+                items:
+                  properties:
+                    default:
+                      x-kubernetes-preserve-unknown-fields: true
+                    name:
+                      type: string
+                    value:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - name
+                  type: object
+                type: array
               resources:
                 items:
                   properties:
@@ -80,13 +93,14 @@ spec:
                     params:
                       items:
                         properties:
+                          default:
+                            x-kubernetes-preserve-unknown-fields: true
                           name:
                             type: string
                           value:
                             x-kubernetes-preserve-unknown-fields: true
                         required:
                         - name
-                        - value
                         type: object
                       type: array
                     sources:

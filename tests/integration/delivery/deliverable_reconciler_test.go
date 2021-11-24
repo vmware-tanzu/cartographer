@@ -162,35 +162,48 @@ var _ = Describe("DeliverableReconciler", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+
+		myServiceAccountSecret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-service-account-secret",
+				Namespace: testNS,
+				Annotations: map[string]string{
+					"kubernetes.io/service-account.name": "my-service-account",
+				},
+			},
+			Data: map[string][]byte{
+				"token": []byte("ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU="),
+			},
+			Type: corev1.SecretTypeServiceAccountToken,
+		}
+
+		myServiceAccount := &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-service-account",
+				Namespace: testNS,
+			},
+			Secrets: []corev1.ObjectReference{
+				{
+					Name: "my-service-account-secret",
+				},
+			},
+		}
+
+		cleanups = append(cleanups, myServiceAccountSecret)
+		err := c.Create(ctx, myServiceAccountSecret, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		cleanups = append(cleanups, myServiceAccount)
+		err = c.Create(ctx, myServiceAccount, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		for _, obj := range cleanups {
 			_ = c.Delete(ctx, obj, &client.DeleteOptions{})
 		}
-	})
-
-	Context("when deliverable enters exponential backoff from lack of matching delivery", func() {
-		BeforeEach(func() {
-			deliverableYaml := utils.HereYaml(`
-				---
-				apiVersion: carto.run/v1alpha1
-				kind: Deliverable
-				metadata:
-				  name: deliverable-bob
-				  labels:
-					name: webapp
-				spec:
-				  source:
-					git:
-					  url: https://github.com/ekcasey/hello-world-ops
-					  ref:
-						branch: prod
-			`)
-
-			deliverable := createObject(ctx, deliverableYaml, testNS)
-			cleanups = append(cleanups, deliverable)
-		})
 	})
 
 	Context("when the deliverable is installed", func() {
@@ -204,6 +217,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				  labels:
 					name: webapp
 				spec:
+				  serviceAccountName: my-service-account
 				  source:
 					git:
 					  url: https://github.com/ekcasey/hello-world-ops

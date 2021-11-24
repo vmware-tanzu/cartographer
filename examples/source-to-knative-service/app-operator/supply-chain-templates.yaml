@@ -61,8 +61,8 @@ kind: ClusterSourceTemplate
 metadata:
   name: test
 spec:
-  urlPath: .spec.inputs.source.url
-  revisionPath: .spec.inputs.source.revision
+  urlPath: .status.outputs.url
+  revisionPath: .status.outputs.revision
 
   template:
     apiVersion: carto.run/v1alpha1
@@ -70,6 +70,8 @@ spec:
     metadata:
       name: $(workload.metadata.name)$
     spec:
+      serviceAccountName: $(workload.spec.serviceAccountName)$
+
       runTemplateRef:
         name: tekton-pipelinerun
 
@@ -85,6 +87,8 @@ spec:
         params:
           - name: blob-url
             value: $(source.url)$
+          - name: blob-revision
+            value: $(source.revision)$
 
 
 ---

@@ -83,3 +83,21 @@ func UnknownErrorCondition(err error) metav1.Condition {
 		Message: err.Error(),
 	}
 }
+
+func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.RunTemplateReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}
+
+func ClientBuilderErrorCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.RunTemplateReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ClientBuilderErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}

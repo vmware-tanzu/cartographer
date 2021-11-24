@@ -1,0 +1,45 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: my-app
+  labels:
+    app.tanzu.vmware.com/deliverable-type: web---params-delivery
+spec:
+  serviceAccountName: my-service-account
+  source:
+    git:
+      url: https://github.com/ekcasey/hello-world-ops
+      ref:
+        branch: prod
+  params:
+    - name: template-and-deliverable-but-not-delivery-nor-resource
+      value: not-me-deliverable
+    - name: ovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: me
+    - name: ovrdbl-delivery-on-deliverable
+      value: me
+    - name: ovrdbl-resource-on-deliverable
+      value: me
+    - name: ovrdbl-delivery-notovrdbl-resource-on-deliverable
+      value: not-me-deliverable
+    - name: notovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: me
+    - name: notovrdbl-delivery-notovrdbl-resource-on-deliverable
+      value: not-me-deliverable
+    - name: not-on-template
+      value: never-present

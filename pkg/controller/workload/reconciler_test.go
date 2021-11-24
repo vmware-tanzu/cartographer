@@ -18,14 +18,13 @@ import (
 	"context"
 	"errors"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,8 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/vmware-tanzu/cartographer/pkg/repository"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
@@ -44,6 +41,7 @@ import (
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
@@ -90,10 +88,11 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
+		serviceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`blahblah`)}}
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(ctx context.Context, secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -116,14 +115,14 @@ var _ = Describe("Reconciler", func() {
 
 		workloadLabels = map[string]string{"some-key": "some-val"}
 
-		serviceAccountName = "alternate-service-account-name"
+		serviceAccountName = "workload-service-account-name"
 
 		wl = &v1alpha1.Workload{
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 1,
 				Labels:     workloadLabels,
-				Name:       "my-workload",
-				Namespace:  "my-ns",
+				Name:       "my-workload-name",
+				Namespace:  "my-namespace",
 			},
 			Spec: v1alpha1.WorkloadSpec{
 				ServiceAccountName: serviceAccountName,
@@ -223,7 +222,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 			}
-			repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain}, nil)
+			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 			stampedObject1 = &unstructured.Unstructured{}
 			stampedObject1.SetGroupVersionKind(schema.GroupVersionKind{
 				Group:   "thing.io",
@@ -243,8 +242,23 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(serviceAccountName).To(Equal(serviceAccountName))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
+			Expect(serviceAccountNS).To(Equal("my-namespace"))
+			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+		})
+
+		It("uses the default service account in the workloads namespace if there is no service account specified", func() {
+			wl.Spec.ServiceAccountName = ""
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal("default"))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
 
@@ -305,7 +319,7 @@ var _ = Describe("Reconciler", func() {
 						Message: "some informative message",
 					},
 				}
-				repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain}, nil)
+				repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 			})
 
 			It("does not return an error", func() {
@@ -617,7 +631,7 @@ var _ = Describe("Reconciler", func() {
 			supplyChain := v1alpha1.ClusterSupplyChain{
 				ObjectMeta: metav1.ObjectMeta{Name: "my-supply-chain"},
 			}
-			repo.GetSupplyChainsForWorkloadReturns([]v1alpha1.ClusterSupplyChain{supplyChain, supplyChain}, nil)
+			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain, &supplyChain}, nil)
 		})
 
 		It("calls the condition manager to report too mane supply chains matched", func() {

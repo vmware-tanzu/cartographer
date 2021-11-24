@@ -410,7 +410,7 @@ spec:
 			It("attempts to get the object from the apiServer", func() {
 				_, err := repo.GetSupplyChain(ctx, "sc-name")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("get:"))
+				Expect(err.Error()).To(ContainSubstring("failed to get supply chain object from api server [sc-name]: failed to get object [/sc-name]: some get error"))
 			})
 		})
 

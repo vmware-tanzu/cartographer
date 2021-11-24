@@ -20,6 +20,8 @@ metadata:
   labels:
     my-label: this-is-it
 spec:
+  serviceAccountName: my-service-account
+
   runTemplateRef:
     name: run-template---runnables-by-label-selector
 

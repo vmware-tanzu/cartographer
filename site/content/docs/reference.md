@@ -104,12 +104,10 @@ spec:
       cpu: 4000m
 
   # any other parameters that don't fit the ones already typed.
-  #
   params:
-    - name: my-company.com/defaults/java-version
+    - name: java-version
+      # name of the parameter. should match a supply chain parameter name
       value: 11
-    - name: debug
-      value: true
 ```
 
 notes:
@@ -141,6 +139,34 @@ spec:
   selector:
     app.tanzu.vmware.com/workload-type: web
 
+  # parameters to override the defaults from the templates.
+  # if a resource in the supply-chain specifies a parameter
+  # of the same name that resource parameter clobber what is
+  # specified here at the top level (this includes specification
+  # as `value` vs `default`)
+  #
+  # in a template, these can be consumed as:
+  #
+  #   $(params.<name>)
+  #
+  # (optional)
+  params:
+    # name of the parameter. (required, unique in this list, and should match
+    # a pre-defined parameter name in a template)
+    #
+    - name: java-version
+      # value to be passed down to the template's parameters,  supporting
+      # interpolation.
+      #
+      value: 6
+      # when specified as `value`, a parameter of the same name on the workload will
+      # be disregarded.
+      #
+    - name: jvm
+      value: openjdk
+      # when specified as `default`, a parameter of the same name on the workload will
+      # overwrite this default value.
+      #
 
   # set of resources that will take care of bringing the application to a
   # deliverable state. (required, at least 1)
@@ -212,22 +238,30 @@ spec:
       configs: []
 
       # parameters to override the defaults from the templates.
-      # (optional)
+      # resource parameters override any parameter of the same name set
+      # for the overall supply-chain in spec.params
       # in a template, these can be consumed as:
       #
       #   $(params.<name>)
       #
+      # (optional)
       params:
-        # name of the parameter. (required, unique in this list, and must match
+        # name of the parameter. (required, unique in this list, and should match
         # template's pre-defined set of parameters)
         #
         - name: java-version
-          # value to be passed down to the template's parameters, supporting
+          # value to be passed down to the template's parameters,  supporting
           # interpolation.
           #
-          value: $(workload.spec.params[?(@.name=="nebhale-io/java-version")].value)$
+          default: 9
+          # when specified as `default`, a parameter of the same name on the workload will
+          # overwrite this default value.
+          #
         - name: jvm
           value: openjdk
+          # when specified as `value`, a parameter of the same name on the workload will
+          # be disregarded
+          #
 ```
 
 

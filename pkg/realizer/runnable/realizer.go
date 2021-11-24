@@ -32,7 +32,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, runnable *v1alpha1.Runnable, repository repository.Repository) (*unstructured.Unstructured, templates.Outputs, error)
+	Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository) (*unstructured.Unstructured, templates.Outputs, error)
 }
 
 func NewRealizer() Realizer {
@@ -46,12 +46,12 @@ type TemplatingContext struct {
 	Selected map[string]interface{} `json:"selected"`
 }
 
-func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, repository repository.Repository) (*unstructured.Unstructured, templates.Outputs, error) {
+func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository) (*unstructured.Unstructured, templates.Outputs, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", runnable.Spec.RunTemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
 	runnable.Spec.RunTemplateRef.Kind = "ClusterRunTemplate"
-	apiRunTemplate, err := repository.GetRunTemplate(ctx, runnable.Spec.RunTemplateRef)
+	apiRunTemplate, err := systemRepo.GetRunTemplate(ctx, runnable.Spec.RunTemplateRef)
 
 	if err != nil {
 		log.Error(err, "failed to get runnable cluster template")
@@ -68,7 +68,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		"carto.run/run-template-name": template.GetName(),
 	}
 
-	selected, err := resolveSelector(ctx, runnable.Spec.Selector, repository, runnable.GetNamespace())
+	selected, err := resolveSelector(ctx, runnable.Spec.Selector, runnableRepo, runnable.GetNamespace())
 	if err != nil {
 		log.Error(err, "failed to resolve selector", "selector", runnable.Spec.Selector)
 		return nil, nil, ResolveSelectorError{
@@ -96,7 +96,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	}
 
 	// FIXME: why are we taking a DeepCopy?
-	err = repository.EnsureObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), false)
+	err = runnableRepo.EnsureObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), false)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{
@@ -108,7 +108,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	objectForListCall := stampedObject.DeepCopy()
 	objectForListCall.SetLabels(labels)
 
-	allRunnableStampedObjects, err := repository.ListUnstructured(ctx, objectForListCall)
+	allRunnableStampedObjects, err := runnableRepo.ListUnstructured(ctx, objectForListCall)
 	if err != nil {
 		log.Error(err, "failed to list objects")
 		return stampedObject, nil, ListCreatedObjectsError{

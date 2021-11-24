@@ -60,6 +60,8 @@ spec:
                   - value
                   type: object
                 type: array
+              serviceAccountName:
+                type: string
               source:
                 properties:
                   git:

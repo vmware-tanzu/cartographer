@@ -22,18 +22,55 @@ import (
 
 type Params map[string]apiextensionsv1.JSON
 
-func ParamsBuilder(defaultParams v1alpha1.DefaultParams, resourceParams []v1alpha1.Param) Params {
+func ParamsBuilder(
+	templateParams []v1alpha1.TemplateParam,
+	blueprintParams []v1alpha1.DelegatableParam,
+	resourceParams []v1alpha1.DelegatableParam,
+	ownerParams []v1alpha1.Param,
+) Params {
 	newParams := Params{}
-	for _, param := range defaultParams {
+	for _, param := range templateParams {
 		newParams[param.Name] = param.DefaultValue
 	}
 
+	overridableByOwner := make(map[string]bool)
+
 	for key := range newParams {
-		for _, override := range resourceParams {
-			if key == override.Name {
-				newParams[key] = override.Value
+		for _, blueprintOverride := range blueprintParams {
+			if key == blueprintOverride.Name {
+				if blueprintOverride.Value != nil {
+					newParams[key] = *blueprintOverride.Value
+					overridableByOwner[key] = false
+				} else {
+					newParams[key] = *blueprintOverride.DefaultValue
+					overridableByOwner[key] = true
+				}
+			}
+		}
+
+		for _, resourceOverride := range resourceParams {
+			if key == resourceOverride.Name {
+				if resourceOverride.Value != nil {
+					newParams[key] = *resourceOverride.Value
+					overridableByOwner[key] = false
+				} else {
+					newParams[key] = *resourceOverride.DefaultValue
+					overridableByOwner[key] = true
+				}
+			}
+		}
+
+		for _, ownerOverride := range ownerParams {
+			if key == ownerOverride.Name && ownerCanOverride(overridableByOwner, key) {
+				newParams[key] = ownerOverride.Value
 			}
 		}
 	}
+
 	return newParams
+}
+
+func ownerCanOverride(isOverridable map[string]bool, key string) bool {
+	overridable, written := isOverridable[key]
+	return written && overridable
 }

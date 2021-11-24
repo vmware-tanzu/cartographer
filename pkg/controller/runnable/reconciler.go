@@ -21,12 +21,15 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -39,6 +42,9 @@ type Reconciler struct {
 	DynamicTracker          tracker.DynamicTracker
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
+	RepositoryBuilder       repository.RepositoryBuilder
+	ClientBuilder           realizerclient.ClientBuilder
+	RunnableCache           repository.RepoCache
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -62,7 +68,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo)
+	serviceAccountName := "default"
+	if runnable.Spec.ServiceAccountName != "" {
+		serviceAccountName = runnable.Spec.ServiceAccountName
+	}
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, request.Namespace)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("get secret for service account '%s': %w", serviceAccountName, err))
+	}
+
+	runnableClient, err := r.ClientBuilder(secret)
+	if err != nil {
+		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
+	}
+
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache))
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -75,7 +98,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			if !kerrors.IsForbidden(typedErr.Err) {
+				err = controller.NewUnhandledError(err)
+			}
 		case realizer.ListCreatedObjectsError:
 			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -101,6 +126,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
+	return r.completeReconciliation(ctx, runnable, outputs, err)
+}
+
+func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, err error) (ctrl.Result, error) {
 	var changed bool
 	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
 
