@@ -20,11 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-
-	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
-
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/external"
@@ -41,6 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	realizerrunnable "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
@@ -301,6 +299,9 @@ func registerRunnableController(mgr manager.Manager) error {
 	reconciler := &runnable.Reconciler{
 		Repo:                    repo,
 		Realizer:                realizerrunnable.NewRealizer(),
+		RunnableCache:           repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache")),
+		RepositoryBuilder:       repository.NewRepository,
+		ClientBuilder:           realizerclient.NewClientBuilder(mgr.GetConfig()),
 		ConditionManagerBuilder: conditions.NewConditionManager,
 	}
 	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{
@@ -324,11 +325,22 @@ func registerRunnableController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("runnable"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToRunnableRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterRunTemplate{}: mapper.RunTemplateToRunnableRequests,
+		&corev1.ServiceAccount{}:       mapper.ServiceAccountToRunnableRequests,
+		&rbacv1.Role{}:                 mapper.RoleToRunnableRequests,
+		&rbacv1.RoleBinding{}:          mapper.RoleBindingToRunnableRequests,
+		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToRunnableRequests,
+		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToRunnableRequests,
+	}
+
+	for kindType, mapFunc := range watches {
+		if err := ctrl.Watch(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		); err != nil {
+			return fmt.Errorf("watch %T: %w", kindType, err)
+		}
 	}
 
 	return nil

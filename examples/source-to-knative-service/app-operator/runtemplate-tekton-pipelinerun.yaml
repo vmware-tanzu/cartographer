@@ -17,6 +17,8 @@ kind: ClusterRunTemplate
 metadata:
   name: tekton-pipelinerun
 spec:
+  outputs:
+    url: spec.params[?(@.name=="blob-url")].value
   template:
     apiVersion: tekton.dev/v1beta1
     kind: TaskRun

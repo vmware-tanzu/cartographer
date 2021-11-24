@@ -36,3 +36,5 @@ spec:
       params:
         - name: expected-param
           value: $(workload.spec.params[0].value)$
+        - name: service-account-name
+          value: $(workload.spec.serviceAccountName)$
