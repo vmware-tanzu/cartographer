@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -116,8 +117,9 @@ var _ = Describe("Reconcile", func() {
 	})
 
 	Context("reconcile a new valid Runnable", func() {
+		var rb *v1alpha1.Runnable
 		BeforeEach(func() {
-			repo.GetRunnableReturns(&v1alpha1.Runnable{
+			rb = &v1alpha1.Runnable{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Runnable",
 					APIVersion: "carto.run/v1alpha1",
@@ -134,8 +136,8 @@ var _ = Describe("Reconcile", func() {
 					},
 					ServiceAccountName: serviceAccountName,
 				},
-			}, nil)
-
+			}
+			repo.GetRunnableReturns(rb, nil)
 		})
 
 		It("updates the conditions based on the condition manager", func() {
@@ -552,6 +554,21 @@ var _ = Describe("Reconcile", func() {
 
 					Expect(err.Error()).To(ContainSubstring("some error"))
 				})
+			})
+		})
+
+		Context("the runnable does not specify a service account", func() {
+			BeforeEach(func() {
+				rb.Spec.ServiceAccountName = ""
+				repo.GetRunnableReturns(rb, nil)
+			})
+			It("uses the default service account in the namespace", func() {
+				_, _ = reconciler.Reconcile(ctx, request)
+
+				Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+				Expect(serviceAccountName).To(Equal("default"))
+				Expect(serviceAccountNS).To(Equal("my-namespace"))
 			})
 		})
 	})

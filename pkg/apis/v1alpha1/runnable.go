@@ -60,7 +60,7 @@ type RunnableSpec struct {
 	RunTemplateRef     TemplateReference               `json:"runTemplateRef"`
 	Selector           *ResourceSelector               `json:"selector,omitempty"`
 	Inputs             map[string]apiextensionsv1.JSON `json:"inputs,omitempty"`
-	ServiceAccountName string                          `json:"serviceAccountName"`
+	ServiceAccountName string                          `json:"serviceAccountName,omitempty"`
 }
 
 type ResourceSelector struct {

@@ -83,7 +83,6 @@ spec:
                 type: string
             required:
             - runTemplateRef
-            - serviceAccountName
             type: object
           status:
             properties:

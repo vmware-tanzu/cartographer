@@ -2065,7 +2065,7 @@ var _ = Describe("MapFunctions", func() {
 
 					clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "some-role-binding",
+							Name: "some-role-binding",
 						},
 						Subjects: []rbacv1.Subject{
 							{
@@ -2140,7 +2140,7 @@ var _ = Describe("MapFunctions", func() {
 					It("returns requests for only the matching runnable", func() {
 						r := &rbacv1.ClusterRole{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "some-role",
+								Name: "some-role",
 							},
 						}
 						reqs := m.ClusterRoleToRunnableRequests(r)
@@ -2170,7 +2170,7 @@ var _ = Describe("MapFunctions", func() {
 					It("returns an empty request list", func() {
 						r := &rbacv1.ClusterRole{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "some-role",
+								Name: "some-role",
 							},
 						}
 						reqs := m.ClusterRoleToRunnableRequests(r)
@@ -2195,7 +2195,7 @@ var _ = Describe("MapFunctions", func() {
 			It("returns the error", func() {
 				r := &rbacv1.ClusterRole{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "some-role-binding",
+						Name: "some-role-binding",
 					},
 				}
 				reqs := m.ClusterRoleToRunnableRequests(r)

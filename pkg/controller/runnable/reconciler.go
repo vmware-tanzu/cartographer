@@ -64,10 +64,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, runnable.Spec.ServiceAccountName, request.Namespace)
+	serviceAccountName := runnable.Spec.ServiceAccountName
+	if serviceAccountName == "" {
+		serviceAccountName = "default"
+	}
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, request.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("get secret for service account '%s': %w", runnable.Spec.ServiceAccountName, err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("get secret for service account '%s': %w", serviceAccountName, err))
 	}
 
 	runnableClient, err := r.ClientBuilder(secret)

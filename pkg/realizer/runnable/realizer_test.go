@@ -38,10 +38,10 @@ import (
 
 var _ = Describe("Realizer", func() {
 	var (
-		ctx        context.Context
-		systemRepo *repositoryfakes.FakeRepository
-		runnableRepo *repositoryfakes.FakeRepository
-		rlzr       realizer.Realizer
+		ctx                 context.Context
+		systemRepo          *repositoryfakes.FakeRepository
+		runnableRepo        *repositoryfakes.FakeRepository
+		rlzr                realizer.Realizer
 		runnable            *v1alpha1.Runnable
 		createdUnstructured *unstructured.Unstructured
 	)
