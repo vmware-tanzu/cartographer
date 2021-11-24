@@ -70,6 +70,14 @@ spec:
     #
     image: harbor-repo.vmware.com/tanzu_desktop/golang-sample-source@sha256:e508a587
 
+  build:
+    # environment variables to propagate to a resource responsible
+    # for performing a build in the supplychain.
+    #
+    env:
+      - name: CGO_ENABLED
+        value: "0"
+
 
   # serviceClaims to be bound through service-bindings
   #
