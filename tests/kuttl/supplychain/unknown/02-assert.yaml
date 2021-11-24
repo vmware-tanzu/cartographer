@@ -26,11 +26,9 @@ status:
     - type: ResourcesSubmitted
       status: "Unknown"
       reason: MissingValueAtPath
-      message: "Resource 'image-provider' is waiting to read value '.data.best_school'"
     - type: Ready
       status: "Unknown"
       reason: MissingValueAtPath
-      message: "Resource 'image-provider' is waiting to read value '.data.best_school'"
   supplyChainRef:
     name: responsible-ops-unknown
     kind: ClusterSupplyChain
