@@ -64,9 +64,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
-	serviceAccountName := runnable.Spec.ServiceAccountName
-	if serviceAccountName == "" {
-		serviceAccountName = "default"
+	serviceAccountName := "default"
+	if runnable.Spec.ServiceAccountName != "" {
+		serviceAccountName = runnable.Spec.ServiceAccountName
 	}
 
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, request.Namespace)

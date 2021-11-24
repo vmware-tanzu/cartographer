@@ -434,7 +434,7 @@ func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject c
 
 	err := mapper.Client.List(context.TODO(), list)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to workload requests: list workloads")
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to deliverable requests: list deliverables")
 		return nil
 	}
 
@@ -462,7 +462,7 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 
 	for _, subject := range roleBinding.Subjects {
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			var serviceAccountObject client.Object
+			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
 				Namespace: subject.Name,
 				Name:      subject.Namespace,
@@ -487,7 +487,7 @@ func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBinding
 
 	for _, subject := range clusterRoleBinding.Subjects {
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			var serviceAccountObject client.Object
+			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
 				Namespace: subject.Name,
 				Name:      subject.Namespace,
@@ -530,7 +530,7 @@ func (mapper *Mapper) RoleToDeliverableRequests(roleObject client.Object) []reco
 }
 
 func (mapper *Mapper) ClusterRoleToDeliverableRequests(clusterRoleObject client.Object) []reconcile.Request {
-	clusterRole, ok := clusterRoleObject.(*rbacv1.Role)
+	clusterRole, ok := clusterRoleObject.(*rbacv1.ClusterRole)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role to deliverable requests: cast to ClusterRole failed")
 		return nil
@@ -580,7 +580,7 @@ func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject clie
 
 	var requests []reconcile.Request
 	for _, runnable := range list.Items {
-		if mapper.serviceAccountRunnableMatch(&runnable, serviceAccountObject) {
+		if runnable.Namespace == serviceAccountObject.GetNamespace() && runnable.Spec.ServiceAccountName == serviceAccountObject.GetName() {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      runnable.Name,
@@ -591,10 +591,6 @@ func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject clie
 	}
 
 	return requests
-}
-
-func (mapper *Mapper) serviceAccountRunnableMatch(runnable *v1alpha1.Runnable, object client.Object) bool {
-	return runnable.Namespace == object.GetNamespace() && runnable.Spec.ServiceAccountName == object.GetName()
 }
 
 func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Object) []reconcile.Request {

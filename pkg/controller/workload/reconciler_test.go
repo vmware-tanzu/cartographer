@@ -123,8 +123,8 @@ var _ = Describe("Reconciler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 1,
 				Labels:     workloadLabels,
-				Name: "my-workload-name",
-				Namespace: "my-namespace",
+				Name:       "my-workload-name",
+				Namespace:  "my-namespace",
 			},
 			Spec: v1alpha1.WorkloadSpec{
 				ServiceAccountName: serviceAccountName,

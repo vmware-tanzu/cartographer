@@ -3002,8 +3002,928 @@ var _ = Describe("MapFunctions", func() {
 		})
 	})
 
-	//TODO: RoleToWorkloadRequests
-	//TODO: ClusterRoleToWorkloadRequests
-	//TODO: RoleBindingToWorkloadRequests
-	//TODO: ClusterRoleBindingToWorkloadRequests
+	Describe("ServiceAccountToDeliverableRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		BeforeEach(func() {
+			fakeLogger = &registrarfakes.FakeLogger{}
+			fakeClient = &registrarfakes.FakeClient{}
+
+			m = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			scheme := runtime.NewScheme()
+			err := v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeClient.SchemeReturns(scheme)
+		})
+
+		Context("client.list does not return errors", func() {
+			Context("there are no deliverables", func() {
+				BeforeEach(func() {
+					existingList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("returns an empty request list", func() {
+					sa := &corev1.ServiceAccount{}
+					reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("there are multiple deliverables", func() {
+				BeforeEach(func() {
+					existingDeliverable1 := &v1alpha1.Deliverable{
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				Context("there is a matching deliverable", func() {
+
+					It("returns requests for only the matching deliverable", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+
+				Context("there is no matching deliverable", func() {
+					It("returns an empty request list", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-other-service-account",
+								Namespace: "some-other-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+			})
+		})
+
+		Context("client.list errors", func() {
+			var (
+				listErr error
+			)
+			BeforeEach(func() {
+				listErr = fmt.Errorf("some error")
+
+				fakeClient.ListReturns(listErr)
+			})
+
+			It("returns the error", func() {
+				sa := &corev1.ServiceAccount{}
+				reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+				Expect(reqs).To(HaveLen(0))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(listErr))
+				Expect(msg).To(Equal("service account to deliverable requests: list deliverables"))
+			})
+		})
+	})
+
+	Describe("RoleBindingToDeliverableRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		BeforeEach(func() {
+			fakeLogger = &registrarfakes.FakeLogger{}
+			fakeClient = &registrarfakes.FakeClient{}
+
+			m = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			scheme := runtime.NewScheme()
+			err := v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeClient.SchemeReturns(scheme)
+		})
+
+		Context("client.list does not return errors", func() {
+			Context("there are no deliverables", func() {
+				BeforeEach(func() {
+					existingList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("returns an empty request list", func() {
+					rb := &rbacv1.RoleBinding{}
+					reqs := m.RoleBindingToDeliverableRequests(rb)
+
+					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("there are multiple deliverables", func() {
+				BeforeEach(func() {
+					existingDeliverable1 := &v1alpha1.Deliverable{
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+
+					sa := corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+
+					fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+						objectVal := reflect.ValueOf(object)
+						saVal := reflect.ValueOf(sa)
+
+						reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+						return nil
+					}
+				})
+
+				Context("there is a matching deliverable", func() {
+
+					It("returns requests for only the matching deliverable", func() {
+						rb := &rbacv1.RoleBinding{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-role-binding",
+								Namespace: "some-namespace",
+							},
+							Subjects: []rbacv1.Subject{
+								{
+									Kind:      "ServiceAccount",
+									Name:      "some-service-account",
+									Namespace: "some-namespace",
+								},
+							},
+						}
+						reqs := m.RoleBindingToDeliverableRequests(rb)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+
+				Context("there is no matching deliverable", func() {
+					BeforeEach(func() {
+						sa := corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-unused-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+
+						fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+							objectVal := reflect.ValueOf(object)
+							saVal := reflect.ValueOf(sa)
+
+							reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+							return nil
+						}
+					})
+					It("returns an empty request list", func() {
+						rb := &rbacv1.RoleBinding{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-role-binding",
+								Namespace: "some-namespace",
+							},
+							Subjects: []rbacv1.Subject{
+								{
+									Kind:      "ServiceAccount",
+									Name:      "some-unused-service-account",
+									Namespace: "some-namespace",
+								},
+							},
+						}
+						reqs := m.RoleBindingToDeliverableRequests(rb)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+			})
+		})
+
+		Context("client.list errors", func() {
+			var (
+				getErr error
+			)
+			BeforeEach(func() {
+				getErr = fmt.Errorf("some error")
+
+				fakeClient.GetReturns(getErr)
+			})
+
+			It("returns the error", func() {
+				rb := &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-role-binding",
+						Namespace: "some-namespace",
+					},
+					Subjects: []rbacv1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					},
+				}
+				reqs := m.RoleBindingToDeliverableRequests(rb)
+
+				Expect(reqs).To(HaveLen(0))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(getErr))
+				Expect(msg).To(Equal("role binding to deliverable requests: get service account"))
+			})
+		})
+	})
+
+	Describe("ClusterRoleBindingToDeliverableRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		BeforeEach(func() {
+			fakeLogger = &registrarfakes.FakeLogger{}
+			fakeClient = &registrarfakes.FakeClient{}
+
+			m = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			scheme := runtime.NewScheme()
+			err := v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeClient.SchemeReturns(scheme)
+		})
+
+		Context("client.list does not return errors", func() {
+			Context("there are no deliverables", func() {
+				BeforeEach(func() {
+					existingList := v1alpha1.RunnableList{
+						Items: []v1alpha1.Runnable{},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("returns an empty request list", func() {
+					rb := &rbacv1.ClusterRoleBinding{}
+					reqs := m.ClusterRoleBindingToRunnableRequests(rb)
+
+					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("there are multiple deliverables", func() {
+				BeforeEach(func() {
+					existingDeliverable1 := &v1alpha1.Deliverable{
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
+					}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+
+					sa := corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+
+					fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+						objectVal := reflect.ValueOf(object)
+						saVal := reflect.ValueOf(sa)
+
+						reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+						return nil
+					}
+				})
+
+				Context("there is a matching deliverable", func() {
+
+					It("returns requests for only the matching deliverable", func() {
+						rb := &rbacv1.ClusterRoleBinding{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "some-role-binding",
+							},
+							Subjects: []rbacv1.Subject{
+								{
+									Kind:      "ServiceAccount",
+									Name:      "some-service-account",
+									Namespace: "some-namespace",
+								},
+							},
+						}
+						reqs := m.ClusterRoleBindingToDeliverableRequests(rb)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+
+				Context("there is no matching deliverable", func() {
+					BeforeEach(func() {
+						sa := corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-unused-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+
+						fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+							objectVal := reflect.ValueOf(object)
+							saVal := reflect.ValueOf(sa)
+
+							reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+							return nil
+						}
+					})
+					It("returns an empty request list", func() {
+						rb := &rbacv1.ClusterRoleBinding{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "some-role-binding",
+							},
+							Subjects: []rbacv1.Subject{
+								{
+									Kind:      "ServiceAccount",
+									Name:      "some-unused-service-account",
+									Namespace: "some-namespace",
+								},
+							},
+						}
+						reqs := m.ClusterRoleBindingToDeliverableRequests(rb)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+			})
+		})
+
+		Context("client.list errors", func() {
+			var (
+				getErr error
+			)
+			BeforeEach(func() {
+				getErr = fmt.Errorf("some error")
+
+				fakeClient.GetReturns(getErr)
+			})
+
+			It("returns the error", func() {
+				rb := &rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-role-binding",
+					},
+					Subjects: []rbacv1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					},
+				}
+				reqs := m.ClusterRoleBindingToDeliverableRequests(rb)
+
+				Expect(reqs).To(HaveLen(0))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(getErr))
+				Expect(msg).To(Equal("cluster role binding to deliverable requests: get service account"))
+			})
+		})
+	})
+
+	Describe("RoleToDeliverableRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		BeforeEach(func() {
+			fakeLogger = &registrarfakes.FakeLogger{}
+			fakeClient = &registrarfakes.FakeClient{}
+
+			m = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			scheme := runtime.NewScheme()
+			err := v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeClient.SchemeReturns(scheme)
+		})
+
+		Context("client.list does not return errors", func() {
+			Context("there are no deliverables", func() {
+				BeforeEach(func() {
+					existingList := rbacv1.RoleBindingList{}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("returns an empty request list", func() {
+					r := &rbacv1.Role{}
+					reqs := m.RoleToRunnableRequests(r)
+
+					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("there are multiple deliverables", func() {
+				BeforeEach(func() {
+					existingDeliverable1 := &v1alpha1.Deliverable{
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingDeliverableList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
+					}
+
+					roleBinding := &rbacv1.RoleBinding{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-role-binding",
+							Namespace: "some-namespace",
+						},
+						Subjects: []rbacv1.Subject{
+							{
+								Kind:      "ServiceAccount",
+								Name:      "some-service-account",
+								Namespace: "some-namespace",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							Kind: "Role",
+							Name: "some-role",
+						},
+					}
+
+					roleBindingList := rbacv1.RoleBindingList{Items: []rbacv1.RoleBinding{*roleBinding}}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						var existingVal reflect.Value
+
+						_, isDeliverableList := list.(*v1alpha1.DeliverableList)
+						if isDeliverableList {
+							existingVal = reflect.ValueOf(existingDeliverableList)
+						} else {
+							existingVal = reflect.ValueOf(roleBindingList)
+						}
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+
+					sa := corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+
+					fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+						objectVal := reflect.ValueOf(object)
+						saVal := reflect.ValueOf(sa)
+
+						reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+						return nil
+					}
+				})
+
+				Context("there is a matching deliverable", func() {
+
+					It("returns requests for only the matching deliverable", func() {
+						r := &rbacv1.Role{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-role",
+								Namespace: "some-namespace",
+							},
+						}
+						reqs := m.RoleToDeliverableRequests(r)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+
+				Context("there is no matching deliverable", func() {
+					BeforeEach(func() {
+						sa := corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-unused-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+
+						fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+							objectVal := reflect.ValueOf(object)
+							saVal := reflect.ValueOf(sa)
+
+							reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+							return nil
+						}
+					})
+					It("returns an empty request list", func() {
+						r := &rbacv1.Role{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-role",
+								Namespace: "some-namespace",
+							},
+						}
+						reqs := m.RoleToDeliverableRequests(r)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+			})
+		})
+
+		Context("client.list errors", func() {
+			var (
+				listErr error
+			)
+			BeforeEach(func() {
+				listErr = fmt.Errorf("some error")
+
+				fakeClient.ListReturns(listErr)
+			})
+
+			It("returns the error", func() {
+				r := &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-role-binding",
+						Namespace: "some-namespace",
+					},
+				}
+				reqs := m.RoleToDeliverableRequests(r)
+
+				Expect(reqs).To(HaveLen(0))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(listErr))
+				Expect(msg).To(Equal("role to deliverable requests: list role bindings"))
+			})
+		})
+	})
+
+	Describe("ClusterRoleToDeliverableRequests", func() {
+		var (
+			m          *registrar.Mapper
+			fakeLogger *registrarfakes.FakeLogger
+			fakeClient *registrarfakes.FakeClient
+		)
+
+		BeforeEach(func() {
+			fakeLogger = &registrarfakes.FakeLogger{}
+			fakeClient = &registrarfakes.FakeClient{}
+
+			m = &registrar.Mapper{
+				Client: fakeClient,
+				Logger: fakeLogger,
+			}
+
+			scheme := runtime.NewScheme()
+			err := v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			fakeClient.SchemeReturns(scheme)
+		})
+
+		Context("client.list does not return errors", func() {
+			Context("there are no deliverables", func() {
+				BeforeEach(func() {
+					clusterRoleBindingList := rbacv1.ClusterRoleBindingList{}
+					roleBindingList := rbacv1.RoleBindingList{}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						var existingVal reflect.Value
+
+						_, isClusterRoleBindingList := list.(*rbacv1.ClusterRoleBindingList)
+						if isClusterRoleBindingList {
+							existingVal = reflect.ValueOf(clusterRoleBindingList)
+						} else {
+							existingVal = reflect.ValueOf(roleBindingList)
+						}
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("returns an empty request list", func() {
+					r := &rbacv1.ClusterRole{}
+					reqs := m.ClusterRoleToRunnableRequests(r)
+
+					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("there are multiple deliverables", func() {
+				BeforeEach(func() {
+					existingDeliverable1 := &v1alpha1.Deliverable{
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingDeliverableList := v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
+					}
+
+					clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-role-binding",
+						},
+						Subjects: []rbacv1.Subject{
+							{
+								Kind:      "ServiceAccount",
+								Name:      "some-service-account",
+								Namespace: "some-namespace",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							Kind: "ClusterRole",
+							Name: "some-role",
+						},
+					}
+
+					clusterRoleBindingList := rbacv1.ClusterRoleBindingList{Items: []rbacv1.ClusterRoleBinding{*clusterRoleBinding}}
+
+					roleBinding := &rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-role-binding",
+							Namespace: "some-namespace",
+						},
+						Subjects: []rbacv1.Subject{
+							{
+								Kind:      "ServiceAccount",
+								Name:      "some-unused-service-account",
+								Namespace: "some-namespace",
+							},
+						},
+						RoleRef: rbacv1.RoleRef{
+							Kind: "ClusterRole",
+							Name: "some-unused-role",
+						},
+					}
+
+					roleBindingList := rbacv1.RoleBindingList{Items: []rbacv1.RoleBinding{*roleBinding}}
+
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						var existingVal reflect.Value
+
+						_, isDeliverableList := list.(*v1alpha1.DeliverableList)
+						if isDeliverableList {
+							existingVal = reflect.ValueOf(existingDeliverableList)
+						} else if _, isClusterRoleBindingList := list.(*rbacv1.ClusterRoleBindingList); isClusterRoleBindingList {
+							existingVal = reflect.ValueOf(clusterRoleBindingList)
+						} else {
+							existingVal = reflect.ValueOf(roleBindingList)
+						}
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+
+					sa := corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+
+					fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+						objectVal := reflect.ValueOf(object)
+						saVal := reflect.ValueOf(sa)
+
+						reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+						return nil
+					}
+				})
+
+				Context("there is a matching deliverable", func() {
+
+					It("returns requests for only the matching deliverable", func() {
+						r := &rbacv1.ClusterRole{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "some-role",
+							},
+						}
+						reqs := m.ClusterRoleToDeliverableRequests(r)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+
+				Context("there is no matching deliverable", func() {
+					BeforeEach(func() {
+						sa := corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-unused-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+
+						fakeClient.GetStub = func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+							objectVal := reflect.ValueOf(object)
+							saVal := reflect.ValueOf(sa)
+
+							reflect.Indirect(objectVal).Set(reflect.Indirect(saVal))
+							return nil
+						}
+					})
+					It("returns an empty request list", func() {
+						r := &rbacv1.ClusterRole{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "some-role",
+							},
+						}
+						reqs := m.ClusterRoleToDeliverableRequests(r)
+
+						Expect(reqs).To(HaveLen(0))
+					})
+				})
+
+			})
+		})
+
+		Context("client.list errors", func() {
+			var (
+				listErr error
+			)
+			BeforeEach(func() {
+				listErr = fmt.Errorf("some error")
+
+				fakeClient.ListReturns(listErr)
+			})
+
+			It("returns the error", func() {
+				r := &rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-role-binding",
+					},
+				}
+				reqs := m.ClusterRoleToDeliverableRequests(r)
+
+				Expect(reqs).To(HaveLen(0))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+
+				err, msg, _ := fakeLogger.ErrorArgsForCall(0)
+				Expect(err).To(MatchError(listErr))
+				Expect(msg).To(Equal("cluster role to deliverable requests: list cluster role bindings"))
+			})
+		})
+	})
 })
