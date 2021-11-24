@@ -41,27 +41,16 @@ rules:
   - apiGroups:
       - carto.run
     resources:
-      - workloads
       - workloads/status
       - clustersupplychains/status
       - runnables/status
+      - delivery/status
+      - deliverable/status
     verbs:
-      - get
-      - list
       - create
       - update
       - delete
       - patch
-      - watch
-
-  - apiGroups:
-      - carto.run
-    resources:
-      - '*'
-    verbs:
-      - watch
-      - get
-      - list
 
   - apiGroups:
       - '*'

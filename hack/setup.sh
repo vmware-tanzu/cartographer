@@ -267,8 +267,6 @@ test_example() {
 
         for i in {1..5}; do
                 for sleep_duration in {15..1}; do
-                        echo "- attempt $i"
-
                         local deployed_pods
                         deployed_pods=$(kubectl get pods \
                                 -l 'serving.knative.dev/configuration=dev' \
