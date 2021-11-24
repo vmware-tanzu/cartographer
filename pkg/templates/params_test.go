@@ -16,6 +16,7 @@ package templates_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
@@ -23,36 +24,160 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-var _ = Describe("OverrideDefaultParams", func() {
-	Describe("ParamsBuilder", func() {
-		It("makes Params using v1alpha.DefaultParams and overrides them with v1alpha.Param values", func() {
-			defaultParams := v1alpha1.DefaultParams{
-				{
-					Name: "foo",
-					DefaultValue: apiextensionsv1.JSON{
-						Raw: []byte(`bar`),
-					},
-				},
-				{
-					Name: "fizz",
-					DefaultValue: apiextensionsv1.JSON{
-						Raw: []byte(`baz`),
-					},
-				},
-			}
-			resourceParams := []v1alpha1.Param{
-				{
-					Name: "fizz",
-					Value: apiextensionsv1.JSON{
-						Raw: []byte(`buzz`),
-					},
-				},
-			}
-			params := templates.ParamsBuilder(defaultParams, resourceParams)
+var _ = Describe("Params", func() {
+	templateParam := &v1alpha1.TemplateParam{
+		Name:         "target-name",
+		DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
+	}
 
-			Expect(params).To(HaveLen(2))
-			Expect(params["foo"].Raw).To(Equal([]byte("bar")))
-			Expect(params["fizz"].Raw).To(Equal([]byte("buzz")))
-		})
-	})
+	delegatingBlueprintParam := &v1alpha1.DelegatableParam{
+		Name:         "target-name",
+		DefaultValue: &apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
+	}
+
+	nonDelegatingBlueprintParam := &v1alpha1.DelegatableParam{
+		Name:  "target-name",
+		Value: &apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
+	}
+
+	delegatingResourceParam := &v1alpha1.DelegatableParam{
+		Name:         "target-name",
+		DefaultValue: &apiextensionsv1.JSON{Raw: []byte("from the resource")},
+	}
+
+	nonDelegatingResourceParam := &v1alpha1.DelegatableParam{
+		Name:  "target-name",
+		Value: &apiextensionsv1.JSON{Raw: []byte("from the resource")},
+	}
+
+	ownerParam := &v1alpha1.Param{
+		Name:  "target-name",
+		Value: apiextensionsv1.JSON{Raw: []byte("from the owner")},
+	}
+
+	DescribeTable("ParamsBuilder",
+		func(templateParam *v1alpha1.TemplateParam,
+			blueprintParam *v1alpha1.DelegatableParam,
+			resourceParam *v1alpha1.DelegatableParam,
+			ownerParam *v1alpha1.Param,
+			expected string) {
+			var (
+				templateParams  []v1alpha1.TemplateParam
+				resourceParams  []v1alpha1.DelegatableParam
+				blueprintParams []v1alpha1.DelegatableParam
+				ownerParams     []v1alpha1.Param
+			)
+
+			if templateParam != nil {
+				templateParams = append(templateParams, *templateParam)
+			}
+			if resourceParam != nil {
+				resourceParams = append(resourceParams, *resourceParam)
+			}
+			if blueprintParam != nil {
+				blueprintParams = append(blueprintParams, *blueprintParam)
+			}
+			if ownerParam != nil {
+				ownerParams = append(ownerParams, *ownerParam)
+			}
+
+			actual := templates.ParamsBuilder(
+				templateParams,
+				blueprintParams,
+				resourceParams,
+				ownerParams)
+
+			if expected == "" {
+				Expect(actual).To(BeEmpty())
+			} else {
+				value, ok := actual["target-name"]
+				Expect(ok).To(BeTrue())
+				Expect(string(value.Raw)).To(Equal(expected))
+			}
+		},
+
+		Entry("value only in template",
+			templateParam,
+			&v1alpha1.DelegatableParam{},
+			&v1alpha1.DelegatableParam{},
+			&v1alpha1.Param{},
+			"from the template"),
+
+		Entry("no value on template, values elsewhere",
+			nil,
+			nonDelegatingBlueprintParam,
+			&v1alpha1.DelegatableParam{},
+			&v1alpha1.Param{},
+			""),
+
+		Entry("value in template, resource, and owner; resource is not overridable",
+			templateParam,
+			&v1alpha1.DelegatableParam{},
+			nonDelegatingResourceParam,
+			ownerParam,
+			"from the resource"),
+
+		Entry("value in template, blueprint, resource, and owner; blueprint and resource are not overridable",
+			templateParam,
+			nonDelegatingBlueprintParam,
+			nonDelegatingResourceParam,
+			ownerParam,
+			"from the resource"),
+
+		Entry("value in template, blueprint, and owner; blueprint is not overridable",
+			templateParam,
+			nonDelegatingBlueprintParam,
+			&v1alpha1.DelegatableParam{},
+			ownerParam,
+			"from the blueprint"),
+
+		Entry("value in template, blueprint, resource, and owner; blueprint is not overridable, resource is",
+			templateParam,
+			nonDelegatingBlueprintParam,
+			delegatingResourceParam,
+			ownerParam,
+			"from the owner"),
+
+		Entry("value in template, resource, and owner; resource is not overridable",
+			templateParam,
+			&v1alpha1.DelegatableParam{},
+			delegatingResourceParam,
+			ownerParam,
+			"from the owner"),
+
+		Entry("value in template, blueprint, resource, and owner; blueprint is overridable, resource is not",
+			templateParam,
+			delegatingBlueprintParam,
+			nonDelegatingResourceParam,
+			ownerParam,
+			"from the resource"),
+
+		Entry("value in template, blueprint, and owner; blueprint is overridable",
+			templateParam,
+			delegatingBlueprintParam,
+			&v1alpha1.DelegatableParam{},
+			ownerParam,
+			"from the owner"),
+
+		Entry("value in template, blueprint, resource; blueprint and resource are overridable",
+			templateParam,
+			delegatingBlueprintParam,
+			delegatingResourceParam,
+			&v1alpha1.Param{},
+			"from the resource"),
+
+		Entry("value in template, blueprint, resource, and owner; blueprint and resource are overridable",
+			templateParam,
+			delegatingBlueprintParam,
+			delegatingResourceParam,
+			ownerParam,
+			"from the owner"),
+
+		Entry("value in template and owner",
+			templateParam,
+			&v1alpha1.DelegatableParam{},
+			&v1alpha1.DelegatableParam{},
+			ownerParam,
+			"from the template"),
+	)
 })

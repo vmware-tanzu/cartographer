@@ -34,14 +34,16 @@ type ResourceRealizer interface {
 }
 
 type resourceRealizer struct {
-	deliverable *v1alpha1.Deliverable
-	repo        repository.Repository
+	deliverable    *v1alpha1.Deliverable
+	repo           repository.Repository
+	deliveryParams []v1alpha1.DelegatableParam
 }
 
-func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repository) ResourceRealizer {
+func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) ResourceRealizer {
 	return &resourceRealizer{
-		deliverable: deliverable,
-		repo:        repo,
+		deliverable:    deliverable,
+		repo:           repo,
+		deliveryParams: deliveryParams,
 	}
 }
 
@@ -76,7 +78,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	inputs := outputs.GenerateInputs(resource)
 	templatingContext := map[string]interface{}{
 		"deliverable": r.deliverable,
-		"params":      templates.ParamsBuilder(template.GetDefaultParams(), resource.Params),
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.deliveryParams, resource.Params, r.deliverable.Spec.Params),
 		"sources":     inputs.Sources,
 		"configs":     inputs.Configs,
 		"deployment":  inputs.Deployment,

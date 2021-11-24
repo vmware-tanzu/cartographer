@@ -21,9 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type DefaultParams []DefaultParam
+type TemplateParams []TemplateParam
 
-type DefaultParam struct {
+type TemplateParam struct {
 	Name         string               `json:"name"`
 	DefaultValue apiextensionsv1.JSON `json:"default"`
 }
@@ -31,6 +31,27 @@ type DefaultParam struct {
 type Param struct {
 	Name  string               `json:"name"`
 	Value apiextensionsv1.JSON `json:"value"`
+}
+
+type DelegatableParam struct {
+	Name         string                `json:"name"`
+	Value        *apiextensionsv1.JSON `json:"value,omitempty"`
+	DefaultValue *apiextensionsv1.JSON `json:"default,omitempty"`
+}
+
+func (p *DelegatableParam) validateDelegatableParams() error {
+	if p.bothValuesSet() || p.neitherValueSet() {
+		return fmt.Errorf("invalid param: '%s', must set exactly one of value and default", p.Name)
+	}
+	return nil
+}
+
+func (p *DelegatableParam) bothValuesSet() bool {
+	return p.DefaultValue != nil && p.Value != nil
+}
+
+func (p *DelegatableParam) neitherValueSet() bool {
+	return p.DefaultValue == nil && p.Value == nil
 }
 
 type ResourceReference struct {

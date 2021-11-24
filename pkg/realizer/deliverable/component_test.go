@@ -35,13 +35,14 @@ import (
 var _ = Describe("Resource", func() {
 
 	var (
-		ctx          context.Context
-		resource     v1alpha1.ClusterDeliveryResource
-		deliverable  v1alpha1.Deliverable
-		outputs      realizer.Outputs
-		deliveryName string
-		fakeRepo     repositoryfakes.FakeRepository
-		r            realizer.ResourceRealizer
+		ctx            context.Context
+		resource       v1alpha1.ClusterDeliveryResource
+		deliverable    v1alpha1.Deliverable
+		outputs        realizer.Outputs
+		deliveryName   string
+		deliveryParams []v1alpha1.DelegatableParam
+		fakeRepo       repositoryfakes.FakeRepository
+		r              realizer.ResourceRealizer
 	)
 
 	BeforeEach(func() {
@@ -56,11 +57,13 @@ var _ = Describe("Resource", func() {
 
 		deliveryName = "delivery-name"
 
+		deliveryParams = []v1alpha1.DelegatableParam{}
+
 		outputs = realizer.NewOutputs()
 
 		fakeRepo = repositoryfakes.FakeRepository{}
 		deliverable = v1alpha1.Deliverable{}
-		r = realizer.NewResourceRealizer(&deliverable, &fakeRepo)
+		r = realizer.NewResourceRealizer(&deliverable, &fakeRepo, deliveryParams)
 	})
 
 	Describe("Do", func() {
