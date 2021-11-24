@@ -16,9 +16,9 @@ package delivery_test
 
 import (
 	"context"
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -42,6 +42,65 @@ var _ = Describe("Deliveries", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+
+		myServiceAccount := &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-service-account",
+				Namespace: testNS,
+			},
+			Secrets: []corev1.ObjectReference{
+				{
+					Name: "my-service-account-secret",
+					Namespace: testNS,
+				},
+			},
+		}
+
+		roleBinding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "my-service-account-role-binding",
+				Namespace: testNS,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:     "ServiceAccount",
+					Name:     "my-service-account",
+					Namespace: testNS,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "my-service-account-role",
+			},
+		}
+
+		role := &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-service-account-role",
+				Namespace: testNS,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					Verbs:     []string{"*"},
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+				},
+			},
+		}
+
+		cleanups = append(cleanups, myServiceAccount)
+		err := c.Create(ctx, myServiceAccount, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		cleanups = append(cleanups, role)
+		err = c.Create(ctx, role, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		cleanups = append(cleanups, roleBinding)
+		err = c.Create(ctx, roleBinding, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -451,41 +510,6 @@ var _ = Describe("Deliveries", func() {
 
 			err = c.Create(ctx, delivery, &client.CreateOptions{})
 			cleanups = append(cleanups, delivery)
-			Expect(err).NotTo(HaveOccurred())
-			myServiceAccountSecret := &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-service-account-secret",
-					Namespace: testNS,
-					Annotations: map[string]string{
-						"kubernetes.io/service-account.name": "my-service-account",
-					},
-				},
-				Data: map[string][]byte{
-					"token": []byte("ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU="),
-				},
-				Type: corev1.SecretTypeServiceAccountToken,
-			}
-
-			myServiceAccount := &corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-service-account",
-					Namespace: testNS,
-				},
-				Secrets: []corev1.ObjectReference{
-					{
-						Name: "my-service-account-secret",
-					},
-				},
-			}
-
-			cleanups = append(cleanups, myServiceAccountSecret)
-			err = c.Create(ctx, myServiceAccountSecret, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			cleanups = append(cleanups, myServiceAccount)
-			err = c.Create(ctx, myServiceAccount, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			deliverable := &v1alpha1.Deliverable{

@@ -17,14 +17,12 @@ package helpers
 import (
 	"fmt"
 	"io/ioutil"
-
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
 func GenerateConfigFile(env *envtest.Environment) (string, error) {
 	user, err := env.ControlPlane.AddUser(envtest.User{
 		Name:   "envtest-admin",
-		Groups: []string{"system:masters"},
 	}, nil)
 	if err != nil {
 		return "", fmt.Errorf("add user: %w", err)

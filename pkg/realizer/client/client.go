@@ -49,6 +49,10 @@ func AddBearerToken(secret *corev1.Secret, restConfig *rest.Config) (*rest.Confi
 	newConfig := *restConfig
 	newConfig.BearerToken = string(tokenBytes)
 	newConfig.BearerTokenFile = ""
+	newConfig.TLSClientConfig.CertData = []byte{}
+	newConfig.TLSClientConfig.KeyData = []byte{}
+	newConfig.TLSClientConfig.KeyFile = ""
+	newConfig.TLSClientConfig.CertFile = ""
 
 	return &newConfig, nil
 }
