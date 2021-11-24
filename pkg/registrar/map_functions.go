@@ -326,7 +326,7 @@ func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Obj
 
 	for _, subject := range roleBinding.Subjects {
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			var serviceAccountObject client.Object
+			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
 				Namespace: subject.Name,
 				Name:      subject.Namespace,
@@ -351,7 +351,7 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 
 	for _, subject := range clusterRoleBinding.Subjects {
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			var serviceAccountObject client.Object
+			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
 				Namespace: subject.Name,
 				Name:      subject.Namespace,
@@ -394,7 +394,7 @@ func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconci
 }
 
 func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Object) []reconcile.Request {
-	clusterRole, ok := clusterRoleObject.(*rbacv1.Role)
+	clusterRole, ok := clusterRoleObject.(*rbacv1.ClusterRole)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role to workload requests: cast to ClusterRole failed")
 		return nil

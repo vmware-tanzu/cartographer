@@ -15,7 +15,7 @@
 apiVersion: carto.run/v1alpha1
 kind: Runnable
 metadata:
-  name: my-runnable
+  name: my-runnable-inputs
   labels:
     my-label: this-is-it
     my-other-label: bye
