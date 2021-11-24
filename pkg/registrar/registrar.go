@@ -316,11 +316,22 @@ func registerRunnableController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("runnable"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToRunnableRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterRunTemplate{}: mapper.RunTemplateToRunnableRequests,
+		&corev1.ServiceAccount{}:       mapper.ServiceAccountToRunnableRequests,
+		&rbacv1.Role{}:                 mapper.RoleToRunnableRequests,
+		&rbacv1.RoleBinding{}:          mapper.RoleBindingToRunnableRequests,
+		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToRunnableRequests,
+		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToRunnableRequests,
+	}
+
+	for kindType, mapFunc := range watches {
+		if err := ctrl.Watch(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		); err != nil {
+			return fmt.Errorf("watch %T: %w", kindType, err)
+		}
 	}
 
 	return nil
