@@ -104,22 +104,28 @@ kind: ClusterImageTemplate
 metadata:
   name: image
 spec:
+  params:
+    - name: image_prefix
+      default: projectcartographer/demo-
+
   imagePath: .status.latestImage
 
   template:
-    apiVersion: kpack.io/v1alpha1
+    apiVersion: kpack.io/v1alpha2
     kind: Image
     metadata:
       name: $(workload.metadata.name)$
     spec:
-      tag: #@ data.values.image_prefix + "$(workload.metadata.name)$"
-      serviceAccount: service-account
+      tag: $(params.image_prefix)$$(workload.metadata.name)$
+      serviceAccountName: service-account
       builder:
         kind: ClusterBuilder
         name: go-builder
       source:
         blob:
           url: $(sources.source.url)$
+      build:
+        env: $(workload.spec.build.env)$
 
 ---
 #

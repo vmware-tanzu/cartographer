@@ -127,8 +127,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	output, err := template.GetOutput()
 	if err != nil {
 		return stampedObject, nil, RetrieveOutputError{
-			Err:      err,
-			Resource: resource,
+			Err:           err,
+			Resource:      resource,
+			StampedObject: stampedObject,
 		}
 	}
 

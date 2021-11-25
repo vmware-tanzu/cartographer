@@ -112,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				err = controller.NewUnhandledError(err)
 			}
 		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.Resource.Name, typedErr.JsonPathExpression()))
+			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)

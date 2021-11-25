@@ -470,18 +470,29 @@ var _ = Describe("Reconciler", func() {
 
 			Context("of type RetrieveOutputError", func() {
 				var retrieveError realizer.RetrieveOutputError
+				var stampedObject *unstructured.Unstructured
 				BeforeEach(func() {
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetGroupVersionKind(schema.GroupVersionKind{
+						Group:   "thing.io",
+						Version: "alphabeta1",
+						Kind:    "MyThing",
+					})
+					stampedObject.SetName("my-obj")
+					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = realizer.RetrieveOutputError{
-						Err:      jsonPathError,
-						Resource: &v1alpha1.SupplyChainResource{Name: "some-resource"},
+						Err:           jsonPathError,
+						Resource:      &v1alpha1.SupplyChainResource{Name: "some-resource"},
+						StampedObject: stampedObject,
 					}
 					rlzr.RealizeReturns(nil, retrieveError)
 				})
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.MissingValueAtPathCondition("some-resource", "this.wont.find.anything")))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
+						Equal(workload.MissingValueAtPathCondition(stampedObject, "this.wont.find.anything")))
 				})
 
 				It("does not return an error", func() {
@@ -494,7 +505,7 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error"`))
-					Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object for resource 'some-resource': evaluate json path 'this.wont.find.anything': some error"`))
+					Expect(out).To(Say(`"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: evaluate json path 'this.wont.find.anything': some error"`))
 				})
 			})
 
