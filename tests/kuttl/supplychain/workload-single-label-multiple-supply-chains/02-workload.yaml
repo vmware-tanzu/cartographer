@@ -19,6 +19,7 @@ metadata:
   labels:
     integration-test: "workload-multiple-supply-chains-single-label"
 spec:
+  serviceAccountName: default
   params:
     - name: waciuma-com/quality
       value: beta

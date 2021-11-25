@@ -5,12 +5,14 @@ go 1.17
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/go-logr/logr v0.4.0
+	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golangci/golangci-lint v1.43.0
 	github.com/google/addlicense v1.0.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/valyala/fasttemplate v1.2.1
+	go.uber.org/zap v1.19.1
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	k8s.io/api v0.22.4
@@ -24,8 +26,6 @@ require (
 	sigs.k8s.io/controller-tools v0.7.0
 	sigs.k8s.io/yaml v1.3.0
 )
-
-require go.uber.org/zap v1.19.1
 
 require (
 	4d63.com/gochecknoglobals v0.1.0 // indirect

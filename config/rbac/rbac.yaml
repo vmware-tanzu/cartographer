@@ -19,10 +19,6 @@ metadata:
   namespace: cartographer-system
 
 ---
-#!
-#!    TODO make use of granular roles rather than a catch-all "cluster-admin"
-#!         grants it more privileges than it needs.
-#!
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -30,8 +26,37 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cluster-admin
+  name: cartographer-controller-admin
 subjects:
   - kind: ServiceAccount
     name: cartographer-controller
     namespace: cartographer-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cartographer-controller-admin
+rules:
+  - apiGroups:
+      - carto.run
+    resources:
+      - workloads/status
+      - clustersupplychains/status
+      - runnables/status
+      - clusterdeliveries/status
+      - deliverables/status
+    verbs:
+      - create
+      - update
+      - delete
+      - patch
+
+  - apiGroups:
+      - '*'
+    resources:
+      - '*'
+    verbs:
+      - watch
+      - get
+      - list

@@ -30,10 +30,12 @@ const (
 )
 
 const (
-	ReadySupplyChainReason                 = "Ready"
-	WorkloadLabelsMissingSupplyChainReason = "WorkloadLabelsMissing"
-	NotFoundSupplyChainReadyReason         = "SupplyChainNotFound"
-	MultipleMatchesSupplyChainReadyReason  = "MultipleSupplyChainMatches"
+	ReadySupplyChainReason                               = "Ready"
+	WorkloadLabelsMissingSupplyChainReason               = "WorkloadLabelsMissing"
+	NotFoundSupplyChainReadyReason                       = "SupplyChainNotFound"
+	MultipleMatchesSupplyChainReadyReason                = "MultipleSupplyChainMatches"
+	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )
 
 // +kubebuilder:object:root=true
@@ -58,15 +60,16 @@ type WorkloadServiceClaimReference struct {
 }
 
 type WorkloadSpec struct {
-	Params []Param `json:"params,omitempty"`
-	Source *Source `json:"source,omitempty"`
+	Params []Param         `json:"params,omitempty"`
+	Source *Source         `json:"source,omitempty"`
+	Build  WorkloadBuild   `json:"build,omitempty"`
+	Env    []corev1.EnvVar `json:"env,omitempty"`
 	// Image is a pre-built image in a registry. It is an alternative to defining source
 	// code.
-	Image         *string                      `json:"image,omitempty"`
-	ServiceClaims []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
-	Env           []corev1.EnvVar              `json:"env,omitempty"`
-	Build         WorkloadBuild                `json:"build,omitempty"`
-	Resources     *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Image              *string                      `json:"image,omitempty"`
+	Resources          *corev1.ResourceRequirements `json:"resources,omitempty"`
+	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
+	ServiceClaims      []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
 }
 
 type WorkloadBuild struct {

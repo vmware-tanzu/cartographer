@@ -7,6 +7,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -135,6 +136,21 @@ type FakeRepository struct {
 	}
 	getSchemeReturnsOnCall map[int]struct {
 		result1 *runtime.Scheme
+	}
+	GetServiceAccountSecretStub        func(context.Context, string, string) (*v1.Secret, error)
+	getServiceAccountSecretMutex       sync.RWMutex
+	getServiceAccountSecretArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}
+	getServiceAccountSecretReturns struct {
+		result1 *v1.Secret
+		result2 error
+	}
+	getServiceAccountSecretReturnsOnCall map[int]struct {
+		result1 *v1.Secret
+		result2 error
 	}
 	GetSupplyChainStub        func(context.Context, string) (*v1alpha1.ClusterSupplyChain, error)
 	getSupplyChainMutex       sync.RWMutex
@@ -782,6 +798,72 @@ func (fake *FakeRepository) GetSchemeReturnsOnCall(i int, result1 *runtime.Schem
 	}{result1}
 }
 
+func (fake *FakeRepository) GetServiceAccountSecret(arg1 context.Context, arg2 string, arg3 string) (*v1.Secret, error) {
+	fake.getServiceAccountSecretMutex.Lock()
+	ret, specificReturn := fake.getServiceAccountSecretReturnsOnCall[len(fake.getServiceAccountSecretArgsForCall)]
+	fake.getServiceAccountSecretArgsForCall = append(fake.getServiceAccountSecretArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.GetServiceAccountSecretStub
+	fakeReturns := fake.getServiceAccountSecretReturns
+	fake.recordInvocation("GetServiceAccountSecret", []interface{}{arg1, arg2, arg3})
+	fake.getServiceAccountSecretMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetServiceAccountSecretCallCount() int {
+	fake.getServiceAccountSecretMutex.RLock()
+	defer fake.getServiceAccountSecretMutex.RUnlock()
+	return len(fake.getServiceAccountSecretArgsForCall)
+}
+
+func (fake *FakeRepository) GetServiceAccountSecretCalls(stub func(context.Context, string, string) (*v1.Secret, error)) {
+	fake.getServiceAccountSecretMutex.Lock()
+	defer fake.getServiceAccountSecretMutex.Unlock()
+	fake.GetServiceAccountSecretStub = stub
+}
+
+func (fake *FakeRepository) GetServiceAccountSecretArgsForCall(i int) (context.Context, string, string) {
+	fake.getServiceAccountSecretMutex.RLock()
+	defer fake.getServiceAccountSecretMutex.RUnlock()
+	argsForCall := fake.getServiceAccountSecretArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeRepository) GetServiceAccountSecretReturns(result1 *v1.Secret, result2 error) {
+	fake.getServiceAccountSecretMutex.Lock()
+	defer fake.getServiceAccountSecretMutex.Unlock()
+	fake.GetServiceAccountSecretStub = nil
+	fake.getServiceAccountSecretReturns = struct {
+		result1 *v1.Secret
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetServiceAccountSecretReturnsOnCall(i int, result1 *v1.Secret, result2 error) {
+	fake.getServiceAccountSecretMutex.Lock()
+	defer fake.getServiceAccountSecretMutex.Unlock()
+	fake.GetServiceAccountSecretStub = nil
+	if fake.getServiceAccountSecretReturnsOnCall == nil {
+		fake.getServiceAccountSecretReturnsOnCall = make(map[int]struct {
+			result1 *v1.Secret
+			result2 error
+		})
+	}
+	fake.getServiceAccountSecretReturnsOnCall[i] = struct {
+		result1 *v1.Secret
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeRepository) GetSupplyChain(arg1 context.Context, arg2 string) (*v1alpha1.ClusterSupplyChain, error) {
 	fake.getSupplyChainMutex.Lock()
 	ret, specificReturn := fake.getSupplyChainReturnsOnCall[len(fake.getSupplyChainArgsForCall)]
@@ -1126,6 +1208,8 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getRunnableMutex.RUnlock()
 	fake.getSchemeMutex.RLock()
 	defer fake.getSchemeMutex.RUnlock()
+	fake.getServiceAccountSecretMutex.RLock()
+	defer fake.getServiceAccountSecretMutex.RUnlock()
 	fake.getSupplyChainMutex.RLock()
 	defer fake.getSupplyChainMutex.RUnlock()
 	fake.getSupplyChainsForWorkloadMutex.RLock()

@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -34,20 +36,34 @@ type ResourceRealizer interface {
 
 type resourceRealizer struct {
 	workload          *v1alpha1.Workload
-	repo              repository.Repository
+	systemRepo        repository.Repository
+	workloadRepo      repository.Repository
 	supplyChainParams []v1alpha1.DelegatableParam
 }
 
-func NewResourceRealizer(workload *v1alpha1.Workload, repo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) ResourceRealizer {
-	return &resourceRealizer{
-		workload:          workload,
-		repo:              repo,
-		supplyChainParams: supplyChainParams,
+type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (ResourceRealizer, error)
+
+//counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (ResourceRealizer, error) {
+		workloadClient, err := clientBuilder(secret)
+		if err != nil {
+			return nil, fmt.Errorf("can't build client: %w", err)
+		}
+
+		workloadRepo := repositoryBuilder(workloadClient, cache)
+
+		return &resourceRealizer{
+			workload:          workload,
+			systemRepo:        systemRepo,
+			workloadRepo:      workloadRepo,
+			supplyChainParams: supplyChainParams,
+		}, nil
 	}
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
-	apiTemplate, err := r.repo.GetClusterTemplate(ctx, resource.TemplateRef)
+	apiTemplate, err := r.systemRepo.GetClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		return nil, nil, GetClusterTemplateError{
 			Err:         err,
@@ -98,7 +114,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
+	err = r.workloadRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,

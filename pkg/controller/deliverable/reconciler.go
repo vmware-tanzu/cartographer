@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -39,6 +40,7 @@ import (
 type Reconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
+	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                realizer.Realizer
 	DynamicTracker          tracker.DynamicTracker
 	conditionManager        conditions.ConditionManager
@@ -90,7 +92,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
-	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(deliverable, r.Repo, delivery.Spec.Params), delivery)
+	serviceAccountName := "default"
+	if deliverable.Spec.ServiceAccountName != "" {
+		serviceAccountName = deliverable.Spec.ServiceAccountName
+	}
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, deliverable.Namespace)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("get secret for service account '%s': %w", deliverable.Spec.ServiceAccountName, err))
+	}
+
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
+	if err != nil {
+		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
+		return r.completeReconciliation(ctx, deliverable, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
+	}
+
+	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, delivery)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -101,7 +120,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			if !kerrors.IsForbidden(typedErr.Err) {
+				err = controller.NewUnhandledError(err)
+			}
 		case realizer.RetrieveOutputError:
 			switch typedErr.Err.(type) {
 			case templates.ObservedGenerationError:

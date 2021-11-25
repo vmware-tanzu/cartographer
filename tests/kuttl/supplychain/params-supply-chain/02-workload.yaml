@@ -19,6 +19,7 @@ metadata:
   labels:
     integration-test: "params-supply-chain"
 spec:
+  serviceAccountName: my-service-account
   params:
     - name: template-and-workload-but-not-supply-chain-nor-resource
       value: not-me-workload

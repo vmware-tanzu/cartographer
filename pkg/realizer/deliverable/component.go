@@ -19,9 +19,11 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -34,16 +36,27 @@ type ResourceRealizer interface {
 }
 
 type resourceRealizer struct {
-	deliverable    *v1alpha1.Deliverable
-	repo           repository.Repository
-	deliveryParams []v1alpha1.DelegatableParam
+	deliverable     *v1alpha1.Deliverable
+	systemRepo      repository.Repository
+	deliverableRepo repository.Repository
+	deliveryParams  []v1alpha1.DelegatableParam
 }
 
-func NewResourceRealizer(deliverable *v1alpha1.Deliverable, repo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) ResourceRealizer {
-	return &resourceRealizer{
-		deliverable:    deliverable,
-		repo:           repo,
-		deliveryParams: deliveryParams,
+type ResourceRealizerBuilder func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, repo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (ResourceRealizer, error)
+
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+	return func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (ResourceRealizer, error) {
+		client, err := clientBuilder(secret)
+		if err != nil {
+			return nil, fmt.Errorf("can't build client: %w", err)
+		}
+		deliverableRepo := repositoryBuilder(client, cache)
+		return &resourceRealizer{
+			deliverable:     deliverable,
+			systemRepo:      systemRepo,
+			deliverableRepo: deliverableRepo,
+			deliveryParams:  deliveryParams,
+		}, nil
 	}
 }
 
@@ -51,7 +64,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	apiTemplate, err := r.repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
+	apiTemplate, err := r.systemRepo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
 		return nil, nil, GetDeliveryClusterTemplateError{
@@ -102,7 +115,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	err = r.repo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
+	err = r.deliverableRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{

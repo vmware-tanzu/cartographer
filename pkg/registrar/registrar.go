@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/external"
@@ -36,6 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	realizerrunnable "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
@@ -51,6 +54,14 @@ func (t Timer) Now() metav1.Time {
 func AddToScheme(scheme *runtime.Scheme) error {
 	if err := v1alpha1.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("cartographer v1alpha1 add to scheme: %w", err)
+	}
+
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("core v1 add to scheme: %w", err)
+	}
+
+	if err := rbacv1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("rbac v1 add to scheme: %w", err)
 	}
 
 	return nil
@@ -89,6 +100,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 	reconciler := &workload.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
+		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
 		Realizer:                realizerworkload.NewRealizer(),
 	}
 
@@ -113,19 +125,23 @@ func registerWorkloadController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("workload"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterSupplyChain{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.ClusterSupplyChainToWorkloadRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterSupplyChain{}: mapper.ClusterSupplyChainToWorkloadRequests,
+		&corev1.ServiceAccount{}:       mapper.ServiceAccountToWorkloadRequests,
+		&rbacv1.Role{}:                 mapper.RoleToWorkloadRequests,
+		&rbacv1.RoleBinding{}:          mapper.RoleBindingToWorkloadRequests,
+		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToWorkloadRequests,
+		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToWorkloadRequests,
 	}
-
 	for _, template := range v1alpha1.ValidSupplyChainTemplates {
+		watches[template] = mapper.TemplateToWorkloadRequests
+	}
+	for kindType, mapFunc := range watches {
 		if err := ctrl.Watch(
-			&source.Kind{Type: template},
-			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToWorkloadRequests),
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		); err != nil {
-			return fmt.Errorf("watch template: %w", err)
+			return fmt.Errorf("watch %T: %w", kindType, err)
 		}
 	}
 
@@ -222,7 +238,12 @@ func registerDeliverableController(mgr manager.Manager) error {
 	reconciler := &deliverable.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
-		Realizer:                realizerdeliverable.NewRealizer(),
+		ResourceRealizerBuilder: realizerdeliverable.NewResourceRealizerBuilder(
+			repository.NewRepository,
+			realizerclient.NewClientBuilder(mgr.GetConfig()),
+			repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")),
+		),
+		Realizer: realizerdeliverable.NewRealizer(),
 	}
 
 	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{
@@ -246,19 +267,23 @@ func registerDeliverableController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("deliverable"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterDelivery{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.ClusterDeliveryToDeliverableRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterDelivery{}:  mapper.ClusterDeliveryToDeliverableRequests,
+		&corev1.ServiceAccount{}:     mapper.ServiceAccountToDeliverableRequests,
+		&rbacv1.Role{}:               mapper.RoleToDeliverableRequests,
+		&rbacv1.RoleBinding{}:        mapper.RoleBindingToDeliverableRequests,
+		&rbacv1.ClusterRole{}:        mapper.ClusterRoleToDeliverableRequests,
+		&rbacv1.ClusterRoleBinding{}: mapper.ClusterRoleBindingToDeliverableRequests,
 	}
-
 	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		watches[template] = mapper.TemplateToDeliverableRequests
+	}
+	for kindType, mapFunc := range watches {
 		if err := ctrl.Watch(
-			&source.Kind{Type: template},
-			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliverableRequests),
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		); err != nil {
-			return fmt.Errorf("watch template: %w", err)
+			return fmt.Errorf("watch %T: %w", kindType, err)
 		}
 	}
 
@@ -274,6 +299,9 @@ func registerRunnableController(mgr manager.Manager) error {
 	reconciler := &runnable.Reconciler{
 		Repo:                    repo,
 		Realizer:                realizerrunnable.NewRealizer(),
+		RunnableCache:           repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache")),
+		RepositoryBuilder:       repository.NewRepository,
+		ClientBuilder:           realizerclient.NewClientBuilder(mgr.GetConfig()),
 		ConditionManagerBuilder: conditions.NewConditionManager,
 	}
 	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{
@@ -297,11 +325,22 @@ func registerRunnableController(mgr manager.Manager) error {
 		Logger: mgr.GetLogger().WithName("runnable"),
 	}
 
-	if err := ctrl.Watch(
-		&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
-		handler.EnqueueRequestsFromMapFunc(mapper.RunTemplateToRunnableRequests),
-	); err != nil {
-		return fmt.Errorf("watch: %w", err)
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterRunTemplate{}: mapper.RunTemplateToRunnableRequests,
+		&corev1.ServiceAccount{}:       mapper.ServiceAccountToRunnableRequests,
+		&rbacv1.Role{}:                 mapper.RoleToRunnableRequests,
+		&rbacv1.RoleBinding{}:          mapper.RoleBindingToRunnableRequests,
+		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToRunnableRequests,
+		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToRunnableRequests,
+	}
+
+	for kindType, mapFunc := range watches {
+		if err := ctrl.Watch(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		); err != nil {
+			return fmt.Errorf("watch %T: %w", kindType, err)
+		}
 	}
 
 	return nil

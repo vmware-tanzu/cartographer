@@ -1557,18 +1557,7 @@ func (in *WorkloadSpec) DeepCopyInto(out *WorkloadSpec) {
 		*out = new(Source)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Image != nil {
-		in, out := &in.Image, &out.Image
-		*out = new(string)
-		**out = **in
-	}
-	if in.ServiceClaims != nil {
-		in, out := &in.ServiceClaims, &out.ServiceClaims
-		*out = make([]WorkloadServiceClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
+	in.Build.DeepCopyInto(&out.Build)
 	if in.Env != nil {
 		in, out := &in.Env, &out.Env
 		*out = make([]corev1.EnvVar, len(*in))
@@ -1576,11 +1565,22 @@ func (in *WorkloadSpec) DeepCopyInto(out *WorkloadSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	in.Build.DeepCopyInto(&out.Build)
+	if in.Image != nil {
+		in, out := &in.Image, &out.Image
+		*out = new(string)
+		**out = **in
+	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = new(corev1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.ServiceClaims != nil {
+		in, out := &in.ServiceClaims, &out.ServiceClaims
+		*out = make([]WorkloadServiceClaim, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

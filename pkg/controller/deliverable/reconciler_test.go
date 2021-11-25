@@ -23,6 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +41,7 @@ import (
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
@@ -56,6 +59,12 @@ var _ = Describe("Reconciler", func() {
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
 		dynamicTracker    *trackerfakes.FakeDynamicTracker
+
+		builtResourceRealizer        *deliverablefakes.FakeResourceRealizer
+		resourceRealizerSecret       *corev1.Secret
+		serviceAccountSecret         *corev1.Secret
+		serviceAccountName           string
+		resourceRealizerBuilderError error
 	)
 
 	BeforeEach(func() {
@@ -80,9 +89,25 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
+		serviceAccountSecret = &corev1.Secret{
+			StringData: map[string]string{"foo": "bar"},
+		}
+		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
+
+		resourceRealizerBuilderError = nil
+		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (realizer.ResourceRealizer, error) {
+			if resourceRealizerBuilderError != nil {
+				return nil, resourceRealizerBuilderError
+			}
+			resourceRealizerSecret = secret
+			builtResourceRealizer = &deliverablefakes.FakeResourceRealizer{}
+			return builtResourceRealizer, nil
+		}
+
 		reconciler = deliverable.Reconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
+			ResourceRealizerBuilder: resourceRealizerBuilder,
 			Realizer:                rlzr,
 			DynamicTracker:          dynamicTracker,
 		}
@@ -93,12 +118,17 @@ var _ = Describe("Reconciler", func() {
 
 		deliverableLabels = map[string]string{"some-key": "some-val"}
 
+		serviceAccountName = "service-account-name-for-deliverable"
+
 		dl = &v1alpha1.Deliverable{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "my-deliverable",
 				Namespace:  "my-ns",
 				Generation: 1,
 				Labels:     deliverableLabels,
+			},
+			Spec: v1alpha1.DeliverableSpec{
+				ServiceAccountName: serviceAccountName,
 			},
 		}
 		repo.GetDeliverableReturns(dl, nil)
@@ -215,6 +245,35 @@ var _ = Describe("Reconciler", func() {
 			stampedObject2.SetNamespace("my-ns-two")
 			stampedObject2.SetName("my-name-two")
 			rlzr.RealizeReturns([]*unstructured.Unstructured{stampedObject1, stampedObject2}, nil)
+		})
+
+		It("uses the service account specified by the workload for realizing resources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
+			Expect(serviceAccountNS).To(Equal("my-ns"))
+			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+		})
+
+		It("uses the default service account in the deliverables namespace if there is no service account specified", func() {
+			dl.Spec.ServiceAccountName = ""
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal("default"))
+			Expect(serviceAccountNS).To(Equal("my-ns"))
+			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
 		It("sets the DeliveryRef", func() {
@@ -380,6 +439,40 @@ var _ = Describe("Reconciler", func() {
 					_, err := reconciler.Reconcile(ctx, req)
 
 					Expect(err.Error()).To(ContainSubstring("unable to apply object"))
+				})
+			})
+
+			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
+				var stampedObjectError realizer.ApplyStampedObjectError
+				BeforeEach(func() {
+					status := &metav1.Status{
+						Message: "fantastic error",
+						Reason:  metav1.StatusReasonForbidden,
+						Code:    403,
+					}
+					stampedObject1 = &unstructured.Unstructured{}
+					stampedObject1.SetNamespace("a-namespace")
+					stampedObject1.SetName("a-name")
+
+					stampedObjectError = realizer.ApplyStampedObjectError{
+						Err:           kerrors.FromObject(status),
+						StampedObject: stampedObject1,
+					}
+
+					rlzr.RealizeReturns(nil, stampedObjectError)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+				})
+
+				It("handles the error and logs it", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\]: fantastic error"`))
 				})
 			})
 
@@ -566,6 +659,45 @@ var _ = Describe("Reconciler", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 
 				Expect(err.Error()).To(ContainSubstring("could not watch"))
+			})
+		})
+
+		Context("but the repo returns an error when requesting the service account secret", func() {
+			var repoError error
+			BeforeEach(func() {
+				repoError = errors.New("some error")
+				repo.GetServiceAccountSecretReturns(nil, repoError)
+			})
+
+			It("calls the condition manager to add a service account secret not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.ServiceAccountSecretNotFoundCondition(repoError)))
+			})
+
+			It("handles the error and logs it", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"handled error":"get secret for service account 'service-account-name-for-deliverable': some error"`))
+			})
+		})
+
+		Context("but the resource realizer builder fails", func() {
+			BeforeEach(func() {
+				resourceRealizerBuilderError = errors.New("some error")
+			})
+
+			It("calls the condition manager to add a resource realizer builder error condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
+			})
+
+			It("returns an unhandled error", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).To(HaveOccurred())
+
+				Expect(err.Error()).To(ContainSubstring("build resource realizer: some error"))
 			})
 		})
 	})

@@ -34,5 +34,7 @@ spec:
         - resource: source-provider
           name: source-provider
       params:
+        - name: service-account-name
+          value: $(workload.spec.serviceAccountName)$
         - name: a-config-map
           default: ""

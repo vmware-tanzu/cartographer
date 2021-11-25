@@ -15,11 +15,13 @@
 apiVersion: carto.run/v1alpha1
 kind: Runnable
 metadata:
-  name: my-runnable
+  name: my-runnable-inputs
   labels:
     my-label: this-is-it
     my-other-label: bye
 spec:
+  serviceAccountName: my-service-account
+
   runTemplateRef:
     name: my-run-template-inputs
 

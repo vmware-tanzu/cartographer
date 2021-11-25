@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -37,6 +38,7 @@ import (
 type Reconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
+	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                realizer.Realizer
 	DynamicTracker          tracker.DynamicTracker
 	conditionManager        conditions.ConditionManager
@@ -79,7 +81,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	stampedObjects, err := r.Realizer.Realize(ctx, realizer.NewResourceRealizer(workload, r.Repo, supplyChain.Spec.Params), supplyChain)
+	serviceAccountName := "default"
+	if workload.Spec.ServiceAccountName != "" {
+		serviceAccountName = workload.Spec.ServiceAccountName
+	}
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, workload.Namespace)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		return r.completeReconciliation(ctx, workload, fmt.Errorf("get secret for service account '%s': %w", workload.Spec.ServiceAccountName, err))
+	}
+
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
+	if err != nil {
+		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
+		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
+	}
+
+	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
 	if err != nil {
 		switch typedErr := err.(type) {
 		case realizer.GetClusterTemplateError:
@@ -89,7 +108,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			if !kerrors.IsForbidden(typedErr.Err) {
+				err = controller.NewUnhandledError(err)
+			}
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
 		default:

@@ -16,7 +16,9 @@ package repository_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 
 	. "github.com/onsi/ginkgo"
@@ -535,6 +537,212 @@ spec:
 				})
 			})
 
+		})
+
+		Describe("GetServiceAccountSecret", func() {
+			Context("when the service account and secret exist", func() {
+				var (
+					serviceAccount       *v1.ServiceAccount
+					serviceAccountSecret *v1.Secret
+					serviceAccountName   string
+				)
+
+				BeforeEach(func() {
+					serviceAccountName = "my-service-account"
+					serviceAccountSecretName := "my-service-account-secret"
+
+					serviceAccountSecret = &v1.Secret{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: serviceAccountSecretName,
+							Annotations: map[string]string{
+								"kubernetes.io/service-account.name": serviceAccountName,
+							},
+						},
+						Data: map[string][]byte{
+							"token": []byte("ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU="),
+						},
+						Type: v1.SecretTypeServiceAccountToken,
+					}
+
+					serviceAccount = &v1.ServiceAccount{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: serviceAccountName,
+						},
+						Secrets: []v1.ObjectReference{
+							{
+								Name: serviceAccountSecretName,
+							},
+						},
+					}
+
+					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else if key.Name == serviceAccountSecretName {
+							bytes, _ := json.Marshal(serviceAccountSecret)
+							_ = json.Unmarshal(bytes, obj)
+						} else {
+							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
+						}
+						return nil
+					}
+				})
+
+				It("returns the secret associated with the specified service account", func() {
+					secret, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(secret).To(Equal(serviceAccountSecret))
+				})
+			})
+
+			Context("when there is an error getting the service account", func() {
+				BeforeEach(func() {
+					cl.GetReturnsOnCall(0, fmt.Errorf("some error"))
+				})
+
+				It("returns a helpful error message", func() {
+					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
+					Expect(err).To(HaveOccurred())
+
+					Expect(err.Error()).To(ContainSubstring("getting service account"))
+				})
+			})
+
+			Context("when there is an error getting the service account secret", func() {
+				var (
+					serviceAccount     *v1.ServiceAccount
+					serviceAccountName string
+				)
+
+				BeforeEach(func() {
+					serviceAccountName = "my-service-account"
+					serviceAccountSecretName := "my-service-account-secret"
+
+					serviceAccount = &v1.ServiceAccount{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: serviceAccountName,
+						},
+						Secrets: []v1.ObjectReference{
+							{
+								Name: serviceAccountSecretName,
+							},
+						},
+					}
+
+					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else if key.Name == serviceAccountSecretName {
+							return fmt.Errorf("some error")
+						} else {
+							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
+						}
+						return nil
+					}
+				})
+
+				It("returns a helpful error message", func() {
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					Expect(err).To(HaveOccurred())
+
+					Expect(err.Error()).To(ContainSubstring("getting service account secret"))
+				})
+			})
+
+			Context("when the service account does not have any secrets", func() {
+				var (
+					serviceAccount     *v1.ServiceAccount
+					serviceAccountName string
+				)
+
+				BeforeEach(func() {
+					serviceAccountName = "my-service-account"
+
+					serviceAccount = &v1.ServiceAccount{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: serviceAccountName,
+						},
+						Secrets: []v1.ObjectReference{},
+					}
+
+					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else {
+							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
+						}
+						return nil
+					}
+				})
+
+				It("returns a helpful error message", func() {
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					Expect(err).To(HaveOccurred())
+
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any secrets", serviceAccountName)))
+				})
+			})
+
+			Context("when the service account does not have any token secrets", func() {
+				var (
+					serviceAccount     *v1.ServiceAccount
+					secret             *v1.Secret
+					serviceAccountName string
+				)
+
+				BeforeEach(func() {
+					serviceAccountName = "my-service-account"
+					secretName := "my-secret"
+
+					secret = &v1.Secret{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: secretName,
+						},
+						Type: v1.SecretTypeBasicAuth,
+					}
+
+					serviceAccount = &v1.ServiceAccount{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: serviceAccountName,
+						},
+						Secrets: []v1.ObjectReference{
+							{
+								Name: secretName,
+							},
+						},
+					}
+
+					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else if key.Name == secretName {
+							bytes, _ := json.Marshal(secret)
+							_ = json.Unmarshal(bytes, obj)
+						} else {
+							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
+						}
+						return nil
+					}
+				})
+
+				It("returns a helpful error message", func() {
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					Expect(err).To(HaveOccurred())
+
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any token secrets", serviceAccountName)))
+				})
+			})
 		})
 
 	})

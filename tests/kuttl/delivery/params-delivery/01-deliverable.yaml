@@ -20,6 +20,7 @@ metadata:
   labels:
     app.tanzu.vmware.com/deliverable-type: web---params-delivery
 spec:
+  serviceAccountName: my-service-account
   source:
     git:
       url: https://github.com/ekcasey/hello-world-ops

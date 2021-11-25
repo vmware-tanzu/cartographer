@@ -53,8 +53,9 @@ type Deliverable struct {
 }
 
 type DeliverableSpec struct {
-	Params []Param `json:"params,omitempty"`
-	Source *Source `json:"source,omitempty"`
+	Params             []Param `json:"params,omitempty"`
+	Source             *Source `json:"source,omitempty"`
+	ServiceAccountName string  `json:"serviceAccountName,omitempty"`
 }
 
 type DeliverableStatus struct {

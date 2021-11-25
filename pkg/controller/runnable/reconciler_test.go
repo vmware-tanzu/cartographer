@@ -23,12 +23,15 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -38,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
@@ -45,34 +49,62 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		out              *Buffer
-		ctx              context.Context
-		reconciler       runnable.Reconciler
-		request          controllerruntime.Request
-		repository       *repositoryfakes.FakeRepository
-		rlzr             *runnablefakes.FakeRealizer
-		dynamicTracker   *trackerfakes.FakeDynamicTracker
-		conditionManager *conditionsfakes.FakeConditionManager
+		out                      *Buffer
+		ctx                      context.Context
+		reconciler               runnable.Reconciler
+		request                  controllerruntime.Request
+		repo                     *repositoryfakes.FakeRepository
+		rlzr                     *runnablefakes.FakeRealizer
+		dynamicTracker           *trackerfakes.FakeDynamicTracker
+		conditionManager         *conditionsfakes.FakeConditionManager
+		builtClient              *repositoryfakes.FakeClient
+		clientForBuiltRepository *client.Client
+		cacheForBuiltRepository  *repository.RepoCache
+		fakeCache                *repositoryfakes.FakeRepoCache
+		fakeRunnabeRepo          *repositoryfakes.FakeRepository
+		serviceAccountSecret     *corev1.Secret
+		secretForBuiltClient     *corev1.Secret
+		serviceAccountName       string
 	)
 
 	BeforeEach(func() {
 		out = NewBuffer()
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
-		repository = &repositoryfakes.FakeRepository{}
+		repo = &repositoryfakes.FakeRepository{}
 		rlzr = &runnablefakes.FakeRealizer{}
 		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
 		conditionManager = &conditionsfakes.FakeConditionManager{}
+		fakeCache = &repositoryfakes.FakeRepoCache{}
+
+		serviceAccountName = "alternate-service-account-name"
+
+		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
 			return conditionManager
 		}
 
+		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache) repository.Repository {
+			clientForBuiltRepository = &client
+			cacheForBuiltRepository = &repoCache
+			return fakeRunnabeRepo
+		}
+
+		builtClient = &repositoryfakes.FakeClient{}
+		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
+			secretForBuiltClient = secret
+			return builtClient, nil
+		}
+
 		reconciler = runnable.Reconciler{
-			Repo:                    repository,
+			Repo:                    repo,
 			Realizer:                rlzr,
 			DynamicTracker:          dynamicTracker,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
+			RunnableCache:           fakeCache,
+			ClientBuilder:           clientBuilder,
+			RepositoryBuilder:       repositoryBuilder,
 		}
 
 		request = controllerruntime.Request{
@@ -84,8 +116,9 @@ var _ = Describe("Reconcile", func() {
 	})
 
 	Context("reconcile a new valid Runnable", func() {
+		var rb *v1alpha1.Runnable
 		BeforeEach(func() {
-			repository.GetRunnableReturns(&v1alpha1.Runnable{
+			rb = &v1alpha1.Runnable{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Runnable",
 					APIVersion: "carto.run/v1alpha1",
@@ -100,9 +133,10 @@ var _ = Describe("Reconcile", func() {
 						Kind: "RunTemplateRef",
 						Name: "my-run-template",
 					},
+					ServiceAccountName: serviceAccountName,
 				},
-			}, nil)
-
+			}
+			repo.GetRunnableReturns(rb, nil)
 		})
 
 		It("updates the conditions based on the condition manager", func() {
@@ -127,7 +161,7 @@ var _ = Describe("Reconcile", func() {
 
 			_, _ = reconciler.Reconcile(ctx, request)
 
-			actualCtx, updatedRunnable := repository.StatusUpdateArgsForCall(0)
+			actualCtx, updatedRunnable := repo.StatusUpdateArgsForCall(0)
 			Expect(actualCtx).To(Equal(ctx))
 
 			Expect(*updatedRunnable.(*v1alpha1.Runnable)).To(MatchFields(IgnoreExtras, Fields{
@@ -135,6 +169,24 @@ var _ = Describe("Reconcile", func() {
 					"Conditions": Equal(someConditions),
 				}),
 			}))
+		})
+
+		It("uses the service account specified by the workload for realizing resources", func() {
+			_, _ = reconciler.Reconcile(ctx, request)
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountName).To(Equal(serviceAccountName))
+			Expect(serviceAccountNS).To(Equal("my-namespace"))
+
+			Expect(*clientForBuiltRepository).To(Equal(builtClient))
+			Expect(secretForBuiltClient).To(Equal(serviceAccountSecret))
+			Expect(*cacheForBuiltRepository).To(Equal(reconciler.RunnableCache))
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, _, systemRepo, runnableRepo := rlzr.RealizeArgsForCall(0)
+			Expect(systemRepo).To(Equal(repo))
+			Expect(runnableRepo).To(Equal(fakeRunnabeRepo))
 		})
 
 		Context("watching does not cause an error", func() {
@@ -186,8 +238,8 @@ var _ = Describe("Reconcile", func() {
 			It("fetches the runnable", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
-				Expect(repository.GetRunnableCallCount()).To(Equal(1))
-				actualCtx, actualName, actualNamespace := repository.GetRunnableArgsForCall(0)
+				Expect(repo.GetRunnableCallCount()).To(Equal(1))
+				actualCtx, actualName, actualNamespace := repo.GetRunnableArgsForCall(0)
 				Expect(actualCtx).To(Equal(ctx))
 				Expect(actualName).To(Equal("my-runnable"))
 				Expect(actualNamespace).To(Equal("my-namespace"))
@@ -205,8 +257,8 @@ var _ = Describe("Reconcile", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-				actualCtx, obj := repository.StatusUpdateArgsForCall(0)
+				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
+				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
 				Expect(actualCtx).To(Equal(ctx))
 				statusObject, ok := obj.(*v1alpha1.Runnable)
 				Expect(ok).To(BeTrue())
@@ -226,8 +278,8 @@ var _ = Describe("Reconcile", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(repository.StatusUpdateCallCount()).To(Equal(1))
-				actualCtx, obj := repository.StatusUpdateArgsForCall(0)
+				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
+				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
 				Expect(actualCtx).To(Equal(ctx))
 				statusObject, ok := obj.(*v1alpha1.Runnable)
 				Expect(ok).To(BeTrue())
@@ -241,7 +293,7 @@ var _ = Describe("Reconcile", func() {
 		Context("updating the status fails", func() {
 			BeforeEach(func() {
 				rlzr.RealizeReturns(nil, nil, nil)
-				repository.StatusUpdateReturns(errors.New("bad status update error"))
+				repo.StatusUpdateReturns(errors.New("bad status update error"))
 			})
 
 			It("Starts and Finishes cleanly", func() {
@@ -393,6 +445,45 @@ var _ = Describe("Reconcile", func() {
 				})
 			})
 
+			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
+				var stampedObjectError realizer.ApplyStampedObjectError
+				BeforeEach(func() {
+					status := &metav1.Status{
+						Message: "fantastic error",
+						Reason:  metav1.StatusReasonForbidden,
+						Code:    403,
+					}
+					stampedObject := &unstructured.Unstructured{}
+					stampedObject.SetGroupVersionKind(schema.GroupVersionKind{
+						Group:   "thing.io",
+						Version: "alphabeta1",
+						Kind:    "MyThing",
+					})
+					stampedObject.SetNamespace("a-namespace")
+					stampedObject.SetName("a-name")
+
+					stampedObjectError = realizer.ApplyStampedObjectError{
+						Err:           kerrors.FromObject(status),
+						StampedObject: stampedObject,
+					}
+
+					rlzr.RealizeReturns(nil, nil, stampedObjectError)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, request)
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.StampedObjectRejectedByAPIServerCondition(stampedObjectError)))
+				})
+
+				It("handles the error and logs it", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"error":"unable to apply stamped object 'a-namespace/a-name': 'fantastic error'"`))
+				})
+			})
+
 			Context("of type ListCreatedObjectsError", func() {
 				var err error
 				BeforeEach(func() {
@@ -464,11 +555,26 @@ var _ = Describe("Reconcile", func() {
 				})
 			})
 		})
+
+		Context("the runnable does not specify a service account", func() {
+			BeforeEach(func() {
+				rb.Spec.ServiceAccountName = ""
+				repo.GetRunnableReturns(rb, nil)
+			})
+			It("uses the default service account in the namespace", func() {
+				_, _ = reconciler.Reconcile(ctx, request)
+
+				Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+				Expect(serviceAccountName).To(Equal("default"))
+				Expect(serviceAccountNS).To(Equal("my-namespace"))
+			})
+		})
 	})
 
 	Context("the runnable goes away", func() {
 		BeforeEach(func() {
-			repository.GetRunnableReturns(nil, nil)
+			repo.GetRunnableReturns(nil, nil)
 		})
 
 		It("considers the reconcile complete", func() {
@@ -495,7 +601,7 @@ var _ = Describe("Reconcile", func() {
 
 	Context("the runnable fetch is in error", func() {
 		BeforeEach(func() {
-			repository.GetRunnableReturns(nil, errors.New("very bad runnable"))
+			repo.GetRunnableReturns(nil, errors.New("very bad runnable"))
 		})
 
 		It("returns an error and requeues", func() {

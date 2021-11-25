@@ -43,6 +43,8 @@ spec:
     - name: a-config-map
       default:
         key: value
+    - name: service-account-name
+      default: default
 
   template:
     apiVersion: carto.run/v1alpha1
@@ -52,6 +54,8 @@ spec:
       labels:
         my-label: this-is-it
     spec:
+      serviceAccountName: $(params.service-account-name)$
+
       runTemplateRef:
         name: my-run-template-driven-by-supply-chain
 

@@ -79,6 +79,8 @@ spec:
                 - matchingLabels
                 - resource
                 type: object
+              serviceAccountName:
+                type: string
             required:
             - runTemplateRef
             type: object
