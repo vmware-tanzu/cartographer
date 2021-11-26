@@ -157,6 +157,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			cleanups = append(cleanups, workload)
 			err := c.Create(ctx, workload, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
+
 		})
 
 		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
@@ -235,6 +236,116 @@ var _ = Describe("WorkloadReconciler", func() {
 				))
 				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))
 			})
+		})
+	})
+
+	Context("insufficient service account permissions", func() {
+		BeforeEach(func() {
+			myServiceAccountSecret := &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-service-account-secret",
+					Namespace: testNS,
+					Annotations: map[string]string{
+						"kubernetes.io/service-account.name": "my-service-account",
+					},
+				},
+				Data: map[string][]byte{
+					"token": []byte("ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU="),
+				},
+				Type: corev1.SecretTypeServiceAccountToken,
+			}
+
+			myServiceAccount := &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-service-account",
+					Namespace: testNS,
+				},
+				Secrets: []corev1.ObjectReference{
+					{
+						Name: "initially-insufficient-service-account-secret",
+					},
+				},
+			}
+
+			cleanups = append(cleanups, myServiceAccountSecret)
+			err := c.Create(ctx, myServiceAccountSecret, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			cleanups = append(cleanups, myServiceAccount)
+			err = c.Create(ctx, myServiceAccount, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			template := &v1alpha1.ClusterSourceTemplate{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "proper-template-ada",
+				},
+				Spec: v1alpha1.SourceTemplateSpec{
+					TemplateSpec: v1alpha1.TemplateSpec{
+						Template: &runtime.RawExtension{Raw: templateBytes()},
+					},
+				},
+			}
+
+			cleanups = append(cleanups, template)
+			err = c.Create(ctx, template, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			supplyChain := newClusterSupplyChain("supplychain-ada", map[string]string{"name": "webapp"})
+			supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
+				{
+					Name: "ada-resource",
+					TemplateRef: v1alpha1.ClusterTemplateReference{
+						Kind: "ClusterSourceTemplate",
+						Name: "proper-template-ada",
+					},
+				},
+			}
+			cleanups = append(cleanups, supplyChain)
+
+			err = c.Create(ctx, supplyChain, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			workload := &v1alpha1.Workload{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-ada",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"name": "webapp",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{ServiceAccountName: "initially-insufficient-service-account"},
+			}
+
+			cleanups = append(cleanups, workload)
+			err = c.Create(ctx, workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		FIt("throws a forbidden error", func() {
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 5*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("SupplyChainReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionFalse),
+				}),
+			))
+		})
+		It("reconciles on update to role", func() {
+
+		})
+
+		It("reconciles on update to clusterrole", func() {
+
 		})
 	})
 

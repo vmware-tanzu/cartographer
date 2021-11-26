@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
+	"reflect"
 
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 )
@@ -63,10 +64,23 @@ var _ = Describe("Pkg/Realizer/Client/Client", func() {
 			newConfig, err := realizerclient.AddBearerToken(secret, oldConfig)
 			Expect(err).NotTo(HaveOccurred())
 
-			newConfig.BearerToken = oldToken
-			newConfig.BearerTokenFile = tokenFile
+			newValues := reflect.ValueOf(*newConfig)
+			oldValues := reflect.ValueOf(*oldConfig)
+			for i := 0; i < oldValues.NumField(); i++ {
+				name := oldValues.Type().Field(i).Name
+				newValue := newValues.FieldByName(name).Interface()
+				oldValue := oldValues.FieldByName(name).Interface()
 
-			Expect(newConfig).To(Equal(oldConfig))
+				if oldValue == nil && newValue == nil { //equivalentto matcher doesn't like comparing nil to nil
+					continue
+				}
+
+				if name == "BearerToken" || name == "BearerTokenFile" {
+					Expect(newValue).NotTo(BeEquivalentTo(oldValue))
+				} else {
+					Expect(newValue).To(BeEquivalentTo(oldValue))
+				}
+			}
 		})
 	})
 })
