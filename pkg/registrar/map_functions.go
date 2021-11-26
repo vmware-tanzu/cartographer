@@ -464,8 +464,8 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
