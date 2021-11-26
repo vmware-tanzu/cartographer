@@ -29,6 +29,10 @@ gen-objects: pkg/apis/carto/v1alpha1/zz_generated.deepcopy.go
 .PHONY: gen-manifests
 gen-manifests: config/crd/bases/*.yaml
 
+.PHONY: gen-client
+gen-client: 
+	./hack/update-codegen.sh
+
 test_crd_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(wildcard tests/resources/*.go))
 
 tests/resources/zz_generated.deepcopy.go: $(test_crd_sources)

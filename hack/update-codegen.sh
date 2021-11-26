@@ -24,7 +24,7 @@ GENERATOR_VERSION=v0.22.4
   # To support running this script from anywhere, we have to first cd into this directory
   # so we can install the tools.
   cd "$(dirname "${0}")"
-  go get k8s.io/code-generator/cmd/{defaulter-gen,client-gen,lister-gen,informer-gen,deepcopy-gen}@$GENERATOR_VERSION
+  go install k8s.io/code-generator/cmd/{defaulter-gen,client-gen,lister-gen,informer-gen,deepcopy-gen}@$GENERATOR_VERSION
 )
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")

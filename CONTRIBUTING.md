@@ -324,3 +324,10 @@ ps.: those commands can be all specified at once, for instance:
 [carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
 [imgpkg bundle]: https://carvel.dev/imgpkg/docs/latest/
  
+## Generating Kubernetes clients, fake clients and listers
+
+If you make a change to the Cartographer Custom Resources (under pkg/apis/carto) you will need to regenerate clients.
+
+```
+make gen-client
+```
