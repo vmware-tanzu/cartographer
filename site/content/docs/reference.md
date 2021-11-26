@@ -124,7 +124,7 @@ notes:
 
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside.
 
-_ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
+_ref: [pkg/apis/carto/v1alpha1/workload.go](../../../pkg/apis/carto/v1alpha1/workload.go)_
 
 
 ### ClusterSupplyChain
@@ -273,7 +273,7 @@ spec:
 ```
 
 
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/cluster_supply_chain.go)_
+_ref: [pkg/apis/carto/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/carto/v1alpha1/cluster_supply_chain.go)_
 
 
 ### ClusterSourceTemplate
@@ -334,7 +334,7 @@ spec:
       ignore: ""
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref: [pkg/apis/carto/v1alpha1/cluster_source_template.go](../../../pkg/apis/carto/v1alpha1/cluster_source_template.go)_
 
 
 ### ClusterImageTemplate
@@ -378,7 +378,7 @@ spec:
           url: $(sources.provider.url)$
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref: [pkg/apis/carto/v1alpha1/cluster_image_template.go](../../../pkg/apis/carto/v1alpha1/cluster_image_template.go)_
 
 
 ### ClusterConfigTemplate
@@ -387,7 +387,7 @@ Instructs the supply chain how to instantiate a Kubernetes object that knows how
 
 The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfigTemplate` will update its status to emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make this value available to other resources.
 
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref: [pkg/apis/carto/v1alpha1/cluster_config_template.go](../../../pkg/apis/carto/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
@@ -452,7 +452,7 @@ spec:
         - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_
+_ref: [pkg/apis/carto/v1alpha1/cluster_template.go](../../../pkg/apis/carto/v1alpha1/cluster_template.go)_
 
 
 ### Runnable

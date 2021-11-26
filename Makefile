@@ -6,18 +6,18 @@ build: gen-objects gen-manifests
 run: build
 	build/cartographer
 
-crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
-crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
+crd_non_sources := pkg/apis/carto/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/carto/v1alpha1/*_test.go)
+crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/carto/v1alpha1/*.go))
 
 pkg/apis/carto/v1alpha1/zz_generated.deepcopy.go: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
                 object \
-                paths=./pkg/apis/v1alpha1
+                paths=./pkg/apis/carto/v1alpha1
 
 config/crd/bases/*.yaml &: $(crd_sources)
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
 		crd \
-		paths=./pkg/apis/v1alpha1 \
+		paths=./pkg/apis/carto/v1alpha1 \
 		output:crd:artifacts:config=config/crd/bases
 	go run github.com/google/addlicense \
 		-f ./hack/boilerplate.go.txt \

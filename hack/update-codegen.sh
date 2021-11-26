@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 #CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ./cmd/code-generator)}
-GENERATOR_VERSION=v0.22.3
+GENERATOR_VERSION=v0.22.4
 (
   # To support running this script from anywhere, we have to first cd into this directory
   # so we can install the tools.
