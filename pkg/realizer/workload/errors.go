@@ -16,6 +16,7 @@ package workload
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -50,12 +51,16 @@ func (e StampError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err      error
-	Resource *v1alpha1.SupplyChainResource
+	Err           error
+	Resource      *v1alpha1.SupplyChainResource
+	StampedObject *unstructured.Unstructured
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for resource [%s]: %w", e.Resource.Name, e.Err).Error()
+	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s.%s] for resource [%s]: %w",
+		e.JsonPathExpression(), e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
+		strings.ToLower(e.StampedObject.GetKind()), e.StampedObject.GetObjectKind().GroupVersionKind().Group,
+		e.Resource.Name, e.Err).Error()
 }
 
 type JsonPathErrorContext interface {

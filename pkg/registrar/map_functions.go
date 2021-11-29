@@ -324,8 +324,8 @@ func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Obj
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
@@ -349,8 +349,8 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
@@ -464,8 +464,8 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
@@ -489,8 +489,8 @@ func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBinding
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
@@ -605,8 +605,8 @@ func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Obj
 			serviceAccountObject := &corev1.ServiceAccount{}
 
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
@@ -630,8 +630,8 @@ func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObj
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {

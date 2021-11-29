@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -137,8 +136,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return stampedObject, nil, RetrieveOutputError{
-			Err:      err,
-			Resource: resource,
+			Err:           err,
+			Resource:      resource,
+			StampedObject: stampedObject,
 		}
 	}
 

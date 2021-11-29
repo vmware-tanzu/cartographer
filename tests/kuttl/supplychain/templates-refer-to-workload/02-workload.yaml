@@ -48,6 +48,11 @@ spec:
     - name: SPRING_PROFILES_ACTIVE
       value: mysql
 
+  build:
+    env:
+      - name: SOME_BUILD_ENV
+        value: foo
+
   resources:
     requests:
       memory: "1Gi"
