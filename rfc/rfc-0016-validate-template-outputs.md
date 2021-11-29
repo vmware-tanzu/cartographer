@@ -1,4 +1,7 @@
-# Draft RFC 0016 Validate Template Output
+# RFC 0016 Validate Template Output
+
+## Status
+Accepted
 
 ## Summary
 
