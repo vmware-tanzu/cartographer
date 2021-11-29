@@ -97,7 +97,8 @@ spec:
 
 ##### ClusterImageTemplate
 The image field to which a `ClusterImageTemplate` points should resolve to a
-string. Further validation (ensuring that the string is a valid digest) is appropriate.
+string. Further validation (ensuring that the string is a valid digest and not a tag)
+is appropriate.
 
 ```yaml
 ---
@@ -113,7 +114,7 @@ spec:
     metadata:
       name: test-configmap
     data:
-      some_malformed_image_digest: 6
+      some_malformed_image_digest: gcr.io/my-project/busybox:latest
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -133,7 +134,7 @@ spec:
 
 ##### ClusterConfigTemplate
 The config field to which a `ClusterConfigTemplate` points should resolve to a
-valid k8s object.
+valid yaml with at least one top level key.
 
   ```yaml
 ---
@@ -149,9 +150,7 @@ spec:
     metadata:
       name: test-configmap
     data:
-      some_invalid_object_definition:
-        kind: some-kind
-        other-field: not-enough-info-for-object-specification
+      some_invalid_object_definition: just-a-string
 
 ---
 apiVersion: carto.run/v1alpha1
