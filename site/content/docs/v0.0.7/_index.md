@@ -1,7 +1,7 @@
 ---
 version: v0.0.7
 cascade:
-layout: docs
+  layout: docs
 ---
 
 ## TLDR
