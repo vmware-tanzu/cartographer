@@ -87,7 +87,7 @@ var _ = Describe("Delivery Validation", func() {
 					})
 					It("returns an error", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"invalid param: 'some-param', must set exactly one of value and default",
+							"param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -105,7 +105,7 @@ var _ = Describe("Delivery Validation", func() {
 
 					It("returns an error", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"invalid param: 'some-param', must set exactly one of value and default",
+							"param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -122,7 +122,7 @@ var _ = Describe("Delivery Validation", func() {
 					})
 					It("returns an error", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -139,7 +139,7 @@ var _ = Describe("Delivery Validation", func() {
 					})
 					It("returns an error", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})

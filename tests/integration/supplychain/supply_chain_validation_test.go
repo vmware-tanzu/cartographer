@@ -195,7 +195,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the supply chain", func() {
 				err = c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
+				Expect(err.Error()).To(ContainSubstring("duplicate resource name [source-provider] found in clustersupplychain [responsible-ops---default-params]"))
 			})
 		})
 
@@ -237,7 +237,7 @@ var _ = Describe("SupplyChainValidation", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("duplicate resource name 'source-provider' found in clustersupplychain 'responsible-ops---default-params'"))
+				Expect(err.Error()).To(ContainSubstring("duplicate resource name [source-provider] found in clustersupplychain [responsible-ops---default-params]"))
 			})
 		})
 	})
@@ -273,7 +273,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the supply chain", func() {
 				err = c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("resource 'provider' providing 'solo-source-provider' must reference a ClusterSourceTemplate"))
+				Expect(err.Error()).To(ContainSubstring("resource [provider] providing [solo-source-provider] must reference a ClusterSourceTemplate"))
 			})
 		})
 	})

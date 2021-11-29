@@ -276,7 +276,7 @@ var _ = Describe("Interpolator", func() {
 			It("Returns an error that it cannot find the value notknown", func() {
 				_, err := templates.InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, template, tagInterpolator)
 				Expect(err).To(BeMeaningful("interpolate tag: "))
-				Expect(err).To(BeMeaningful("evaluate jsonpath: evaluate: jsonpath parse path '{.params['notknown]}': invalid array index 'notknown"))
+				Expect(err).To(BeMeaningful("evaluate jsonpath: evaluate: failed to parse jsonpath '{.params['notknown]}': invalid array index 'notknown"))
 			})
 		})
 	})

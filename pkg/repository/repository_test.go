@@ -659,15 +659,18 @@ spec:
 				var (
 					serviceAccount     *v1.ServiceAccount
 					serviceAccountName string
+					serviceAccountNs   string
 				)
 
 				BeforeEach(func() {
 					serviceAccountName = "my-service-account"
+					serviceAccountNs = "my-ns"
 
 					serviceAccount = &v1.ServiceAccount{
 						TypeMeta: metav1.TypeMeta{},
 						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
+							Name:      serviceAccountName,
+							Namespace: serviceAccountNs,
 						},
 						Secrets: []v1.ObjectReference{},
 					}
@@ -684,10 +687,10 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [/%s] does not have any secrets", serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any secrets", serviceAccountNs, serviceAccountName)))
 				})
 			})
 
@@ -696,10 +699,12 @@ spec:
 					serviceAccount     *v1.ServiceAccount
 					secret             *v1.Secret
 					serviceAccountName string
+					serviceAccountNs   string
 				)
 
 				BeforeEach(func() {
 					serviceAccountName = "my-service-account"
+					serviceAccountNs = "my-ns"
 					secretName := "my-secret"
 
 					secret = &v1.Secret{
@@ -713,7 +718,8 @@ spec:
 					serviceAccount = &v1.ServiceAccount{
 						TypeMeta: metav1.TypeMeta{},
 						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
+							Name:      serviceAccountName,
+							Namespace: serviceAccountNs,
 						},
 						Secrets: []v1.ObjectReference{
 							{
@@ -737,10 +743,10 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [/%s] does not have any token secrets", serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any token secrets", serviceAccountNs, serviceAccountName)))
 				})
 			})
 		})

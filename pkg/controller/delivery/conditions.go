@@ -25,8 +25,8 @@ import (
 
 func TemplatesNotFoundCondition(resourceNames []string) metav1.Condition {
 	message := fmt.Sprintf(
-		"Did not find the template of the resource(s) '%s'",
-		strings.Join(resourceNames, "', '"),
+		"Did not find the template of the resource(s) [%s]",
+		strings.Join(resourceNames, ", "),
 	)
 
 	return metav1.Condition{

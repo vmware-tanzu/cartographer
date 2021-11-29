@@ -152,7 +152,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
 					_, err := template.GetOutput(stampedObjects)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: evaluate: find results: nonexistant is not found"))
+					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: evaluate: failed to find results: nonexistant is not found"))
 				})
 			})
 		})
@@ -224,7 +224,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
 					_, err := template.GetOutput(stampedObjects)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: evaluate: find results: nonexistant is not found"))
+					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: evaluate: failed to find results: nonexistant is not found"))
 				})
 
 				Context("and one does not have succeeded condition", func() {
@@ -235,7 +235,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 						template := templates.NewRunTemplateModel(apiTemplate)
 						_, err := template.GetOutput(stampedObjects)
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("failed to evaluate path [spec.nonexistant]: evaluate: find results: nonexistant is not found"))
+						Expect(err.Error()).To(ContainSubstring("failed to evaluate path [spec.nonexistant]: evaluate: failed to find results: nonexistant is not found"))
 					})
 				})
 			})

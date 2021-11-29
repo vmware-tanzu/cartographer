@@ -76,13 +76,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("get secret for service account '%s': %w", serviceAccountName, err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", serviceAccountName, err))
 	}
 
 	runnableClient, err := r.ClientBuilder(secret)
 	if err != nil {
 		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("build resource realizer: %w", err)))
+		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache))

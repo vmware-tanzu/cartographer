@@ -283,13 +283,13 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
-	selectorGetters := []SelectorGetter{}
+	var selectorGetters []SelectorGetter
 	for _, item := range list.Items {
 		item := item
 		selectorGetters = append(selectorGetters, &item)
 	}
 
-	supplyChains := []*v1alpha1.ClusterSupplyChain{}
+	var supplyChains []*v1alpha1.ClusterSupplyChain
 	for _, matchingObject := range BestLabelMatches(workload, selectorGetters) {
 		log.V(logger.DEBUG).Info("supply chain matched workload",
 			"supply chain", matchingObject)
@@ -309,13 +309,13 @@ func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverabl
 		return nil, fmt.Errorf("unable to list deliveries from api server: %w", err)
 	}
 
-	selectorGetters := []SelectorGetter{}
+	var selectorGetters []SelectorGetter
 	for _, item := range list.Items {
 		item := item
 		selectorGetters = append(selectorGetters, &item)
 	}
 
-	deliveries := []*v1alpha1.ClusterDelivery{}
+	var deliveries []*v1alpha1.ClusterDelivery
 	for _, matchingObject := range BestLabelMatches(deliverable, selectorGetters) {
 		log.V(logger.DEBUG).Info("delivery matched deliverable",
 			"delivery", matchingObject)
@@ -325,6 +325,15 @@ func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverabl
 	log.V(logger.DEBUG).Info("deliveries matched deliverable",
 		"deliveries", deliveries)
 	return deliveries, nil
+}
+func getNamespacedName(name string, namespace string) string {
+	var namespacedName string
+	if namespace == "" {
+		namespacedName = name
+	} else {
+		namespacedName = fmt.Sprintf("%s/%s", namespace, name)
+	}
+	return namespacedName
 }
 
 func (r *repository) getObject(ctx context.Context, name string, namespace string, obj client.Object) error {
@@ -339,13 +348,7 @@ func (r *repository) getObject(ctx context.Context, name string, namespace strin
 		obj,
 	)
 	if err != nil {
-		//TODO: use namespacedName everywhere in repo, not everything has a namespace
-		var namespacedName string
-		if namespace == "" {
-			namespacedName = name
-		} else {
-			namespacedName = fmt.Sprintf("%s/%s", namespace, name)
-		}
+		namespacedName := getNamespacedName(name, namespace)
 		log.Error(err, "failed to get object from api server", "object", namespacedName)
 		return fmt.Errorf("failed to get object [%s] from api server: %w", namespacedName, err)
 	}
