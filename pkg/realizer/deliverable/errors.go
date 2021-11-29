@@ -20,7 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
+
+const NO_JSONPATH_CONTEXT = "<no jsonpath context>"
 
 type GetDeliveryClusterTemplateError struct {
 	Err         error
@@ -50,8 +53,9 @@ func (e StampError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err      error
-	Resource *v1alpha1.ClusterDeliveryResource
+	Err           error
+	Resource      *v1alpha1.ClusterDeliveryResource
+	StampedObject *unstructured.Unstructured
 }
 
 type JsonPathErrorContext interface {
@@ -59,7 +63,16 @@ type JsonPathErrorContext interface {
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for resource [%s]: %w", e.Resource.Name, e.Err).Error()
+	if e.JsonPathExpression() == NO_JSONPATH_CONTEXT {
+		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
+			e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
+			utils.GetFullyQualifiedType(e.StampedObject),
+			e.Resource.Name, e.Err).Error()
+	}
+	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
+		e.JsonPathExpression(), e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
+		utils.GetFullyQualifiedType(e.StampedObject),
+		e.Resource.Name, e.Err).Error()
 }
 
 func (e RetrieveOutputError) ResourceName() string {
@@ -71,5 +84,5 @@ func (e RetrieveOutputError) JsonPathExpression() string {
 	if ok {
 		return jsonPathErrorContext.JsonPathExpression()
 	}
-	return "<no jsonpath context>"
+	return NO_JSONPATH_CONTEXT
 }

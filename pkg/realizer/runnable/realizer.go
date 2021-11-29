@@ -107,11 +107,16 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	outputs, err := template.GetOutput(allRunnableStampedObjects)
+	outputs, evaluatedStampedObject, err := template.GetOutput(allRunnableStampedObjects)
 	if err != nil {
+		errStampedObject := stampedObject
+		if evaluatedStampedObject != nil {
+			errStampedObject = evaluatedStampedObject
+		}
 		return stampedObject, nil, RetrieveOutputError{
-			Err:      err,
-			Runnable: runnable,
+			Err:           err,
+			Runnable:      runnable,
+			StampedObject: errStampedObject,
 		}
 	}
 

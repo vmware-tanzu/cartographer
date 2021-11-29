@@ -107,9 +107,10 @@ var _ = Describe("ClusterRunTemplate", func() {
 			Context("with no outputs", func() {
 				It("returns an empty list", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					outputs, err := template.GetOutput(stampedObjects)
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs).To(BeEmpty())
+					Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
 				})
 			})
 
@@ -127,18 +128,20 @@ var _ = Describe("ClusterRunTemplate", func() {
 					})
 					It("returns empty outputs", func() {
 						template := templates.NewRunTemplateModel(apiTemplate)
-						outputs, err := template.GetOutput(stampedObjects)
+						outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(outputs).To(BeEmpty())
+						Expect(evaluatedStampedObject).To(BeNil())
 					})
 				})
 
 				It("returns the new outputs", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					outputs, err := template.GetOutput(stampedObjects)
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
 					Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
+					Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
 				})
 			})
 
@@ -150,7 +153,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 				It("returns an error", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					_, err := template.GetOutput(stampedObjects)
+					_, _, err := template.GetOutput(stampedObjects)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: evaluate: find results: nonexistant is not found"))
 				})
@@ -174,9 +177,10 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 				It("returns empty outputs", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					outputs, err := template.GetOutput(stampedObjects)
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs).To(BeEmpty())
+					Expect(evaluatedStampedObject).To(BeNil())
 				})
 			})
 			Context("when only the least recently has succeeded", func() {
@@ -185,19 +189,21 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 				It("returns the output of the earlier submitted and successful object", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					outputs, err := template.GetOutput(stampedObjects)
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
 					Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
+					Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
 				})
 			})
 			Context("when all have succeeded", func() {
 				It("returns the output of the most recently submitted and successful object", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					outputs, err := template.GetOutput(stampedObjects)
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-simple"`)}))
 					Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-complex"`)}))
+					Expect(evaluatedStampedObject).To(Equal(secondStampedObject))
 				})
 			})
 			Context("when the field of one object don't match the declared output fields", func() {
@@ -209,9 +215,10 @@ var _ = Describe("ClusterRunTemplate", func() {
 
 				It("returns the output of the most recently submitted, successful, non-error inducing object", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					outputs, err := template.GetOutput(stampedObjects)
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"populated"`)}))
+					Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
 				})
 			})
 			Context("when the fields of all objects don't match the declared output fields", func() {
@@ -222,7 +229,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 				It("returns a helpful error", func() {
 					template := templates.NewRunTemplateModel(apiTemplate)
-					_, err := template.GetOutput(stampedObjects)
+					_, _, err := template.GetOutput(stampedObjects)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: evaluate: find results: nonexistant is not found"))
 				})
@@ -233,7 +240,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 					})
 					It("returns a helpful error", func() {
 						template := templates.NewRunTemplateModel(apiTemplate)
-						_, err := template.GetOutput(stampedObjects)
+						_, _, err := template.GetOutput(stampedObjects)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("failed to evaluate path [spec.nonexistant]: evaluate: find results: nonexistant is not found"))
 					})

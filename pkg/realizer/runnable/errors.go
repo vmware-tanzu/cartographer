@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type GetRunTemplateError struct {
@@ -81,11 +82,19 @@ func (e ListCreatedObjectsError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err      error
-	Runnable *v1alpha1.Runnable
+	Err           error
+	Runnable      *v1alpha1.Runnable
+	StampedObject *unstructured.Unstructured
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for runnable '%s/%s': %w",
+	name := e.StampedObject.GetName()
+	if name == "" {
+		name = e.StampedObject.GetGenerateName()
+	}
+
+	return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for runnable [%s/%s]: %w",
+		e.StampedObject.GetNamespace(), name,
+		utils.GetFullyQualifiedType(e.StampedObject),
 		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
 }

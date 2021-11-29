@@ -18,9 +18,11 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 // -- Delivery conditions
@@ -88,12 +90,17 @@ func TemplateObjectRetrievalFailureCondition(err error) metav1.Condition {
 	}
 }
 
-func MissingValueAtPathCondition(resourceName, expression string) metav1.Condition {
+func MissingValueAtPathCondition(obj *unstructured.Unstructured, expression string) metav1.Condition {
+	var namespaceMsg string
+	if obj.GetNamespace() != "" {
+		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
+	}
 	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionUnknown,
-		Reason:  v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("Resource '%s' is waiting to read value '%s'", resourceName, expression),
+		Type:   v1alpha1.WorkloadResourceSubmitted,
+		Status: metav1.ConditionUnknown,
+		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
+		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s]%s",
+			expression, utils.GetFullyQualifiedType(obj), obj.GetName(), namespaceMsg),
 	}
 }
 
