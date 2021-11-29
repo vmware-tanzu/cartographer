@@ -58,7 +58,7 @@ var _ = Describe("JsonPath", func() {
 			path = "{{"
 		})
 
-		ItReturnsAHelpfulError("jsonpath parse path '{{': ")
+		ItReturnsAHelpfulError("failed to parse jsonpath '{{': ")
 	})
 
 	Context("when there are two queries are in the path", func() {

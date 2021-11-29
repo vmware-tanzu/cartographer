@@ -21,11 +21,11 @@ status:
     - type: SupplyChainReady
       status: "False"
       reason: TemplatesNotFound
-      message: Did not find the template of the resource(s) 'source-provider', 'image-provider', 'config-provider', 'cluster-sink'
+      message: Did not find the template of the resource(s) [source-provider, image-provider, config-provider, cluster-sink]
     - type: Ready
       status: "False"
       reason: TemplatesNotFound
-      message: Did not find the template of the resource(s) 'source-provider', 'image-provider', 'config-provider', 'cluster-sink'
+      message: Did not find the template of the resource(s) [source-provider, image-provider, config-provider, cluster-sink]
   supplyChainRef:
     name: responsible-ops.workload-supply-chain-no-templates
     kind: ClusterSupplyChain

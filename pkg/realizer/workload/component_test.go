@@ -20,20 +20,18 @@ import (
 	"errors"
 	"reflect"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/vmware-tanzu/cartographer/pkg/repository"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -169,8 +167,7 @@ var _ = Describe("Resource", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				actualCtx, stampedObject, allowUpdate := fakeWorkloadRepo.EnsureObjectExistsOnClusterArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, stampedObject, allowUpdate := fakeWorkloadRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
 
@@ -212,7 +209,7 @@ var _ = Describe("Resource", func() {
 				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("unable to get template 'image-template-1'"))
+				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetClusterTemplateError"))
 			})
@@ -236,7 +233,7 @@ var _ = Describe("Resource", func() {
 			It("returns a helpful error", func() {
 				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("new model from api:"))
+				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1}]: resource does not match a known template"))
 			})
 		})
 
@@ -264,7 +261,7 @@ var _ = Describe("Resource", func() {
 			It("returns StampError", func() {
 				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource 'resource-1'"))
+				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
 			})
 		})

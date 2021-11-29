@@ -182,13 +182,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 			It("on create, returns an error", func() {
 				Expect(supplyChain.ValidateCreate()).To(MatchError(
-					"invalid sources for resource 'other-source-provider': 'some-source' is provided by unknown resource 'some-nonexistent-resource'",
+					"invalid sources for resource [other-source-provider]: [some-source] is provided by unknown resource [some-nonexistent-resource]",
 				))
 			})
 
 			It("on update, returns an error", func() {
 				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-					"invalid sources for resource 'other-source-provider': 'some-source' is provided by unknown resource 'some-nonexistent-resource'",
+					"invalid sources for resource [other-source-provider]: [some-source] is provided by unknown resource [some-nonexistent-resource]",
 				))
 			})
 
@@ -206,13 +206,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 			It("on create, it rejects the Resource", func() {
 				Expect(supplyChain.ValidateCreate()).To(MatchError(
-					"duplicate resource name 'some-duplicate-name' found in clustersupplychain 'responsible-ops---default-params'",
+					"duplicate resource name [some-duplicate-name] found in clustersupplychain [responsible-ops---default-params]",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
 				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-					"duplicate resource name 'some-duplicate-name' found in clustersupplychain 'responsible-ops---default-params'",
+					"duplicate resource name [some-duplicate-name] found in clustersupplychain [responsible-ops---default-params]",
 				))
 			})
 
@@ -233,13 +233,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 					})
 					It("on create, returns an error", func() {
 						Expect(supplyChain.ValidateCreate()).To(MatchError(
-							"invalid param: 'some-param', must set exactly one of value and default",
+							"param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
 						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-							"invalid param: 'some-param', must set exactly one of value and default",
+							"param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
@@ -261,13 +261,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 					It("on create, returns an error", func() {
 						Expect(supplyChain.ValidateCreate()).To(MatchError(
-							"invalid param: 'some-param', must set exactly one of value and default",
+							"param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
 						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-							"invalid param: 'some-param', must set exactly one of value and default",
+							"param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
@@ -288,13 +288,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 					})
 					It("on create, returns an error", func() {
 						Expect(supplyChain.ValidateCreate()).To(MatchError(
-							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
 						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
@@ -315,13 +315,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 					})
 					It("on create, returns an error", func() {
 						Expect(supplyChain.ValidateCreate()).To(MatchError(
-							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
 						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-							"invalid resource 'source-provider': invalid param: 'some-param', must set exactly one of value and default",
+							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
@@ -398,14 +398,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 					} else {
 						Expect(createErr).To(HaveOccurred())
 						Expect(createErr).To(MatchError(fmt.Sprintf(
-							"invalid %ss for resource 'input-consumer': resource 'input-provider' providing 'input-name' must reference a %s",
+							"invalid %ss for resource [input-consumer]: resource [input-provider] providing [input-name] must reference a %s",
 							strings.ToLower(inputReferenceType),
 							consumerToProviderMapping[inputReferenceType]),
 						))
 
 						Expect(updateErr).To(HaveOccurred())
 						Expect(updateErr).To(MatchError(fmt.Sprintf(
-							"invalid %ss for resource 'input-consumer': resource 'input-provider' providing 'input-name' must reference a %s",
+							"invalid %ss for resource [input-consumer]: resource [input-provider] providing [input-name] must reference a %s",
 							strings.ToLower(inputReferenceType),
 							consumerToProviderMapping[inputReferenceType]),
 						))

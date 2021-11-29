@@ -41,7 +41,7 @@ type DelegatableParam struct {
 
 func (p *DelegatableParam) validateDelegatableParams() error {
 	if p.bothValuesSet() || p.neitherValueSet() {
-		return fmt.Errorf("invalid param: '%s', must set exactly one of value and default", p.Name)
+		return fmt.Errorf("param [%s] is invalid: must set exactly one of value and default", p.Name)
 	}
 	return nil
 }

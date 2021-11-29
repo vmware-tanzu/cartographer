@@ -81,7 +81,7 @@ func markersFor(relativeFile, typeName, fieldName, markerType string) (interface
 
 	if mrkrs == nil {
 		return nil, fmt.Errorf(
-			"could not find marker type '%s' in file/type/field: %s/%s/%s",
+			"could not find marker type [%s] in file/type/field: [%s/%s/%s]",
 			markerType,
 			relativeFile,
 			typeName,

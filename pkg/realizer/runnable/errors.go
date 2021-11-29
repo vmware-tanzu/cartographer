@@ -28,7 +28,7 @@ type GetRunTemplateError struct {
 }
 
 func (e GetRunTemplateError) Error() string {
-	return fmt.Errorf("unable to get runnable '%s/%s': '%w'",
+	return fmt.Errorf("unable to get runnable [%s/%s]: %w",
 		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
 }
 
@@ -38,10 +38,10 @@ type ResolveSelectorError struct {
 }
 
 func (e ResolveSelectorError) Error() string {
-	return fmt.Errorf("unable to resolve selector '(apiVersion:%s kind:%s labels:%v)': '%w'",
+	return fmt.Errorf("unable to resolve selector [%v], apiVersion [%s], kind [%s]: %w",
+		e.Selector.MatchingLabels,
 		e.Selector.Resource.APIVersion,
 		e.Selector.Resource.Kind,
-		e.Selector.MatchingLabels,
 		e.Err).Error()
 }
 
@@ -51,7 +51,7 @@ type StampError struct {
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object '%s/%s': '%w'",
+	return fmt.Errorf("unable to stamp object [%s/%s]: %w",
 		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
 }
 
@@ -65,7 +65,7 @@ func (e ApplyStampedObjectError) Error() string {
 	if name == "" {
 		name = e.StampedObject.GetGenerateName()
 	}
-	return fmt.Errorf("unable to apply stamped object '%s/%s': '%w'",
+	return fmt.Errorf("unable to apply stamped object [%s/%s]: %w",
 		e.StampedObject.GetNamespace(), name, e.Err).Error()
 }
 
@@ -76,7 +76,7 @@ type ListCreatedObjectsError struct {
 }
 
 func (e ListCreatedObjectsError) Error() string {
-	return fmt.Errorf("unable to list objects in namespace '%s' with labels '%v': '%w'",
+	return fmt.Errorf("unable to list objects in namespace [%s] with labels [%v]: %w",
 		e.Namespace, e.Labels, e.Err).Error()
 }
 
@@ -86,6 +86,6 @@ type RetrieveOutputError struct {
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs from stamped object for runnable '%s/%s': %w",
+	return fmt.Errorf("unable to retrieve outputs from stamped object for runnable [%s/%s]: %w",
 		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
 }

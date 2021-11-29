@@ -32,12 +32,12 @@ func SinglePathEvaluate(jsonpathExpression string, obj interface{}) ([]interface
 
 	err := parser.Parse(jsonpathExpression)
 	if err != nil {
-		return nil, fmt.Errorf("jsonpath parse path '%s': %w", jsonpathExpression, err)
+		return nil, fmt.Errorf("failed to parse jsonpath '%s': %w", jsonpathExpression, err)
 	}
 
 	values, err := parser.FindResults(obj)
 	if err != nil {
-		return nil, fmt.Errorf("find results: %w", err)
+		return nil, fmt.Errorf("failed to find results: %w", err)
 	}
 
 	if len(values) > 1 {
@@ -47,13 +47,13 @@ func SinglePathEvaluate(jsonpathExpression string, obj interface{}) ([]interface
 	parser.EnableJSONOutput(true)
 	err = parser.PrintResults(&jsonBuffer, values[0])
 	if err != nil {
-		return nil, fmt.Errorf("print results: %w", err)
+		return nil, fmt.Errorf("failed to print results: %w", err)
 	}
 
 	bufBytes := jsonBuffer.Bytes()
 	err = json.Unmarshal(bufBytes, &interfaceList)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshall: %w", err)
+		return nil, fmt.Errorf("failed to unmarshall: %w", err)
 	}
 	return interfaceList, nil
 }
