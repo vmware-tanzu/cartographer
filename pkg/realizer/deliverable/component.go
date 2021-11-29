@@ -131,8 +131,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return stampedObject, nil, RetrieveOutputError{
-			Err:      err,
-			Resource: resource,
+			Err:           err,
+			Resource:      resource,
+			StampedObject: stampedObject,
 		}
 	}
 

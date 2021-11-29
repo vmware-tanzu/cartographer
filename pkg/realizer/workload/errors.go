@@ -16,11 +16,11 @@ package workload
 
 import (
 	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type GetClusterTemplateError struct {
@@ -57,9 +57,9 @@ type RetrieveOutputError struct {
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s.%s] for resource [%s]: %w",
+	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
 		e.JsonPathExpression(), e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
-		strings.ToLower(e.StampedObject.GetKind()), e.StampedObject.GetObjectKind().GroupVersionKind().Group,
+		utils.GetFullyQualifiedType(e.StampedObject),
 		e.Resource.Name, e.Err).Error()
 }
 

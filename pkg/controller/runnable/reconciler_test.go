@@ -505,17 +505,29 @@ var _ = Describe("Reconcile", func() {
 
 			Context("of type RetrieveOutputError", func() {
 				var err error
+				var stampedObject *unstructured.Unstructured
+
 				BeforeEach(func() {
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetGroupVersionKind(schema.GroupVersionKind{
+						Group:   "thing.io",
+						Version: "alphabeta1",
+						Kind:    "MyThing",
+					})
+					stampedObject.SetName("my-obj")
+					stampedObject.SetNamespace("my-ns")
+
 					err = realizer.RetrieveOutputError{
-						Err:      errors.New("some error"),
-						Runnable: &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+						Err:           errors.New("some error"),
+						Runnable:      &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+						StampedObject: stampedObject,
 					}
 					rlzr.RealizeReturns(nil, nil, err)
 				})
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.OutputPathNotSatisfiedCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.OutputPathNotSatisfiedCondition(stampedObject, err.Error())))
 				})
 
 				It("does not return an error", func() {
@@ -528,7 +540,7 @@ var _ = Describe("Reconcile", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling runnable"`))
-					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object for runnable \[my-ns/my-runnable\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for runnable \[my-ns/my-runnable\]: some error"`))
 				})
 			})
 

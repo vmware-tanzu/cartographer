@@ -31,18 +31,19 @@ type Outputs map[string]apiextensionsv1.JSON
 type ClusterRunTemplate interface {
 	GetName() string
 	GetResourceTemplate() v1alpha1.TemplateSpec
-	GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, error)
+	GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error)
 }
 
 type runTemplate struct {
 	template *v1alpha1.ClusterRunTemplate
 }
 
-func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, error) {
+func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
 	var (
 		updateError                        error
 		everyObjectErrored                 bool
 		mostRecentlySubmittedSuccesfulTime *time.Time
+		evaluatedStampedObject             *unstructured.Unstructured
 	)
 
 	outputs := Outputs{}
@@ -76,6 +77,7 @@ func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Out
 			}
 
 			outputs = provisionalOutputs
+			evaluatedStampedObject = stampedObject
 		}
 
 		if objectErr != nil {
@@ -86,10 +88,10 @@ func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Out
 	}
 
 	if everyObjectErrored {
-		return nil, updateError
+		return nil, nil, updateError
 	}
 
-	return outputs, nil
+	return outputs, evaluatedStampedObject, nil
 }
 
 func getCreationTimestamp(stampedObject *unstructured.Unstructured, evaluator evaluator) (*time.Time, error) {
@@ -113,6 +115,7 @@ func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedO
 	provisionalOutputs := Outputs{}
 	for key, path := range t.template.Spec.Outputs {
 		output, err := evaluator.EvaluateJsonPath(path, stampedObject.UnstructuredContent())
+		//TODO: get this path out to the user in case of error
 		if err != nil {
 			objectErr = fmt.Errorf("failed to evaluate path [%s]: %w", path, err)
 			continue

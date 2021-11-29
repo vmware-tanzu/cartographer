@@ -15,9 +15,13 @@
 package runnable
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 // -- ClusterRunTemplate conditions
@@ -48,12 +52,23 @@ func StampedObjectRejectedByAPIServerCondition(err error) metav1.Condition {
 	}
 }
 
-func OutputPathNotSatisfiedCondition(err error) metav1.Condition {
+func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, errMsg string) metav1.Condition {
+	var namespaceMsg string
+	if obj.GetNamespace() != "" {
+		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
+	}
+
+	name := obj.GetName()
+	if name == "" {
+		name = obj.GetGenerateName()
+	}
+
 	return metav1.Condition{
-		Type:    v1alpha1.RunTemplateReady,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.OutputPathNotSatisfiedRunTemplateReason,
-		Message: err.Error(),
+		Type:   v1alpha1.RunTemplateReady,
+		Status: metav1.ConditionFalse,
+		Reason: v1alpha1.OutputPathNotSatisfiedRunTemplateReason,
+		Message: fmt.Sprintf("Waiting to read value from resource [%s/%s]%s: %s",
+			utils.GetFullyQualifiedType(obj), name, namespaceMsg, errMsg),
 	}
 }
 

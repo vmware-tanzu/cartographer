@@ -105,7 +105,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr))
+			r.conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.Error()))
 		default:
 			r.conditionManager.AddPositive(UnknownErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)

@@ -118,17 +118,19 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	outputs, err := template.GetOutput(allRunnableStampedObjects)
+	outputs, evaluatedStampedObject, err := template.GetOutput(allRunnableStampedObjects)
 	if err != nil {
 		for _, obj := range allRunnableStampedObjects {
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
 		}
 		log.Error(err, "failed to retrieve output from object")
 		return stampedObject, nil, RetrieveOutputError{
-			Err:      err,
-			Runnable: runnable,
+			Err:           err,
+			Runnable:      runnable,
+			StampedObject: stampedObject,
 		}
 	}
+	log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)
 
 	if len(outputs) == 0 {
 		log.V(logger.DEBUG).Info("no outputs retrieved, getting outputs from runnable.Status.Outputs")

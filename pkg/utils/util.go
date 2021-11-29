@@ -22,6 +22,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -90,4 +91,15 @@ func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) err
 	default:
 		return fmt.Errorf("unexpected type: %T", knownType)
 	}
+}
+
+func GetFullyQualifiedType(obj *unstructured.Unstructured) string {
+	var fullyQualifiedType string
+	if obj.GetObjectKind().GroupVersionKind().Group == "" {
+		fullyQualifiedType = strings.ToLower(obj.GetKind())
+	} else {
+		fullyQualifiedType = fmt.Sprintf("%s.%s", strings.ToLower(obj.GetKind()),
+			obj.GetObjectKind().GroupVersionKind().Group)
+	}
+	return fullyQualifiedType
 }
