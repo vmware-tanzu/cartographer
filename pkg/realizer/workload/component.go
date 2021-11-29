@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -63,8 +64,12 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 }
 
 func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
+	ctx = logr.NewContext(ctx, log)
+
 	apiTemplate, err := r.systemRepo.GetClusterTemplate(ctx, resource.TemplateRef)
 	if err != nil {
+		log.Error(err, "failed to get cluster template")
 		return nil, nil, GetClusterTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
@@ -73,7 +78,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
-		return nil, nil, fmt.Errorf("new model from api: %w", err)
+		log.Error(err, "failed to get cluster template")
+		return nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
+
 	}
 
 	labels := map[string]string{
@@ -108,6 +115,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	stampContext := templates.StamperBuilder(r.workload, workloadTemplatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
+		log.Error(err, "failed to stamp resource")
 		return nil, nil, StampError{
 			Err:      err,
 			Resource: resource,
@@ -116,6 +124,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 
 	err = r.workloadRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
 	if err != nil {
+		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
@@ -126,6 +135,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 
 	output, err := template.GetOutput()
 	if err != nil {
+		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return stampedObject, nil, RetrieveOutputError{
 			Err:           err,
 			Resource:      resource,

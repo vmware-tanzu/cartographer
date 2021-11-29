@@ -110,7 +110,7 @@ spec:
 
 				It("returns a helpful error", func() {
 					err := repo.EnsureObjectExistsOnCluster(ctx, stampedObj, true)
-					Expect(err).To(MatchError(ContainSubstring("list: some-error")))
+					Expect(err).To(MatchError(ContainSubstring("unable to list from api server: some-error")))
 				})
 
 				It("does not create or patch any objects", func() {
@@ -398,7 +398,7 @@ spec:
 			It("attempts to list the object from the apiServer", func() {
 				_, err := repo.GetSupplyChainsForWorkload(ctx, &v1alpha1.Workload{})
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("list supply chains:"))
+				Expect(err.Error()).To(ContainSubstring("unable to list supply chains from api server: some list error"))
 			})
 		})
 
@@ -410,7 +410,7 @@ spec:
 			It("attempts to get the object from the apiServer", func() {
 				_, err := repo.GetSupplyChain(ctx, "sc-name")
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to get supply chain object from api server [sc-name]: failed to get object [/sc-name]: some get error"))
+				Expect(err.Error()).To(ContainSubstring("failed to get supply chain object from api server [sc-name]: failed to get object [sc-name] from api server: some get error"))
 			})
 		})
 
@@ -438,7 +438,7 @@ spec:
 					}
 					_, err := repo.GetClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [/image-template]: some bad get error"))
+					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
 			})
 		})
@@ -467,7 +467,7 @@ spec:
 					}
 					_, err := repo.GetDeliveryClusterTemplate(ctx, reference)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [/image-template]: some bad get error"))
+					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
 			})
 		})
@@ -608,7 +608,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring("getting service account"))
+					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object [some-service-account] from api server: some error"))
 				})
 			})
 
@@ -651,7 +651,7 @@ spec:
 					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring("getting service account secret"))
+					Expect(err.Error()).To(ContainSubstring("failed to get secret object from api server: "))
 				})
 			})
 
@@ -659,15 +659,18 @@ spec:
 				var (
 					serviceAccount     *v1.ServiceAccount
 					serviceAccountName string
+					serviceAccountNs   string
 				)
 
 				BeforeEach(func() {
 					serviceAccountName = "my-service-account"
+					serviceAccountNs = "my-ns"
 
 					serviceAccount = &v1.ServiceAccount{
 						TypeMeta: metav1.TypeMeta{},
 						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
+							Name:      serviceAccountName,
+							Namespace: serviceAccountNs,
 						},
 						Secrets: []v1.ObjectReference{},
 					}
@@ -684,10 +687,10 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any secrets", serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any secrets", serviceAccountNs, serviceAccountName)))
 				})
 			})
 
@@ -696,10 +699,12 @@ spec:
 					serviceAccount     *v1.ServiceAccount
 					secret             *v1.Secret
 					serviceAccountName string
+					serviceAccountNs   string
 				)
 
 				BeforeEach(func() {
 					serviceAccountName = "my-service-account"
+					serviceAccountNs = "my-ns"
 					secretName := "my-secret"
 
 					secret = &v1.Secret{
@@ -713,7 +718,8 @@ spec:
 					serviceAccount = &v1.ServiceAccount{
 						TypeMeta: metav1.TypeMeta{},
 						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
+							Name:      serviceAccountName,
+							Namespace: serviceAccountNs,
 						},
 						Secrets: []v1.ObjectReference{
 							{
@@ -737,10 +743,10 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account '%s' does not have any token secrets", serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any token secrets", serviceAccountNs, serviceAccountName)))
 				})
 			})
 		})

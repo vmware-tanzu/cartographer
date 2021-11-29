@@ -19,9 +19,11 @@ package workload
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
 //counterfeiter:generate . Realizer
@@ -36,6 +38,9 @@ func NewRealizer() Realizer {
 }
 
 func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("Realize")
+
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
 
@@ -43,11 +48,15 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		resource := supplyChain.Spec.Resources[i]
 		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
 		if stampedObject != nil {
+			log.V(logger.DEBUG).Info("realized resource as object",
+				"object", stampedObject)
 			stampedObjects = append(stampedObjects, stampedObject)
 		}
 		if err != nil {
+			log.Error(err, "failed to realize resource")
 			return stampedObjects, err
 		}
+
 		outs.AddOutput(resource.Name, out)
 	}
 

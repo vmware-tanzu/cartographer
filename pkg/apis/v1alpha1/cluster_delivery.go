@@ -127,11 +127,11 @@ func (c *ClusterDelivery) validateNewState() error {
 func (c *ClusterDelivery) validateDeploymentPassedToProperReceivers() error {
 	for _, resource := range c.Spec.Resources {
 		if resource.TemplateRef.Kind == "ClusterDeploymentTemplate" && resource.Deployment == nil {
-			return fmt.Errorf("spec.resources['%s'] is a ClusterDeploymentTemplate and must receive a deployment", resource.Name)
+			return fmt.Errorf("spec.resources[%s] is a ClusterDeploymentTemplate and must receive a deployment", resource.Name)
 		}
 
 		if resource.Deployment != nil && resource.TemplateRef.Kind != "ClusterDeploymentTemplate" {
-			return fmt.Errorf("spec.resources['%s'] receives a deployment but is not a ClusterDeploymentTemplate", resource.Name)
+			return fmt.Errorf("spec.resources[%s] receives a deployment but is not a ClusterDeploymentTemplate", resource.Name)
 		}
 	}
 	return nil
@@ -152,7 +152,7 @@ func (c *ClusterDelivery) validateResourceNamesUnique() error {
 func (c *ClusterDelivery) validateDeploymentTemplateDidNotReceiveConfig() error {
 	for _, resource := range c.Spec.Resources {
 		if resource.TemplateRef.Kind == "ClusterDeploymentTemplate" && resource.Configs != nil {
-			return fmt.Errorf("spec.resources['%s'] is a ClusterDeploymentTemplate and must not receive config", resource.Name)
+			return fmt.Errorf("spec.resources[%s] is a ClusterDeploymentTemplate and must not receive config", resource.Name)
 		}
 	}
 	return nil
@@ -170,7 +170,7 @@ func (c *ClusterDelivery) validateParams() error {
 		for _, param := range resource.Params {
 			err := param.validateDelegatableParams()
 			if err != nil {
-				return fmt.Errorf("invalid resource '%s': %w", resource.Name, err)
+				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
 			}
 		}
 	}

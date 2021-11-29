@@ -161,8 +161,7 @@ var _ = Describe("Reconcile", func() {
 
 			_, _ = reconciler.Reconcile(ctx, request)
 
-			actualCtx, updatedRunnable := repo.StatusUpdateArgsForCall(0)
-			Expect(actualCtx).To(Equal(ctx))
+			_, updatedRunnable := repo.StatusUpdateArgsForCall(0)
 
 			Expect(*updatedRunnable.(*v1alpha1.Runnable)).To(MatchFields(IgnoreExtras, Fields{
 				"Status": MatchFields(IgnoreExtras, Fields{
@@ -220,7 +219,7 @@ var _ = Describe("Reconcile", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(out).To(Say(`"level":"error"`))
-				Expect(out).To(Say(`"msg":"dynamic tracker watch"`))
+				Expect(out).To(Say(`"msg":"failed to add informer for object"`))
 			})
 
 			It("returns an unhandled error and requeues", func() {
@@ -239,8 +238,7 @@ var _ = Describe("Reconcile", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(repo.GetRunnableCallCount()).To(Equal(1))
-				actualCtx, actualName, actualNamespace := repo.GetRunnableArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, actualName, actualNamespace := repo.GetRunnableArgsForCall(0)
 				Expect(actualName).To(Equal("my-runnable"))
 				Expect(actualNamespace).To(Equal("my-namespace"))
 			})
@@ -258,8 +256,7 @@ var _ = Describe("Reconcile", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
-				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, obj := repo.StatusUpdateArgsForCall(0)
 				statusObject, ok := obj.(*v1alpha1.Runnable)
 				Expect(ok).To(BeTrue())
 
@@ -279,8 +276,7 @@ var _ = Describe("Reconcile", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(repo.StatusUpdateCallCount()).To(Equal(1))
-				actualCtx, obj := repo.StatusUpdateArgsForCall(0)
-				Expect(actualCtx).To(Equal(ctx))
+				_, obj := repo.StatusUpdateArgsForCall(0)
 				statusObject, ok := obj.(*v1alpha1.Runnable)
 				Expect(ok).To(BeTrue())
 
@@ -305,7 +301,7 @@ var _ = Describe("Reconcile", func() {
 			It("returns a status error", func() {
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("update runnable status"))
+				Expect(err.Error()).To(ContainSubstring("failed to update status for runnable: bad status update error"))
 				Expect(result).To(Equal(controllerruntime.Result{}))
 			})
 		})
@@ -348,7 +344,7 @@ var _ = Describe("Reconcile", func() {
 				It("returns an unhandled error and requeues", func() {
 					_, err := reconciler.Reconcile(ctx, request)
 
-					Expect(err.Error()).To(ContainSubstring("unable to get runnable 'my-ns/my-runnable': 'some error'"))
+					Expect(err.Error()).To(ContainSubstring("unable to get runnable [my-ns/my-runnable]: some error"))
 				})
 			})
 
@@ -382,8 +378,8 @@ var _ = Describe("Reconcile", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"msg":"handled error"`))
-					Expect(out).To(Say(`"error":"unable to resolve selector '\(apiVersion:my-api-version kind:my-kind labels:map\[foo:bar moo:cow\]\)': 'some error'"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling runnable"`))
+					Expect(out).To(Say(`"handled error":"unable to resolve selector \[map\[foo:bar moo:cow\]\], apiVersion \[my-api-version\], kind \[my-kind\]: some error"`))
 				})
 			})
 
@@ -418,8 +414,8 @@ var _ = Describe("Reconcile", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"msg":"handled error"`))
-					Expect(out).To(Say(`"error":"unable to stamp object 'my-ns/my-runnable': 'some error'"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling runnable"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object \[my-ns/my-runnable\]: some error"`))
 				})
 			})
 
@@ -480,7 +476,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"error":"unable to apply stamped object 'a-namespace/a-name': 'fantastic error'"`))
+					Expect(out).To(Say(`"handled error":"unable to apply stamped object \[a-namespace/a-name\]: fantastic error"`))
 				})
 			})
 
@@ -503,7 +499,7 @@ var _ = Describe("Reconcile", func() {
 				It("returns an unhandled error and requeues", func() {
 					_, err := reconciler.Reconcile(ctx, request)
 
-					Expect(err.Error()).To(ContainSubstring("unable to list objects in namespace 'some-ns' with labels 'map[hi:bye]': 'some error'"))
+					Expect(err.Error()).To(ContainSubstring("unable to list objects in namespace [some-ns] with labels [map[hi:bye]]: some error"))
 				})
 			})
 

@@ -31,7 +31,7 @@ func NewJsonPathError(expression string, err error) JsonPathError {
 }
 
 func (e JsonPathError) Error() string {
-	return fmt.Errorf("evaluate json path '%s': %w", e.expression, e.Err).Error()
+	return fmt.Errorf("failed to evaluate json path '%s': %w", e.expression, e.Err).Error()
 }
 
 func (e JsonPathError) JsonPathExpression() string {

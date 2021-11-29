@@ -8,6 +8,7 @@
 		<div class="wrapper docs clearfix">
 			{{ partial "docs-sidebar.html" . }}
 			<div class="docs-content {{ if not .Site.Params.docs_right_sidebar }}full{{ end }}">
+				{{ partial "version-warning.html" . }}
 				{{ .Content }}
 			</div>
 			{{ partial "docs-right-bar.html" . }}

@@ -57,7 +57,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	for _, resource := range c.Spec.Resources {
 		if _, ok := names[resource.Name]; ok {
 			return fmt.Errorf(
-				"duplicate resource name '%s' found in clustersupplychain '%s'",
+				"duplicate resource name [%s] found in clustersupplychain [%s]",
 				resource.Name,
 				c.Name,
 			)
@@ -68,7 +68,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	for _, resource := range c.Spec.Resources {
 		if err := c.validateResourceRefs(resource.Sources, "ClusterSourceTemplate"); err != nil {
 			return fmt.Errorf(
-				"invalid sources for resource '%s': %w",
+				"invalid sources for resource [%s]: %w",
 				resource.Name,
 				err,
 			)
@@ -76,7 +76,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 
 		if err := c.validateResourceRefs(resource.Images, "ClusterImageTemplate"); err != nil {
 			return fmt.Errorf(
-				"invalid images for resource '%s': %w",
+				"invalid images for resource [%s]: %w",
 				resource.Name,
 				err,
 			)
@@ -84,7 +84,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 
 		if err := c.validateResourceRefs(resource.Configs, "ClusterConfigTemplate"); err != nil {
 			return fmt.Errorf(
-				"invalid configs for resource '%s': %w",
+				"invalid configs for resource [%s]: %w",
 				resource.Name,
 				err,
 			)
@@ -106,7 +106,7 @@ func (c *ClusterSupplyChain) validateParams() error {
 		for _, param := range resource.Params {
 			err := param.validateDelegatableParams()
 			if err != nil {
-				return fmt.Errorf("invalid resource '%s': %w", resource.Name, err)
+				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
 			}
 		}
 	}
@@ -119,14 +119,14 @@ func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference
 		referencedResource := c.getResourceByName(ref.Resource)
 		if referencedResource == nil {
 			return fmt.Errorf(
-				"'%s' is provided by unknown resource '%s'",
+				"[%s] is provided by unknown resource [%s]",
 				ref.Name,
 				ref.Resource,
 			)
 		}
 		if referencedResource.TemplateRef.Kind != targetKind {
 			return fmt.Errorf(
-				"resource '%s' providing '%s' must reference a %s",
+				"resource [%s] providing [%s] must reference a %s",
 				referencedResource.Name,
 				ref.Name,
 				targetKind,

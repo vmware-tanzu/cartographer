@@ -441,7 +441,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
 								"Reason":  Equal("TemplateStampFailure"),
-								"Message": ContainSubstring("resource 'deployer' cannot satisfy observedCompletion without observedGeneration in object status"),
+								"Message": ContainSubstring("Resource [deployer] cannot satisfy observedCompletion without observedGeneration in object status"),
 							}),
 						}))
 					})
@@ -474,7 +474,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Reason":  Equal("ConditionNotMet"),
-								"Message": ContainSubstring("resource 'deployer' condition not met: deployment success condition [status.conditions[?(@.type==\"Succeeded\")].status] was: False, expected: True"),
+								"Message": ContainSubstring("Resource [deployer] condition not met: deployment success condition [status.conditions[?(@.type==\"Succeeded\")].status] was: False, expected: True"),
 							}),
 						}))
 					})
@@ -506,7 +506,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Reason":  Equal("ConditionNotMet"),
-								"Message": ContainSubstring(`resource 'deployer' condition not met: failed to evaluate succeededCondition.Key [status.conditions[?(@.type=="Succeeded")].status]: evaluate: find results: conditions is not found`),
+								"Message": ContainSubstring(`Resource [deployer] condition not met: failed to evaluate succeededCondition.Key [status.conditions[?(@.type=="Succeeded")].status]: evaluate: failed to find results: conditions is not found`),
 							}),
 						}))
 					})
@@ -637,7 +637,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
 								"Reason":  Equal("FailedConditionMet"),
-								"Message": ContainSubstring("resource 'deployer' failed condition met: deployment failure condition [status.conditions[?(@.type==\"Failed\")].status] was: True"),
+								"Message": ContainSubstring("Resource [deployer] failed condition met: deployment failure condition [status.conditions[?(@.type==\"Failed\")].status] was: True"),
 							}),
 						}))
 					})
@@ -673,7 +673,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
 								"Reason":  Equal("FailedConditionMet"),
-								"Message": ContainSubstring("resource 'deployer' failed condition met: deployment failure condition [status.conditions[?(@.type==\"Failed\")].status] was: True"),
+								"Message": ContainSubstring("Resource [deployer] failed condition met: deployment failure condition [status.conditions[?(@.type==\"Failed\")].status] was: True"),
 							}),
 						}))
 					})

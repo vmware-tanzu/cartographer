@@ -690,7 +690,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"handled error":"get secret for service account 'service-account-name-for-deliverable': some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get secret for service account \[service-account-name-for-deliverable\]: some error"`))
 			})
 		})
 
@@ -708,7 +708,7 @@ var _ = Describe("Reconciler", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 				Expect(err).To(HaveOccurred())
 
-				Expect(err.Error()).To(ContainSubstring("build resource realizer: some error"))
+				Expect(err.Error()).To(ContainSubstring("failed to build resource realizer: some error"))
 			})
 		})
 	})

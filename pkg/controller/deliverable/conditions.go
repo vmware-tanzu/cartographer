@@ -118,7 +118,7 @@ func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Conditi
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
-		Message: fmt.Sprintf("resource '%s' cannot satisfy observedCompletion without observedGeneration in object status", err.(deliverable.RetrieveOutputError).ResourceName()),
+		Message: fmt.Sprintf("Resource [%s] cannot satisfy observedCompletion without observedGeneration in object status", err.(deliverable.RetrieveOutputError).ResourceName()),
 	}
 }
 
@@ -127,7 +127,7 @@ func DeploymentConditionNotMetCondition(err error) metav1.Condition {
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
 		Status:  metav1.ConditionUnknown,
 		Reason:  v1alpha1.DeploymentConditionNotMetResourcesSubmittedReason,
-		Message: fmt.Sprintf("resource '%s' condition not met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
+		Message: fmt.Sprintf("Resource [%s] condition not met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
 	}
 }
 
@@ -136,7 +136,7 @@ func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.DeploymentFailedConditionMetResourcesSubmittedReason,
-		Message: fmt.Sprintf("resource '%s' failed condition met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
+		Message: fmt.Sprintf("Resource [%s] failed condition met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
 	}
 }
 
