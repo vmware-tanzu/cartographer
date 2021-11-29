@@ -539,8 +539,8 @@ var _ = Describe("Reconcile", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"msg":"handled error"`))
-					Expect(out).To(Say(`"error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for runnable \[my-ns/my-runnable\]: some error"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling runnable"`))
+					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for runnable \[my-ns/my-runnable\]: some error"`))
 				})
 			})
 

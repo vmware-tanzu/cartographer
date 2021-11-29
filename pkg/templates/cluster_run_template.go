@@ -115,6 +115,7 @@ func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedO
 	provisionalOutputs := Outputs{}
 	for key, path := range t.template.Spec.Outputs {
 		output, err := evaluator.EvaluateJsonPath(path, stampedObject.UnstructuredContent())
+		//TODO: get this path out to the user in case of error
 		if err != nil {
 			objectErr = fmt.Errorf("failed to evaluate path [%s]: %w", path, err)
 			continue

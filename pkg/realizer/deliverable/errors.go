@@ -23,7 +23,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-const NO_JSONPATH_CONTEXT = "<no jsonpath context>"
+const NoJsonpathContext = "<no jsonpath context>"
 
 type GetDeliveryClusterTemplateError struct {
 	Err         error
@@ -63,7 +63,7 @@ type JsonPathErrorContext interface {
 }
 
 func (e RetrieveOutputError) Error() string {
-	if e.JsonPathExpression() == NO_JSONPATH_CONTEXT {
+	if e.JsonPathExpression() == NoJsonpathContext {
 		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
 			e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
 			utils.GetFullyQualifiedType(e.StampedObject),
@@ -84,5 +84,5 @@ func (e RetrieveOutputError) JsonPathExpression() string {
 	if ok {
 		return jsonPathErrorContext.JsonPathExpression()
 	}
-	return NO_JSONPATH_CONTEXT
+	return NoJsonpathContext
 }
