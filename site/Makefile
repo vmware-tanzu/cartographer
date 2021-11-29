@@ -1,6 +1,6 @@
 .PHONY: serve
 serve:
-	open http://localhost:1313
+	echo "Open docs at: http://localhost:1313"
 	hugo server --disableFastRender
 
 .PHONY: release
