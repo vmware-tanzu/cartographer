@@ -34,8 +34,8 @@ Cartographer is composed of several custom resources, some of them being cluster
 
 and two that are namespace-scoped:
 
-- `Workload`
-
+- [`Workload`](#workload)
+- [`Delivery`](#delivery)
 
 ### Workload
 
@@ -402,3 +402,9 @@ spec:
 ```
 
 _ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_
+
+### Delivery
+
+This section is [pending work from issue #286](https://github.com/vmware-tanzu/cartographer/issues/286)
+
+
