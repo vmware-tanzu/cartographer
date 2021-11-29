@@ -19,9 +19,9 @@ package registrar
 import (
 	"context"
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -324,11 +324,11 @@ func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Obj
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
+			if err != nil && !kerrors.IsNotFound(err) {//TODO: Use Repository, avoid kerrors
 				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to workload requests: get service account")
 			}
 			return mapper.ServiceAccountToWorkloadRequests(serviceAccountObject)
@@ -349,11 +349,11 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
+			if err != nil && !kerrors.IsNotFound(err) {//TODO: Use Repository, avoid kerrors
 				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to workload requests: get service account")
 				return []reconcile.Request{}
 			}
@@ -464,12 +464,14 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to deliverable requests: get service account")
+			if err != nil {//TODO: Use Repository, avoid kerrors
+				if !kerrors.IsNotFound(err) {
+					mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to deliverable requests: get service account")
+				}
 			}
 			return mapper.ServiceAccountToDeliverableRequests(serviceAccountObject)
 		}
@@ -489,11 +491,11 @@ func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBinding
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
+			if err != nil && !kerrors.IsNotFound(err) {//TODO: Use Repository, avoid kerrors
 				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to deliverable requests: get service account")
 				return []reconcile.Request{}
 			}
@@ -583,8 +585,8 @@ func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject clie
 		if runnable.Namespace == serviceAccountObject.GetNamespace() && runnable.Spec.ServiceAccountName == serviceAccountObject.GetName() {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      runnable.Name,
-					Namespace: runnable.Namespace,
+					Name:      runnable.Namespace,
+					Namespace: runnable.Name,
 				},
 			})
 		}
@@ -605,11 +607,11 @@ func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Obj
 			serviceAccountObject := &corev1.ServiceAccount{}
 
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
+			if err != nil && !kerrors.IsNotFound(err) {//TODO: Use Repository, avoid kerrors
 				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to runnable requests: get service account")
 			}
 			return mapper.ServiceAccountToRunnableRequests(serviceAccountObject)
@@ -630,11 +632,11 @@ func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObj
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
 			serviceAccountObject := &corev1.ServiceAccount{}
 			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Name,
-				Name:      subject.Namespace,
+				Namespace: subject.Namespace,
+				Name:      subject.Name,
 			}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
+			if err != nil && !kerrors.IsNotFound(err) {//TODO: Use Repository, avoid kerrors
 				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to runnable requests: get service account")
 				return []reconcile.Request{}
 			}
