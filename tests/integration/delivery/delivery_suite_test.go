@@ -17,6 +17,7 @@ package delivery_test
 import (
 	"context"
 	"io"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"os"
 	"path/filepath"
 	"testing"
@@ -84,8 +85,84 @@ var _ = BeforeSuite(func() {
 
 	apiConfig, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
+	// --- create client
+	scheme := runtime.NewScheme()
+	err = v1alpha1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
 
-	// get a kubeconfig
+	err = corev1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = batchv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = rbacv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = resources.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	c, err = client.New(apiConfig, client.Options{
+		Scheme: scheme,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cartographer-controller-role",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				Verbs: []string{
+					"create",
+					"update",
+					"delete",
+					"patch",
+				},
+				APIGroups: []string{"carto.run"},
+				Resources: []string{
+					"workloads/status",
+					"clustersupplychains/status",
+					"runnables/status",
+					"clusterdeliveries/status",
+					"deliverables/status",
+				},
+			},
+			{
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+				APIGroups: []string{"*"},
+				Resources: []string{
+					"*",
+				},
+			},
+		},
+	}
+	err = c.Create(context.TODO(), role)
+	Expect(err).NotTo(HaveOccurred())
+
+	roleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "envtest-cluster-role-binding",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:     "User",
+				APIGroup: "rbac.authorization.k8s.io",
+				Name:     "envtest-admin",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "cartographer-controller-role",
+		},
+	}
+	err = c.Create(context.TODO(), roleBinding)
+	Expect(err).NotTo(HaveOccurred())
 	kubeConfigFile, err := helpers.GenerateConfigFile(testEnv)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -116,25 +193,6 @@ var _ = BeforeSuite(func() {
 
 	Eventually(controllerBuffer, 10*time.Second).Should(gbytes.Say("Starting Controller"))
 	time.Sleep(200 * time.Millisecond)
-
-	// --- create client
-	scheme := runtime.NewScheme()
-	err = v1alpha1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = corev1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = batchv1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = resources.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	c, err = client.New(apiConfig, client.Options{
-		Scheme: scheme,
-	})
-	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = BeforeEach(func() {
