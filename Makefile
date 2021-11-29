@@ -139,7 +139,10 @@ pre-push:
 	[ -z "$$(git status --porcelain)" ] || (echo "changes occurred during pre-push check" && git diff HEAD --exit-code)
 
 
-
 .PHONY: docs-serve
 docs-serve:
 	$(MAKE) -C site serve
+
+.PHONY: docs-release
+docs-release:
+	$(MAKE) -C site release
