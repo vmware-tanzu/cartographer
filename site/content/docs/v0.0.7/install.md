@@ -16,7 +16,7 @@ tl;dr _(having [cert-manager] already installed)_:
 
 ```bash
 kubectl create namespace cartographer-system
-kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/v0.0.7/download/cartographer.yaml
 ```
 
 
@@ -119,7 +119,7 @@ namespace/cartographer-system created
 and then, submit the objects included in the release:
 
 ```bash
-kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/v0.0.7/download/cartographer.yaml
 ```
 ```console
 customresourcedefinition.apiextensions.k8s.io/clusterconfigtemplates.carto.run configured
@@ -140,7 +140,7 @@ First, head to the [releases page] and download the `bundle.tar` file available
 for the release you want to install.
 
 ```bash
-curl -SOL https://github.com/vmware-tanzu/cartographer/releases/latest/download/bundle.tar
+curl -SOL https://github.com/vmware-tanzu/cartographer/releases/v0.0.7/download/bundle.tar
 ```
 
 This bundle contains everything we need to install Cartographer, from container
