@@ -53,8 +53,8 @@ rm $DATA_DOCS_DIRECTORY/$NEW_DOCS_TOC.yml && cp $DATA_DOCS_DIRECTORY/$DEV_VERSIO
 # so check which OS we're running on.
 if [[ $(uname) == "Darwin" ]]; then
     echo "[OS X] updating version-specific links"
-    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i '' "s|https://github.com/vmware-tanzu/cartographer/blob/latest|https://github.com/vmware-tanzu/cartographer/blob/$NEW_DOCS_VERSION|g"
-    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i '' "s|https://github.com/vmware-tanzu/cartographer/releases/latest|https://github.com/vmware-tanzu/cartographer/releases/$NEW_DOCS_VERSION|g"
+    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i '' "s|https://github.com/vmware-tanzu/cartographer/releases/latest/download|https://github.com/vmware-tanzu/cartographer/releases/download/$NEW_DOCS_VERSION|g"
+    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i '' "s|https://github.com/vmware-tanzu/cartographer/releases/latest|https://github.com/vmware-tanzu/cartographer/releases/tag/$NEW_DOCS_VERSION|g"
     find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "_index.md" | xargs sed -i '' "s|version: $DEV_VERSION|version: $NEW_DOCS_VERSION|g"
 
     echo "[OS X] Updating latest version in $CONFIG_FILE"
@@ -74,15 +74,15 @@ ${NEW_DOCS_VERSION}: ${NEW_DOCS_TOC}
 
 else
     echo "[Linux] updating version-specific links"
-    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i'' "s|https://github.com/vmware-tanzu/cartographer/blob/latest|https://github.com/vmware-tanzu/cartographer/blob/$NEW_DOCS_VERSION|g"
-    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i'' "s|https://github.com/vmware-tanzu/cartographer/releases/latest|https://github.com/vmware-tanzu/cartographer/releases/$NEW_DOCS_VERSION|g"
+    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i'' "s|https://github.com/vmware-tanzu/cartographer/releases/latest/download|https://github.com/vmware-tanzu/cartographer/releases/download/$NEW_DOCS_VERSION|g"
+    find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "*.md" | xargs sed -i'' "s|https://github.com/vmware-tanzu/cartographer/releases/latest|https://github.com/vmware-tanzu/cartographer/releases/tag/$NEW_DOCS_VERSION|g"
     find $DOCS_DIRECTORY/${NEW_DOCS_VERSION} -type f -name "_index.md" | xargs sed -i'' "s|version: $DEV_VERSION|version: $NEW_DOCS_VERSION|g"
 
     echo "[Linux] Updating latest version in $CONFIG_FILE"
     sed -i'' "s/docs_latest: .*/docs_latest: ${NEW_DOCS_VERSION}/" $CONFIG_FILE
 
     echo "[Linux] Adding latest version to versions list in $CONFIG_FILE"
-    sed -i'' "/- $DEV_VERSION/a - ${NEW_DOCS_VERSION}" $CONFIG_FILE
+    sed -i'' "/- $DEV_VERSION/a \ \ \ \ - ${NEW_DOCS_VERSION}" $CONFIG_FILE
 
     echo "[Linux] Adding ToC mapping entry"
     sed -i'' "/$DEV_VERSION: $DEV_VERSION-toc/a ${NEW_DOCS_VERSION}: ${NEW_DOCS_TOC}" $DATA_DOCS_DIRECTORY/toc-mapping.yml
