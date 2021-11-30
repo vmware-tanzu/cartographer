@@ -4,7 +4,7 @@
 Implement a change tracking feature to make it possible for clients to track input data as it traverses through the supply chain.
 Motivation
 Context
-At the core of the architecture of cartographer is the concept that a supply chain is the orchestration of objects and their controllers.  
+At the core of the architecture of cartographer is the concept that a supply chain is the choreography of objects and their controllers.  
 
 A supply chain, as the name suggests, chains together a set of objects defining how the (status) fields of one object feeds into the spec (and sometimes data) fields of another.  Thus creating an ordered chain of interacting objects.  Because controllers continuously reconcile their objects towards a desired state.  A supply chain is, therefore, able to choreograph an otherwise set of independent objects (and their controllers).
 
@@ -38,6 +38,11 @@ status:
 Here we see the run image `abc123`, produced by the `image-builder` service, and “containing” the source code image `def567`. 
 
 Using the above example again when a workload is applied with the cli, updating both the source image and debug flags, it can then wait for the workload status to be Ready and for an output status showing the last artifact in the supply chain contains the original source image and the debug flag values we expect.
+
+## Use Case
+The driving use case behind this RFC is from IDE tooling.  When a developer initiates a debug session then they are initiating it on a specific change set of source code.  Therefore, before attaching the debugger, the IDE needs to understand when a particular change set of source code has made it to a deployment. 
+
+A couple of notes on that statement.  Firstly, tooling is really only interested in single cluster supply chain and delivery.  Secondly, from the tools perspective, there is a "last mile" element to our requirement.  IDE tooling needs to know when the changes have actually made it all the way to the deployment.  Not, just output from the last service in the supply chain.
 
 ## Concerns/Questions
 How much does a consumer of this output status need to understand about supply chains?  Does a consumer have to “know” what the last artifact produced by a supply chain is?  And how?  
