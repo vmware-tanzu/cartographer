@@ -464,20 +464,20 @@ _ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster
 
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: Workload
+kind: Deliverable
 metadata:
   name: spring-petclinic
   labels:
-    # label to be matched against a `ClusterSupplyChain`s label selector.
+    # label to be matched against a `ClusterDelivery`s label selector.
     #
-    app.tanzu.vmware.com/workload-type: web   # (1)
+    app.tanzu.vmware.com/deliverable-type: web---deliverable   # (1)
 
 spec:
   source:
     # source code location in a git repository.
     #
     git:
-      url: https://github.com/scothis/spring-petclinic.git
+      url: https://github.com/waciumawanjohi/spring-petclinic.git
       ref:
         branch: "main"
         tag: "v0.0.1"
@@ -542,17 +542,13 @@ spec:
     # (required, unique)
     #
     - name: config-provider
-      # object reference to a template object that instructs how to
-      # instantiate and keep the resource up to date. (required)
+      # reference to a template object. (required)
       #
       templateRef:
         kind: ClusterSourceTemplate
         name: config-source
 
     - name: additional-config-provider
-      # object reference to a template object that instructs how to
-      # instantiate and keep the resource up to date. (required)
-      #
       templateRef:
         kind: ClusterSourceTemplate
         name: another-config-source
@@ -561,11 +557,9 @@ spec:
       templateRef:
         kind: ClusterDeploymentTemplate
         name: app-deploy
-      # a single resource that provides the location of information required for deployment,
-      # that is, url and revision.
+      # a single resource that provides the location (url and revision) of
+      # configuration required for deployment,
       # in a template, these can be consumed as:
-      #
-      # it can be consumed as:
       #
       #    $(deployment.url)$
       #    $(deployment.revision)$
@@ -604,6 +598,7 @@ spec:
       # see specification for params in supply chain resources
       params: []
 ```
+_ref: [pkg/apis/v1alpha1/cluster_delivery.go](../../../pkg/apis/v1alpha1/cluster_delivery.go)_
 
 ### ClusterDeploymentTemplate
 
@@ -613,8 +608,8 @@ The `ClusterDeploymentTemplate` consumes configuration from the `deployment` val
 `ClusterDeploymentTemplate` outputs these same values. The `ClusterDeploymentTemplate` is able to consume additional configuration
 from the `sources` provided by the `ClusterDelivery`.
 
-`ClusterDeploymentTemplate` must specify criteria to determine that templated object has succesfully completed its role
-the configuration of the environment. Only when this criteria is met will the `ClusterDeploymentTemplate` output its deployment
+`ClusterDeploymentTemplate` must specify criteria to determine whether the templated object has successfully completed its role
+in configuring the environment. Once the criteria are met, the `ClusterDeploymentTemplate` will output the `deployment`
 values. The criteria may be specified in `spec.observedMatches` or in `spec.observedCompletion`.
 
 ```yaml
@@ -740,7 +735,6 @@ spec:
     matchingLabels:
       pipelines.foo.bar: testing
 ```
-
 
 ### ClusterRunTemplate
 
