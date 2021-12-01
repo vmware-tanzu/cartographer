@@ -188,6 +188,18 @@ var _ = Describe("Reconcile", func() {
 			Expect(runnableRepo).To(Equal(fakeRunnabeRepo))
 		})
 
+		It("updates the status.observedGeneration to equal metadata.generation", func() {
+			_, _ = reconciler.Reconcile(ctx, request)
+
+			_, updatedRunnable := repo.StatusUpdateArgsForCall(0)
+
+			Expect(*updatedRunnable.(*v1alpha1.Runnable)).To(MatchFields(IgnoreExtras, Fields{
+				"Status": MatchFields(IgnoreExtras, Fields{
+					"ObservedGeneration": BeEquivalentTo(1),
+				}),
+			}))
+		})
+
 		Context("watching does not cause an error", func() {
 			It("watches the stampedObject's kind", func() {
 				stampedObject := &unstructured.Unstructured{}
@@ -283,6 +295,28 @@ var _ = Describe("Reconcile", func() {
 				Expect(statusObject.Status.Outputs).To(HaveLen(1))
 				Expect(statusObject.Status.Outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"the value"`)}))
 
+			})
+
+			Context("the runnable already had outputs in the status", func() {
+				BeforeEach(func() {
+					rb.Status.Outputs = map[string]apiextensionsv1.JSON{
+						"old-output": {Raw: []byte(`"old value"`)},
+					}
+					rb.Status.ObservedGeneration = 1
+				})
+
+				It("updates the status with the new outputs", func() {
+					_, err := reconciler.Reconcile(ctx, request)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.StatusUpdateCallCount()).To(Equal(1))
+					_, obj := repo.StatusUpdateArgsForCall(0)
+					statusObject, ok := obj.(*v1alpha1.Runnable)
+					Expect(ok).To(BeTrue())
+
+					Expect(statusObject.Status.Outputs).To(HaveLen(1))
+					Expect(statusObject.Status.Outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"the value"`)}))
+				})
 			})
 		})
 

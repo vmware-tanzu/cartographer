@@ -19,6 +19,7 @@ package runnable
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -134,8 +135,9 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alp
 	var changed bool
 	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
 
-	if changed || (runnable.Status.ObservedGeneration != runnable.Generation) {
+	if changed || (runnable.Status.ObservedGeneration != runnable.Generation) || !reflect.DeepEqual(runnable.Status.Outputs, outputs) {
 		runnable.Status.Outputs = outputs
+		runnable.Status.ObservedGeneration = runnable.Generation
 		statusUpdateError := r.Repo.StatusUpdate(ctx, runnable)
 		if statusUpdateError != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update status for runnable: %w", statusUpdateError)
