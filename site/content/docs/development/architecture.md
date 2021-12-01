@@ -48,6 +48,17 @@ other linked resources.
 
 ![Generic Blueprint](img/generic-blueprint.png)
 
+### Instantiates blueprint
+When cartographer instantiates a blueprint, for each resource in the blueprint, it will:
+1. Get inputs from blueprint
+2. Get params from blueprint, template, owner
+3. Interpolate inputs, params, owner spec with template yaml
+4. Apply interpolated object to Kubernetes
+5. Retrieve output from applied object using output path specified in template
+
+![Realize](img/realize.png)
+
+
 ### Types of templates
 
 Templates are typed by the output they produce.
