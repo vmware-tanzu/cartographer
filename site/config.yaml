@@ -31,7 +31,7 @@ markup:
     lineNos: false
     lineNumbersInTable: true
     noClasses: true
-    style: native
+    style: github
     tabWidth: 4
 menu:
   docs:
