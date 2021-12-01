@@ -85,7 +85,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: example-config---templates-ytt
+  name: example-bare-template---templates-ytt
 spec:
   ytt: |
     #@ load("@ytt:data", "data")

@@ -47,10 +47,10 @@ spec:
         - resource: built-image-provider
           name: solo-image-provider
 
-    - name: config
+    - name: bare-template
       templateRef:
         kind: ClusterTemplate
-        name: example-config---templates-ytt
+        name: example-bare-template---templates-ytt
       configs:
         - resource: config
           name: solo-config-provider

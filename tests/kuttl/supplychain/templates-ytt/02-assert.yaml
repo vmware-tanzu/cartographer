@@ -16,6 +16,24 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: example-first-configmap
+data:
+  player_initial_lives: "three"
+  player_loves: "gaming"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-second-configmap
+data:
+  player_initial_lives: "5"
+  player_loves: "knitting"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: example-image-configmap
 data:
   player_current_lives: "5"
