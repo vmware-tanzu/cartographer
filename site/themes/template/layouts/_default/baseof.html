@@ -19,7 +19,9 @@
 <body>
 	{{ partial "header" . }}
 	{{ block "main" . }}{{ end }}
+	{{ if not (eq .Section "docs") }}
 	{{ partial "getting-started" . }}
+	{{ end }}
 	{{ partial "footer" . }}
     {{ if .Site.Params.docs_search }}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"></script>
