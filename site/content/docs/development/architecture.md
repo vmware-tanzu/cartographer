@@ -47,6 +47,8 @@ that discovers new base OCI images. If it rebuilds your image, then cartographer
 other linked resources.
 
 ![Generic Blueprint](img/generic-blueprint.png)
+<!-- https://docs.google.com/drawings/d/1Kx8mmzbGqf-TcGJwf3m3xSmr_6MEagmYzfhjbqEeS9s/edit -->
+<!-- https://github.com/kubernetes/community/tree/master/icons/png -->
 
 ### Instantiates blueprint
 When cartographer instantiates a blueprint, for each resource in the blueprint, it will:
@@ -57,6 +59,7 @@ When cartographer instantiates a blueprint, for each resource in the blueprint, 
 5. Retrieve output from applied object using output path specified in template
 
 ![Realize](img/realize.png)
+<!-- https://docs.google.com/drawings/d/1bw8nMa3mHJqJhWGF8ArWhh_wW4gBya9O82BiHwNUT6s/edit -->
 
 
 ### Types of templates
@@ -72,6 +75,8 @@ Templates are typed by the output they produce.
 | | ClusterTemplate |
 
 ### Types of blueprints
+
+<!-- insert image of simplified supply chain into delivery -->
 
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
@@ -91,4 +96,4 @@ owner's labels.
 
 ### Complete Supply Chain and Delivery Example
 
-!!! insert very specific diagram with logos
+<!-- insert very specific diagram with logos -->
