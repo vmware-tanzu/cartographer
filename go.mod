@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.2.1
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golangci/golangci-lint v1.43.0
 	github.com/google/addlicense v1.0.0
