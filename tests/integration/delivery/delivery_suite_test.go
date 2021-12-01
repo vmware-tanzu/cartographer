@@ -134,17 +134,6 @@ var _ = BeforeSuite(func() {
 					"list",
 					"watch",
 				},
-				APIGroups: []string{"carto.run"},
-				Resources: []string{
-					"clustersupplychains",
-				},
-			},
-			{
-				Verbs: []string{
-					"get",
-					"list",
-					"watch",
-				},
 				APIGroups: []string{"*"},
 				Resources: []string{
 					"*",
@@ -163,7 +152,7 @@ var _ = BeforeSuite(func() {
 			{
 				Kind:     "User",
 				APIGroup: "rbac.authorization.k8s.io",
-				Name:     "envtest-admin",
+				Name:     "envtest-user",
 			},
 		},
 		RoleRef: rbacv1.RoleRef{

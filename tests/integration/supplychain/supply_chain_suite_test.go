@@ -48,14 +48,15 @@ func TestSupplyChainIntegration(t *testing.T) {
 }
 
 var (
-	testEnv          *envtest.Environment
-	c                client.Client
-	testNS           string
-	workingDir       string
-	cancel           context.CancelFunc
-	controllerError  chan error
-	controller       *root.Command
-	controllerBuffer *gbytes.Buffer
+	testEnv              *envtest.Environment
+	c                    client.Client
+	testNS               string
+	workingDir           string
+	cancel               context.CancelFunc
+	controllerError      chan error
+	controller           *root.Command
+	controllerBuffer     *gbytes.Buffer
+	serviceAccountHelper helpers.ServiceAccountHelper
 )
 
 const DebugControlPlane = false
@@ -95,6 +96,9 @@ var _ = BeforeSuite(func() {
 	err = corev1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = rbacv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = batchv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -104,6 +108,9 @@ var _ = BeforeSuite(func() {
 	c, err = client.New(apiConfig, client.Options{
 		Scheme: scheme,
 	})
+	Expect(err).NotTo(HaveOccurred())
+
+	serviceAccountHelper, err = helpers.NewServiceAccountHelper(filepath.Join(testEnv.ControlPlane.GetAPIServer().CertDir, "sa-signer.key"), c)
 	Expect(err).NotTo(HaveOccurred())
 
 	role := &rbacv1.ClusterRole{
@@ -151,7 +158,7 @@ var _ = BeforeSuite(func() {
 			{
 				Kind:     "User",
 				APIGroup: "rbac.authorization.k8s.io",
-				Name:     "envtest-admin",
+				Name:     "envtest-user",
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
