@@ -51,12 +51,14 @@ other linked resources.
 <!-- https://github.com/kubernetes/community/tree/master/icons/png -->
 
 ### Instantiates blueprint
-When cartographer instantiates a blueprint, for each resource in the blueprint, it will:
-1. Get inputs from blueprint resource
-2. Get params from blueprint resource, template, owner
-3. Interpolate inputs, params, owner spec with template yaml
-4. Apply interpolated object to Kubernetes
-5. Retrieve output from applied object using output path specified in template
+When Cartographer reconciles an owner, each resource in the matching blueprint is reconciled:
+
+1. Generate Inputs: Using the **blueprint resource `inputs` as a reference, select outputs from previously applied **Kubernetes Resources**
+2. Generate Params: Using the [Parameter Heirarchy](#todo), generate parameter values   
+3. Generate and apply resource spec: Apply the result of interpolating `spec.Template` (or `ytt`), inputs, params and owner spec. 
+4. Retrieve Output: Store the output from the applied resource. The output to use is specified in the **Template Output Path**.  
+
+<!-- new diagram https://miro.com/app/board/uXjVOeb8u5o=/?moveToWidget=3458764514330138805&cot=14 -->
 
 ![Realize](../img/realize.png)
 <!-- https://docs.google.com/drawings/d/1bw8nMa3mHJqJhWGF8ArWhh_wW4gBya9O82BiHwNUT6s/edit -->
