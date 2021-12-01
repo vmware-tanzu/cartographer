@@ -306,20 +306,6 @@
                 }
             }
         }
-        code {
-            border: 2px solid #EFEFEF;
-            color: $darkgrey;
-            padding: 2px 8px;
-        }
-        pre {
-            code {
-                display: block;
-                border: 15px solid #EFEFEF;
-                padding: 15px;
-                margin-bottom: 30px;
-                overflow-x: auto;
-            }
-        }
         img {
             max-width: 100%;
         }
@@ -651,21 +637,6 @@
                 }
             }
         }
-        code {
-            border: 2px solid #EFEFEF;
-            color: $grey;
-            padding: 2px 8px;
-        }
-        pre {
-            white-space: pre-wrap;
-            code {
-                display: block;
-                border: 15px solid #EFEFEF;
-                padding: 15px;
-                margin-bottom: 30px;
-                overflow-x: auto;
-            }
-        }
         img {
             max-width: 100%;
         }
@@ -741,4 +712,34 @@
 
 .community-logo{
     width: 75px;
+}
+
+code {
+    background: #efefef;
+    padding: 2px 4px;
+    font-size: 85%;
+}
+
+pre {
+    code {
+        display: block;
+        padding: 15px;
+        margin-bottom: 30px;
+        overflow-x: auto;
+        background: #f6f8fa;
+        &.language-bash, &.language-bash-plain, &.language-console {
+            background: #202020;
+            color: #d0d0d0;
+            // Cannot see dark letters on dark bg
+            span[style*="color:#000"] {
+                color: #d0d0d0 !important;
+            }
+        }
+        &.language-yaml {
+            // A bit harder to read italicized text
+            span[style*="font-style:italic"] {
+                font-style: normal !important;
+            }
+        }
+    }
 }
