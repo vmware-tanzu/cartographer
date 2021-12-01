@@ -46,7 +46,7 @@ However, one advantage of Cartographer's design, is that a resource can also be 
 that discovers new base OCI images. If it rebuilds your image, then cartographer will see this new image and update 
 other linked resources.
 
-![Generic Blueprint](img/generic-blueprint.png)
+![Generic Blueprint](../img/generic-blueprint.png)
 <!-- https://docs.google.com/drawings/d/1Kx8mmzbGqf-TcGJwf3m3xSmr_6MEagmYzfhjbqEeS9s/edit -->
 <!-- https://github.com/kubernetes/community/tree/master/icons/png -->
 
@@ -58,7 +58,7 @@ When cartographer instantiates a blueprint, for each resource in the blueprint, 
 4. Apply interpolated object to Kubernetes
 5. Retrieve output from applied object using output path specified in template
 
-![Realize](img/realize.png)
+![Realize](../img/realize.png)
 <!-- https://docs.google.com/drawings/d/1bw8nMa3mHJqJhWGF8ArWhh_wW4gBya9O82BiHwNUT6s/edit -->
 
 
