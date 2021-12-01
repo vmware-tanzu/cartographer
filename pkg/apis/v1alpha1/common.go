@@ -84,6 +84,11 @@ type ObjectReference struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 }
 
+type NameAndNamespace struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
 func GetAPITemplate(templateKind string) (client.Object, error) {
 	var template client.Object
 

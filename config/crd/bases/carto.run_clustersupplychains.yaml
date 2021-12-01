@@ -140,6 +140,15 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              serviceAccountRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - name
+                type: object
             required:
             - resources
             - selector

@@ -101,26 +101,20 @@ func (mapper *Mapper) templateToSupplyChains(template client.Object) []v1alpha1.
 }
 
 func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object) []reconcile.Request {
-	var err error
-
 	supplyChain, ok := object.(*v1alpha1.ClusterSupplyChain)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster supply chain to workload requests: cast to ClusterSupplyChain failed")
 		return nil
 	}
 
-	list := &v1alpha1.WorkloadList{}
-
-	err = mapper.Client.List(context.TODO(), list,
-		client.InNamespace(supplyChain.Namespace),
-		client.MatchingLabels(supplyChain.Spec.Selector))
+	workloads, err := mapper.clusterSupplyChainToWorkloads(*supplyChain)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "cluster supply chain to workload requests: client list")
+		mapper.Logger.Error(err, "cluster supply chain to workload requests")
 		return nil
 	}
 
 	var requests []reconcile.Request
-	for _, workload := range list.Items {
+	for _, workload := range workloads {
 		requests = append(requests, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      workload.Name,
@@ -132,6 +126,20 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 	return requests
 }
 
+func (mapper *Mapper) clusterSupplyChainToWorkloads(sc v1alpha1.ClusterSupplyChain) ([]v1alpha1.Workload, error) {
+	list := &v1alpha1.WorkloadList{}
+
+	err := mapper.Client.List(context.TODO(), list,
+		client.InNamespace(sc.Namespace),
+		client.MatchingLabels(sc.Spec.Selector))
+	if err != nil {
+		mapper.Logger.Error(err, "cluster supply chain to workloads: client list")
+		return nil, err
+	}
+
+	return list.Items, nil
+}
+
 func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object) []reconcile.Request {
 	var err error
 
@@ -141,18 +149,14 @@ func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object)
 		return nil
 	}
 
-	list := &v1alpha1.DeliverableList{}
-
-	err = mapper.Client.List(context.TODO(), list,
-		client.InNamespace(delivery.Namespace),
-		client.MatchingLabels(delivery.Spec.Selector))
+	deliverables, err := mapper.clusterDeliveryToDeliverables(*delivery)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "cluster delivery to deliverable requests: client list")
+		mapper.Logger.Error(err, "cluster delivery to deliverable requests")
 		return nil
 	}
 
 	var requests []reconcile.Request
-	for _, deliverable := range list.Items {
+	for _, deliverable := range deliverables {
 		requests = append(requests, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      deliverable.Name,
@@ -162,6 +166,20 @@ func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object)
 	}
 
 	return requests
+}
+
+func (mapper *Mapper) clusterDeliveryToDeliverables(d v1alpha1.ClusterDelivery) ([]v1alpha1.Deliverable, error) {
+	list := &v1alpha1.DeliverableList{}
+
+	err := mapper.Client.List(context.TODO(), list,
+		client.InNamespace(d.Namespace),
+		client.MatchingLabels(d.Spec.Selector))
+	if err != nil {
+		mapper.Logger.Error(err, "cluster delivery to deliverables: client list")
+		return nil, err
+	}
+
+	return list.Items, nil
 }
 
 func (mapper *Mapper) RunTemplateToRunnableRequests(object client.Object) []reconcile.Request {
@@ -298,19 +316,69 @@ func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject clie
 		return nil
 	}
 
-	var requests []reconcile.Request
+	requestMap := make(map[reconcile.Request]bool)
 	for _, workload := range list.Items {
 		if workload.Namespace == serviceAccountObject.GetNamespace() && workload.Spec.ServiceAccountName == serviceAccountObject.GetName() {
-			requests = append(requests, reconcile.Request{
+			request := reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      workload.Name,
 					Namespace: workload.Namespace,
 				},
-			})
+			}
+			requestMap[request] = true
 		}
 	}
 
+	supplyChains := mapper.serviceAccountToSupplyChains(serviceAccountObject)
+	for _, sc := range supplyChains {
+		scWorkloads, err := mapper.clusterSupplyChainToWorkloads(sc)
+		if err != nil {
+			mapper.Logger.Error(err, "service account to workload requests")
+			return nil
+		}
+		for _, workload := range scWorkloads {
+			if workload.Spec.ServiceAccountName != "" {
+				continue
+			}
+
+			if sc.Spec.ServiceAccountRef.Namespace == serviceAccountObject.GetNamespace() ||
+				(sc.Spec.ServiceAccountRef.Namespace == "" && workload.Namespace == serviceAccountObject.GetNamespace()) {
+				request := reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      workload.Name,
+						Namespace: workload.Namespace,
+					},
+				}
+				requestMap[request] = true
+			}
+		}
+	}
+
+	var requests []reconcile.Request
+	for r := range requestMap {
+		requests = append(requests, r)
+	}
+
 	return requests
+}
+
+func (mapper *Mapper) serviceAccountToSupplyChains(serviceAccountObject client.Object) []v1alpha1.ClusterSupplyChain {
+	list := &v1alpha1.ClusterSupplyChainList{}
+
+	err := mapper.Client.List(context.TODO(), list)
+	if err != nil {
+		mapper.Logger.Error(err, "service account to supply chains: list supply chains")
+		return nil
+	}
+
+	var supplyChains []v1alpha1.ClusterSupplyChain
+	for _, sc := range list.Items {
+		if sc.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() {
+			supplyChains = append(supplyChains, sc)
+		}
+	}
+
+	return supplyChains
 }
 
 func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Object) []reconcile.Request {
@@ -438,19 +506,68 @@ func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject c
 		return nil
 	}
 
-	var requests []reconcile.Request
+	requestMap := make(map[reconcile.Request]bool)
 	for _, deliverable := range list.Items {
 		if deliverable.Namespace == serviceAccountObject.GetNamespace() && deliverable.Spec.ServiceAccountName == serviceAccountObject.GetName() {
-			requests = append(requests, reconcile.Request{
+			request := reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      deliverable.Name,
 					Namespace: deliverable.Namespace,
 				},
-			})
+			}
+			requestMap[request] = true
 		}
 	}
 
+	deliveries := mapper.serviceAccountToDeliveries(serviceAccountObject)
+	for _, d := range deliveries {
+		deliveryDeliverables, err := mapper.clusterDeliveryToDeliverables(d)
+		if err != nil {
+			mapper.Logger.Error(err, "service account to deliverable requests")
+		}
+		for _, deliverable := range deliveryDeliverables {
+			if deliverable.Spec.ServiceAccountName != "" {
+				continue
+			}
+
+			if d.Spec.ServiceAccountRef.Namespace == serviceAccountObject.GetNamespace() ||
+				(d.Spec.ServiceAccountRef.Namespace == "" && deliverable.Namespace == serviceAccountObject.GetNamespace()) {
+				request := reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      deliverable.Name,
+						Namespace: deliverable.Namespace,
+					},
+				}
+				requestMap[request] = true
+			}
+		}
+	}
+
+	var requests []reconcile.Request
+	for r := range requestMap {
+		requests = append(requests, r)
+	}
+
 	return requests
+}
+
+func (mapper *Mapper) serviceAccountToDeliveries(serviceAccountObject client.Object) []v1alpha1.ClusterDelivery {
+	list := &v1alpha1.ClusterDeliveryList{}
+
+	err := mapper.Client.List(context.TODO(), list)
+	if err != nil {
+		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to deliveries: list deliveries")
+		return nil
+	}
+
+	var deliveries []v1alpha1.ClusterDelivery
+	for _, d := range list.Items {
+		if d.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() {
+			deliveries = append(deliveries, d)
+		}
+	}
+
+	return deliveries
 }
 
 func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.Object) []reconcile.Request {

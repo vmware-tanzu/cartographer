@@ -56,6 +56,12 @@ metadata:
     app.tanzu.vmware.com/workload-type: web   # (1)
 
 spec:
+  # service account with permissions to create resources submitted by the supply chain
+  # if not set, will use serviceAccountName from supply chain
+  # if that is also not set, will use the default service account in the workload's namespace
+  #
+  serviceAccountName: workload-service-account
+  
   source:
     # source code location in a git repository.
     #
@@ -148,6 +154,12 @@ spec:
   selector:
     app.tanzu.vmware.com/workload-type: web
 
+  # specifies the service account to be used to create resources if one
+  # is not specified in the workload
+  #
+  # (optional)
+  serviceAccountName: service-account
+    
   # parameters to override the defaults from the templates.
   # if a resource in the supply-chain specifies a parameter
   # of the same name that resource parameter clobber what is
@@ -475,6 +487,11 @@ kind: Runnable
 metadata:
   name: test-runner
 spec:
+  # service account with permissions to create resources submitted by the runnable
+  # if not set, will use the default service account in the runnable's namespace
+  #
+  serviceAccountName: runnable-service-account
+  
   # data to be made available to the template of ClusterRunTemplate
   # that we point at.
   #

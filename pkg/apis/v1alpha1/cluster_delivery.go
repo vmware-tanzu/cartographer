@@ -52,9 +52,10 @@ func (c *ClusterDelivery) GetSelector() map[string]string {
 }
 
 type ClusterDeliverySpec struct {
-	Resources []ClusterDeliveryResource `json:"resources"`
-	Selector  map[string]string         `json:"selector"`
-	Params    []DelegatableParam        `json:"params,omitempty"`
+	Resources         []ClusterDeliveryResource `json:"resources"`
+	Selector          map[string]string         `json:"selector"`
+	Params            []DelegatableParam        `json:"params,omitempty"`
+	ServiceAccountRef NameAndNamespace          `json:"serviceAccountRef,omitempty"`
 }
 
 type ClusterDeliveryStatus struct {

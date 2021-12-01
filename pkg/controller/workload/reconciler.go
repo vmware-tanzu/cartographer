@@ -92,12 +92,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	serviceAccountName := "default"
-	if workload.Spec.ServiceAccountName != "" {
-		serviceAccountName = workload.Spec.ServiceAccountName
-	}
+	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, workload.Namespace)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", workload.Spec.ServiceAccountName)
@@ -243,4 +240,20 @@ func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
 	}
 
 	return names
+}
+
+func getServiceAccountNameAndNamespace(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) (string, string) {
+	serviceAccountName := "default"
+	serviceAccountNS := workload.Namespace
+
+	if workload.Spec.ServiceAccountName != "" {
+		serviceAccountName = workload.Spec.ServiceAccountName
+	} else if supplyChain.Spec.ServiceAccountRef.Name != "" {
+		serviceAccountName = supplyChain.Spec.ServiceAccountRef.Name
+		if supplyChain.Spec.ServiceAccountRef.Namespace != "" {
+			serviceAccountNS = supplyChain.Spec.ServiceAccountRef.Namespace
+		}
+	}
+
+	return serviceAccountName, serviceAccountNS
 }

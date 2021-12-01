@@ -177,9 +177,10 @@ func GetSelectorsFromObject(o client.Object) []string {
 }
 
 type SupplyChainSpec struct {
-	Resources []SupplyChainResource `json:"resources"`
-	Selector  map[string]string     `json:"selector"`
-	Params    []DelegatableParam    `json:"params,omitempty"`
+	Resources         []SupplyChainResource `json:"resources"`
+	Selector          map[string]string     `json:"selector"`
+	Params            []DelegatableParam    `json:"params,omitempty"`
+	ServiceAccountRef NameAndNamespace      `json:"serviceAccountRef,omitempty"`
 }
 
 type SupplyChainResource struct {
