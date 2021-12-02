@@ -60,7 +60,7 @@ When Cartographer reconciles an owner, each resource in the matching blueprint i
 
 <!-- new diagram https://miro.com/app/board/uXjVOeb8u5o=/?moveToWidget=3458764514330138805&cot=14 -->
 
-![Realize](../img/realize.png)
+![Realize](../img/realize.jpg)
 <!-- https://docs.google.com/drawings/d/1bw8nMa3mHJqJhWGF8ArWhh_wW4gBya9O82BiHwNUT6s/edit -->
 
 
