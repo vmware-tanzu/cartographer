@@ -88,6 +88,10 @@ var _ = Describe("MapFunctions", func() {
 				Context("there are multiple Deliveries", func() {
 					BeforeEach(func() {
 						existingDelivery1 := v1alpha1.ClusterDelivery{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "ClusterDelivery",
+								APIVersion: "carto.run/v1alpha1",
+							},
 							Spec: v1alpha1.ClusterDeliverySpec{
 								Resources: []v1alpha1.ClusterDeliveryResource{
 									{
@@ -100,6 +104,10 @@ var _ = Describe("MapFunctions", func() {
 							},
 						}
 						existingDelivery2 := v1alpha1.ClusterDelivery{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "ClusterDelivery",
+								APIVersion: "carto.run/v1alpha1",
+							},
 							ObjectMeta: metav1.ObjectMeta{Name: "good-supply-chain"},
 							Spec: v1alpha1.ClusterDeliverySpec{
 								Resources: []v1alpha1.ClusterDeliveryResource{
@@ -110,6 +118,9 @@ var _ = Describe("MapFunctions", func() {
 										},
 									},
 								},
+								Selector: map[string]string{
+									"my-label": "my-value",
+								},
 							},
 						}
 						existingDeliveryList := v1alpha1.ClusterDeliveryList{
@@ -119,6 +130,9 @@ var _ = Describe("MapFunctions", func() {
 						existingDeliverable := v1alpha1.Deliverable{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "my-deliverable",
+								Labels: map[string]string{
+									"my-label": "my-value",
+								},
 							},
 						}
 						existingDeliverableList := v1alpha1.DeliverableList{
@@ -250,6 +264,10 @@ var _ = Describe("MapFunctions", func() {
 				Context("there are multiple supply chains", func() {
 					BeforeEach(func() {
 						existingSupplyChain1 := v1alpha1.ClusterSupplyChain{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "ClusterSupplyChain",
+								APIVersion: "carto.run/v1alpha1",
+							},
 							Spec: v1alpha1.SupplyChainSpec{
 								Resources: []v1alpha1.SupplyChainResource{
 									{
@@ -262,6 +280,10 @@ var _ = Describe("MapFunctions", func() {
 							},
 						}
 						existingSupplyChain2 := v1alpha1.ClusterSupplyChain{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "ClusterSupplyChain",
+								APIVersion: "carto.run/v1alpha1",
+							},
 							ObjectMeta: metav1.ObjectMeta{Name: "good-supply-chain"},
 							Spec: v1alpha1.SupplyChainSpec{
 								Resources: []v1alpha1.SupplyChainResource{
@@ -272,6 +294,9 @@ var _ = Describe("MapFunctions", func() {
 										},
 									},
 								},
+								Selector: map[string]string{
+									"my-label": "my-value",
+								},
 							},
 						}
 						existingSupplyChainList := v1alpha1.ClusterSupplyChainList{
@@ -281,6 +306,9 @@ var _ = Describe("MapFunctions", func() {
 						existingWorkload := v1alpha1.Workload{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "my-workload",
+								Labels: map[string]string{
+									"my-label": "my-value",
+								},
 							},
 						}
 						existingWorkloadList := v1alpha1.WorkloadList{
@@ -377,6 +405,13 @@ var _ = Describe("MapFunctions", func() {
 			fakeLogger = &registrarfakes.FakeLogger{}
 
 			clusterSupplyChain = &v1alpha1.ClusterSupplyChain{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterSupplyChain",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mySupplyChain",
+				},
 				Spec: v1alpha1.SupplyChainSpec{
 					Selector: map[string]string{
 						"myLabel": "myLabelsValue",
@@ -400,7 +435,7 @@ var _ = Describe("MapFunctions", func() {
 			result = mapper.ClusterSupplyChainToWorkloadRequests(clusterSupplyChain)
 		})
 
-		Context("client.List returns an error", func() {
+		Context("client returns an error", func() {
 			// By using a scheme without v1alpha1, the client will error when handed our Objects
 			It("logs an error to the client", func() {
 				Expect(result).To(BeEmpty())
@@ -408,7 +443,7 @@ var _ = Describe("MapFunctions", func() {
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(2))
 				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 				Expect(firstArg).NotTo(BeNil())
-				Expect(secondArg).To(Equal("cluster supply chain to workloads: client list"))
+				Expect(secondArg).To(Equal("could not get GVK for supply chain: mySupplyChain"))
 
 				firstArg, secondArg, _ = fakeLogger.ErrorArgsForCall(1)
 				Expect(firstArg).NotTo(BeNil())
@@ -456,7 +491,7 @@ var _ = Describe("MapFunctions", func() {
 						workload.Labels = map[string]string{
 							"myLabel": "myLabelsValue",
 						}
-						clientObjects = []client.Object{workload}
+						clientObjects = []client.Object{workload, clusterSupplyChain}
 					})
 
 					It("returns a list of requests that includes the workload", func() {
@@ -470,6 +505,26 @@ var _ = Describe("MapFunctions", func() {
 						}
 
 						Expect(result).To(Equal(expected))
+					})
+
+					Context("workload has better matching supply chain", func() {
+						BeforeEach(func() {
+							workload.Labels["myOtherLabel"] = "myOtherLabelsValue"
+
+							sc := &v1alpha1.ClusterSupplyChain{
+								Spec: v1alpha1.SupplyChainSpec{
+									Selector: map[string]string{
+										"myLabel":      "myLabelsValue",
+										"myOtherLabel": "myOtherLabelsValue",
+									},
+								},
+							}
+
+							clientObjects = []client.Object{workload, sc}
+						})
+						It("returns an empty list of requests", func() {
+							Expect(result).To(BeEmpty())
+						})
 					})
 				})
 				Context("supply chain without matching workload", func() {
@@ -518,6 +573,13 @@ var _ = Describe("MapFunctions", func() {
 			fakeLogger = &registrarfakes.FakeLogger{}
 
 			clusterDelivery = &v1alpha1.ClusterDelivery{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterDelivery",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "myDelivery",
+				},
 				Spec: v1alpha1.ClusterDeliverySpec{
 					Selector: map[string]string{
 						"myLabel": "myLabelsValue",
@@ -549,7 +611,7 @@ var _ = Describe("MapFunctions", func() {
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(2))
 				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 				Expect(firstArg).NotTo(BeNil())
-				Expect(secondArg).To(Equal("cluster delivery to deliverables: client list"))
+				Expect(secondArg).To(Equal("could not get GVK for delivery: myDelivery"))
 
 				firstArg, secondArg, _ = fakeLogger.ErrorArgsForCall(1)
 				Expect(firstArg).NotTo(BeNil())
@@ -597,7 +659,7 @@ var _ = Describe("MapFunctions", func() {
 						deliverable.Labels = map[string]string{
 							"myLabel": "myLabelsValue",
 						}
-						clientObjects = []client.Object{deliverable}
+						clientObjects = []client.Object{deliverable, clusterDelivery}
 					})
 
 					It("returns a list of requests that includes the deliverable", func() {
@@ -611,6 +673,26 @@ var _ = Describe("MapFunctions", func() {
 						}
 
 						Expect(result).To(Equal(expected))
+					})
+
+					Context("deliverable has better matching delivery", func() {
+						BeforeEach(func() {
+							deliverable.Labels["myOtherLabel"] = "myOtherLabelsValue"
+
+							delivery := &v1alpha1.ClusterDelivery{
+								Spec: v1alpha1.ClusterDeliverySpec{
+									Selector: map[string]string{
+										"myLabel":      "myLabelsValue",
+										"myOtherLabel": "myOtherLabelsValue",
+									},
+								},
+							}
+
+							clientObjects = []client.Object{deliverable, delivery}
+						})
+						It("returns an empty list of requests", func() {
+							Expect(result).To(BeEmpty())
+						})
 					})
 				})
 				Context("delivery without matching deliverable", func() {
@@ -1297,6 +1379,10 @@ var _ = Describe("MapFunctions", func() {
 					}
 
 					existingSupplyChain = &v1alpha1.ClusterSupplyChain{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ClusterSupplyChain",
+							APIVersion: "carto.run/v1alpha1",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "some-supply-chain",
 						},
@@ -3280,6 +3366,10 @@ var _ = Describe("MapFunctions", func() {
 					}
 
 					existingDelivery = &v1alpha1.ClusterDelivery{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ClusterDelivery",
+							APIVersion: "carto.run/v1alpha1",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "some-delivery",
 						},

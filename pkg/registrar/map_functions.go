@@ -19,6 +19,7 @@ package registrar
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
@@ -127,17 +129,45 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 }
 
 func (mapper *Mapper) clusterSupplyChainToWorkloads(sc v1alpha1.ClusterSupplyChain) ([]v1alpha1.Workload, error) {
-	list := &v1alpha1.WorkloadList{}
-
-	err := mapper.Client.List(context.TODO(), list,
-		client.InNamespace(sc.Namespace),
-		client.MatchingLabels(sc.Spec.Selector))
+	err := mapper.addGVK(&sc)
 	if err != nil {
-		mapper.Logger.Error(err, "cluster supply chain to workloads: client list")
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for supply chain: %s", sc.Name))
 		return nil, err
 	}
 
-	return list.Items, nil
+	scList := &v1alpha1.ClusterSupplyChainList{}
+	err = mapper.Client.List(context.TODO(), scList)
+	if err != nil {
+		mapper.Logger.Error(err, "cluster supply chain to workloads: client list supply chains")
+		return nil, err
+	}
+
+	var selectorGetters []repository.SelectorGetter
+	for _, item := range scList.Items {
+		item := item
+		selectorGetters = append(selectorGetters, &item)
+	}
+
+	workloadList := &v1alpha1.WorkloadList{}
+	err = mapper.Client.List(context.TODO(), workloadList,
+		client.InNamespace(sc.Namespace),
+		client.MatchingLabels(sc.Spec.Selector))
+	if err != nil {
+		mapper.Logger.Error(err, "cluster supply chain to workloads: client list workloads")
+		return nil, err
+	}
+
+	var matchingWorkloads []v1alpha1.Workload
+	for _, wl := range workloadList.Items {
+		for _, matchingObject := range repository.BestLabelMatches(&wl, selectorGetters) {
+			matchingSC := matchingObject.(*v1alpha1.ClusterSupplyChain)
+			if reflect.DeepEqual(matchingSC, &sc) {
+				matchingWorkloads = append(matchingWorkloads, wl)
+			}
+		}
+	}
+
+	return matchingWorkloads, nil
 }
 
 func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object) []reconcile.Request {
@@ -169,17 +199,45 @@ func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object)
 }
 
 func (mapper *Mapper) clusterDeliveryToDeliverables(d v1alpha1.ClusterDelivery) ([]v1alpha1.Deliverable, error) {
-	list := &v1alpha1.DeliverableList{}
-
-	err := mapper.Client.List(context.TODO(), list,
-		client.InNamespace(d.Namespace),
-		client.MatchingLabels(d.Spec.Selector))
+	err := mapper.addGVK(&d)
 	if err != nil {
-		mapper.Logger.Error(err, "cluster delivery to deliverables: client list")
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for delivery: %s", d.Name))
 		return nil, err
 	}
 
-	return list.Items, nil
+	deliveryList := &v1alpha1.ClusterDeliveryList{}
+	err = mapper.Client.List(context.TODO(), deliveryList)
+	if err != nil {
+		mapper.Logger.Error(err, "cluster delivery to deliverables: client list deliveries")
+		return nil, err
+	}
+
+	var selectorGetters []repository.SelectorGetter
+	for _, item := range deliveryList.Items {
+		item := item
+		selectorGetters = append(selectorGetters, &item)
+	}
+
+	deliverableList := &v1alpha1.DeliverableList{}
+	err = mapper.Client.List(context.TODO(), deliverableList,
+		client.InNamespace(d.Namespace),
+		client.MatchingLabels(d.Spec.Selector))
+	if err != nil {
+		mapper.Logger.Error(err, "cluster delivery to deliverables: client list deliverables")
+		return nil, err
+	}
+
+	var matchingDeliverables []v1alpha1.Deliverable
+	for _, deliverable := range deliverableList.Items {
+		for _, matchingObject := range repository.BestLabelMatches(&deliverable, selectorGetters) {
+			matchingDelivery := matchingObject.(*v1alpha1.ClusterDelivery)
+			if reflect.DeepEqual(matchingDelivery, &d) {
+				matchingDeliverables = append(matchingDeliverables, deliverable)
+			}
+		}
+	}
+
+	return matchingDeliverables, nil
 }
 
 func (mapper *Mapper) RunTemplateToRunnableRequests(object client.Object) []reconcile.Request {
