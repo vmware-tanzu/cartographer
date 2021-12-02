@@ -18,7 +18,7 @@ kind: Workload
 metadata:
   name: petclinic
   labels:
-    integration-test: "templates-ytt"
+    integration-test: "templates-ytt-bad-params"
 spec:
   serviceAccountName: my-service-account
   source:

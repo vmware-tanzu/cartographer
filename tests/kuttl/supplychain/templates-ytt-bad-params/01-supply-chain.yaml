@@ -19,7 +19,7 @@ metadata:
   name: responsible-ops---templates-ytt-bad-params
 spec:
   selector:
-    integration-test: "templates-ytt"
+    integration-test: "templates-ytt-bad-params"
   resources:
     - name: params
       templateRef:
