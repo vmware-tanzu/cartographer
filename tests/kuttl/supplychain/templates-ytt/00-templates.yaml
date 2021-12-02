@@ -96,3 +96,31 @@ spec:
       name: example-config-ytt
     data:
       best_name: #@ data.values.config
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: example-params---templates-ytt
+spec:
+  ytt: |
+    #@ load("@ytt:data", "data")
+
+    #@ def workload_param(name):
+    #@   if not hasattr(data.values.workload.spec, "params"):
+    #@     fail("param not found in workload params: [{}]".format(name))
+    #@   end
+    #@   for p in data.values.workload.spec.params:
+    #@     if p.name == name:
+    #@       return p.value
+    #@     end
+    #@   end
+    #@   fail("param not found in workload params: [{}]".format(name))
+    #@ end
+
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-config-ytt-params
+    data:
+      best_name: #@ workload_param("waciuma-com/quality")

@@ -54,3 +54,28 @@ metadata:
   name: example-config-ytt
 data:
   best_name: knitting
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-config-ytt-params
+data:
+  best_name: omicron
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready

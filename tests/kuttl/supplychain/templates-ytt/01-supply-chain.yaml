@@ -54,3 +54,8 @@ spec:
       configs:
         - resource: config
           name: solo-config-provider
+
+    - name: params
+      templateRef:
+        kind: ClusterTemplate
+        name: example-params---templates-ytt
