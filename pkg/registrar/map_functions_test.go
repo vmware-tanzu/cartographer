@@ -405,10 +405,14 @@ var _ = Describe("MapFunctions", func() {
 			It("logs an error to the client", func() {
 				Expect(result).To(BeEmpty())
 
-				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(2))
 				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 				Expect(firstArg).NotTo(BeNil())
-				Expect(secondArg).To(Equal("cluster supply chain to workload requests: client list"))
+				Expect(secondArg).To(Equal("cluster supply chain to workloads: client list"))
+
+				firstArg, secondArg, _ = fakeLogger.ErrorArgsForCall(1)
+				Expect(firstArg).NotTo(BeNil())
+				Expect(secondArg).To(Equal("cluster supply chain to workload requests"))
 			})
 		})
 
@@ -542,10 +546,14 @@ var _ = Describe("MapFunctions", func() {
 			It("logs an error to the client", func() {
 				Expect(result).To(BeEmpty())
 
-				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
+				Expect(fakeLogger.ErrorCallCount()).To(Equal(2))
 				firstArg, secondArg, _ := fakeLogger.ErrorArgsForCall(0)
 				Expect(firstArg).NotTo(BeNil())
-				Expect(secondArg).To(Equal("cluster delivery to deliverable requests: client list"))
+				Expect(secondArg).To(Equal("cluster delivery to deliverables: client list"))
+
+				firstArg, secondArg, _ = fakeLogger.ErrorArgsForCall(1)
+				Expect(firstArg).NotTo(BeNil())
+				Expect(secondArg).To(Equal("cluster delivery to deliverable requests"))
 			})
 		})
 
@@ -1176,18 +1184,36 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no workloads", func() {
-				BeforeEach(func() {
-					existingList := v1alpha1.WorkloadList{
-						Items: []v1alpha1.Workload{},
+			var (
+				existingWorkloadList    v1alpha1.WorkloadList
+				existingSupplyChainList v1alpha1.ClusterSupplyChainList
+			)
+
+			JustBeforeEach(func() {
+				fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+					listVal := reflect.Indirect(reflect.ValueOf(list))
+					switch list.(type) {
+					case *v1alpha1.WorkloadList:
+						existingVal := reflect.Indirect(reflect.ValueOf(existingWorkloadList))
+						listVal.Set(existingVal)
+					case *v1alpha1.ClusterSupplyChainList:
+						existingVal := reflect.Indirect(reflect.ValueOf(existingSupplyChainList))
+						listVal.Set(existingVal)
+					default:
+						panic("list type not stubbed")
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
+					return nil
+				}
+			})
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
+			Context("there are no workloads", func() {
+				BeforeEach(func() {
+					existingWorkloadList = v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{},
+					}
+					existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
+						Items: []v1alpha1.ClusterSupplyChain{},
 					}
 				})
 
@@ -1202,11 +1228,6 @@ var _ = Describe("MapFunctions", func() {
 			Context("there are multiple workloads", func() {
 				BeforeEach(func() {
 					existingWorkload1 := &v1alpha1.Workload{
-						Spec: v1alpha1.WorkloadSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingWorkload2 := &v1alpha1.Workload{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-workload",
 							Namespace: "some-namespace",
@@ -1215,21 +1236,20 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
-					existingList := v1alpha1.WorkloadList{
+					existingWorkload2 := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-workload",
+							Namespace: "some-unused-namespace",
+						},
+					}
+					existingWorkloadList = v1alpha1.WorkloadList{
 						Items: []v1alpha1.Workload{*existingWorkload1, *existingWorkload2},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
+					existingSupplyChainList = v1alpha1.ClusterSupplyChainList{Items: []v1alpha1.ClusterSupplyChain{}}
 				})
 
 				Context("there is a matching workload", func() {
-
 					It("returns requests for only the matching workload", func() {
 						sa := &corev1.ServiceAccount{
 							ObjectMeta: metav1.ObjectMeta{
@@ -1248,8 +1268,8 @@ var _ = Describe("MapFunctions", func() {
 					It("returns an empty request list", func() {
 						sa := &corev1.ServiceAccount{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "some-other-service-account",
-								Namespace: "some-other-namespace",
+								Name:      "some-unused-service-account",
+								Namespace: "some-unused-namespace",
 							},
 						}
 						reqs := m.ServiceAccountToWorkloadRequests(sa)
@@ -1257,7 +1277,186 @@ var _ = Describe("MapFunctions", func() {
 						Expect(reqs).To(HaveLen(0))
 					})
 				})
+			})
 
+			Context("there is a matching workload from the supply chain", func() {
+				var existingSupplyChain *v1alpha1.ClusterSupplyChain
+
+				BeforeEach(func() {
+					existingWorkload := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-workload",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+					existingWorkloadList = v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{*existingWorkload},
+					}
+
+					existingSupplyChain = &v1alpha1.ClusterSupplyChain{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-supply-chain",
+						},
+						Spec: v1alpha1.SupplyChainSpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+
+				})
+
+				Context("the supply chain does not specify a namespace on the service account", func() {
+					BeforeEach(func() {
+						existingSupplyChain.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
+							Name: "some-service-account",
+						}
+						existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
+							Items: []v1alpha1.ClusterSupplyChain{*existingSupplyChain},
+						}
+					})
+
+					It("uses the workload namespace to return a request for the matching workload", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-workload"))
+					})
+				})
+
+				Context("the supply chain specifies a namespace on the service account", func() {
+					BeforeEach(func() {
+						existingSupplyChain.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
+							Name:      "some-service-account",
+							Namespace: "some-supply-chain-namespace",
+						}
+						existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
+							Items: []v1alpha1.ClusterSupplyChain{*existingSupplyChain},
+						}
+					})
+
+					It("uses the specified namespace to return a request for the matching workload", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-service-account",
+								Namespace: "some-supply-chain-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-workload"))
+					})
+				})
+
+			})
+
+			Context("a workload matches by itself and through a supply chain", func() {
+				BeforeEach(func() {
+					existingWorkload := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-workload",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+						Spec: v1alpha1.WorkloadSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingWorkloadList = v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{*existingWorkload},
+					}
+
+					existingSupplyChain := &v1alpha1.ClusterSupplyChain{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-supply-chain",
+						},
+						Spec: v1alpha1.SupplyChainSpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
+								Name: "some-service-account",
+							},
+						},
+					}
+					existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
+						Items: []v1alpha1.ClusterSupplyChain{*existingSupplyChain},
+					}
+				})
+
+				It("only returns one request for the workload", func() {
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+					reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+					Expect(reqs).To(HaveLen(1))
+					Expect(reqs[0].Name).To(Equal("some-workload"))
+				})
+			})
+
+			Context("a workload matches through the supply chain but sets a serviceAccountName itself", func() {
+				BeforeEach(func() {
+					existingWorkload := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-workload",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+						Spec: v1alpha1.WorkloadSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingWorkloadList = v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{*existingWorkload},
+					}
+
+					existingSupplyChain := &v1alpha1.ClusterSupplyChain{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-supply-chain",
+						},
+						Spec: v1alpha1.SupplyChainSpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
+								Name: "some-service-account",
+							},
+						},
+					}
+					existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
+						Items: []v1alpha1.ClusterSupplyChain{*existingSupplyChain},
+					}
+				})
+
+				It("does not return a request for the workload", func() {
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+					reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+					Expect(reqs).To(HaveLen(0))
+				})
 			})
 		})
 
@@ -1308,38 +1507,10 @@ var _ = Describe("MapFunctions", func() {
 			fakeClient.SchemeReturns(scheme)
 		})
 
-		Context("client.list does not return errors", func() {
-			Context("there are no workloads", func() {
-				BeforeEach(func() {
-					existingList := v1alpha1.WorkloadList{
-						Items: []v1alpha1.Workload{},
-					}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					rb := &rbacv1.RoleBinding{}
-					reqs := m.RoleBindingToWorkloadRequests(rb)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
+		Context("client.get does not return errors", func() {
 			Context("there are multiple workloads", func() {
 				BeforeEach(func() {
 					existingWorkload1 := &v1alpha1.Workload{
-						Spec: v1alpha1.WorkloadSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingWorkload2 := &v1alpha1.Workload{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-workload",
 							Namespace: "some-namespace",
@@ -1348,15 +1519,31 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
-					existingList := v1alpha1.WorkloadList{
+					existingWorkload2 := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-workload",
+							Namespace: "some-unused-namespace",
+						},
+					}
+					existingWorkloadList := v1alpha1.WorkloadList{
 						Items: []v1alpha1.Workload{*existingWorkload1, *existingWorkload2},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
+					existingSupplyChainList := v1alpha1.ClusterSupplyChainList{Items: []v1alpha1.ClusterSupplyChain{}}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.WorkloadList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingWorkloadList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterSupplyChainList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingSupplyChainList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
+						}
+
 						return nil
 					}
 
@@ -1439,7 +1626,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 		})
 
-		Context("client.list errors", func() {
+		Context("client.get errors", func() {
 			var (
 				getErr error
 			)
@@ -1498,38 +1685,10 @@ var _ = Describe("MapFunctions", func() {
 			fakeClient.SchemeReturns(scheme)
 		})
 
-		Context("client.list does not return errors", func() {
-			Context("there are no workloads", func() {
-				BeforeEach(func() {
-					existingList := v1alpha1.WorkloadList{
-						Items: []v1alpha1.Workload{},
-					}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					rb := &rbacv1.ClusterRoleBinding{}
-					reqs := m.ClusterRoleBindingToWorkloadRequests(rb)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
+		Context("client.get does not return errors", func() {
 			Context("there are multiple workloads", func() {
 				BeforeEach(func() {
 					existingWorkload1 := &v1alpha1.Workload{
-						Spec: v1alpha1.WorkloadSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingWorkload2 := &v1alpha1.Workload{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-workload",
 							Namespace: "some-namespace",
@@ -1538,15 +1697,31 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
-					existingList := v1alpha1.WorkloadList{
+					existingWorkload2 := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-workload",
+							Namespace: "some-unused-namespace",
+						},
+					}
+					existingWorkloadList := v1alpha1.WorkloadList{
 						Items: []v1alpha1.Workload{*existingWorkload1, *existingWorkload2},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
+					existingSupplyChainList := v1alpha1.ClusterSupplyChainList{Items: []v1alpha1.ClusterSupplyChain{}}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.WorkloadList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingWorkloadList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterSupplyChainList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingSupplyChainList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
+						}
+
 						return nil
 					}
 
@@ -1627,7 +1802,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 		})
 
-		Context("client.list errors", func() {
+		Context("client.get errors", func() {
 			var (
 				getErr error
 			)
@@ -1686,35 +1861,9 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no workloads", func() {
-				BeforeEach(func() {
-					existingList := rbacv1.RoleBindingList{}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					r := &rbacv1.Role{}
-					reqs := m.RoleToWorkloadRequests(r)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
 			Context("there are multiple workloads", func() {
 				BeforeEach(func() {
 					existingWorkload1 := &v1alpha1.Workload{
-						Spec: v1alpha1.WorkloadSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingWorkload2 := &v1alpha1.Workload{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-workload",
 							Namespace: "some-namespace",
@@ -1723,9 +1872,17 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
+					existingWorkload2 := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-workload",
+							Namespace: "some-unused-namespace",
+						},
+					}
 					existingWorkloadList := v1alpha1.WorkloadList{
 						Items: []v1alpha1.Workload{*existingWorkload1, *existingWorkload2},
 					}
+
+					existingSupplyChainList := v1alpha1.ClusterSupplyChainList{Items: []v1alpha1.ClusterSupplyChain{}}
 
 					roleBinding := &rbacv1.RoleBinding{
 						TypeMeta: metav1.TypeMeta{},
@@ -1748,18 +1905,22 @@ var _ = Describe("MapFunctions", func() {
 
 					roleBindingList := rbacv1.RoleBindingList{Items: []rbacv1.RoleBinding{*roleBinding}}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						var existingVal reflect.Value
-
-						_, isWorkloadList := list.(*v1alpha1.WorkloadList)
-						if isWorkloadList {
-							existingVal = reflect.ValueOf(existingWorkloadList)
-						} else {
-							existingVal = reflect.ValueOf(roleBindingList)
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.WorkloadList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingWorkloadList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterSupplyChainList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingSupplyChainList))
+							listVal.Set(existingVal)
+						case *rbacv1.RoleBindingList:
+							existingVal := reflect.Indirect(reflect.ValueOf(roleBindingList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
 						}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
 						return nil
 					}
 
@@ -1881,43 +2042,9 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no workloads", func() {
-				BeforeEach(func() {
-					clusterRoleBindingList := rbacv1.ClusterRoleBindingList{}
-					roleBindingList := rbacv1.RoleBindingList{}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						var existingVal reflect.Value
-
-						_, isClusterRoleBindingList := list.(*rbacv1.ClusterRoleBindingList)
-						if isClusterRoleBindingList {
-							existingVal = reflect.ValueOf(clusterRoleBindingList)
-						} else {
-							existingVal = reflect.ValueOf(roleBindingList)
-						}
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					r := &rbacv1.ClusterRole{}
-					reqs := m.ClusterRoleToWorkloadRequests(r)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
-			Context("there are multiple runnables", func() {
+			Context("there are multiple workloads", func() {
 				BeforeEach(func() {
 					existingWorkload1 := &v1alpha1.Workload{
-						Spec: v1alpha1.WorkloadSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingWorkload2 := &v1alpha1.Workload{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-workload",
 							Namespace: "some-namespace",
@@ -1926,9 +2053,17 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
+					existingWorkload2 := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-workload",
+							Namespace: "some-unused-namespace",
+						},
+					}
 					existingWorkloadList := v1alpha1.WorkloadList{
 						Items: []v1alpha1.Workload{*existingWorkload1, *existingWorkload2},
 					}
+
+					existingSupplyChainList := v1alpha1.ClusterSupplyChainList{Items: []v1alpha1.ClusterSupplyChain{}}
 
 					clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1969,20 +2104,25 @@ var _ = Describe("MapFunctions", func() {
 
 					roleBindingList := rbacv1.RoleBindingList{Items: []rbacv1.RoleBinding{*roleBinding}}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						var existingVal reflect.Value
-
-						_, isWorkloadList := list.(*v1alpha1.WorkloadList)
-						if isWorkloadList {
-							existingVal = reflect.ValueOf(existingWorkloadList)
-						} else if _, isClusterRoleBindingList := list.(*rbacv1.ClusterRoleBindingList); isClusterRoleBindingList {
-							existingVal = reflect.ValueOf(clusterRoleBindingList)
-						} else {
-							existingVal = reflect.ValueOf(roleBindingList)
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.WorkloadList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingWorkloadList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterSupplyChainList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingSupplyChainList))
+							listVal.Set(existingVal)
+						case *rbacv1.ClusterRoleBindingList:
+							existingVal := reflect.Indirect(reflect.ValueOf(clusterRoleBindingList))
+							listVal.Set(existingVal)
+						case *rbacv1.RoleBindingList:
+							existingVal := reflect.Indirect(reflect.ValueOf(roleBindingList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
 						}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
 						return nil
 					}
 
@@ -3026,18 +3166,37 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
+			var (
+				existingDeliverableList v1alpha1.DeliverableList
+				existingDeliveryList    v1alpha1.ClusterDeliveryList
+			)
+
+			JustBeforeEach(func() {
+				fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+					listVal := reflect.Indirect(reflect.ValueOf(list))
+					switch list.(type) {
+					case *v1alpha1.DeliverableList:
+						existingVal := reflect.Indirect(reflect.ValueOf(existingDeliverableList))
+						listVal.Set(existingVal)
+					case *v1alpha1.ClusterDeliveryList:
+						existingVal := reflect.Indirect(reflect.ValueOf(existingDeliveryList))
+						listVal.Set(existingVal)
+					default:
+						panic("list type not stubbed")
+					}
+
+					return nil
+				}
+			})
+
 			Context("there are no deliverables", func() {
 				BeforeEach(func() {
-					existingList := v1alpha1.DeliverableList{
+					existingDeliverableList = v1alpha1.DeliverableList{
 						Items: []v1alpha1.Deliverable{},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
+					existingDeliveryList = v1alpha1.ClusterDeliveryList{
+						Items: []v1alpha1.ClusterDelivery{},
 					}
 				})
 
@@ -3052,11 +3211,6 @@ var _ = Describe("MapFunctions", func() {
 			Context("there are multiple deliverables", func() {
 				BeforeEach(func() {
 					existingDeliverable1 := &v1alpha1.Deliverable{
-						Spec: v1alpha1.DeliverableSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingDeliverable2 := &v1alpha1.Deliverable{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-deliverable",
 							Namespace: "some-namespace",
@@ -3065,21 +3219,20 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
-					existingList := v1alpha1.DeliverableList{
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-deliverable",
+							Namespace: "some-unused-namespace",
+						},
+					}
+					existingDeliverableList = v1alpha1.DeliverableList{
 						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
+					existingDeliveryList = v1alpha1.ClusterDeliveryList{Items: []v1alpha1.ClusterDelivery{}}
 				})
 
 				Context("there is a matching deliverable", func() {
-
 					It("returns requests for only the matching deliverable", func() {
 						sa := &corev1.ServiceAccount{
 							ObjectMeta: metav1.ObjectMeta{
@@ -3098,8 +3251,8 @@ var _ = Describe("MapFunctions", func() {
 					It("returns an empty request list", func() {
 						sa := &corev1.ServiceAccount{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "some-other-service-account",
-								Namespace: "some-other-namespace",
+								Name:      "some-unused-service-account",
+								Namespace: "some-unused-namespace",
 							},
 						}
 						reqs := m.ServiceAccountToDeliverableRequests(sa)
@@ -3107,7 +3260,186 @@ var _ = Describe("MapFunctions", func() {
 						Expect(reqs).To(HaveLen(0))
 					})
 				})
+			})
 
+			Context("there is a matching deliverable from the delivery", func() {
+				var existingDelivery *v1alpha1.ClusterDelivery
+
+				BeforeEach(func() {
+					existingDeliverable := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+					existingDeliverableList = v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable},
+					}
+
+					existingDelivery = &v1alpha1.ClusterDelivery{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-delivery",
+						},
+						Spec: v1alpha1.ClusterDeliverySpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+				})
+
+				Context("the delivery does not specify a namespace on the service account", func() {
+					BeforeEach(func() {
+						existingDelivery.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
+							Name: "some-service-account",
+						}
+						existingDeliveryList = v1alpha1.ClusterDeliveryList{
+							Items: []v1alpha1.ClusterDelivery{*existingDelivery},
+						}
+					})
+
+					It("uses the deliverable namespace to return a request for the matching deliverable", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-service-account",
+								Namespace: "some-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+
+				Context("the delivery specifies a namespace on the service account", func() {
+					BeforeEach(func() {
+						existingDelivery.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
+							Name:      "some-service-account",
+							Namespace: "some-delivery-namespace",
+						}
+						existingDeliveryList = v1alpha1.ClusterDeliveryList{
+							Items: []v1alpha1.ClusterDelivery{*existingDelivery},
+						}
+					})
+
+					It("uses the specified namespace to return a request for the matching deliverable", func() {
+						sa := &corev1.ServiceAccount{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "some-service-account",
+								Namespace: "some-delivery-namespace",
+							},
+						}
+						reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+						Expect(reqs).To(HaveLen(1))
+						Expect(reqs[0].Name).To(Equal("some-deliverable"))
+					})
+				})
+			})
+
+			Context("a deliverable matches by itself and through a delivery", func() {
+				BeforeEach(func() {
+					existingDeliverable := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-service-account",
+						},
+					}
+					existingDeliverableList = v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable},
+					}
+
+					existingDelivery := &v1alpha1.ClusterDelivery{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-delivery",
+						},
+						Spec: v1alpha1.ClusterDeliverySpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
+								Name: "some-service-account",
+							},
+						},
+					}
+
+					existingDeliveryList = v1alpha1.ClusterDeliveryList{
+						Items: []v1alpha1.ClusterDelivery{*existingDelivery},
+					}
+				})
+
+				It("only returns one request for the deliverable", func() {
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+					reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+					Expect(reqs).To(HaveLen(1))
+					Expect(reqs[0].Name).To(Equal("some-deliverable"))
+				})
+			})
+
+			Context("a deliverable matches through the delivery but sets a serviceAccountName itself", func() {
+				BeforeEach(func() {
+					existingDeliverable := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+						Spec: v1alpha1.DeliverableSpec{
+							ServiceAccountName: "some-other-service-account",
+						},
+					}
+					existingDeliverableList = v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable},
+					}
+
+					existingDelivery := &v1alpha1.ClusterDelivery{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-delivery",
+						},
+						Spec: v1alpha1.ClusterDeliverySpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
+								Name: "some-service-account",
+							},
+						},
+					}
+
+					existingDeliveryList = v1alpha1.ClusterDeliveryList{
+						Items: []v1alpha1.ClusterDelivery{*existingDelivery},
+					}
+				})
+
+				It("does not return a request for the deliverable", func() {
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-service-account",
+							Namespace: "some-namespace",
+						},
+					}
+					reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+					Expect(reqs).To(HaveLen(0))
+				})
 			})
 		})
 
@@ -3159,37 +3491,9 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no deliverables", func() {
-				BeforeEach(func() {
-					existingList := v1alpha1.DeliverableList{
-						Items: []v1alpha1.Deliverable{},
-					}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					rb := &rbacv1.RoleBinding{}
-					reqs := m.RoleBindingToDeliverableRequests(rb)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
 			Context("there are multiple deliverables", func() {
 				BeforeEach(func() {
 					existingDeliverable1 := &v1alpha1.Deliverable{
-						Spec: v1alpha1.DeliverableSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingDeliverable2 := &v1alpha1.Deliverable{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-deliverable",
 							Namespace: "some-namespace",
@@ -3198,15 +3502,31 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
-					existingList := v1alpha1.DeliverableList{
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-deliverable",
+							Namespace: "some-unused-namespace",
+						},
+					}
+					existingDeliverableList := v1alpha1.DeliverableList{
 						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
+					existingDeliveryList := v1alpha1.ClusterDeliveryList{Items: []v1alpha1.ClusterDelivery{}}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.DeliverableList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliverableList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterDeliveryList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliveryList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
+						}
+
 						return nil
 					}
 
@@ -3349,37 +3669,9 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no deliverables", func() {
-				BeforeEach(func() {
-					existingList := v1alpha1.RunnableList{
-						Items: []v1alpha1.Runnable{},
-					}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					rb := &rbacv1.ClusterRoleBinding{}
-					reqs := m.ClusterRoleBindingToRunnableRequests(rb)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
 			Context("there are multiple deliverables", func() {
 				BeforeEach(func() {
 					existingDeliverable1 := &v1alpha1.Deliverable{
-						Spec: v1alpha1.DeliverableSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingDeliverable2 := &v1alpha1.Deliverable{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-deliverable",
 							Namespace: "some-namespace",
@@ -3388,15 +3680,31 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
-					existingList := v1alpha1.DeliverableList{
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-deliverable",
+							Namespace: "some-unused-namespace",
+						},
+					}
+					existingDeliverableList := v1alpha1.DeliverableList{
 						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
 					}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
+					existingDeliveryList := v1alpha1.ClusterDeliveryList{Items: []v1alpha1.ClusterDelivery{}}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.DeliverableList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliverableList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterDeliveryList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliveryList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
+						}
+
 						return nil
 					}
 
@@ -3536,35 +3844,9 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no deliverables", func() {
-				BeforeEach(func() {
-					existingList := rbacv1.RoleBindingList{}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						existingVal := reflect.ValueOf(existingList)
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					r := &rbacv1.Role{}
-					reqs := m.RoleToRunnableRequests(r)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
 			Context("there are multiple deliverables", func() {
 				BeforeEach(func() {
 					existingDeliverable1 := &v1alpha1.Deliverable{
-						Spec: v1alpha1.DeliverableSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingDeliverable2 := &v1alpha1.Deliverable{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-deliverable",
 							Namespace: "some-namespace",
@@ -3573,9 +3855,17 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-deliverable",
+							Namespace: "some-unused-namespace",
+						},
+					}
 					existingDeliverableList := v1alpha1.DeliverableList{
 						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
 					}
+
+					existingDeliveryList := v1alpha1.ClusterDeliveryList{Items: []v1alpha1.ClusterDelivery{}}
 
 					roleBinding := &rbacv1.RoleBinding{
 						TypeMeta: metav1.TypeMeta{},
@@ -3598,18 +3888,22 @@ var _ = Describe("MapFunctions", func() {
 
 					roleBindingList := rbacv1.RoleBindingList{Items: []rbacv1.RoleBinding{*roleBinding}}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						var existingVal reflect.Value
-
-						_, isDeliverableList := list.(*v1alpha1.DeliverableList)
-						if isDeliverableList {
-							existingVal = reflect.ValueOf(existingDeliverableList)
-						} else {
-							existingVal = reflect.ValueOf(roleBindingList)
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.DeliverableList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliverableList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterDeliveryList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliveryList))
+							listVal.Set(existingVal)
+						case *rbacv1.RoleBindingList:
+							existingVal := reflect.Indirect(reflect.ValueOf(roleBindingList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
 						}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
 						return nil
 					}
 
@@ -3731,43 +4025,9 @@ var _ = Describe("MapFunctions", func() {
 		})
 
 		Context("client.list does not return errors", func() {
-			Context("there are no deliverables", func() {
-				BeforeEach(func() {
-					clusterRoleBindingList := rbacv1.ClusterRoleBindingList{}
-					roleBindingList := rbacv1.RoleBindingList{}
-
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						var existingVal reflect.Value
-
-						_, isClusterRoleBindingList := list.(*rbacv1.ClusterRoleBindingList)
-						if isClusterRoleBindingList {
-							existingVal = reflect.ValueOf(clusterRoleBindingList)
-						} else {
-							existingVal = reflect.ValueOf(roleBindingList)
-						}
-
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
-						return nil
-					}
-				})
-
-				It("returns an empty request list", func() {
-					r := &rbacv1.ClusterRole{}
-					reqs := m.ClusterRoleToRunnableRequests(r)
-
-					Expect(reqs).To(HaveLen(0))
-				})
-			})
-
 			Context("there are multiple deliverables", func() {
 				BeforeEach(func() {
 					existingDeliverable1 := &v1alpha1.Deliverable{
-						Spec: v1alpha1.DeliverableSpec{
-							ServiceAccountName: "some-other-service-account",
-						},
-					}
-					existingDeliverable2 := &v1alpha1.Deliverable{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "some-deliverable",
 							Namespace: "some-namespace",
@@ -3776,9 +4036,17 @@ var _ = Describe("MapFunctions", func() {
 							ServiceAccountName: "some-service-account",
 						},
 					}
+					existingDeliverable2 := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-unused-deliverable",
+							Namespace: "some-unused-namespace",
+						},
+					}
 					existingDeliverableList := v1alpha1.DeliverableList{
 						Items: []v1alpha1.Deliverable{*existingDeliverable1, *existingDeliverable2},
 					}
+
+					existingDeliveryList := v1alpha1.ClusterDeliveryList{Items: []v1alpha1.ClusterDelivery{}}
 
 					clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 						ObjectMeta: metav1.ObjectMeta{
@@ -3819,20 +4087,25 @@ var _ = Describe("MapFunctions", func() {
 
 					roleBindingList := rbacv1.RoleBindingList{Items: []rbacv1.RoleBinding{*roleBinding}}
 
-					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						listVal := reflect.ValueOf(list)
-						var existingVal reflect.Value
-
-						_, isDeliverableList := list.(*v1alpha1.DeliverableList)
-						if isDeliverableList {
-							existingVal = reflect.ValueOf(existingDeliverableList)
-						} else if _, isClusterRoleBindingList := list.(*rbacv1.ClusterRoleBindingList); isClusterRoleBindingList {
-							existingVal = reflect.ValueOf(clusterRoleBindingList)
-						} else {
-							existingVal = reflect.ValueOf(roleBindingList)
+					fakeClient.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.Indirect(reflect.ValueOf(list))
+						switch list.(type) {
+						case *v1alpha1.DeliverableList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliverableList))
+							listVal.Set(existingVal)
+						case *v1alpha1.ClusterDeliveryList:
+							existingVal := reflect.Indirect(reflect.ValueOf(existingDeliveryList))
+							listVal.Set(existingVal)
+						case *rbacv1.ClusterRoleBindingList:
+							existingVal := reflect.Indirect(reflect.ValueOf(clusterRoleBindingList))
+							listVal.Set(existingVal)
+						case *rbacv1.RoleBindingList:
+							existingVal := reflect.Indirect(reflect.ValueOf(roleBindingList))
+							listVal.Set(existingVal)
+						default:
+							panic("list type not stubbed")
 						}
 
-						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
 						return nil
 					}
 

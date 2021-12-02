@@ -92,12 +92,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(DeliveryReadyCondition())
 
-	serviceAccountName := "default"
-	if deliverable.Spec.ServiceAccountName != "" {
-		serviceAccountName = deliverable.Spec.ServiceAccountName
-	}
+	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(deliverable, delivery)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, deliverable.Namespace)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get secret for service account [%s]: %w", deliverable.Spec.ServiceAccountName, err))
@@ -252,4 +249,20 @@ func getDeliveryNames(objs []*v1alpha1.ClusterDelivery) []string {
 	}
 
 	return names
+}
+
+func getServiceAccountNameAndNamespace(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) (string, string) {
+	serviceAccountName := "default"
+	serviceAccountNS := deliverable.Namespace
+
+	if deliverable.Spec.ServiceAccountName != "" {
+		serviceAccountName = deliverable.Spec.ServiceAccountName
+	} else if delivery.Spec.ServiceAccountRef.Name != "" {
+		serviceAccountName = delivery.Spec.ServiceAccountRef.Name
+		if delivery.Spec.ServiceAccountRef.Namespace != "" {
+			serviceAccountNS = delivery.Spec.ServiceAccountRef.Namespace
+		}
+	}
+
+	return serviceAccountName, serviceAccountNS
 }

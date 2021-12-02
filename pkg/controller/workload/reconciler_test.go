@@ -238,6 +238,14 @@ var _ = Describe("Reconciler", func() {
 			rlzr.RealizeReturns([]*unstructured.Unstructured{stampedObject1, stampedObject2}, nil)
 		})
 
+		It("dynamically creates a resource realizer", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+		})
+
 		It("uses the service account specified by the workload for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
@@ -246,25 +254,68 @@ var _ = Describe("Reconciler", func() {
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
-
-			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
-			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
-		It("uses the default service account in the workloads namespace if there is no service account specified", func() {
-			wl.Spec.ServiceAccountName = ""
-			_, _ = reconciler.Reconcile(ctx, req)
+		Context("the workload does not specify a service account", func() {
+			BeforeEach(func() {
+				wl.Spec.ServiceAccountName = ""
+			})
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(serviceAccountNameArg).To(Equal("default"))
-			Expect(serviceAccountNS).To(Equal("my-namespace"))
-			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+			Context("the supply chain provides a service account", func() {
+				var supplyChainServiceAccountSecret *corev1.Secret
 
-			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
-			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+				BeforeEach(func() {
+					supplyChain.Spec.ServiceAccountRef.Name = "some-supply-chain-service-account"
+
+					supplyChainServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-sc-service-account-token`)}}
+					repo.GetServiceAccountSecretReturns(supplyChainServiceAccountSecret, nil)
+				})
+
+				It("uses the supply chain service account in the workload's namespace", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
+					Expect(serviceAccountNS).To(Equal("my-namespace"))
+					Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
+				})
+
+				Context("the supply chain specifies a namespace", func() {
+					BeforeEach(func() {
+						supplyChain.Spec.ServiceAccountRef.Namespace = "some-supply-chain-namespace"
+					})
+
+					It("uses the supply chain service account in the specified namespace", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+						Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
+						Expect(serviceAccountNS).To(Equal("some-supply-chain-namespace"))
+						Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
+					})
+				})
+			})
+
+			Context("the supply chain does not provide a service account", func() {
+				var defaultServiceAccountSecret *corev1.Secret
+
+				BeforeEach(func() {
+					defaultServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-default-service-account-token`)}}
+					repo.GetServiceAccountSecretReturns(defaultServiceAccountSecret, nil)
+				})
+
+				It("defaults to the default service account in the workloads namespace", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal("default"))
+					Expect(serviceAccountNS).To(Equal("my-namespace"))
+					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
+				})
+			})
 		})
 
 		It("sets the SupplyChainRef", func() {

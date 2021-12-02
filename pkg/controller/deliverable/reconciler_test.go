@@ -247,7 +247,15 @@ var _ = Describe("Reconciler", func() {
 			rlzr.RealizeReturns([]*unstructured.Unstructured{stampedObject1, stampedObject2}, nil)
 		})
 
-		It("uses the service account specified by the workload for realizing resources", func() {
+		It("dynamically creates a resource realizer", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(rlzr.RealizeCallCount()).To(Equal(1))
+			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+		})
+
+		It("uses the service account specified by the deliverable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
@@ -255,25 +263,68 @@ var _ = Describe("Reconciler", func() {
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-ns"))
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
-
-			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
-			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
-		It("uses the default service account in the deliverables namespace if there is no service account specified", func() {
-			dl.Spec.ServiceAccountName = ""
-			_, _ = reconciler.Reconcile(ctx, req)
+		Context("the deliverable does not specify a service account", func() {
+			BeforeEach(func() {
+				dl.Spec.ServiceAccountName = ""
+			})
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(serviceAccountNameArg).To(Equal("default"))
-			Expect(serviceAccountNS).To(Equal("my-ns"))
-			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+			Context("the delivery provides a service account", func() {
+				var deliveryServiceAccountSecret *corev1.Secret
 
-			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
-			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
+				BeforeEach(func() {
+					delivery.Spec.ServiceAccountRef.Name = "some-delivery-service-account"
+
+					deliveryServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-delivery-service-account-token`)}}
+					repo.GetServiceAccountSecretReturns(deliveryServiceAccountSecret, nil)
+				})
+
+				It("uses the delivery service account in the deliverable's namespace", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
+					Expect(serviceAccountNS).To(Equal("my-ns"))
+					Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
+				})
+
+				Context("the delivery specifies a namespace", func() {
+					BeforeEach(func() {
+						delivery.Spec.ServiceAccountRef.Namespace = "some-delivery-namespace"
+					})
+
+					It("uses the delivery service account in the specified namespace", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+						Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
+						Expect(serviceAccountNS).To(Equal("some-delivery-namespace"))
+						Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
+					})
+				})
+			})
+
+			Context("the delivery does not provide a service account", func() {
+				var defaultServiceAccountSecret *corev1.Secret
+
+				BeforeEach(func() {
+					defaultServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-default-service-account-token`)}}
+					repo.GetServiceAccountSecretReturns(defaultServiceAccountSecret, nil)
+				})
+
+				It("defaults to the default service account in the deliverables namespace", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal("default"))
+					Expect(serviceAccountNS).To(Equal("my-ns"))
+					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
+				})
+			})
 		})
 
 		It("sets the DeliveryRef", func() {
