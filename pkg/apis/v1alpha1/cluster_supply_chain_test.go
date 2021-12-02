@@ -56,7 +56,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 			Expect(jsonValue).NotTo(ContainSubstring("omitempty"))
 		})
 
-		It("allows but does not require a service account name", func() {
+		It("allows but does not require a service account ref", func() {
 			serviceAccountNameField, found := supplyChainSpecType.FieldByName("ServiceAccountRef")
 			Expect(found).To(BeTrue())
 			jsonValue := serviceAccountNameField.Tag.Get("json")

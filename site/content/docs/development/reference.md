@@ -158,7 +158,9 @@ spec:
   # is not specified in the workload
   #
   # (optional)
-  serviceAccountName: service-account
+  serviceAccountRef:
+    name: service-account
+    namespace: default
     
   # parameters to override the defaults from the templates.
   # if a resource in the supply-chain specifies a parameter
