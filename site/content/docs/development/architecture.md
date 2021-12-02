@@ -47,8 +47,7 @@ that discovers new base OCI images. If it rebuilds your image, then cartographer
 other linked resources.
 
 ![Generic Blueprint](../img/generic.jpg)
-<!-- https://docs.google.com/drawings/d/1Kx8mmzbGqf-TcGJwf3m3xSmr_6MEagmYzfhjbqEeS9s/edit -->
-<!-- https://github.com/kubernetes/community/tree/master/icons/png -->
+<!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 ### Reconciles blueprint
 When Cartographer reconciles an owner, each resource in the matching blueprint is reconciled:
@@ -61,7 +60,7 @@ When Cartographer reconciles an owner, each resource in the matching blueprint i
 <!-- new diagram https://miro.com/app/board/uXjVOeb8u5o=/?moveToWidget=3458764514330138805&cot=14 -->
 
 ![Realize](../img/realize.jpg)
-<!-- https://docs.google.com/drawings/d/1bw8nMa3mHJqJhWGF8ArWhh_wW4gBya9O82BiHwNUT6s/edit -->
+<!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 
 ### Types of templates
