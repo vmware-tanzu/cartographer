@@ -61,7 +61,9 @@ kind: ConfigMap
 metadata:
   name: example-config-ytt-params
 data:
-  best_name: omicron
+  spooky_letter: omicron
+  who: me
+  yes: me
 
 ---
 apiVersion: carto.run/v1alpha1

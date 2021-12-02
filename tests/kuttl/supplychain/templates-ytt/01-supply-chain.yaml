@@ -18,6 +18,13 @@ kind: ClusterSupplyChain
 metadata:
   name: responsible-ops---templates-ytt
 spec:
+  params:
+    - name: supply-chain-param
+      value: me
+    - name: resource-param
+      value: not-me
+    - name: waciuma-com/quality
+      default: alpha
   selector:
     integration-test: "templates-ytt"
   resources:
@@ -59,3 +66,6 @@ spec:
       templateRef:
         kind: ClusterTemplate
         name: example-params---templates-ytt
+      params:
+        - name: resource-param
+          value: me
