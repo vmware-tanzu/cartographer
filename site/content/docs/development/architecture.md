@@ -46,11 +46,11 @@ However, one advantage of Cartographer's design, is that a resource can also be 
 that discovers new base OCI images. If it rebuilds your image, then cartographer will see this new image and update 
 other linked resources.
 
-![Generic Blueprint](../img/generic-blueprint.png)
+![Generic Blueprint](../img/generic.jpg)
 <!-- https://docs.google.com/drawings/d/1Kx8mmzbGqf-TcGJwf3m3xSmr_6MEagmYzfhjbqEeS9s/edit -->
 <!-- https://github.com/kubernetes/community/tree/master/icons/png -->
 
-### Instantiates blueprint
+### Reconciles blueprint
 When Cartographer reconciles an owner, each resource in the matching blueprint is reconciled:
 
 1. Generate Inputs: Using the **blueprint resource `inputs` as a reference, select outputs from previously applied **Kubernetes Resources**
