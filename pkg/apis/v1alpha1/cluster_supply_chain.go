@@ -180,7 +180,7 @@ type SupplyChainSpec struct {
 	Resources         []SupplyChainResource `json:"resources"`
 	Selector          map[string]string     `json:"selector"`
 	Params            []DelegatableParam    `json:"params,omitempty"`
-	ServiceAccountRef NameAndNamespace      `json:"serviceAccountRef,omitempty"`
+	ServiceAccountRef ServiceAccountRef     `json:"serviceAccountRef,omitempty"`
 }
 
 type SupplyChainResource struct {

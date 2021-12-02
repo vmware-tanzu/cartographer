@@ -1311,7 +1311,7 @@ var _ = Describe("MapFunctions", func() {
 
 				Context("the supply chain does not specify a namespace on the service account", func() {
 					BeforeEach(func() {
-						existingSupplyChain.Spec.ServiceAccountRef = v1alpha1.NameAndNamespace{
+						existingSupplyChain.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
 							Name: "some-service-account",
 						}
 						existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
@@ -1335,7 +1335,7 @@ var _ = Describe("MapFunctions", func() {
 
 				Context("the supply chain specifies a namespace on the service account", func() {
 					BeforeEach(func() {
-						existingSupplyChain.Spec.ServiceAccountRef = v1alpha1.NameAndNamespace{
+						existingSupplyChain.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
 							Name:      "some-service-account",
 							Namespace: "some-supply-chain-namespace",
 						}
@@ -1386,7 +1386,7 @@ var _ = Describe("MapFunctions", func() {
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
-							ServiceAccountRef: v1alpha1.NameAndNamespace{
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
 								Name: "some-service-account",
 							},
 						},
@@ -1436,7 +1436,7 @@ var _ = Describe("MapFunctions", func() {
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
-							ServiceAccountRef: v1alpha1.NameAndNamespace{
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
 								Name: "some-service-account",
 							},
 						},
@@ -3293,7 +3293,7 @@ var _ = Describe("MapFunctions", func() {
 
 				Context("the delivery does not specify a namespace on the service account", func() {
 					BeforeEach(func() {
-						existingDelivery.Spec.ServiceAccountRef = v1alpha1.NameAndNamespace{
+						existingDelivery.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
 							Name: "some-service-account",
 						}
 						existingDeliveryList = v1alpha1.ClusterDeliveryList{
@@ -3317,7 +3317,7 @@ var _ = Describe("MapFunctions", func() {
 
 				Context("the delivery specifies a namespace on the service account", func() {
 					BeforeEach(func() {
-						existingDelivery.Spec.ServiceAccountRef = v1alpha1.NameAndNamespace{
+						existingDelivery.Spec.ServiceAccountRef = v1alpha1.ServiceAccountRef{
 							Name:      "some-service-account",
 							Namespace: "some-delivery-namespace",
 						}
@@ -3367,7 +3367,7 @@ var _ = Describe("MapFunctions", func() {
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
-							ServiceAccountRef: v1alpha1.NameAndNamespace{
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
 								Name: "some-service-account",
 							},
 						},
@@ -3418,7 +3418,7 @@ var _ = Describe("MapFunctions", func() {
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
-							ServiceAccountRef: v1alpha1.NameAndNamespace{
+							ServiceAccountRef: v1alpha1.ServiceAccountRef{
 								Name: "some-service-account",
 							},
 						},

@@ -84,7 +84,7 @@ type ObjectReference struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 }
 
-type NameAndNamespace struct {
+type ServiceAccountRef struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace,omitempty"`
 }

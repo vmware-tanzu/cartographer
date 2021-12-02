@@ -55,7 +55,7 @@ type ClusterDeliverySpec struct {
 	Resources         []ClusterDeliveryResource `json:"resources"`
 	Selector          map[string]string         `json:"selector"`
 	Params            []DelegatableParam        `json:"params,omitempty"`
-	ServiceAccountRef NameAndNamespace          `json:"serviceAccountRef,omitempty"`
+	ServiceAccountRef ServiceAccountRef         `json:"serviceAccountRef,omitempty"`
 }
 
 type ClusterDeliveryStatus struct {
