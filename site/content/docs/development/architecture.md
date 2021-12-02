@@ -53,7 +53,7 @@ other linked resources.
 When Cartographer reconciles an owner, each resource in the matching blueprint is reconciled:
 
 1. Generate Inputs: Using the **blueprint resource `inputs` as a reference, select outputs from previously applied **Kubernetes Resources**
-2. Generate Params: Using the [Parameter Heirarchy](#todo), generate parameter values   
+2. Generate Params: Using the [Parameter Hierarchy](architecture.md#parameter-hierarchy), generate parameter values   
 3. Generate and apply resource spec: Apply the result of interpolating `spec.Template` (or `ytt`), inputs, params and owner spec. 
 4. Retrieve Output: Store the output from the applied resource. The output to use is specified in the **Template Output Path**.  
 
@@ -94,6 +94,10 @@ is a blueprint which continuously deploys and validates images to a cluster. Thi
 #### Selectors
 An owner's labels will determine which blueprint will select for it. A blueprint's `spec.selector` will match on the 
 owner's labels.
+
+### Types of Inputs
+
+### Parameter Hierarchy
 
 ### Complete Supply Chain and Delivery Example
 
