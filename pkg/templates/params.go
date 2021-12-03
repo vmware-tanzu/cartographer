@@ -33,44 +33,41 @@ func ParamsBuilder(
 		newParams[param.Name] = param.DefaultValue
 	}
 
-	overridableByOwner := make(map[string]bool)
+	protectedFromOwnerOverride := make(map[string]bool)
 
-	for key := range newParams {
-		for _, blueprintOverride := range blueprintParams {
-			if key == blueprintOverride.Name {
-				if blueprintOverride.Value != nil {
-					newParams[key] = *blueprintOverride.Value
-					overridableByOwner[key] = false
-				} else {
-					newParams[key] = *blueprintOverride.DefaultValue
-					overridableByOwner[key] = true
-				}
-			}
+	for _, blueprintOverride := range blueprintParams {
+		key := blueprintOverride.Name
+		if blueprintOverride.Value != nil {
+			newParams[key] = *blueprintOverride.Value
+			protectedFromOwnerOverride[key] = true
+		} else {
+			newParams[key] = *blueprintOverride.DefaultValue
+			protectedFromOwnerOverride[key] = false
 		}
+	}
 
-		for _, resourceOverride := range resourceParams {
-			if key == resourceOverride.Name {
-				if resourceOverride.Value != nil {
-					newParams[key] = *resourceOverride.Value
-					overridableByOwner[key] = false
-				} else {
-					newParams[key] = *resourceOverride.DefaultValue
-					overridableByOwner[key] = true
-				}
-			}
+	for _, resourceOverride := range resourceParams {
+		key := resourceOverride.Name
+		if resourceOverride.Value != nil {
+			newParams[key] = *resourceOverride.Value
+			protectedFromOwnerOverride[key] = true
+		} else {
+			newParams[key] = *resourceOverride.DefaultValue
+			protectedFromOwnerOverride[key] = false
 		}
+	}
 
-		for _, ownerOverride := range ownerParams {
-			if key == ownerOverride.Name && ownerCanOverride(overridableByOwner, key) {
-				newParams[key] = ownerOverride.Value
-			}
+	for _, ownerOverride := range ownerParams {
+		key := ownerOverride.Name
+		if ownerCanOverride(protectedFromOwnerOverride, key) {
+			newParams[key] = ownerOverride.Value
 		}
 	}
 
 	return newParams
 }
 
-func ownerCanOverride(isOverridable map[string]bool, key string) bool {
-	overridable, written := isOverridable[key]
-	return written && overridable
+func ownerCanOverride(isProtected map[string]bool, key string) bool {
+	protected, written := isProtected[key]
+	return !written || !protected
 }

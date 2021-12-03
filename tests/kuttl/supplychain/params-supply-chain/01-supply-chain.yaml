@@ -20,18 +20,18 @@ spec:
   selector:
     integration-test: "params-supply-chain"
   params:
-    - name: not-on-template
-      default: never-prese
+    - name: not-on-template-ovrdbl-supply-chain-ovrdbl-resource-on-workload
+      default: not-me-supply-chain
     - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
-      default: not-me-supply-cha
+      default: not-me-supply-chain
     - name: ovrdbl-supply-chain-ovrdbl-resource-not-on-workload
-      default: not-me-supply-cha
+      default: not-me-supply-chain
     - name: ovrdbl-supply-chain-on-workload
-      default: not-me-supply-cha
+      default: not-me-supply-chain
     - name: notovrdbl-supply-chain-on-workload
       value: me
     - name: ovrdbl-supply-chain-notovrdbl-resource-on-workload
-      default: not-me-supply-cha
+      default: not-me-supply-chain
     - name: notovrdbl-supply-chain-ovrdbl-resource-on-workload
       value: not-me-supply-chain
     - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
@@ -56,5 +56,5 @@ spec:
           default: not-me-resource
         - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
           value: me
-        - name: not-on-template
-          default: never-present
+        - name: not-on-template-ovrdbl-supply-chain-ovrdbl-resource-on-workload
+          default: not-me-resource

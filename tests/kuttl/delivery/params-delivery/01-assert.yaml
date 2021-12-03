@@ -27,6 +27,7 @@ spec:
     who: me
     woe-is: me
     bite: me
+    dear: me
 
 ---
 apiVersion: carto.run/v1alpha1

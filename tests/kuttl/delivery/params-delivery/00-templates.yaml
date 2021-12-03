@@ -22,7 +22,7 @@ spec:
     - name: on-template
       default: me
     - name: template-and-deliverable-but-not-delivery-nor-resource
-      default: me
+      default: not-me-template
     - name: ovrdbl-delivery-ovrdbl-resource-on-deliverable
       default: not-me-template
     - name: ovrdbl-delivery-ovrdbl-resource-not-on-deliverable
@@ -55,3 +55,4 @@ spec:
         who: $(params.ovrdbl-delivery-notovrdbl-resource-on-deliverable)$
         woe-is: $(params.notovrdbl-delivery-ovrdbl-resource-on-deliverable)$
         bite: $(params.notovrdbl-delivery-notovrdbl-resource-on-deliverable)$
+        dear: $(params.not-on-template-ovrdbl-delivery-ovrdbl-resource-on-deliverable)$
