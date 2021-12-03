@@ -14,17 +14,16 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: Workload
+kind: ClusterTemplate
 metadata:
-  name: petclinic
-  labels:
-    integration-test: "templates-ytt"
+  name: example-params---templates-ytt-bad-params
 spec:
-  serviceAccountName: my-service-account
-  source:
-    git:
-      url: https://github.com/spring-projects/spring-petclinic.git
+  ytt: |
+    #@ load("@ytt:data", "data")
 
-  params:
-    - name: waciuma-com/quality
-      value: omicron
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-config-ytt-params
+    data:
+      best_name: #@ data.values.params["waciuma-com/quality"]

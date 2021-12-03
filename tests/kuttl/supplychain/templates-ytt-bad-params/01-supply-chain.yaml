@@ -14,17 +14,14 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: Workload
+kind: ClusterSupplyChain
 metadata:
-  name: petclinic
-  labels:
-    integration-test: "templates-ytt"
+  name: responsible-ops---templates-ytt-bad-params
 spec:
-  serviceAccountName: my-service-account
-  source:
-    git:
-      url: https://github.com/spring-projects/spring-petclinic.git
-
-  params:
-    - name: waciuma-com/quality
-      value: omicron
+  selector:
+    integration-test: "templates-ytt-bad-params"
+  resources:
+    - name: params
+      templateRef:
+        kind: ClusterTemplate
+        name: example-params---templates-ytt-bad-params

@@ -85,7 +85,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: example-config---templates-ytt
+  name: example-bare-template---templates-ytt
 spec:
   ytt: |
     #@ load("@ytt:data", "data")
@@ -96,3 +96,28 @@ spec:
       name: example-config-ytt
     data:
       best_name: #@ data.values.config
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: example-params---templates-ytt
+spec:
+  params:
+    - name: waciuma-com/quality
+      default: ""
+    - name: supply-chain-param
+      default: not-me
+    - name: resource-param
+      default: not-me
+  ytt: |
+    #@ load("@ytt:data", "data")
+
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-config-ytt-params
+    data:
+      spooky_letter: #@ data.values.params["waciuma-com/quality"]
+      who: #@ data.values.params["supply-chain-param"]
+      yes: #@ data.values.params["resource-param"]

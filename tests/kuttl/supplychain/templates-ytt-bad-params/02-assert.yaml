@@ -17,14 +17,15 @@ apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
   name: petclinic
-  labels:
-    integration-test: "templates-ytt"
-spec:
-  serviceAccountName: my-service-account
-  source:
-    git:
-      url: https://github.com/spring-projects/spring-petclinic.git
-
-  params:
-    - name: waciuma-com/quality
-      value: omicron
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "False"
+      reason: TemplateStampFailure
+      message: "unable to stamp object for resource [params]: unable to apply ytt template: ytt: Error: \n- key \"waciuma-com/quality\" not in struct\n    in <toplevel>\n      stdin.yml:8 |   best_name: #@ data.values.params[\"waciuma-com/quality\"]\n"
+    - type: Ready
+      status: "False"
+      reason: TemplateStampFailure
