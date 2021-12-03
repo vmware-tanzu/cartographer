@@ -60,7 +60,6 @@ When Cartographer reconciles an owner, each resource in the matching blueprint i
 <!-- new diagram https://miro.com/app/board/uXjVOeb8u5o=/?moveToWidget=3458764514330138805&cot=14 -->
 
 ![Realize](../img/realize.jpg)
-<!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 
 ### Types of templates
@@ -77,8 +76,6 @@ Templates are typed by the output they produce.
 
 ### Types of blueprints
 
-![Gitops](../img/gitops.jpg)
-
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
 | ClusterSupplyChain | Workload | ClusterSourceTemplate, ClusterImageTemplate, ClusterTemplate, ClusterConfigTemplate |
@@ -87,9 +84,13 @@ Templates are typed by the output they produce.
 #### ClusterSupplyChain
 is a blueprint which continuously integrates and builds your app.
 
+![ClusterSupplyChain](../img/supplychain.jpg)
+
 #### ClusterDelivery
 is a blueprint which continuously deploys and validates images to a cluster. This blueprint has the ability to lock 
 (and unlock) templates which pauses the continuous deploy.
+
+![ClusterDelivery](../img/delivery.jpg)
 
 #### Selectors
 An owner's labels will determine which blueprint will select for it. A blueprint's `spec.selector` will match on the 
@@ -99,7 +100,7 @@ owner's labels.
 
 ### Parameter Hierarchy
 
-### Complete Supply Chain and Delivery Example
+### Complete Supply Chain and Delivery with GitOps
 
-![ClusterSupplyChain](../img/supplychain.jpg)
-![ClusterDelivery](../img/delivery.jpg)
+![Gitops](../img/gitops.jpg)
+
