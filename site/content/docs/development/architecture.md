@@ -77,7 +77,7 @@ Templates are typed by the output they produce.
 
 ### Types of blueprints
 
-<!-- insert image of simplified supply chain into delivery -->
+![Gitops](../img/gitops.jpg)
 
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
@@ -101,4 +101,5 @@ owner's labels.
 
 ### Complete Supply Chain and Delivery Example
 
-<!-- insert very specific diagram with logos -->
+![ClusterSupplyChain](../img/supplychain.jpg)
+![ClusterDelivery](../img/delivery.jpg)
