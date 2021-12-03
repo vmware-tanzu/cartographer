@@ -602,7 +602,7 @@ _ref: [pkg/apis/v1alpha1/cluster_delivery.go](../../../pkg/apis/v1alpha1/cluster
 
 ### ClusterDeploymentTemplate
 
-`ClusterDeploymentTemplate` indicates how the delivery should configure the environment (namespace/cluster).
+A `ClusterDeploymentTemplate` indicates how the delivery should configure the environment (namespace/cluster).
 
 The `ClusterDeploymentTemplate` consumes configuration from the `deployment` values provided by the `ClusterDelivery`. The
 `ClusterDeploymentTemplate` outputs these same values. The `ClusterDeploymentTemplate` is able to consume additional configuration
