@@ -22,7 +22,7 @@ spec:
   serviceAccountName: my-service-account
   params:
     - name: template-and-workload-but-not-supply-chain-nor-resource
-      value: not-me-workload
+      value: me
     - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
       value: me
     - name: ovrdbl-supply-chain-on-workload
@@ -39,8 +39,8 @@ spec:
       value: me
     - name: notovrdbl-supply-chain-notovrdbl-resource-on-workload
       value: not-me-workload
-    - name: not-on-template
-      value: never-present
+    - name: not-on-template-ovrdbl-supply-chain-ovrdbl-resource-on-workload
+      value: me
 
   source:
     git:

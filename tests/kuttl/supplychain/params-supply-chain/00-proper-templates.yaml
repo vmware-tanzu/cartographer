@@ -21,7 +21,7 @@ spec:
     - name: on-template
       default: me
     - name: template-and-workload-but-not-supply-chain-nor-resource
-      default: me
+      default: not-me-template
     - name: ovrdbl-supply-chain-ovrdbl-resource-on-workload
       default: not-me-template
     - name: ovrdbl-supply-chain-ovrdbl-resource-not-on-workload
@@ -60,3 +60,4 @@ spec:
         bite: $(params.notovrdbl-supply-chain-notovrdbl-resource-on-workload)$
         so-help: $(params.notovrdbl-supply-chain-on-workload)$
         mercy: $(params.notovrdbl-resource-on-workload)$
+        dear: $(params.not-on-template-ovrdbl-supply-chain-ovrdbl-resource-on-workload)$

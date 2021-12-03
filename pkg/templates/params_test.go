@@ -98,21 +98,21 @@ var _ = Describe("Params", func() {
 
 		Entry("value only in template",
 			templateParam,
-			&v1alpha1.DelegatableParam{},
-			&v1alpha1.DelegatableParam{},
-			&v1alpha1.Param{},
+			nil,
+			nil,
+			nil,
 			"from the template"),
 
 		Entry("no value on template, values elsewhere",
 			nil,
 			nonDelegatingBlueprintParam,
-			&v1alpha1.DelegatableParam{},
-			&v1alpha1.Param{},
-			""),
+			nil,
+			nil,
+			"from the blueprint"),
 
 		Entry("value in template, resource, and owner; resource is not overridable",
 			templateParam,
-			&v1alpha1.DelegatableParam{},
+			nil,
 			nonDelegatingResourceParam,
 			ownerParam,
 			"from the resource"),
@@ -127,7 +127,7 @@ var _ = Describe("Params", func() {
 		Entry("value in template, blueprint, and owner; blueprint is not overridable",
 			templateParam,
 			nonDelegatingBlueprintParam,
-			&v1alpha1.DelegatableParam{},
+			nil,
 			ownerParam,
 			"from the blueprint"),
 
@@ -140,7 +140,7 @@ var _ = Describe("Params", func() {
 
 		Entry("value in template, resource, and owner; resource is not overridable",
 			templateParam,
-			&v1alpha1.DelegatableParam{},
+			nil,
 			delegatingResourceParam,
 			ownerParam,
 			"from the owner"),
@@ -155,7 +155,7 @@ var _ = Describe("Params", func() {
 		Entry("value in template, blueprint, and owner; blueprint is overridable",
 			templateParam,
 			delegatingBlueprintParam,
-			&v1alpha1.DelegatableParam{},
+			nil,
 			ownerParam,
 			"from the owner"),
 
@@ -163,7 +163,7 @@ var _ = Describe("Params", func() {
 			templateParam,
 			delegatingBlueprintParam,
 			delegatingResourceParam,
-			&v1alpha1.Param{},
+			nil,
 			"from the resource"),
 
 		Entry("value in template, blueprint, resource, and owner; blueprint and resource are overridable",
@@ -175,9 +175,9 @@ var _ = Describe("Params", func() {
 
 		Entry("value in template and owner",
 			templateParam,
-			&v1alpha1.DelegatableParam{},
-			&v1alpha1.DelegatableParam{},
+			nil,
+			nil,
 			ownerParam,
-			"from the template"),
+			"from the owner"),
 	)
 })

@@ -28,7 +28,7 @@ spec:
         branch: prod
   params:
     - name: template-and-deliverable-but-not-delivery-nor-resource
-      value: not-me-deliverable
+      value: me
     - name: ovrdbl-delivery-ovrdbl-resource-on-deliverable
       value: me
     - name: ovrdbl-delivery-on-deliverable
@@ -41,5 +41,5 @@ spec:
       value: me
     - name: notovrdbl-delivery-notovrdbl-resource-on-deliverable
       value: not-me-deliverable
-    - name: not-on-template
-      value: never-present
+    - name: not-on-template-ovrdbl-delivery-ovrdbl-resource-on-deliverable
+      value: me
