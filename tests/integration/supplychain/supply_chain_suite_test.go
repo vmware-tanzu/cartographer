@@ -18,7 +18,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -26,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/vmware-tanzu/cartographer/tests/integration"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,23 +65,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// start kube-apiserver and etcd
-	testEnv = &envtest.Environment{
-		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
-		},
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "config", "crd", "bases"),
-			filepath.Join("..", "..", "resources", "crds"),
-		},
-
-		AttachControlPlaneOutput: DebugControlPlane, // Set to true for great debug logging
-	}
-
-	if DebugControlPlane {
-		testEnv.ControlPlane.GetAPIServer().Configure().
-			Append("audit-policy-file", filepath.Join(workingDir, "policy.yaml")).
-			Append("audit-log-path", "-")
-	}
+	testEnv = integration.CreateTestEnv(workingDir, GinkgoWriter)
 
 	apiConfig, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
