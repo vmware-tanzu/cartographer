@@ -391,24 +391,22 @@ func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject clie
 	for _, sc := range supplyChains {
 		scWorkloads, err := mapper.clusterSupplyChainToWorkloads(sc)
 		if err != nil {
-			mapper.Logger.Error(err, "service account to workload requests")
+			mapper.Logger.Error(err, fmt.Sprintf("service account to workload requests: cluster supply chain [%s] to workloads", sc.Name))
 			return nil
 		}
 		for _, workload := range scWorkloads {
-			if workload.Spec.ServiceAccountName != "" {
+			if workload.Spec.ServiceAccountName != "" ||
+				sc.Spec.ServiceAccountRef.Namespace == "" && workload.Namespace != serviceAccountObject.GetNamespace() {
 				continue
 			}
 
-			if sc.Spec.ServiceAccountRef.Namespace == serviceAccountObject.GetNamespace() ||
-				(sc.Spec.ServiceAccountRef.Namespace == "" && workload.Namespace == serviceAccountObject.GetNamespace()) {
-				request := reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      workload.Name,
-						Namespace: workload.Namespace,
-					},
-				}
-				requestMap[request] = true
+			request := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      workload.Name,
+					Namespace: workload.Namespace,
+				},
 			}
+			requestMap[request] = true
 		}
 	}
 
@@ -431,7 +429,11 @@ func (mapper *Mapper) serviceAccountToSupplyChains(serviceAccountObject client.O
 
 	var supplyChains []v1alpha1.ClusterSupplyChain
 	for _, sc := range list.Items {
-		if sc.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() {
+		if sc.Spec.ServiceAccountRef.Namespace != "" && sc.Spec.ServiceAccountRef.Namespace != serviceAccountObject.GetNamespace() {
+			continue
+		}
+		if sc.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() ||
+			sc.Spec.ServiceAccountRef.Name == "" && serviceAccountObject.GetName() == "default" {
 			supplyChains = append(supplyChains, sc)
 		}
 	}
@@ -581,23 +583,22 @@ func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject c
 	for _, d := range deliveries {
 		deliveryDeliverables, err := mapper.clusterDeliveryToDeliverables(d)
 		if err != nil {
-			mapper.Logger.Error(err, "service account to deliverable requests")
+			mapper.Logger.Error(err, fmt.Sprintf("service account to deliverable requests: cluster delivery [%s] to deliverables", d.Name))
+			return nil
 		}
 		for _, deliverable := range deliveryDeliverables {
-			if deliverable.Spec.ServiceAccountName != "" {
+			if deliverable.Spec.ServiceAccountName != "" ||
+				d.Spec.ServiceAccountRef.Namespace == "" && deliverable.Namespace != serviceAccountObject.GetNamespace() {
 				continue
 			}
 
-			if d.Spec.ServiceAccountRef.Namespace == serviceAccountObject.GetNamespace() ||
-				(d.Spec.ServiceAccountRef.Namespace == "" && deliverable.Namespace == serviceAccountObject.GetNamespace()) {
-				request := reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      deliverable.Name,
-						Namespace: deliverable.Namespace,
-					},
-				}
-				requestMap[request] = true
+			request := reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      deliverable.Name,
+					Namespace: deliverable.Namespace,
+				},
 			}
+			requestMap[request] = true
 		}
 	}
 
@@ -620,7 +621,11 @@ func (mapper *Mapper) serviceAccountToDeliveries(serviceAccountObject client.Obj
 
 	var deliveries []v1alpha1.ClusterDelivery
 	for _, d := range list.Items {
-		if d.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() {
+		if d.Spec.ServiceAccountRef.Namespace != "" && d.Spec.ServiceAccountRef.Namespace != serviceAccountObject.GetNamespace() {
+			continue
+		}
+		if d.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() ||
+			d.Spec.ServiceAccountRef.Name == "" && serviceAccountObject.GetName() == "default" {
 			deliveries = append(deliveries, d)
 		}
 	}
