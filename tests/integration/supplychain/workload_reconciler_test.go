@@ -17,6 +17,7 @@ package supplychain_test
 import (
 	"context"
 	"encoding/json"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -211,13 +212,109 @@ var _ = Describe("WorkloadReconciler", func() {
 	})
 
 	Context("insufficient service account permissions", func() {
+		var (
+			initiallyInsufficientRole *rbacv1.Role
+			initiallyInsufficientClusterBoundClusterRole *rbacv1.ClusterRole
+			initiallyInsufficientNonClusterBoundClusterRole *rbacv1.ClusterRole
+		)
 		BeforeEach(func() {
 			serviceAccount, err := serviceAccountHelper.CreateServiceAccount("initially-insufficient-service-account", testNS)
 			Expect(err).NotTo(HaveOccurred())
+
 			secret, err := serviceAccountHelper.CreateAuthableSecret(serviceAccount)
 			Expect(err).NotTo(HaveOccurred())
 
 			cleanups = append(cleanups, serviceAccount, secret)
+
+			roleBindingForRole := &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-role.role-binding",
+					Namespace: testNS,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "initially-insufficient-service-account",
+						Namespace: testNS,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					Kind: "Role",
+					Name: "initially-insufficient-role",
+				},
+			}
+			initiallyInsufficientRole = &rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-role",
+					Namespace: testNS,
+				},
+			}
+			roleBindingForClusterRole := &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-non-cluster-bound-cluster-role.role-binding",
+					Namespace: testNS,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "initially-insufficient-service-account",
+						Namespace: testNS,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					Kind: "ClusterRole",
+					Name: "initially-insufficient-non-cluster-bound-cluster-role",
+				},
+			}
+			initiallyInsufficientNonClusterBoundClusterRole = &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-non-cluster-bound-cluster-role",
+					Namespace: testNS,
+				},
+			}
+			clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-cluster-bound-cluster-role.cluster-role-binding",
+					Namespace: testNS,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "initially-insufficient-service-account",
+						Namespace: testNS,
+					},
+				},
+				RoleRef: rbacv1.RoleRef{
+					Kind: "ClusterRole",
+					Name: "initially-insufficient-cluster-bound-cluster-role",
+				},
+			}
+			initiallyInsufficientClusterBoundClusterRole = &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "initially-insufficient-cluster-bound-cluster-role",
+					Namespace: testNS,
+				},
+			}
+
+			err = c.Create(ctx, roleBindingForRole, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, roleBindingForRole)
+			err = c.Create(ctx, initiallyInsufficientRole, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, initiallyInsufficientRole)
+			err = c.Create(ctx, roleBindingForClusterRole, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, roleBindingForClusterRole)
+			err = c.Create(ctx, initiallyInsufficientNonClusterBoundClusterRole, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, initiallyInsufficientNonClusterBoundClusterRole)
+			err = c.Create(ctx, clusterRoleBinding, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, clusterRoleBinding)
+			err = c.Create(ctx, initiallyInsufficientClusterBoundClusterRole, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, initiallyInsufficientClusterBoundClusterRole)
+
 			template := &v1alpha1.ClusterSourceTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
@@ -266,7 +363,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		FIt("throws a forbidden error", func() {
+		It("throws a forbidden error", func() {
 			Eventually(func() []metav1.Condition {
 				obj := &v1alpha1.Workload{}
 				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
@@ -282,11 +379,107 @@ var _ = Describe("WorkloadReconciler", func() {
 				}),
 			))
 		})
-		It("reconciles on update to role", func() {
+
+		FIt("reconciles on update to role", func() {
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 10*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":    Equal("ResourcesSubmitted"),
+					"Reason":  Equal("TemplateRejectedByAPIServer"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Message": ContainSubstring("is forbidden"),
+				}),
+			))
+
+			initiallyInsufficientRole.Rules = []rbacv1.PolicyRule{
+				{
+					Verbs:     []string{"*"},
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+				},
+			}
+			err := c.Update(ctx, initiallyInsufficientRole)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 10*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Status": Equal(metav1.ConditionUnknown),
+					"Reason": Equal("MissingValueAtPath"),
+				}),
+			))
+
+			Fail("Stop here so we see debug output")
+		})
+
+		It("reconciles on update to clusterrole related by cluster role binding", func() {
+			initiallyInsufficientClusterBoundClusterRole.Rules = []rbacv1.PolicyRule{
+				{
+					Verbs:     []string{"*"},
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+				},
+			}
+			err := c.Update(ctx, initiallyInsufficientClusterBoundClusterRole)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 10*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Status": Equal(metav1.ConditionUnknown),
+					"Reason": Equal("MissingValueAtPath"),
+				}),
+			))
+		})
+
+		It("reconciles on update to clusterrole related by role binding", func() {
+			initiallyInsufficientNonClusterBoundClusterRole.Rules = []rbacv1.PolicyRule{
+				{
+					Verbs:     []string{"*"},
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+				},
+			}
+			err := c.Update(ctx, initiallyInsufficientNonClusterBoundClusterRole)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}, 10*time.Second).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Status": Equal(metav1.ConditionUnknown),
+					"Reason": Equal("MissingValueAtPath"),
+				}),
+			))
+		})
+
+		It("reconciles on update to clusterrolebinding", func() {
 
 		})
 
-		It("reconciles on update to clusterrole", func() {
+		It("reconciles on update to rolebinding", func() {
 
 		})
 	})

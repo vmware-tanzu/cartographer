@@ -150,6 +150,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alp
 
 	if err != nil {
 		if controller.IsUnhandledError(err) {
+			r.logger.Info("unhandled error", "error", err)
 			return ctrl.Result{}, err
 		}
 		r.logger.Info("handled error", "error", err)

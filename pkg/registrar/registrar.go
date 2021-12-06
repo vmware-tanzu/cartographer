@@ -127,11 +127,11 @@ func registerWorkloadController(mgr manager.Manager) error {
 
 	watches := map[client.Object]handler.MapFunc{
 		&v1alpha1.ClusterSupplyChain{}: mapper.ClusterSupplyChainToWorkloadRequests,
-		&corev1.ServiceAccount{}:       mapper.ServiceAccountToWorkloadRequests,
-		&rbacv1.Role{}:                 mapper.RoleToWorkloadRequests,
-		&rbacv1.RoleBinding{}:          mapper.RoleBindingToWorkloadRequests,
-		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToWorkloadRequests,
-		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToWorkloadRequests,
+		//&corev1.ServiceAccount{}:       mapper.ServiceAccountToWorkloadRequests,
+		//&rbacv1.Role{}:                 mapper.RoleToWorkloadRequests,
+		//&rbacv1.RoleBinding{}:          mapper.RoleBindingToWorkloadRequests,
+		//&rbacv1.ClusterRole{}:          mapper.ClusterRoleToWorkloadRequests,
+		//&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToWorkloadRequests,
 	}
 	for _, template := range v1alpha1.ValidSupplyChainTemplates {
 		watches[template] = mapper.TemplateToWorkloadRequests

@@ -59,7 +59,7 @@ var (
 	serviceAccountHelper helpers.ServiceAccountHelper
 )
 
-const DebugControlPlane = false
+const DebugControlPlane = true
 
 var _ = BeforeSuite(func() {
 	var err error
