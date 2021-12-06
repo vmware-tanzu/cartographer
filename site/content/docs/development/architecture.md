@@ -8,34 +8,72 @@ application Delivery workflows.
 
 ## Concepts
 
+### Blueprints
+
+Blueprints are a list of templates (called resources) and how they depend upon each other. It forms the dependency graph of
+your supply chain or delivery.
+
+The dependencies are formed by specifying which resource(s) are used as inputs.
+
+Blueprints consist of:
+* A **selector** to match owners
+* **Parameters** to pass to all resources 
+* **Resources**: 
+  * A **templateRef** pointing to the template for the resource
+  * **Parameters** to pass to the template
+  * **Inputs**, which specify dependencies for the template
+
+![Blueprint](../img/blueprint.jpg)
+<!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
+
+| Blueprint    | Owner | Valid Templates |
+| ----------- | ----------- | ----------- |
+| ClusterSupplyChain | Workload | ClusterSourceTemplate, ClusterImageTemplate, ClusterTemplate, ClusterConfigTemplate |
+| ClusterDelivery | Deliverable | ClusterSourceTemplate, ClusterDeploymentTemplate, ClusterTemplate |
+
 ### Templates
 
 Templates create or update resources (i.e. kubectl apply).
 
 Templates consist of:
-* Inputs
-    * Outputs of other resources
-    * Params from Owners and Blueprints
-    * Any field in the Owner - simplifies extension
-* Resource, the actual yaml to apply to kubernetes
-* Output, a single typed object from the stamped resource
-    * Config
-    * Image
-    * Source
-    * Deployment
+* Parameters to pass to `spec.template` or `spec.ytt`
+* The Kubernetes resource yaml as `spec.template` or `spec.ytt` [see Templating](#tbd)
+* **Output paths** which tell Cartographer where to find the output of the Kubernetes resource
+  * The path field depends upon the specific template kind.
 
+![Template](../img/template.jpg)
 
-### Blueprints
+Templates are typed by the output they produce.
 
-Blueprints is a list of templates and how they depend upon each other. It forms the dependency graph of
-your supply chain or delivery.
+| Output      | Template |
+| ----------- | ----------- |
+| Config | ClusterConfigTemplate |
+| Image | ClusterImageTemplate |
+| Source | ClusterSourceTemplate |
+| Deployment | ClusterDeploymentTemplate |
+| | ClusterTemplate |
 
 ### Owners
 
 Owners represent the workload or deliverable, which in many cases refer to a single application's source or image 
 location.
 
-### Theory of operation
+Owners are the developer provided configuration which cause a blueprint to be reconciled into resources.
+
+They consist of:
+* **Labels**: blueprints will select based on the labels of an owner, see [selectors](#selectors) 
+* **Params**: parameters supplied to the blueprint, see [Parameter Hierarchy](#parameter-hierarchy)
+* **Source**: The source reference for the input to the Supply Chain or Delivery Blueprints,
+see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverable)
+
+![Owner](../img/owner.jpg)
+
+| Owner      | Blueprint |
+| ----------- | ----------- |
+| Workload | ClusterSupplyChain |
+| Deliverable | ClusterDelivery |
+
+## Theory of operation
 
 Given an owner that matches a blueprint, cartographer reconciles the resources referenced by the blueprint.
 The resources are only created when the inputs are satisfied, and a resource is only updated when it's inputs change.
@@ -49,52 +87,35 @@ other linked resources.
 ![Generic Blueprint](../img/generic.jpg)
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
-### Reconciles blueprint
 When Cartographer reconciles an owner, each resource in the matching blueprint is reconciled:
 
-1. Generate Inputs: Using the **blueprint resource `inputs` as a reference, select outputs from previously applied **Kubernetes Resources**
-2. Generate Params: Using the [Parameter Hierarchy](architecture.md#parameter-hierarchy), generate parameter values   
-3. Generate and apply resource spec: Apply the result of interpolating `spec.Template` (or `ytt`), inputs, params and owner spec. 
-4. Retrieve Output: Store the output from the applied resource. The output to use is specified in the **Template Output Path**.  
-
-<!-- new diagram https://miro.com/app/board/uXjVOeb8u5o=/?moveToWidget=3458764514330138805&cot=14 -->
+1. **Generate Inputs**: Using the **blueprint resource's** `inputs` as a reference, select outputs from previously applied **Kubernetes resources**
+2. **Generate Params**: Using the [Parameter Hierarchy](architecture.md#parameter-hierarchy), generate parameter values   
+3. **Generate and apply resource spec**: Apply the result of interpolating `spec.template` (or `spec.ytt`), **inputs**, **params** and the **owner spec**. 
+4. **Retrieve Output**: Store the output from the applied resource. The output to use is specified in the **template output path**.  
 
 ![Realize](../img/realize.jpg)
 
+### Complete Supply Chain and Delivery with GitOps
 
-### Types of templates
+![Gitops](../img/gitops.jpg)
 
-Templates are typed by the output they produce.
+## Blueprint Details
 
-| Output      | Template |
-| ----------- | ----------- |
-| Config | ClusterConfigTemplate |
-| Image | ClusterImageTemplate |
-| Source | ClusterSourceTemplate |
-| Deployment | ClusterDeploymentTemplate |
-| | ClusterTemplate |
-
-### Types of blueprints
-
-| Blueprint    | Owner | Valid Templates |
-| ----------- | ----------- | ----------- |
-| ClusterSupplyChain | Workload | ClusterSourceTemplate, ClusterImageTemplate, ClusterTemplate, ClusterConfigTemplate |
-| ClusterDelivery | Deliverable | ClusterSourceTemplate, ClusterDeploymentTemplate, ClusterTemplate |
-
-#### ClusterSupplyChain
-is a blueprint which continuously integrates and builds your app.
+### ClusterSupplyChain
+A ClusterSupplyChain blueprint continuously integrates and builds your app.
 
 ![ClusterSupplyChain](../img/supplychain.jpg)
 
-#### ClusterDelivery
-is a blueprint which continuously deploys and validates images to a cluster. This blueprint has the ability to lock 
+### ClusterDelivery
+A ClusterDelivery blueprint continuously deploys and validates images to a cluster. A ClusterDelivery has the ability to lock 
 (and unlock) templates which pauses the continuous deploy. 
 
 <!--- @TODO MORE ON LOCKING -->
 
 ![ClusterDelivery](../img/delivery.jpg)
 
-#### Selectors
+### Selectors
 An owner's labels will determine which blueprint will select for it. The controller will do a "best match" on a blueprint's 
 `spec.selector` with an owner's labels.
 
@@ -106,22 +127,16 @@ A "best match" follows the rules:
 Note:  Despite the rules, the controller can still return more than one match. If more than one match is returned, 
 no blueprint will reconcile for the owner.
 
-### Types of Inputs
+## Parameter Hierarchy
 
-<!--- @TODO WHAT DO WE WANT TO SHOW HERE -->
+<!--- @TODO Image of params -->
 
-### Parameter Hierarchy
-The order of precedence is:
 
-- blueprint value (highest precedence) 
-- owner value 
-- blueprint default 
-- template default (lowest precedence)
+Templates specify the **parameters** they accept in `spec.params`. These can have a default value.
 
-Note: While supply chain is determined by the top level params and the resource level params. If the resource level 
-param is specified, the top level param is ignored.
+These parameters can be fulfilled by the **blueprint**, which allows operators to specify:
+* a default value which can be overridden by the **owner's** `spec.params`
+* a value which cannot be overridden by the **owner**
 
-### Complete Supply Chain and Delivery with GitOps
-
-![Gitops](../img/gitops.jpg)
-
+Blueprint parameters can be specified globally in `spec.params` or per resource `spec.resource[].params`
+If the **per resource param** is specified, the global blueprint param is ignored.
