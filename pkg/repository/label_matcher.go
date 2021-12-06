@@ -22,7 +22,7 @@ type LabelsGetter interface {
 	GetLabels() map[string]string
 }
 
-// BestLabelMatch attempts at finding the targets that best match the label set
+// BestLabelMatches attempts at finding the targets that best match the label set
 // of the source.
 //
 func BestLabelMatches(source LabelsGetter, targets []SelectorGetter) []SelectorGetter {
