@@ -520,7 +520,7 @@ var _ = Describe("MapFunctions", func() {
 								},
 							}
 
-							clientObjects = []client.Object{workload, sc}
+							clientObjects = []client.Object{workload, sc, clusterSupplyChain}
 						})
 						It("returns an empty list of requests", func() {
 							Expect(result).To(BeEmpty())
