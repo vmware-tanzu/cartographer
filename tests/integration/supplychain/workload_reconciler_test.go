@@ -17,6 +17,9 @@ package supplychain_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -217,6 +220,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			initiallyInsufficientRole *rbacv1.Role
 			initiallyInsufficientClusterBoundClusterRole *rbacv1.ClusterRole
 			initiallyInsufficientNonClusterBoundClusterRole *rbacv1.ClusterRole
+			originalResourceVersion int
 		)
 		BeforeEach(func() {
 			serviceAccount, err := serviceAccountHelper.CreateServiceAccount("initially-insufficient-service-account", testNS)
@@ -362,6 +366,9 @@ var _ = Describe("WorkloadReconciler", func() {
 			cleanups = append(cleanups, workload)
 			err = c.Create(ctx, workload, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
+
+			originalResourceVersion, err = strconv.Atoi(workload.ResourceVersion)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("throws a forbidden error", func() {
@@ -382,8 +389,8 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 
 		FIt("reconciles on update to role", func() {
+			obj := &v1alpha1.Workload{}
 			Eventually(func() []metav1.Condition {
-				obj := &v1alpha1.Workload{}
 				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -397,20 +404,40 @@ var _ = Describe("WorkloadReconciler", func() {
 				}),
 			))
 
-			//initiallyInsufficientRole.Rules = []rbacv1.PolicyRule{
-			//	{
-			//		Verbs:     []string{"*"},
-			//		APIGroups: []string{"*"},
-			//		Resources: []string{"*"},
-			//	},
-			//}
-			//err := c.Update(ctx, initiallyInsufficientRole)
+			rv, err := strconv.Atoi(obj.ObjectMeta.ResourceVersion)
+			Expect(err).NotTo(HaveOccurred())
+			fmt.Fprintf(os.Stderr, "\n\nOriginal RV: %d\n", originalResourceVersion)
+			fmt.Fprintf(os.Stderr, "\n\nRV at (2): %d\n", rv)
+
+			time.Sleep(1*time.Second)
+			obj = &v1alpha1.Workload{}
+
+			//err = c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
 			//Expect(err).NotTo(HaveOccurred())
+			//
+			//rv2, err := strconv.Atoi(obj.ObjectMeta.ResourceVersion)
+			//Expect(err).NotTo(HaveOccurred())
+			//fmt.Fprintf(os.Stderr, "\n\nRV after wait: %d\n", rv2)
+
+
+			initiallyInsufficientRole.Rules = []rbacv1.PolicyRule{
+				{
+					Verbs:     []string{"*"},
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+				},
+			}
+			err = c.Update(ctx, initiallyInsufficientRole)
+			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() []metav1.Condition {
 				obj := &v1alpha1.Workload{}
 				err := c.Get(ctx, client.ObjectKey{Name: "workload-ada", Namespace: testNS}, obj)
 				Expect(err).NotTo(HaveOccurred())
+
+				rv2, err := strconv.Atoi(obj.ObjectMeta.ResourceVersion)
+				Expect(err).NotTo(HaveOccurred())
+				fmt.Fprintf(os.Stderr, "\n\nRV checking in loop: %d\n", rv2)
 
 				return obj.Status.Conditions
 			}, 10*time.Second).Should(ContainElements(
@@ -420,8 +447,6 @@ var _ = Describe("WorkloadReconciler", func() {
 					"Reason": Equal("MissingValueAtPath"),
 				}),
 			))
-
-			Fail("Stop here so we see debug output")
 		})
 
 		It("reconciles on update to clusterrole related by cluster role binding", func() {
