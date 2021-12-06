@@ -88,17 +88,38 @@ is a blueprint which continuously integrates and builds your app.
 
 #### ClusterDelivery
 is a blueprint which continuously deploys and validates images to a cluster. This blueprint has the ability to lock 
-(and unlock) templates which pauses the continuous deploy.
+(and unlock) templates which pauses the continuous deploy. 
+
+<!--- @TODO MORE ON LOCKING -->
 
 ![ClusterDelivery](../img/delivery.jpg)
 
 #### Selectors
-An owner's labels will determine which blueprint will select for it. A blueprint's `spec.selector` will match on the 
-owner's labels.
+An owner's labels will determine which blueprint will select for it. The controller will do a "best match" on a blueprint's 
+`spec.selector` with an owner's labels.
+
+A "best match" follows the rules:
+1. If all labels are fully contained in the selector, reconcile the owner with that blueprint
+2. If more than one blueprint has all the labels that the owner has, pick the most identical to the owner
+3. If multiple blueprints match the owner labels, reconcile with the blueprint with the most label matches
+
+Note:  Despite the rules, the controller can still return more than one match. If more than one match is returned, 
+no blueprint will reconcile for the owner.
 
 ### Types of Inputs
 
+<!--- @TODO WHAT DO WE WANT TO SHOW HERE -->
+
 ### Parameter Hierarchy
+The order of precedence is:
+
+- blueprint value (highest precedence) 
+- owner value 
+- blueprint default 
+- template default (lowest precedence)
+
+Note: While supply chain is determined by the top level params and the resource level params. If the resource level 
+param is specified, the top level param is ignored.
 
 ### Complete Supply Chain and Delivery with GitOps
 
