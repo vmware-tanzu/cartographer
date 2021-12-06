@@ -17,8 +17,9 @@ package supplychain_test
 import (
 	"context"
 	"encoding/json"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"time"
+
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -396,15 +397,15 @@ var _ = Describe("WorkloadReconciler", func() {
 				}),
 			))
 
-			initiallyInsufficientRole.Rules = []rbacv1.PolicyRule{
-				{
-					Verbs:     []string{"*"},
-					APIGroups: []string{"*"},
-					Resources: []string{"*"},
-				},
-			}
-			err := c.Update(ctx, initiallyInsufficientRole)
-			Expect(err).NotTo(HaveOccurred())
+			//initiallyInsufficientRole.Rules = []rbacv1.PolicyRule{
+			//	{
+			//		Verbs:     []string{"*"},
+			//		APIGroups: []string{"*"},
+			//		Resources: []string{"*"},
+			//	},
+			//}
+			//err := c.Update(ctx, initiallyInsufficientRole)
+			//Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() []metav1.Condition {
 				obj := &v1alpha1.Workload{}

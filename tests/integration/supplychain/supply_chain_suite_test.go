@@ -17,11 +17,12 @@ package supplychain_test
 import (
 	"context"
 	"io"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -80,7 +81,10 @@ var _ = BeforeSuite(func() {
 	}
 
 	if DebugControlPlane {
-		testEnv.ControlPlane.GetAPIServer().Configure().
+		apiServer := testEnv.ControlPlane.GetAPIServer()
+		apiServer.Out = GinkgoWriter
+		apiServer.Err = GinkgoWriter
+		apiServer.Configure().
 			Append("audit-policy-file", filepath.Join(workingDir, "policy.yaml")).
 			Append("audit-log-path", "-")
 	}
