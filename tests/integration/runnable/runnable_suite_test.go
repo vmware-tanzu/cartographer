@@ -56,8 +56,6 @@ var (
 	controllerBuffer *gbytes.Buffer
 )
 
-const DebugControlPlane = true
-
 var _ = BeforeSuite(func() {
 	var err error
 	workingDir, err = os.Getwd()
