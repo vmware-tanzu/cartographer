@@ -27,8 +27,16 @@ toc:
         url: /uninstall
   - title: Reference
     subfolderitems:
-      - page: CRD Reference
-        url: /reference
+      - page: GVK
+        url: /reference/gvk
+      - page: Owner Custom Resources
+        url: /reference/owner
+      - page: Blueprint Custom Resources
+        url: /reference/blueprint
+      - page: Template Custom Resources
+        url: /reference/template
+      - page: Runnable Custom Resources
+        url: /reference/runnable
   - title: Examples
     subfolderitems:
       - page: Examples

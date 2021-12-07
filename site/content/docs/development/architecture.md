@@ -14,8 +14,8 @@ Two kinds of blueprint work together to provide **code-to-production**, [Supply 
 
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
-| [ClusterSupplyChain](reference/#clustersupplychain) | [Workload](reference/#workload) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterImageTemplate](reference/#clusterimagetemplate), [ClusterConfigTemplate](reference/#clusterconfigtemplate), [ClusterTemplate](reference/#clustertemplate) |
-| [ClusterDelivery](reference/#delivery) | [Deliverable](reference/#deliverable) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate), [ClusterTemplate](reference/#clustertemplate) |
+| [ClusterSupplyChain](reference/blueprint#clustersupplychain) | [Workload](reference/owner#workload) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterImageTemplate](reference/template#clusterimagetemplate), [ClusterConfigTemplate](reference/template#clusterconfigtemplate), [ClusterTemplate](reference/template#clustertemplate) |
+| [ClusterDelivery](reference/blueprint#clusterdelivery) | [Deliverable](reference/owner#deliverable) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate), [ClusterTemplate](reference/template#clustertemplate) |
 
 Blueprints are a list of templates (called resources) that defines how the templates depend upon each other. It forms
 the dependency graph of your supply chain or delivery.
@@ -37,11 +37,11 @@ Blueprints consist of:
 
 | Output      | Template |
 | ----------- | ----------- |
-| Config | [ClusterConfigTemplate](reference/#clusterconfigtemplate) |
-| Image | [ClusterImageTemplate](reference/#clusterimagetemplate) |
-| Source | [ClusterSourceTemplate](reference/#clustersourcetemplate) |
-| Deployment | [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate) |
-| | [ClusterTemplate](reference/#clustertemplate) |
+| Config | [ClusterConfigTemplate](reference/template#clusterconfigtemplate) |
+| Image | [ClusterImageTemplate](reference/template#clusterimagetemplate) |
+| Source | [ClusterSourceTemplate](reference/template#clustersourcetemplate) |
+| Deployment | [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate) |
+| | [ClusterTemplate](reference/template#clustertemplate) |
 
 Templates create or update resources (i.e. kubectl apply).
 
@@ -72,7 +72,7 @@ They consist of:
 * **Labels**: blueprints will select based on the labels of an owner, see [selectors](#selectors) 
 * **Params**: parameters supplied to the blueprint, see [Parameter Hierarchy](#parameter-hierarchy)
 * **Source**: The source reference for the input to the Supply Chain or Delivery Blueprints,
-see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverable)
+see [Workload](reference/owner#workload) and [Deliverable](reference/owner#deliverable)
 
 {{< figure src="../img/owner.svg" alt="Owner" width="400px" >}}
 

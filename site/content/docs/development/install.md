@@ -268,11 +268,10 @@ on how to create a Secret to pull images from a private Docker registry or
 repository)._
 
 
-
 ## 3. Installation using Carvel Packaging
 
 Another way that you can go about installing Cartographer is with the use of
-[carvel Packaging] provided by [kapp controller]. These, when used alongside
+[carvel Packaging] provided by [kapp-controller]. These, when used alongside
 [secretgen controller], provide a great experience for, in a declarative way,
 installing Cartographer.
 
@@ -322,7 +321,7 @@ Namespace        Name                                                    Kind
 Succeeded
 ```
 
-3. [secretgen-controller] installed
+3. [secretgen controller] installed
 
 ```bash
 kubectl get crd secretexports.secretgen.carvel.dev
@@ -493,3 +492,4 @@ spec:
 [kapp]: https://carvel.dev/kapp/
 [kind]: https://github.com/kubernetes-sigs/kind
 [releases page]: https://github.com/vmware-tanzu/cartographer/releases
+[secretgen controller]: https://github.com/vmware-tanzu/carvel-secretgen-controller
