@@ -31,6 +31,10 @@ toc:
     subfolderitems:
       - page: Examples
         url: /examples
+  - title: Support
+    subfolderitems:
+      - page: Troubleshooting
+        url: /troubleshooting
   - title: Documentation Style Guide
     subfolderitems:
       - page: Style Guide
