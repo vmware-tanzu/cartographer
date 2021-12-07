@@ -17,6 +17,8 @@ toc:
     subfolderitems:
       - page: About
         url: /
+      - page: Architecture
+        url: /architecture
   - title: Install/Uninstall
     subfolderitems:
       - page: Installing Cartographer
