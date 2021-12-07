@@ -12,8 +12,8 @@ Two kinds of blueprint work together to provide **code-to-production**, [Supply 
 
 ### Blueprints
 
-Blueprints are a list of templates (called resources) and how they depend upon each other. It forms the dependency graph of
-your supply chain or delivery.
+Blueprints are a list of templates (called resources) that defines how the templates depend upon each other. It forms
+the dependency graph of your supply chain or delivery.
 
 The dependencies are formed by specifying which resource(s) are used as inputs.
 
