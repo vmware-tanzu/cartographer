@@ -12,6 +12,11 @@ Two kinds of blueprint work together to provide **code-to-production**, [Supply 
 
 ### Blueprints
 
+| Blueprint    | Owner | Valid Templates |
+| ----------- | ----------- | ----------- |
+| [ClusterSupplyChain](reference/#clustersupplychain) | [Workload](reference/#workload) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterImageTemplate](reference/#clusterimagetemplate), [ClusterConfigTemplate](reference/#clusterconfigtemplate), [ClusterTemplate](reference/#clustertemplate) |
+| [ClusterDelivery](reference/#delivery) | [Deliverable](reference/#deliverable) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate), [ClusterTemplate](reference/#clustertemplate) |
+
 Blueprints are a list of templates (called resources) that defines how the templates depend upon each other. It forms
 the dependency graph of your supply chain or delivery.
 
@@ -27,11 +32,6 @@ Blueprints consist of:
 
 ![Blueprint](../img/blueprint.jpg)
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
-
-| Blueprint    | Owner | Valid Templates |
-| ----------- | ----------- | ----------- |
-| [ClusterSupplyChain](reference/#clustersupplychain) | [Workload](reference/#workload) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterImageTemplate](reference/#clusterimagetemplate), [ClusterConfigTemplate](reference/#clusterconfigtemplate), [ClusterTemplate](reference/#clustertemplate) |
-| [ClusterDelivery](reference/#delivery) | [Deliverable](reference/#deliverable) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate), [ClusterTemplate](reference/#clustertemplate) |
 
 ### Templates
 
