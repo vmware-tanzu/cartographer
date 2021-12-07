@@ -30,22 +30,10 @@ Blueprints consist of:
   * **Parameters** to pass to the template
   * **Inputs**, which specify dependencies for the template
 
-![Blueprint](../img/blueprint.jpg)
+{{< figure src="../img/blueprint.jpg" alt="Blueprint" width="400px" >}}
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 ### Templates
-
-Templates create or update resources (i.e. kubectl apply).
-
-Templates consist of:
-* Parameters to pass to `spec.template` or `spec.ytt`
-* The Kubernetes resource yaml as `spec.template` or `spec.ytt` [see Templating](#tbd)
-* **Output paths** which tell Cartographer where to find the output of the Kubernetes resource
-  * The path field depends upon the specific template kind.
-
-![Template](../img/template.jpg)
-
-Templates are typed by the output they produce.
 
 | Output      | Template |
 | ----------- | ----------- |
@@ -55,9 +43,25 @@ Templates are typed by the output they produce.
 | Deployment | [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate) |
 | | [ClusterTemplate](reference/#clustertemplate) |
 
-### Owners
+Templates create or update resources (i.e. kubectl apply).
 
-Owners represent the workload or deliverable, which in many cases refer to a single application's source or image 
+Templates consist of:
+* Parameters to pass to `spec.template` or `spec.ytt`
+* The Kubernetes resource yaml as `spec.template` or `spec.ytt` [see Templating](#tbd)
+* **Output paths** which tell Cartographer where to find the output of the Kubernetes resource
+  * The path field depends upon the specific template kind.
+
+Templates are typed by the output their underlying resource produces.
+
+{{< figure src="../img/template.jpg" alt="Template" width="400px" >}}
+
+### Owners
+| Owner      | Blueprint |
+| ----------- | ----------- |
+| Workload | ClusterSupplyChain |
+| Deliverable | ClusterDelivery |
+
+Owners represent the **workload** or **deliverable**, which in many cases refer to a single application's source or image 
 location.
 
 Owners are the developer provided configuration which cause a blueprint to be reconciled into resources.
@@ -70,12 +74,7 @@ They consist of:
 * **Source**: The source reference for the input to the Supply Chain or Delivery Blueprints,
 see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverable)
 
-![Owner](../img/owner.jpg)
-
-| Owner      | Blueprint |
-| ----------- | ----------- |
-| Workload | ClusterSupplyChain |
-| Deliverable | ClusterDelivery |
+{{< figure src="../img/owner.jpg" alt="Owner" width="400px" >}}
 
 ## Theory of operation
 
