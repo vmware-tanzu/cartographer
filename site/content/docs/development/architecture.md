@@ -30,7 +30,7 @@ Blueprints consist of:
   * **Parameters** to pass to the template
   * **Inputs**, which specify dependencies for the template
 
-{{< figure src="../img/blueprint.jpg" alt="Blueprint" width="400px" >}}
+{{< figure src="../img/blueprint.svg" alt="Blueprint" width="400px" >}}
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 ### Templates
@@ -53,7 +53,7 @@ Templates consist of:
 
 Templates are typed by the output their underlying resource produces.
 
-{{< figure src="../img/template.jpg" alt="Template" width="400px" >}}
+{{< figure src="../img/template.svg" alt="Template" width="400px" >}}
 
 ### Owners
 | Owner      | Blueprint |
@@ -74,7 +74,7 @@ They consist of:
 * **Source**: The source reference for the input to the Supply Chain or Delivery Blueprints,
 see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverable)
 
-{{< figure src="../img/owner.jpg" alt="Owner" width="400px" >}}
+{{< figure src="../img/owner.svg" alt="Owner" width="400px" >}}
 
 ## Theory of operation
 
@@ -110,7 +110,7 @@ When Cartographer reconciles an owner, each resource in the matching blueprint i
 ### ClusterSupplyChain
 A ClusterSupplyChain blueprint continuously integrates and builds your app.
 
-![ClusterSupplyChain](../img/supplychain.jpg)
+![ClusterSupplyChain](../img/supplychain.png)
 
 ### ClusterDelivery
 A ClusterDelivery blueprint continuously deploys and validates Kubernetes configuration to a cluster.
