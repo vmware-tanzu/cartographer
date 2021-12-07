@@ -61,6 +61,8 @@ Owners represent the workload or deliverable, which in many cases refer to a sin
 location.
 
 Owners are the developer provided configuration which cause a blueprint to be reconciled into resources.
+Owners reference the primary **source** or **image** for the **blueprint**  
+
 
 They consist of:
 * **Labels**: blueprints will select based on the labels of an owner, see [selectors](#selectors) 
@@ -78,13 +80,13 @@ see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverab
 ## Theory of operation
 
 Given an owner that matches a blueprint, Cartographer reconciles the resources referenced by the blueprint.
-The resources are only created when the inputs are satisfied, and a resource is only updated when it's inputs change.
+The resources are only created when the inputs are satisfied, and a resource is only updated when its inputs change.
 This results in a system where a new result from one resource can cause other resources to change.
 
 ![Generic Blueprint](../img/generic.jpg)
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
-Although Cartographer is not a 'runner of things', a resource can be something as simple as a Job or a CI pipeline.
+Although Cartographer is not a 'runner of things', a resource can be something as simple as a Job.
 
 However, one advantage of Cartographer's design is that resources that self-mutate can cause downstream change.
 
@@ -112,10 +114,11 @@ A ClusterSupplyChain blueprint continuously integrates and builds your app.
 ![ClusterSupplyChain](../img/supplychain.jpg)
 
 ### ClusterDelivery
-A ClusterDelivery blueprint continuously deploys and validates Kubernetes configuration to a cluster. A ClusterDelivery 
-has the ability to lock (and unlock) templates which pauses the continuous deploy. 
+A ClusterDelivery blueprint continuously deploys and validates Kubernetes configuration to a cluster.
 
-<!--- @TODO MORE ON LOCKING -->
+[comment]: <> (Not implemented yet)
+[comment]: <> (A ClusterDelivery has the ability to lock &#40;and unlock&#41; templates which pauses the continuous deploy. )
+[comment]: <> (TODO - more on locking)
 
 ![ClusterDelivery](../img/delivery.jpg)
 
@@ -135,10 +138,9 @@ no blueprint will reconcile for the owner.
 
 <!--- @TODO Image of params -->
 
+Templates can specify default values for **parameters** in `spec.params`.
 
-Templates specify the **parameters** they accept in `spec.params`. These can have a default value.
-
-These parameters can be fulfilled by the **blueprint**, which allows operators to specify:
+These parameters may be overridden by the **blueprint**, which allows operators to specify:
 * a default value which can be overridden by the **owner's** `spec.params`
 * a value which cannot be overridden by the **owner**
 
