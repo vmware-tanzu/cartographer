@@ -28,8 +28,8 @@ Blueprints consist of:
 
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
-| ClusterSupplyChain | Workload | ClusterSourceTemplate, ClusterImageTemplate, ClusterTemplate, ClusterConfigTemplate |
-| ClusterDelivery | Deliverable | ClusterSourceTemplate, ClusterDeploymentTemplate, ClusterTemplate |
+| [ClusterSupplyChain](reference/#clustersupplychain) | [Workload](reference/#workload) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterImageTemplate](reference/#clusterimagetemplate), [ClusterConfigTemplate](reference/#clusterconfigtemplate), [ClusterTemplate](reference/#clustertemplate) |
+| [ClusterDelivery](reference/#delivery) | [Deliverable](reference/#deliverable) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate), [ClusterTemplate](reference/#clustertemplate) |
 
 ### Templates
 
@@ -47,11 +47,11 @@ Templates are typed by the output they produce.
 
 | Output      | Template |
 | ----------- | ----------- |
-| Config | ClusterConfigTemplate |
-| Image | ClusterImageTemplate |
-| Source | ClusterSourceTemplate |
-| Deployment | ClusterDeploymentTemplate |
-| | ClusterTemplate |
+| Config | [ClusterConfigTemplate](reference/#clusterconfigtemplate) |
+| Image | [ClusterImageTemplate](reference/#clusterimagetemplate) |
+| Source | [ClusterSourceTemplate](reference/#clustersourcetemplate) |
+| Deployment | [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate) |
+| | [ClusterTemplate](reference/#clustertemplate) |
 
 ### Owners
 
