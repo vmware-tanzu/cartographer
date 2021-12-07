@@ -75,19 +75,21 @@ see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverab
 
 ## Theory of operation
 
-Given an owner that matches a blueprint, cartographer reconciles the resources referenced by the blueprint.
+Given an owner that matches a blueprint, Cartographer reconciles the resources referenced by the blueprint.
 The resources are only created when the inputs are satisfied, and a resource is only updated when it's inputs change.
-This results in a system where a new intrinsic result from one resource can cause other resources to change.
-
-Although Cartographer is not a 'runner of things', a resource can be something as simple as a Job or a CI pipeline.
-However, one advantage of Cartographer's design, is that a resource can also be untriggered. Imagine a Build resource 
-that discovers new base OCI images. If it rebuilds your image, then cartographer will see this new image and update 
-other linked resources.
+This results in a system where a new result from one resource can cause other resources to change.
 
 ![Generic Blueprint](../img/generic.jpg)
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
-When Cartographer reconciles an owner, each resource in the matching blueprint is reconciled:
+Although Cartographer is not a 'runner of things', a resource can be something as simple as a Job or a CI pipeline.
+
+However, one advantage of Cartographer's design is that resources that self-mutate can cause downstream change.
+
+For example, a Build resource that discovers new base OCI images. If it rebuilds your image, then Cartographer will see 
+this new image and update downstream resources.
+
+When Cartographer reconciles an owner, each resource in the matching blueprint is applied:
 
 1. **Generate Inputs**: Using the **blueprint resource's** `inputs` as a reference, select outputs from previously applied **Kubernetes resources**
 2. **Generate Params**: Using the [Parameter Hierarchy](architecture.md#parameter-hierarchy), generate parameter values   
@@ -108,8 +110,8 @@ A ClusterSupplyChain blueprint continuously integrates and builds your app.
 ![ClusterSupplyChain](../img/supplychain.jpg)
 
 ### ClusterDelivery
-A ClusterDelivery blueprint continuously deploys and validates images to a cluster. A ClusterDelivery has the ability to lock 
-(and unlock) templates which pauses the continuous deploy. 
+A ClusterDelivery blueprint continuously deploys and validates Kubernetes configuration to a cluster. A ClusterDelivery 
+has the ability to lock (and unlock) templates which pauses the continuous deploy. 
 
 <!--- @TODO MORE ON LOCKING -->
 
@@ -120,11 +122,11 @@ An owner's labels will determine which blueprint will select for it. The control
 `spec.selector` with an owner's labels.
 
 A "best match" follows the rules:
-1. If all labels are fully contained in the selector, reconcile the owner with that blueprint
-2. If more than one blueprint has all the labels that the owner has, pick the most identical to the owner
-3. If multiple blueprints match the owner labels, reconcile with the blueprint with the most label matches
+1. If all labels are fully contained in the selector, reconcile the owner with that blueprint.
+2. If not all labels match, we choose the blueprint with the most matched labels.
+3. If two blueprints match all labels, the blueprint with the more concise match (less non-matching labels) is selected.
 
-Note:  Despite the rules, the controller can still return more than one match. If more than one match is returned, 
+Note: Despite the rules, the controller can still return more than one match. If more than one match is returned, 
 no blueprint will reconcile for the owner.
 
 ## Parameter Hierarchy
