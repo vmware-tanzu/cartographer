@@ -29,13 +29,13 @@ toc:
     subfolderitems:
       - page: GVK
         url: /reference/gvk
-      - page: Owner Custom Resources
-        url: /reference/owner
-      - page: Blueprint Custom Resources
-        url: /reference/blueprint
-      - page: Template Custom Resources
+      - page: Workload & Supply Chain CRs
+        url: /reference/workload
+      - page: Deliverable & Delivery CRs
+        url: /reference/deliverable
+      - page: Template CRs
         url: /reference/template
-      - page: Runnable Custom Resources
+      - page: Runnable CRs
         url: /reference/runnable
   - title: Examples
     subfolderitems:

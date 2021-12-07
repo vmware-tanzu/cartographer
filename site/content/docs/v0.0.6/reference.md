@@ -1,8 +1,8 @@
 ---
 aliases:
 - /docs/v0.0.6/reference/gvk/
-- /docs/v0.0.6/reference/owner/
-- /docs/v0.0.6/reference/blueprint/
+- /docs/v0.0.6/reference/deliverable/
+- /docs/v0.0.6/reference/workload/
 - /docs/v0.0.6/reference/template/
 - /docs/v0.0.6/reference/runnable/
 ---

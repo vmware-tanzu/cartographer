@@ -20,7 +20,7 @@ approved workflow.
 
 Cartographer allows users to define all of the steps that an application must go through to create an image and
 Kubernetes configuration. Users achieve this with the Supply Chain
-abstraction ([Spec Reference](reference/blueprint#clustersupplychain)).
+abstraction ([Spec Reference](reference/workload#clustersupplychain)).
 
 The supply chain consists of resources that are specified via Templates. Each template acts as a wrapper for existing
 Kubernetes resources and allows them to be used with Cartographer. There are currently four different types of templates
@@ -41,7 +41,7 @@ updating an object, a new object would be created). There are a number of CI/CD 
 Tekton. The Runnable CRD provides a declarative way for pipelines to be run inside of Cartographer.
 
 While the supply chain is operator facing, Cartographer also provides an abstraction for developers called workloads
-([Spec Reference](reference/owner#workload)). Workloads allow developers to create application specifications such as
+([Spec Reference](reference/workload#workload)). Workloads allow developers to create application specifications such as
 the location of their repository, environment variables and service claims.
 
 By design, supply chains can be reused by many workloads. This allows an operator to specify the steps in the path to

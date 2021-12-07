@@ -14,8 +14,8 @@ Two kinds of blueprint work together to provide **code-to-production**, [Supply 
 
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
-| [ClusterSupplyChain](reference/blueprint#clustersupplychain) | [Workload](reference/owner#workload) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterImageTemplate](reference/template#clusterimagetemplate), [ClusterConfigTemplate](reference/template#clusterconfigtemplate), [ClusterTemplate](reference/template#clustertemplate) |
-| [ClusterDelivery](reference/blueprint#clusterdelivery) | [Deliverable](reference/owner#deliverable) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate), [ClusterTemplate](reference/template#clustertemplate) |
+| [ClusterSupplyChain](reference/workload#clustersupplychain) | [Workload](reference/workload#workload) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterImageTemplate](reference/template#clusterimagetemplate), [ClusterConfigTemplate](reference/template#clusterconfigtemplate), [ClusterTemplate](reference/template#clustertemplate) |
+| [ClusterDelivery](reference/deliverable#clusterdelivery) | [Deliverable](reference/deliverable#deliverable) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate), [ClusterTemplate](reference/template#clustertemplate) |
 
 Blueprints are a list of templates (called resources) that defines how the templates depend upon each other. It forms
 the dependency graph of your supply chain or delivery.
@@ -72,7 +72,7 @@ They consist of:
 * **Labels**: blueprints will select based on the labels of an owner, see [selectors](#selectors) 
 * **Params**: parameters supplied to the blueprint, see [Parameter Hierarchy](#parameter-hierarchy)
 * **Source**: The source reference for the input to the Supply Chain or Delivery Blueprints,
-see [Workload](reference/owner#workload) and [Deliverable](reference/owner#deliverable)
+see [Workload](reference/workload#workload) and [Deliverable](reference/deliverable#deliverable)
 
 {{< figure src="../img/owner.svg" alt="Owner" width="400px" >}}
 
