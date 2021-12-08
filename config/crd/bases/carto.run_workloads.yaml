@@ -24,6 +24,8 @@ metadata:
 spec:
   group: carto.run
   names:
+    categories:
+    - all
     kind: Workload
     listKind: WorkloadList
     plural: workloads
