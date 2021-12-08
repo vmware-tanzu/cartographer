@@ -196,7 +196,7 @@ start_repository() {
         DOCKER_EXEC_SUCCESS=false
         until $DOCKER_EXEC_SUCCESS
         do
-          GITEA_TOKEN="$(docker exec -u git "$CONTAINER_ID" gitea admin user create --username "$GIT_WRITER_USERNAME" --password hi --email "$GIT_WRITER_SSH_USER_EMAIL" --admin --access-token --must-change-password=false | head -1 | rev | cut -d ' ' -f1 | rev)" && DOCKER_EXEC_SUCCESS=true || echo "attempting docker exec again" && sleep 5
+          GITEA_TOKEN="$(docker exec -u git "$CONTAINER_ID" gitea admin user create --username "$GIT_WRITER_USERNAME" --password hi --email "$GIT_WRITER_SSH_USER_EMAIL" --admin --access-token --must-change-password=false | tee >(cat 1>&2) | head -1 | rev | cut -d ' ' -f1 | rev)" && DOCKER_EXEC_SUCCESS=true || echo "attempting docker exec again" && sleep 5
         done
 
         # Generate public/private key
@@ -231,11 +231,12 @@ start_repository() {
 
                 git config --local user.email "$GIT_WRITER_USERNAME"
                 git config --local user.name "$GIT_WRITER_SSH_USER_EMAIL"
+                git config --global init.defaultBranch main
 
                 git add README.md
                 git commit -m "first commit"
                 git remote add origin "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
-                git push -u origin master
+                git push -u origin main
         popd
 }
 
@@ -482,6 +483,7 @@ delete_containers() {
         docker rm -f $REGISTRY_CONTAINER_NAME || true
         docker rm -f $KUBERNETES_CONTAINER_NAME || true
         docker-compose -f hack/docker-compose.yaml down -v
+        rm -rf ./hack/gitea || true
 }
 
 delete_generated_repository_keys() {
