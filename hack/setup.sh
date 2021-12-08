@@ -485,7 +485,7 @@ delete_containers() {
 }
 
 delete_generated_repository_keys() {
-        rm hack/gitea-key.pub hack/gitea-key hack/gitea-server-public-key
+        rm hack/gitea-key.pub hack/gitea-key hack/gitea-server-public-key || true
 }
 
 log() {
