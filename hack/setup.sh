@@ -388,7 +388,7 @@ setup_gitops_to_app() {
 teardown_example() {
         kapp delete --yes -a example-supply
         kapp delete --yes -a example-deliver
-        rm hack/git_entropy
+        rm hack/git_entropy || true
 }
 
 test_source_to_gitops() {
