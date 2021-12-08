@@ -391,7 +391,7 @@ func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject clie
 	for _, sc := range supplyChains {
 		scWorkloads, err := mapper.clusterSupplyChainToWorkloads(sc)
 		if err != nil {
-			mapper.Logger.Error(err, fmt.Sprintf("service account to workload requests: cluster supply chain [%s] to workloads", sc.Name))
+			mapper.Logger.Error(err, "service account to workload requests: cluster supply chain to workloads", "supply chain", sc.Name)
 			return nil
 		}
 		for _, workload := range scWorkloads {
@@ -583,7 +583,7 @@ func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject c
 	for _, d := range deliveries {
 		deliveryDeliverables, err := mapper.clusterDeliveryToDeliverables(d)
 		if err != nil {
-			mapper.Logger.Error(err, fmt.Sprintf("service account to deliverable requests: cluster delivery [%s] to deliverables", d.Name))
+			mapper.Logger.Error(err, "service account to deliverable requests: cluster delivery to deliverables", "delivery", d.Name)
 			return nil
 		}
 		for _, deliverable := range deliveryDeliverables {
