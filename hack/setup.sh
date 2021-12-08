@@ -397,7 +397,7 @@ test_source_to_gitops() {
         GIT_ENTROPY="$(cat hack/git_entropy)"
         BRANCH="$GIT_ENTROPY"
 
-        EXPECTED_GIT_MESSAGE="Some peturbation: $GIT_ENTROPY"
+        EXPECTED_GIT_MESSAGE="Some perturbation: $GIT_ENTROPY"
 
         SUCCESS=false
 
