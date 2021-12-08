@@ -27,8 +27,16 @@ toc:
         url: /uninstall
   - title: Reference
     subfolderitems:
-      - page: CRD Reference
-        url: /reference
+      - page: GVK
+        url: /reference/gvk
+      - page: Workload & Supply Chain CRs
+        url: /reference/workload
+      - page: Deliverable & Delivery CRs
+        url: /reference/deliverable
+      - page: Template CRs
+        url: /reference/template
+      - page: Runnable CRs
+        url: /reference/runnable
   - title: Examples
     subfolderitems:
       - page: Examples

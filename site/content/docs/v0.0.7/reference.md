@@ -1,3 +1,11 @@
+---
+aliases:
+- /docs/v0.0.7/reference/gvk/
+- /docs/v0.0.7/reference/deliverable/
+- /docs/v0.0.7/reference/workload/
+- /docs/v0.0.7/reference/template/
+- /docs/v0.0.7/reference/runnable/
+---
 # Spec Reference
 
 ## GVK

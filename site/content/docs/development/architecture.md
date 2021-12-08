@@ -14,8 +14,8 @@ Two kinds of blueprint work together to provide **code-to-production**, [Supply 
 
 | Blueprint    | Owner | Valid Templates |
 | ----------- | ----------- | ----------- |
-| [ClusterSupplyChain](reference/#clustersupplychain) | [Workload](reference/#workload) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterImageTemplate](reference/#clusterimagetemplate), [ClusterConfigTemplate](reference/#clusterconfigtemplate), [ClusterTemplate](reference/#clustertemplate) |
-| [ClusterDelivery](reference/#delivery) | [Deliverable](reference/#deliverable) | [ClusterSourceTemplate](reference/#clustersourcetemplate), [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate), [ClusterTemplate](reference/#clustertemplate) |
+| [ClusterSupplyChain](reference/workload#clustersupplychain) | [Workload](reference/workload#workload) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterImageTemplate](reference/template#clusterimagetemplate), [ClusterConfigTemplate](reference/template#clusterconfigtemplate), [ClusterTemplate](reference/template#clustertemplate) |
+| [ClusterDelivery](reference/deliverable#clusterdelivery) | [Deliverable](reference/deliverable#deliverable) | [ClusterSourceTemplate](reference/template#clustersourcetemplate), [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate), [ClusterTemplate](reference/template#clustertemplate) |
 
 Blueprints are a list of templates (called resources) that defines how the templates depend upon each other. It forms
 the dependency graph of your supply chain or delivery.
@@ -30,10 +30,18 @@ Blueprints consist of:
   * **Parameters** to pass to the template
   * **Inputs**, which specify dependencies for the template
 
-![Blueprint](../img/blueprint.jpg)
+{{< figure src="../img/blueprint.svg" alt="Blueprint" width="400px" >}}
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 ### Templates
+
+| Output      | Template |
+| ----------- | ----------- |
+| Config | [ClusterConfigTemplate](reference/template#clusterconfigtemplate) |
+| Image | [ClusterImageTemplate](reference/template#clusterimagetemplate) |
+| Source | [ClusterSourceTemplate](reference/template#clustersourcetemplate) |
+| Deployment | [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate) |
+| | [ClusterTemplate](reference/template#clustertemplate) |
 
 Templates create or update resources (i.e. kubectl apply).
 
@@ -43,21 +51,17 @@ Templates consist of:
 * **Output paths** which tell Cartographer where to find the output of the Kubernetes resource
   * The path field depends upon the specific template kind.
 
-![Template](../img/template.jpg)
+Templates are typed by the output their underlying resource produces.
 
-Templates are typed by the output they produce.
-
-| Output      | Template |
-| ----------- | ----------- |
-| Config | [ClusterConfigTemplate](reference/#clusterconfigtemplate) |
-| Image | [ClusterImageTemplate](reference/#clusterimagetemplate) |
-| Source | [ClusterSourceTemplate](reference/#clustersourcetemplate) |
-| Deployment | [ClusterDeploymentTemplate](reference/#clusterdeploymenttemplate) |
-| | [ClusterTemplate](reference/#clustertemplate) |
+{{< figure src="../img/template.svg" alt="Template" width="400px" >}}
 
 ### Owners
+| Owner      | Blueprint |
+| ----------- | ----------- |
+| Workload | ClusterSupplyChain |
+| Deliverable | ClusterDelivery |
 
-Owners represent the workload or deliverable, which in many cases refer to a single application's source or image 
+Owners represent the **workload** or **deliverable**, which in many cases refer to a single application's source or image 
 location.
 
 Owners are the developer provided configuration which cause a blueprint to be reconciled into resources.
@@ -68,14 +72,9 @@ They consist of:
 * **Labels**: blueprints will select based on the labels of an owner, see [selectors](#selectors) 
 * **Params**: parameters supplied to the blueprint, see [Parameter Hierarchy](#parameter-hierarchy)
 * **Source**: The source reference for the input to the Supply Chain or Delivery Blueprints,
-see [Workload](reference.md/#workload) and [Deliverable](reference.md/#deliverable)
+see [Workload](reference/workload#workload) and [Deliverable](reference/deliverable#deliverable)
 
-![Owner](../img/owner.jpg)
-
-| Owner      | Blueprint |
-| ----------- | ----------- |
-| Workload | ClusterSupplyChain |
-| Deliverable | ClusterDelivery |
+{{< figure src="../img/owner.svg" alt="Owner" width="400px" >}}
 
 ## Theory of operation
 
@@ -111,7 +110,7 @@ When Cartographer reconciles an owner, each resource in the matching blueprint i
 ### ClusterSupplyChain
 A ClusterSupplyChain blueprint continuously integrates and builds your app.
 
-![ClusterSupplyChain](../img/supplychain.jpg)
+![ClusterSupplyChain](../img/supplychain.png)
 
 ### ClusterDelivery
 A ClusterDelivery blueprint continuously deploys and validates Kubernetes configuration to a cluster.
