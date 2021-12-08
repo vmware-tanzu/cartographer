@@ -231,7 +231,7 @@ start_repository() {
 
                 git config --local user.email "$GIT_WRITER_USERNAME"
                 git config --local user.name "$GIT_WRITER_SSH_USER_EMAIL"
-                git config --global init.defaultBranch main
+                git config --local init.defaultBranch main
 
                 git add README.md
                 git commit -m "first commit"
