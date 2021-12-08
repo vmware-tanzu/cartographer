@@ -357,7 +357,7 @@ setup_source_to_gitops() {
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-" \
-                --data-value git_writer.message="Some peturbation: $(cat hack/git_entropy)" \
+                --data-value git_writer.message="Some perturbation: $(cat hack/git_entropy)" \
                 --data-value git_writer.ssh_user="$GIT_WRITER_SSH_USER" \
                 --data-value git_writer.username="$GIT_WRITER_USERNAME" \
                 --data-value git_writer.user_email="$GIT_WRITER_SSH_USER_EMAIL" \
