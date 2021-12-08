@@ -24,6 +24,8 @@ metadata:
 spec:
   group: carto.run
   names:
+    categories:
+    - all
     kind: Deliverable
     listKind: DeliverableList
     plural: deliverables

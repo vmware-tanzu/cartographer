@@ -43,6 +43,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=all
 // +kubebuilder:subresource:status
 
 type Deliverable struct {
