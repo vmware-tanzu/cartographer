@@ -16,8 +16,8 @@ name: release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [release-test]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,45 +30,25 @@ jobs:
 
       - name: set up Go
         uses: actions/setup-go@v2
-        with: {go-version: '^1.17.1'}
-
-      - name: check copyright header
-        run: |-
-          make copyright
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
-
-      - name: lint
-        run: |-
-          make lint
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
+        with: {go-version: '^1.17'}
 
       - name: setup base dependencies
         run: |-
           sudo apt update && sudo apt install -y curl tar
-          ./hack/ci/install-binaries.sh ko kubebuilder kuttl gh tree
+          ./hack/ci/install-binaries.sh ko gh
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
 
-      - name: run tests
-        env:
-          KUBEBUILDER_ASSETS: /usr/local/bin
-        run: make test
-
-      - name: setup the cluster and local registry with all dependencies needed
-        run: ./hack/setup.sh cluster example-dependencies
-
-      - name: generate a cartographer release and install it
+      - name: generate a cartographer release
         env:
           REGISTRY: projectcartographer
           DOCKER_USERNAME: projectcartographer
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_CONFIG: "~/.docker"
         run: |-
           ./hack/docker-login.sh
-          ./hack/setup.sh cartographer
-
-      - name: submit the example and assert that it worked
-        run: ./hack/setup.sh example
+          ./hack/release.sh
 
       - name: submit github release
         env:
