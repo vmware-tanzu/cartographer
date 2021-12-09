@@ -52,6 +52,7 @@ jobs:
           ./hack/docker-login.sh
           ./hack/release.sh
 
+
       - name: submit github release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
