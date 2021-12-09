@@ -4,7 +4,6 @@
 
 The Cartographer project team welcomes contributions from the community. If you wish to contribute code and you have not signed our [contributor license agreement](https://cla.vmware.com/cla/1/preview), our bot will update the issue when you open a Pull Request. For any questions about the CLA process, please refer to our [FAQ](https://cla.vmware.com/faq).
 
-
 ## Development Dependencies
 
 - [`ctlptl`]: for deploying local changes to a local registry
@@ -38,9 +37,9 @@ See [Logging Kubernetes Objects](https://github.com/kubernetes-sigs/controller-r
 ### Rules of thumb
 - When an error occurs, think about what debug will improve our ability to debug issues related to the error.
 - Do not blindly add logs at every call site.
-- With values that will provide context in higher abstractions, add them as soon as you can, for example "supplychain",
-supplychain in the workload reconciler. Do not add them if they're only going to be useful locally (eg stampedObject in
-our reconcilers will mean nothing to callee's).
+- With values that will provide context in higher abstractions, add them as soon as you can, for example "supplychain"
+  in the workload reconciler. Do not add them if they're only going to be useful locally (eg stampedObject in 
+  our reconcilers will mean nothing in callee's).
 - Place context on errors and describe the error in 'local' terms. Eg: for a get to the api server: "failed to get
 supply-chain from api server" but for the same error in the reconciler "failed to get supply-chain". There will still 
 be a lot of repetition, but the changing context gives the duplicate messages a reason to exist.
