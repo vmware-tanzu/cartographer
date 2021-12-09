@@ -124,7 +124,7 @@ notes:
 
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside. 
 
-_ref: [pkg/apis/v1alpha1/workload.go](../../../pkg/apis/v1alpha1/workload.go)_
+_ref: [pkg/apis/v1alpha1/workload.go](/pkg/apis/v1alpha1/workload.go)_
 
 
 ### ClusterSupplyChain
@@ -236,7 +236,7 @@ spec:
 ```
 
 
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../pkg/apis/v1alpha1/cluster_supply_chain.go)_
+_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](/pkg/apis/v1alpha1/cluster_supply_chain.go)_
 
 
 ### ClusterSourceTemplate
@@ -296,7 +296,7 @@ spec:
       ignore: ""
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](../../../pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_source_template.go](/pkg/apis/v1alpha1/cluster_source_template.go)_
 
 
 ### ClusterImageTemplate
@@ -339,13 +339,13 @@ spec:
           url: $(sources.provider.url)$
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](../../../pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_image_template.go](/pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ### ClusterConfigTemplate
 
 Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further resources in the chain.
 
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](../../../pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_config_template.go](/pkg/apis/v1alpha1/cluster_config_template.go)_
 
 
 ### ClusterTemplate
@@ -409,4 +409,4 @@ spec:
         - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](../../../pkg/apis/v1alpha1/cluster_template.go)_
+_ref: [pkg/apis/v1alpha1/cluster_template.go](/pkg/apis/v1alpha1/cluster_template.go)_
