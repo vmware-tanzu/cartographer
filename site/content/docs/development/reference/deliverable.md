@@ -45,7 +45,7 @@ Notes:
 
 1. labels serve as a way of indirectly selecting `ClusterDelivery`
 
-_ref: [pkg/apis/v1alpha1/deliverable.go](/pkg/apis/v1alpha1/deliverable.go)_
+_ref: [pkg/apis/v1alpha1/deliverable.go](../../../../../pkg/apis/v1alpha1/deliverable.go)_
 
 ## ClusterDelivery
 
@@ -142,5 +142,5 @@ spec:
       params: [ ]
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_delivery.go](/pkg/apis/v1alpha1/cluster_delivery.go)_
+_ref: [pkg/apis/v1alpha1/cluster_delivery.go](../../../../../pkg/apis/v1alpha1/cluster_delivery.go)_
 
