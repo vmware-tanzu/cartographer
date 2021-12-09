@@ -1544,6 +1544,54 @@ var _ = Describe("MapFunctions", func() {
 					Expect(reqs).To(HaveLen(0))
 				})
 			})
+
+			Context("a workload implicitly matches the default service account", func() {
+				BeforeEach(func() {
+					existingWorkload := &v1alpha1.Workload{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-workload",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+					existingWorkloadList = v1alpha1.WorkloadList{
+						Items: []v1alpha1.Workload{*existingWorkload},
+					}
+
+					existingSupplyChain := &v1alpha1.ClusterSupplyChain{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ClusterSupplyChain",
+							APIVersion: "carto.run/v1alpha1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-supply-chain",
+						},
+						Spec: v1alpha1.SupplyChainSpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+					existingSupplyChainList = v1alpha1.ClusterSupplyChainList{
+						Items: []v1alpha1.ClusterSupplyChain{*existingSupplyChain},
+					}
+				})
+
+				It("returns a request for the workload", func() {
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "default",
+							Namespace: "some-namespace",
+						},
+					}
+					reqs := m.ServiceAccountToWorkloadRequests(sa)
+
+					Expect(reqs).To(HaveLen(1))
+					Expect(reqs[0].Name).To(Equal("some-workload"))
+				})
+			})
 		})
 
 		Context("client.list errors", func() {
@@ -3529,6 +3577,54 @@ var _ = Describe("MapFunctions", func() {
 					reqs := m.ServiceAccountToDeliverableRequests(sa)
 
 					Expect(reqs).To(HaveLen(0))
+				})
+			})
+
+			Context("a deliverable implicitly matches the default service account", func() {
+				BeforeEach(func() {
+					existingDeliverable := &v1alpha1.Deliverable{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "some-deliverable",
+							Namespace: "some-namespace",
+							Labels: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+					existingDeliverableList = v1alpha1.DeliverableList{
+						Items: []v1alpha1.Deliverable{*existingDeliverable},
+					}
+
+					existingDelivery := &v1alpha1.ClusterDelivery{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ClusterDelivery",
+							APIVersion: "carto.run/v1alpha1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-supply-chain",
+						},
+						Spec: v1alpha1.ClusterDeliverySpec{
+							Selector: map[string]string{
+								"some-label": "some-label-value",
+							},
+						},
+					}
+					existingDeliveryList = v1alpha1.ClusterDeliveryList{
+						Items: []v1alpha1.ClusterDelivery{*existingDelivery},
+					}
+				})
+
+				It("returns a request for the deliverable", func() {
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "default",
+							Namespace: "some-namespace",
+						},
+					}
+					reqs := m.ServiceAccountToDeliverableRequests(sa)
+
+					Expect(reqs).To(HaveLen(1))
+					Expect(reqs[0].Name).To(Equal("some-deliverable"))
 				})
 			})
 		})
