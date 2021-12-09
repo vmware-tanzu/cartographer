@@ -48,7 +48,7 @@ jobs:
       - name: setup base dependencies
         run: |-
           sudo apt update && sudo apt install -y curl tar
-          ./hack/ci/install-binaries.sh ko kubebuilder kuttl
+          ./hack/ci/install-binaries.sh ko kubebuilder kuttl tree
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
