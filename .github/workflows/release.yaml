@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_VERSION: "v0.0.0-dev"
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -33,7 +35,7 @@ jobs:
         with: {go-version: '^1.17'}
 
       - name: setup base dependencies
-        run: |-
+        run: |
           sudo apt update && sudo apt install -y curl tar
           ./hack/ci/install-binaries.sh ko gh
 
@@ -46,11 +48,13 @@ jobs:
           DOCKER_USERNAME: projectcartographer
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           DOCKER_CONFIG: "~/.docker"
-        run: |-
+        run: |
           ./hack/docker-login.sh
           ./hack/release.sh
 
       - name: submit github release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./hack/publish-github-release.sh
+        run: |
+          gh release delete $RELEASE_VERSION -y || true
+          ./hack/publish-github-release.sh
