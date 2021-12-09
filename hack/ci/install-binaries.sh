@@ -25,6 +25,8 @@ readonly KUTTL_VERSION=${KUTTL_VERSION:-0.11.1}
 readonly KUTTL_CHECKSUM=${KUTTL_CHECKSUM:-0fb13f8fbb6109803a06847a8ad3fae4fedc8cd159e2b0fd6c1a1d8737191e5f}
 readonly GH_VERSION=${GH_VERSION:-2.0.0}
 readonly GH_CHECKSUM=${GH_CHECKSUM:-20c2d1b1915a0ff154df453576d9e97aab709ad4b236ce8313435b8b96d31e5c}
+readonly KUBECTL_TREE_CHECKSUM=${KUBECTL_TREE_CHECKSUM:-f4a3230d46b824889fca56525d051aad70815965a94623388ec0b5dc71781790}
+readonly KUBECTL_TREE_VERSION=${KUBECTL_TREE_VERSION:-0.4.1}
 
 main() {
         cd $(mktemp -d)
@@ -42,6 +44,9 @@ main() {
                         ;;
                 gh)
                         install_gh
+                        ;;
+                tree)
+                        install_kubectl_tree
                         ;;
                 *) ;;
                 esac
@@ -90,6 +95,17 @@ install_gh() {
         tar xzf $fname --strip-components=1
 
         mv ./bin/gh /usr/local/bin
+}
+
+install_kubectl_tree() {
+        local url=https://github.com/ahmetb/kubectl-tree/releases/download/v${KUBECTL_TREE_VERSION}/kubectl-tree_v${KUBECTL_TREE_VERSION}_linux_amd64.tar.gz
+        local fname=kubectl-tree_v${KUBECTL_TREE_VERSION}_linux_amd64.tar.gz
+
+        curl -sSOL $url
+        echo "${KUBECTL_TREE_CHECKSUM}  $fname" | sha256sum -c
+        tar xzf $fname
+
+        install -m 0755 ./kubectl-tree /usr/local/bin
 }
 
 main "$@"
