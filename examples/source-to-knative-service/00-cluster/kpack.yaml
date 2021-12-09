@@ -20,7 +20,10 @@ metadata:
   name: go-store
 spec:
   sources:
-    - image: gcr.io/paketo-buildpacks/go
+    # need to pin to go0.12 until a new kpack is released with a newer lifecycle
+    # kpack v0.4.3 (latest at the moment) has lifecycle 0.11.4 (https://github.com/pivotal/kpack/blob/v0.4.3/hack/lifecycle/main.go#L49)
+    # the latest go buildpack requires at least lifecycle 0.13.x because it requires support for buildpack API 0.7
+    - image: gcr.io/paketo-buildpacks/go:0.12.0
 
 ---
 apiVersion: kpack.io/v1alpha2
