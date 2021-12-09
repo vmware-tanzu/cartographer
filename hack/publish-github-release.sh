@@ -25,21 +25,21 @@ readonly ASSETS_DIR=${ASSETS_DIR:-$ROOT/release}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
 
 main() {
-        cd $ROOT
-        submit_release_to_github $RELEASE_VERSION
+  cd $ROOT
+  submit_release_to_github $RELEASE_VERSION
 }
 
 submit_release_to_github() {
-        local version=$1
+  local version=$1
 
-        gh release create $version \
-                --draft \
-                --notes-file $RELEASE_NOTES_FILE \
-                ./release/package/package.yaml \
-                ./release/package/package-install.yaml \
-                ./release/package/package-metadata.yaml \
-                ./release/bundle.tar \
-                ./release/cartographer.yaml
+  gh release create $version \
+    --draft \
+    --notes-file $RELEASE_NOTES_FILE \
+    ./release/package/package.yaml \
+    ./release/package/package-install.yaml \
+    ./release/package/package-metadata.yaml \
+    ./release/bundle.tar \
+    ./release/cartographer.yaml
 }
 
 main "$@"
