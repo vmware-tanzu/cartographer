@@ -22,10 +22,9 @@ readonly ROOT
 
 readonly RELEASE_NOTES_FILE=${RELEASE_NOTES:-$ROOT/release/CHANGELOG.md}
 readonly ASSETS_DIR=${ASSETS_DIR:-$ROOT/release}
+readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
 
 main() {
-        readonly RELEASE_VERSION="${RELEASE_VERSION:-$(git_current_version)}"
-
         cd $ROOT
         submit_release_to_github $RELEASE_VERSION
 }
@@ -41,10 +40,6 @@ submit_release_to_github() {
                 ./release/package/package-metadata.yaml \
                 ./release/bundle.tar \
                 ./release/cartographer.yaml
-}
-
-git_current_version() {
-        git tag --points-at HEAD
 }
 
 main "$@"

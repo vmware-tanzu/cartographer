@@ -19,7 +19,7 @@ on:
     branches: [release-test]
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
