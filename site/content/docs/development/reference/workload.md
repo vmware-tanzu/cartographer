@@ -91,7 +91,7 @@ Notes:
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the
    supplychain, but outside.
 
-_ref: [pkg/apis/v1alpha1/workload.go](../../../../../pkg/apis/v1alpha1/workload.go)_
+_ref: [pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/workload.go)_
 
 
 ## ClusterSupplyChain
@@ -248,5 +248,5 @@ spec:
           #
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](../../../../../pkg/apis/v1alpha1/cluster_supply_chain.go)_
+_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_supply_chain.go)_
 
