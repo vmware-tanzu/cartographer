@@ -16,7 +16,7 @@ name: release
 
 on:
   push:
-    branches: [release-test]
+    branches: [main]
 
 jobs:
   release:
