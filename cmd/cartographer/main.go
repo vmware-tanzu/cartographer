@@ -21,8 +21,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/vmware-tanzu/cartographer/pkg/cmd"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
-	"github.com/vmware-tanzu/cartographer/pkg/root"
 )
 
 var devMode bool
@@ -44,7 +44,7 @@ func main() {
 		panic(err)
 	}
 
-	cmd := root.Command{
+	cmd := cmd.Command{
 		Port:    port,
 		CertDir: certDir,
 		Logger:  zap.New(zap.UseDevMode(devMode), loggerOpt),
