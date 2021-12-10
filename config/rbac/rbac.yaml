@@ -71,32 +71,6 @@ metadata:
   name: cartographer-user-admin
   labels:
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
-rules:
-  - apiGroups:
-      - carto.run
-    resources:
-      - clustersupplychains
-      - clustersourcetemplates
-      - clusterimagetemplates
-      - clustertemplates
-      - clusterdeliveries
-      - workloads
-      - deliveries
-    verbs:
-      - create
-      - update
-      - patch
-      - delete
-      - get
-      - list
-      - watch
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: cartographer-user-edit
-  labels:
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
   - apiGroups:
@@ -106,21 +80,9 @@ rules:
       - deliveries
     verbs:
       - create
-      - patch
       - update
+      - patch
       - delete
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - carto.run
-    resources:
-      - clustersupplychains
-      - clustersourcetemplates
-      - clusterimagetemplates
-      - clustertemplates
-      - clusterdeliveries
-    verbs:
       - get
       - list
       - watch
@@ -147,3 +109,4 @@ rules:
       - get
       - list
       - watch
+
