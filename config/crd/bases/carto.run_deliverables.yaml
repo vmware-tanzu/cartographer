@@ -30,7 +30,20 @@ spec:
     singular: deliverable
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.source['git.url','image']
+      name: Source
+      type: string
+    - jsonPath: .status.deliveryRef.name
+      name: Delivery
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Reason
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         properties:

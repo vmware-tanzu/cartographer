@@ -44,6 +44,10 @@ const (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Source",type="string",JSONPath=`.spec.source['git.url','image']`
+// +kubebuilder:printcolumn:name="Delivery",type="string",JSONPath=".status.deliveryRef.name"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].reason`
 
 type Deliverable struct {
 	metav1.TypeMeta   `json:",inline"`
