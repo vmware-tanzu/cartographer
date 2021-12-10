@@ -16,13 +16,15 @@ name: release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_VERSION: "v0.0.0-dev"
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -30,47 +32,29 @@ jobs:
 
       - name: set up Go
         uses: actions/setup-go@v2
-        with: {go-version: '^1.17.1'}
-
-      - name: check copyright header
-        run: |-
-          make copyright
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
-
-      - name: lint
-        run: |-
-          make lint
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
+        with: {go-version: '^1.17'}
 
       - name: setup base dependencies
-        run: |-
+        run: |
           sudo apt update && sudo apt install -y curl tar
-          ./hack/ci/install-binaries.sh ko kubebuilder kuttl gh tree
+          ./hack/ci/install-binaries.sh ko gh
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
 
-      - name: run tests
-        env:
-          KUBEBUILDER_ASSETS: /usr/local/bin
-        run: make test
-
-      - name: setup the cluster and local registry with all dependencies needed
-        run: ./hack/setup.sh cluster example-dependencies
-
-      - name: generate a cartographer release and install it
+      - name: generate a cartographer release
         env:
           REGISTRY: projectcartographer
           DOCKER_USERNAME: projectcartographer
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        run: |-
+          DOCKER_CONFIG: "~/.docker"
+        run: |
           ./hack/docker-login.sh
-          ./hack/setup.sh cartographer
-
-      - name: submit the example and assert that it worked
-        run: ./hack/setup.sh example
+          ./hack/release.sh
 
       - name: submit github release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./hack/publish-github-release.sh
+        run: |
+          gh release delete $RELEASE_VERSION -y || true
+          ./hack/publish-github-release.sh

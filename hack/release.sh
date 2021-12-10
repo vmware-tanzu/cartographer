@@ -29,7 +29,7 @@ readonly YTT_VERSION=0.36.0
 readonly YTT_CHECKSUM=d81ecf6c47209f6ac527e503a6fd85e999c3c2f8369e972794047bddc7e5fbe2
 
 main() {
-        readonly RELEASE_VERSION=${RELEASE_VERSION:-$(git_current_version)}
+        readonly RELEASE_VERSION="v0.0.0-dev"
         readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
 
         show_vars
@@ -204,17 +204,6 @@ git_changeset() {
                 --no-decorate \
                 --no-color \
                 "${previous_version}..${current_version}"
-}
-
-git_current_version() {
-        local tag
-        tag=$(git tag --points-at HEAD)
-
-        if [[ $tag == "" ]]; then
-                tag="v0.0.0-dev"
-        fi
-
-        printf $tag
 }
 
 git_previous_version() {
