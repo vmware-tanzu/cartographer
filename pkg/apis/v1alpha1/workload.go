@@ -39,6 +39,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:categories="all"
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Source",type="string",JSONPath=`.spec.source['git.url','image']`
 // +kubebuilder:printcolumn:name="SupplyChain",type="string",JSONPath=".status.supplyChainRef.name"
