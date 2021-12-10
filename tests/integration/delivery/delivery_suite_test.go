@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/root"
+	"github.com/vmware-tanzu/cartographer/pkg/cmd"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
 	"github.com/vmware-tanzu/cartographer/tests/integration"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
@@ -53,7 +53,7 @@ var (
 	workingDir       string
 	cancel           context.CancelFunc
 	controllerError  chan error
-	controller       *root.Command
+	controller       *cmd.Command
 	controllerBuffer *gbytes.Buffer
 )
 
@@ -85,7 +85,7 @@ var _ = BeforeSuite(func() {
 	controllerError = make(chan error)
 
 	go func() {
-		controller = &root.Command{
+		controller = &cmd.Command{
 			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
 			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
 			Logger:  logger,
