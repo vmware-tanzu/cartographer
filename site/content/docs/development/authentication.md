@@ -131,6 +131,38 @@ metadata:
 ```
 
 ## Cartographer Controller Permissions
+Cartographer has its own service account, `cartographer-controller` in the `cartographer-system` namespace. 
+The clusterrole that's bound to the service account is:
 
+```bash
+kubectl get clusterrole cartographer-controller-admin -oyaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cartographer-controller-admin
+rules:
+- apiGroups:
+  - carto.run
+  resources:
+  - workloads/status
+  - clustersupplychains/status
+  - runnables/status
+  - clusterdeliveries/status
+  - deliverables/status
+  verbs:
+  - create
+  - update
+  - delete
+  - patch
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - watch
+  - get
+  - list
+```
 
 
