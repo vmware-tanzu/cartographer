@@ -4,7 +4,7 @@ cascade:
   layout: docs
 ---
 
-## TLDR
+## TL;DR
 
 Cartographer is
 a [Supply Chain Choreographer](https://tanzu.vmware.com/developer/guides/ci-cd/supply-chain-choreography/) for
@@ -19,17 +19,17 @@ approved workflow.
 ## Cartographer Design and Philosophy
 
 Cartographer allows users to define all of the steps that an application must go through to create an image and
-Kubernetes configuration. Users achieve this with the Supply Chain
-abstraction ([Spec Reference](reference/workload#clustersupplychain)).
+Kubernetes configuration. Users achieve this with the Supply Chain abstraction,
+see [Spec Reference](reference/workload#clustersupplychain).
 
 The supply chain consists of resources that are specified via Templates. Each template acts as a wrapper for existing
 Kubernetes resources and allows them to be used with Cartographer. There are currently four different types of templates
 that can be use in a Cartographer supply chain:
 
-* Source Template ([Spec Reference](reference/template#clustersourcetemplate))
-* Image Template ([Spec Reference](reference/template#clusterimagetemplate))
-* Config Template ([Spec Reference](reference/template#clusterconfigtemplate))
-* Generic Template ([Spec Reference](reference/template#clustertemplate))
+* [Source Template](reference/template#clustersourcetemplate)
+* [Image Template](reference/template#clusterimagetemplate)
+* [Config Template](reference/template#clusterconfigtemplate)
+* [Generic Template](reference/template#clustertemplate)
 
 Contrary to many other Kubernetes native workflow tools that already exist in the market, Cartographer does not “run”
 any of the objects themselves. Instead, it monitors the execution of each resource and templates the following resource
@@ -40,9 +40,9 @@ The supply chain may also be extended to include integrations to existing CI/CD 
 updating an object, a new object would be created). There are a number of CI/CD CRDs that follow this pattern, including
 Tekton. The Runnable CRD provides a declarative way for pipelines to be run inside of Cartographer.
 
-While the supply chain is operator facing, Cartographer also provides an abstraction for developers called workloads
-([Spec Reference](reference/workload#workload)). Workloads allow developers to create application specifications such as
-the location of their repository, environment variables and service claims.
+While the supply chain is operator facing, Cartographer also provides an abstraction for developers
+called [workloads](reference/workload#workload). Workloads allow developers to create application specifications such
+as the location of their repository, environment variables and service claims.
 
 By design, supply chains can be reused by many workloads. This allows an operator to specify the steps in the path to
 production a single time, and for developers to specify their applications independently but for each to use the same
