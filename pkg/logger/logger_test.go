@@ -103,7 +103,7 @@ var _ = Describe("Logger", func() {
 				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
 
 			},
-			Entry("error", ERROR, true),
+			FEntry("error", ERROR, true),
 			Entry("info", INFO, false),
 			Entry("debug", DEBUG, false),
 		)
