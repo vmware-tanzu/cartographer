@@ -1,4 +1,5 @@
 <div class="side-nav">
+    <nav class="navigation">
     {{ if .Site.Params.use_advanced_docs }}
         <noscript>Please enable javascript to use dropdown navigation</noscript>
         {{ $version := .CurrentSection.Params.version }}
@@ -11,7 +12,7 @@
             {{ end }}
             {{ $toc := (index $.Site.Data "docs" $tocTemplateName).toc }}
             {{ range $toc }}
-                <h4>{{ .title }}</h4>
+                <h3>{{ .title }}</h3>
                 <ul>
                     {{ range .subfolderitems }}
                     <li>
@@ -30,4 +31,5 @@
             {{ end }}
         </ul>
     {{ end }}
+    </nav>
 </div>
