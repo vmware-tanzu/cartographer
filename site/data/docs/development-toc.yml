@@ -21,12 +21,8 @@ toc:
         url: /architecture
       - page: Authentication
         url: /authentication
-  - title: Install/Uninstall
-    subfolderitems:
-      - page: Installing Cartographer
+      - page: Install
         url: /install
-      - page: Uninstalling Cartographer
-        url: /uninstall
   - title: CR Reference
     subfolderitems:
       - page: GVK
