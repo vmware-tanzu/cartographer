@@ -128,8 +128,8 @@ spec:
   #
   params: [ ]
 
-  # jsonpath expression to instruct where in the object templated out container
-  # image information can be found. (required)
+  # jsonpath expression to instruct where in the object templated out config
+  # information can be found. (required)
   #
   configPath: .data
   
