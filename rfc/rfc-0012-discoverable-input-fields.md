@@ -22,6 +22,58 @@ This is an array of
 When a supply chain is submitted to the cluster, the supply chain controller updates its status
 with all of the fields required by the referenced templates.
 
+### Example
+
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: test
+spec:
+  urlPath: .status.outputs.url
+  revisionPath: .status.outputs.revision
+
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Runnable
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      serviceAccountName: $(workload.spec.serviceAccountName)$
+
+      runTemplateRef:
+        name: tekton-pipelinerun
+
+      selector:
+        resource:
+          apiVersion: tekton.dev/v1beta1
+          kind: Task
+        matchingLabels:
+          apps.tanzu.vmware.com/task: test
+          some.other.label: $(params.other-label)$
+
+      inputs:
+        source: $(source)$
+        params:
+          - name: blob-url
+            value: $(source.url)$
+          - name: blob-revision
+            value: $(source.revision)$
+status:
+  inputs:
+    workload:
+      metadata:
+      - name
+      spec:
+      - serviceAccountName
+    params:
+      - other-label
+    sources:
+    - ANYNAME:
+      - url
+      - revision
+```
+
 ## Cross References and Prior Art
 
 {{Reference other similar implementations, and resources you are using to draw inspiration from}}
