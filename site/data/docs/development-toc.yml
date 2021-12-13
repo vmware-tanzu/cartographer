@@ -27,17 +27,17 @@ toc:
         url: /install
       - page: Uninstalling Cartographer
         url: /uninstall
-  - title: Reference
+  - title: CR Reference
     subfolderitems:
       - page: GVK
         url: /reference/gvk
-      - page: Workload & Supply Chain CRs
+      - page: Workload & Supply Chain
         url: /reference/workload
-      - page: Deliverable & Delivery CRs
+      - page: Deliverable & Delivery
         url: /reference/deliverable
-      - page: Template CRs
+      - page: Templates
         url: /reference/template
-      - page: Runnable CRs
+      - page: Runnable
         url: /reference/runnable
   - title: Examples
     subfolderitems:

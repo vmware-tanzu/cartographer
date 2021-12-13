@@ -439,28 +439,11 @@
     padding: 30px 30px 50px 30px;
     display: flex;
     .side-nav {
+        max-width: 230px;
         width: 25%;
         float: left;
         position: relative;
-        ul {
-            padding-left: 0px;
-            margin-bottom: 35px;
-            li {
-                display: list-item;
-                margin-bottom: 15px;
-                a {
-                    color: $darkgrey;
-                    font-size: 14px;
-                    &.active {
-                        color: $blue;
-                    }
-                }
-                &.heading {
-                    color: $black;
-                    font-size: 14px;
-                }
-            }
-        }
+        border-right: 1px solid $lightgrey;
         .dropdown {
             font-size: 14px;
             font-family: $metropolis-medium;
@@ -474,7 +457,6 @@
                 padding: 10px 30px 10px 10px;
                 border: 1px solid $blue;
                 color: $black;
-                cursor: pointer;
                 font-size: 14px;
                 font-family: $metropolis-medium;
                 margin-bottom: 10px;
@@ -487,38 +469,33 @@
             position: absolute;
             border: 1px solid $grey;
             border-radius: 5px;
-            top: 35px;
+            top: 30px;
             left: 0px;
             background-color: $white;
-            padding: 10px 0;
+            padding: 10px 20px;
             min-width: 100px;
             display: none;
             a {
                 display: block;
-                padding: 7px 20px;
-                &:hover {
-                    background-color: $lightgrey;
-                }
+                margin: 7px 0px;
             }
             &.dropdown-menu-visible {
                 display: block;
-                z-index: 1;
             }
         }
         .form-control {
             display: block;
-            width: 100%;
+            width: 90%;
             height: 40px;
             padding: .375rem .75rem;
             font-size: 1.125rem;
             line-height: 1.5;
-            color: $darkgrey;
+            color: $grey;
             background-color: #fff;
             border: 1px solid #cecece;
             background-image: url(/img/search-icon.svg);
             background-repeat: no-repeat;
             background-position: 95% center;
-            border-radius: 5px;
             &:focus {
                 outline: none;
             }
@@ -527,76 +504,37 @@
             }
         }
         .ds-dataset-1 {
-            padding: 15px 15px 0;
-
-            a {
-                color: $darkgrey;
-                display: inline-block;
-                font-family: $metropolis-light;
-                margin-bottom: 10px;
-
-                div {
-                    display: inline;
-                }
-            }
-
-            .algolia-docsearch-suggestion--subcategory-inline {
-                &::after {
-                    content: ' /';
-                }
-            }
-
-            .algolia-docsearch-suggestion--highlight {
-                background-color: rgba($blue, .1);
-                color: $navyblue;
-            }
-
-            .algolia-docsearch-suggestion--title {
-                font-family: $metropolis-medium;
-            }
-
-            .algolia-docsearch-suggestion--category-header,
-            .algolia-docsearch-suggestion--subcategory-column {
-                display: none;
-            }
-
-            .algolia-docsearch-footer {
-                font-size: 14px;
-                text-align: right;
-
-                a {
-                    font-size: 14px;
-                }
-            }
+            padding: 5px;
         }
         .ds-dropdown-menu {
             background-color: #fff;
             border: 1px solid #cecece;
-            border-radius: 5px;
-            width: 130%;
         }
-        @include breakpoint(extra-large) {
-            width: 22%;
+        a.active {
+            background: $lightgrey;
+            padding: 5px 7px;
+            margin-left: -7px;
         }
-        @include breakpoint(large) {
-            width: 22%;
+        h3 {
+            font-size: 18px;
+            font-family: $metropolis-medium;
+            margin-bottom: 10px;
         }
-        @include breakpoint(small){
-            h4{
-                font-weight: bold;
-                font-size: 12px;
-                word-break: break-word;
-                padding-right: 2px;
-            }
-            a{
-                font-size: 10px;
-                word-break: break-word; 
-            }
-            button{
-                // width: 30%;
-                background-image:none !important;
-                padding: 10px 10px 10px 10px !important;
-                font-size: 12px !important;
+        ul {
+            padding-left: 0px;
+            margin-top: 0;
+            margin-bottom: 35px;
+            list-style-type: none;
+            li {
+                display: block;
+                a {
+                    font-size: 14px;
+                    font-weight: 300;
+                }
+                &.heading {
+                    color: $black;
+                    font-size: 14px;
+                }
             }
         }
     }
@@ -643,9 +581,11 @@
         @include breakpoint(large) {
             width: 58%;
             padding-right: 20px;
+            padding-left: 20px;
         }
         @include breakpoint(extra-large) {
             width: 75%;
+            padding-left: 20px;
             padding-right: 20px;
         }
     }
