@@ -118,6 +118,46 @@ The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfi
 emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make
 this value available to other resources.
 
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterConfigTemplate
+metadata:
+  name: deployer
+spec:
+  # default parameters. see ClusterSourceTemplate for more info. (optional)
+  #
+  params: [ ]
+
+  # jsonpath expression to instruct where in the object templated out container
+  # image information can be found. (required)
+  #
+  configPath: .data
+  
+  # how to template out the kubernetes object. (required)
+  #
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: $(workload.metadata.name)
+    data:
+      service.yml: |
+        ---
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        metadata:
+          name: links
+          labels:
+            app.kubernetes.io/part-of: $(workload.metadata.labels['app\.kubernetes\.io/part-of'])$
+        spec:
+          template:
+            spec:
+              containers:
+                - image: $(images.<name-of-image-provider>.image)$
+                  securityContext:
+                    runAsUser: 1000
+```
+
 _ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
 
 ## ClusterDeploymentTemplate
@@ -213,7 +253,7 @@ The `ClusterTemplate` does not emit values to the supply chain.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
-kind: ConfigTemplate
+kind: ClusterTemplate
 metadata:
   name: deployer
 spec:
