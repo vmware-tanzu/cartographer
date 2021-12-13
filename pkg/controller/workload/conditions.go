@@ -98,7 +98,7 @@ func MissingValueAtPathCondition(obj *unstructured.Unstructured, expression stri
 		Type:   v1alpha1.WorkloadResourceSubmitted,
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("Waiting to read value [%s] from resource [%s/%s]%s",
+		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
 			expression, utils.GetFullyQualifiedType(obj), obj.GetName(), namespaceMsg),
 	}
 }

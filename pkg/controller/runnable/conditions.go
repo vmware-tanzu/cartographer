@@ -67,7 +67,7 @@ func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, errMsg stri
 		Type:   v1alpha1.RunTemplateReady,
 		Status: metav1.ConditionFalse,
 		Reason: v1alpha1.OutputPathNotSatisfiedRunTemplateReason,
-		Message: fmt.Sprintf("Waiting to read value from resource [%s/%s]%s: %s",
+		Message: fmt.Sprintf("waiting to read value from resource [%s/%s]%s: %s",
 			utils.GetFullyQualifiedType(obj), name, namespaceMsg, errMsg),
 	}
 }

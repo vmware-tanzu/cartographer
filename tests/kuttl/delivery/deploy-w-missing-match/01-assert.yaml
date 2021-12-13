@@ -25,7 +25,7 @@ status:
     - type: ResourcesSubmitted
       status: Unknown
       reason: ConditionNotMet
-      message: "Resource [deployer] condition not met: could not find value on output [spec.value.some-missing-key]: evaluate: failed to find results: some-missing-key is not found"
+      message: "resource [deployer] condition not met: could not find value on output [spec.value.some-missing-key]: evaluate: failed to find results: some-missing-key is not found"
     - type: Ready
       status: Unknown
       reason: ConditionNotMet
