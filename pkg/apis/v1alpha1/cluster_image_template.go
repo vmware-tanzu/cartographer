@@ -25,21 +25,16 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
 type ClusterImageTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ImageTemplateSpec   `json:"spec"`
-	Status            ImageTemplateStatus `json:"status,omitempty"`
+	Spec              ImageTemplateSpec `json:"spec"`
 }
 type ImageTemplateSpec struct {
 	TemplateSpec `json:",inline"`
 	ImagePath    string `json:"imagePath"`
-}
-
-type ImageTemplateStatus struct {
 }
 
 var _ webhook.Validator = &ClusterImageTemplate{}

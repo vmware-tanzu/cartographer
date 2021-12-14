@@ -29,14 +29,12 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
 type ClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              TemplateSpec   `json:"spec"`
-	Status            TemplateStatus `json:"status,omitempty"`
+	Spec              TemplateSpec `json:"spec"`
 }
 
 type TemplateSpec struct {
@@ -44,9 +42,6 @@ type TemplateSpec struct {
 	Template *runtime.RawExtension `json:"template,omitempty"`
 	Ytt      string                `json:"ytt,omitempty"`
 	Params   TemplateParams        `json:"params,omitempty"`
-}
-
-type TemplateStatus struct {
 }
 
 var _ webhook.Validator = &ClusterTemplate{}

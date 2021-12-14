@@ -27,14 +27,12 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
 type ClusterDeploymentTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              DeploymentSpec `json:"spec"`
-	Status            TemplateStatus `json:"status,omitempty"`
 }
 
 type DeploymentSpec struct {
