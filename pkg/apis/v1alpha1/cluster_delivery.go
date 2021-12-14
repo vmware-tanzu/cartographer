@@ -43,33 +43,33 @@ const (
 type ClusterDelivery struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ClusterDeliverySpec   `json:"spec"`
-	Status            ClusterDeliveryStatus `json:"status,omitempty"`
+	Spec              DeliverySpec   `json:"spec"`
+	Status            DeliveryStatus `json:"status,omitempty"`
 }
 
 func (c *ClusterDelivery) GetSelector() map[string]string {
 	return c.Spec.Selector
 }
 
-type ClusterDeliverySpec struct {
-	Resources         []ClusterDeliveryResource `json:"resources"`
-	Selector          map[string]string         `json:"selector"`
-	Params            []DelegatableParam        `json:"params,omitempty"`
-	ServiceAccountRef ServiceAccountRef         `json:"serviceAccountRef,omitempty"`
+type DeliverySpec struct {
+	Resources         []DeliveryResource `json:"resources"`
+	Selector          map[string]string  `json:"selector"`
+	Params            []DelegatableParam `json:"params,omitempty"`
+	ServiceAccountRef ServiceAccountRef  `json:"serviceAccountRef,omitempty"`
 }
 
-type ClusterDeliveryStatus struct {
+type DeliveryStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
-type ClusterDeliveryResource struct {
-	Name        string                           `json:"name"`
-	TemplateRef DeliveryClusterTemplateReference `json:"templateRef"`
-	Params      []DelegatableParam               `json:"params,omitempty"`
-	Sources     []ResourceReference              `json:"sources,omitempty"`
-	Deployment  *DeploymentReference             `json:"deployment,omitempty"`
-	Configs     []ResourceReference              `json:"configs,omitempty"`
+type DeliveryResource struct {
+	Name        string                    `json:"name"`
+	TemplateRef DeliveryTemplateReference `json:"templateRef"`
+	Params      []DelegatableParam        `json:"params,omitempty"`
+	Sources     []ResourceReference       `json:"sources,omitempty"`
+	Deployment  *DeploymentReference      `json:"deployment,omitempty"`
+	Configs     []ResourceReference       `json:"configs,omitempty"`
 }
 
 type DeploymentReference struct {
@@ -82,7 +82,7 @@ var ValidDeliveryTemplates = []client.Object{
 	&ClusterTemplate{},
 }
 
-type DeliveryClusterTemplateReference struct {
+type DeliveryTemplateReference struct {
 	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1

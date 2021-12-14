@@ -96,7 +96,7 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 	var resourcesNotFound []string
 
 	for _, resource := range chain.Spec.Resources {
-		template, err := r.Repo.GetClusterTemplate(ctx, resource.TemplateRef)
+		template, err := r.Repo.GetSupplyChainTemplate(ctx, resource.TemplateRef)
 		if err != nil {
 			log.Error(err, "failed to get cluster template", "template", resource.TemplateRef)
 			return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))

@@ -215,7 +215,7 @@ var _ = Describe("Reconciler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: deliveryName,
 				},
-				Status: v1alpha1.ClusterDeliveryStatus{
+				Status: v1alpha1.DeliveryStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "Ready",
@@ -412,10 +412,10 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		Context("but the realizer returns an error", func() {
-			Context("of type GetClusterTemplateError", func() {
+			Context("of type GetDeliveryTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = realizer.GetDeliveryClusterTemplateError{
+					templateError = realizer.GetDeliveryTemplateError{
 						Err: errors.New("some error"),
 					}
 					rlzr.RealizeReturns(nil, templateError)
@@ -438,7 +438,7 @@ var _ = Describe("Reconciler", func() {
 				BeforeEach(func() {
 					stampError = realizer.StampError{
 						Err:      errors.New("some error"),
-						Resource: &v1alpha1.ClusterDeliveryResource{Name: "some-name"},
+						Resource: &v1alpha1.DeliveryResource{Name: "some-name"},
 					}
 					rlzr.RealizeReturns(nil, stampError)
 				})
@@ -544,7 +544,7 @@ var _ = Describe("Reconciler", func() {
 
 					retrieveError = realizer.RetrieveOutputError{
 						Err:           wrappedError,
-						Resource:      &v1alpha1.ClusterDeliveryResource{Name: "some-resource"},
+						Resource:      &v1alpha1.DeliveryResource{Name: "some-resource"},
 						StampedObject: stampedObject,
 					}
 

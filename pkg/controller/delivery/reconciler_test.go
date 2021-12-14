@@ -71,18 +71,18 @@ var _ = Describe("delivery reconciler", func() {
 					Name:       "my-new-delivery",
 					Generation: 99,
 				},
-				Spec: v1alpha1.ClusterDeliverySpec{
-					Resources: []v1alpha1.ClusterDeliveryResource{
+				Spec: v1alpha1.DeliverySpec{
+					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "first-resource",
-							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "my-source-template",
 							},
 						},
 						{
 							Name: "second-resource",
-							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterTemplate",
 								Name: "my-final-template",
 							},
@@ -95,7 +95,7 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("all referenced templates exist", func() {
 			BeforeEach(func() {
-				repo.GetDeliveryClusterTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
+				repo.GetDeliveryTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
 			})
 
 			It("Attaches a ready/true status", func() {
@@ -155,7 +155,7 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("get cluster template fails", func() {
 			BeforeEach(func() {
-				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
+				repo.GetDeliveryTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
 			It("returns an error and requeues", func() {
@@ -166,7 +166,7 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("cannot find cluster template", func() {
 			BeforeEach(func() {
-				repo.GetDeliveryClusterTemplateReturnsOnCall(0, nil, nil)
+				repo.GetDeliveryTemplateReturnsOnCall(0, nil, nil)
 			})
 
 			It("adds a positive templates NOT found condition", func() {

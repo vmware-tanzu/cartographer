@@ -94,7 +94,7 @@ var _ = Describe("Realizer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var templateAPI = &v1alpha1.ClusterRunTemplate{
-				Spec: v1alpha1.ClusterRunTemplateSpec{
+				Spec: v1alpha1.RunTemplateSpec{
 					Outputs: map[string]string{
 						"myout": "spec.foo",
 					},
@@ -297,7 +297,7 @@ var _ = Describe("Realizer", func() {
 	Context("with unsatisfied output paths", func() {
 		BeforeEach(func() {
 			templateAPI := &v1alpha1.ClusterRunTemplate{
-				Spec: v1alpha1.ClusterRunTemplateSpec{
+				Spec: v1alpha1.RunTemplateSpec{
 					Outputs: map[string]string{
 						"myout": "data.hasnot",
 					},
@@ -336,7 +336,7 @@ var _ = Describe("Realizer", func() {
 	Context("with an invalid ClusterRunTemplate", func() {
 		BeforeEach(func() {
 			templateAPI := &v1alpha1.ClusterRunTemplate{
-				Spec: v1alpha1.ClusterRunTemplateSpec{
+				Spec: v1alpha1.RunTemplateSpec{
 					Template: runtime.RawExtension{},
 				},
 			}

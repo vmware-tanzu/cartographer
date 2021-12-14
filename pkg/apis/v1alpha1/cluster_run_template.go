@@ -29,10 +29,10 @@ import (
 type ClusterRunTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ClusterRunTemplateSpec `json:"spec"`
+	Spec              RunTemplateSpec `json:"spec"`
 }
 
-type ClusterRunTemplateSpec struct {
+type RunTemplateSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
 	Outputs  map[string]string    `json:"outputs,omitempty"`

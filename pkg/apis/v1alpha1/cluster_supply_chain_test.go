@@ -140,14 +140,14 @@ var _ = Describe("ClusterSupplyChain", func() {
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v1alpha1.ClusterTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
 						},
 						{
 							Name: "other-source-provider",
-							TemplateRef: v1alpha1.ClusterTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
@@ -356,13 +356,13 @@ var _ = Describe("ClusterSupplyChain", func() {
 						Resources: []v1alpha1.SupplyChainResource{
 							{
 								Name: "input-provider",
-								TemplateRef: v1alpha1.ClusterTemplateReference{
+								TemplateRef: v1alpha1.SupplyChainTemplateReference{
 									Name: "output-template",
 								},
 							},
 							{
 								Name: "input-consumer",
-								TemplateRef: v1alpha1.ClusterTemplateReference{
+								TemplateRef: v1alpha1.SupplyChainTemplateReference{
 									Kind: "ClusterTemplate",
 									Name: "consuming-template",
 								},
@@ -492,7 +492,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		})
 	})
 
-	Describe("ClusterTemplateReference", func() {
+	Describe("SupplyChainTemplateReference", func() {
 		It("has four valid references", func() {
 			Expect(v1alpha1.ValidSupplyChainTemplates).To(HaveLen(4))
 
@@ -507,7 +507,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 		It("has a matching valid enum for Kind", func() {
 			mrkrs, err := markersFor(
 				"./cluster_supply_chain.go",
-				"ClusterTemplateReference",
+				"SupplyChainTemplateReference",
 				"Kind",
 				"kubebuilder:validation:Enum",
 			)

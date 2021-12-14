@@ -36,18 +36,18 @@ var _ = Describe("Delivery Validation", func() {
 					Name:      "delivery-resource",
 					Namespace: "default",
 				},
-				Spec: v1alpha1.ClusterDeliverySpec{
-					Resources: []v1alpha1.ClusterDeliveryResource{
+				Spec: v1alpha1.DeliverySpec{
+					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "source-template",
 							},
 						},
 						{
 							Name: "other-source-provider",
-							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "source-template",
 							},
@@ -159,18 +159,18 @@ var _ = Describe("Delivery Validation", func() {
 					Name:      "delivery-resource",
 					Namespace: "default",
 				},
-				Spec: v1alpha1.ClusterDeliverySpec{
-					Resources: []v1alpha1.ClusterDeliveryResource{
+				Spec: v1alpha1.DeliverySpec{
+					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "source-template",
 							},
 						},
 						{
 							Name: "other-source-provider",
-							TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "source-template",
 							},
@@ -194,9 +194,9 @@ var _ = Describe("Delivery Validation", func() {
 		Context("Duplicate resource names", func() {
 			BeforeEach(func() {
 				newDelivery = previousDelivery.DeepCopy()
-				newDelivery.Spec.Resources = append(newDelivery.Spec.Resources, v1alpha1.ClusterDeliveryResource{
+				newDelivery.Spec.Resources = append(newDelivery.Spec.Resources, v1alpha1.DeliveryResource{
 					Name: "other-source-provider",
-					TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+					TemplateRef: v1alpha1.DeliveryTemplateReference{
 						Kind: "ClusterSourceTemplate",
 						Name: "source-template",
 					},
@@ -218,7 +218,7 @@ var _ = Describe("Delivery Validation", func() {
 	})
 })
 
-var _ = Describe("DeliveryClusterTemplateReference", func() {
+var _ = Describe("DeliveryTemplateReference", func() {
 	It("has valid references", func() {
 		Expect(v1alpha1.ValidDeliveryTemplates).To(HaveLen(3))
 
@@ -233,7 +233,7 @@ var _ = Describe("DeliveryClusterTemplateReference", func() {
 
 		mrkrs, err := markersFor(
 			"./cluster_delivery.go",
-			"DeliveryClusterTemplateReference",
+			"DeliveryTemplateReference",
 			"Kind",
 			"kubebuilder:validation:Enum",
 		)

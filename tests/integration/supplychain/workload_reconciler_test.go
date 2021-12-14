@@ -202,7 +202,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "fred-resource",
-						TemplateRef: v1alpha1.ClusterTemplateReference{
+						TemplateRef: v1alpha1.SupplyChainTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "proper-template-bob",
 						},
