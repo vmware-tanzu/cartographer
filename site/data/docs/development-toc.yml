@@ -23,6 +23,8 @@ toc:
         url: /authentication
       - page: Install
         url: /install
+      - page: Templating
+        url: /templating
   - title: CR Reference
     subfolderitems:
       - page: GVK
