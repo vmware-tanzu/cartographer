@@ -46,7 +46,7 @@ jobs:
       - name: setup base dependencies
         run: |-
           sudo apt update && sudo apt install -y curl tar
-          ./hack/ci/install-binaries.sh ko kubebuilder kuttl tree
+          ./hack/ci/install-binaries.sh ko kubebuilder kuttl tree grype
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
@@ -57,4 +57,16 @@ jobs:
         run: make test
 
       - name: run e2e example
-        run: ./hack/setup.sh cluster cartographer example-dependencies example
+        run: |-
+          sudo ./hack/ci/trust-local-registry.sh
+          ./hack/setup.sh cluster cartographer example-dependencies example
+
+      - name: scan source
+        run: |-
+          grype .
+
+      - name: scan image
+        env:
+          DOCKER_CONFIG: /tmp/cartographer-docker
+        run: |-
+          grype $(cat ./release/cartographer.yaml | grep ' image: ' | awk '{print $NF}')
