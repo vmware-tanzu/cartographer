@@ -188,7 +188,7 @@ start_repository() {
         docker-compose -f hack/docker-compose.yaml up -d
 
         # Apply gitea configuration
-        CONTAINER_ID=$(docker ps | cut -d ' ' -f1 | head -2 | tail -1)
+        CONTAINER_ID=$(docker ps --filter name=gitea | cut -d ' ' -f1 | head -2 | tail -1)
         docker cp hack/golden-app.ini "$CONTAINER_ID:/data/gitea/conf/app.ini"
         docker restart "$CONTAINER_ID"
 
