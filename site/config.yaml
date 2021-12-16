@@ -12,15 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#baseURL: "https://template.dev/"
+#baseURL: "https://cartographer.sh/"
 languageCode: "en-us"
 title: "Cartographer"
 theme: "template"
 outputs:
   home: [ "HTML", "REDIRECTS" ]
 pygmentsCodefences: true
-pygmentsStyle: "pygments"
 markup:
+  defaultMarkdownHandler: goldmark
+  goldmark: # already at defaults, but here for easy adjustment
+    extensions:
+      definitionList: true
+      footnote: true
+      linkify: true
+      strikethrough: true
+      table: true
+      taskList: true
+      typographer: true
+    parser:
+      attribute:
+        block: false
+        title: true
+      autoHeadingID: true
+      autoHeadingIDType: github
+    renderer:
+      hardWraps: false
+      unsafe: false
+      xhtml: false
   highlight:
     anchorLineNos: false
     codeFences: true
@@ -30,8 +49,7 @@ markup:
     lineNoStart: 1
     lineNos: false
     lineNumbersInTable: true
-    noClasses: true
-    style: github
+    noClasses: false
     tabWidth: 4
 menu:
   docs:
