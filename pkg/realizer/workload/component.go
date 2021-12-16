@@ -28,7 +28,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
