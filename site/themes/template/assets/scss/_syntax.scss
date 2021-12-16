@@ -1,0 +1,195 @@
+/* Grab styles with: hugo gen chromastyles --style=pygments */
+
+pre {
+    code {
+        display: block;
+        padding: 15px;
+        overflow-x: auto;
+        font-size: 10pt;
+        font-family: "SFMono-Regular", monospace; /* kubernetes doc uses this and it looks so much better */
+        border: 1px solid rgba(0,0,0,.125);
+        border-radius: 0.25rem;
+        &.language-bash, &.language-console {
+            border: none;
+        }
+    }
+}
+
+.chroma {
+    /* **********************************
+    style=pygments
+    Used for most code blocks.
+    ********************************** */
+    background-color: #f8f8f8;
+    /* Other */ .x {  }
+    /* Error */ .err {  }
+    /* LineTableTD */ .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+    /* LineTable */ .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+    /* LineHighlight */ .hl { display: block; width: 100%;background-color: #ffffcc }
+    /* LineNumbersTable */ .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+    /* LineNumbers */ .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+    /* Keyword */ .k { color: #008000; font-weight: bold }
+    /* KeywordConstant */ .kc { color: #008000; font-weight: bold }
+    /* KeywordDeclaration */ .kd { color: #008000; font-weight: bold }
+    /* KeywordNamespace */ .kn { color: #008000; font-weight: bold }
+    /* KeywordPseudo */ .kp { color: #008000 }
+    /* KeywordReserved */ .kr { color: #008000; font-weight: bold }
+    /* KeywordType */ .kt { color: #b00040 }
+    /* Name */ .n {  }
+    /* NameAttribute */ .na { color: #7d9029 }
+    /* NameBuiltin */ .nb { color: #008000 }
+    /* NameBuiltinPseudo */ .bp {  }
+    /* NameClass */ .nc { color: #0000ff; font-weight: bold }
+    /* NameConstant */ .no { color: #880000 }
+    /* NameDecorator */ .nd { color: #aa22ff }
+    /* NameEntity */ .ni { color: #999999; font-weight: bold }
+    /* NameException */ .ne { color: #d2413a; font-weight: bold }
+    /* NameFunction */ .nf { color: #0000ff }
+    /* NameFunctionMagic */ .fm {  }
+    /* NameLabel */ .nl { color: #a0a000 }
+    /* NameNamespace */ .nn { color: #0000ff; font-weight: bold }
+    /* NameOther */ .nx {  }
+    /* NameProperty */ .py {  }
+    /* NameTag */ .nt { color: #008000; font-weight: bold }
+    /* NameVariable */ .nv { color: #19177c }
+    /* NameVariableClass */ .vc {  }
+    /* NameVariableGlobal */ .vg {  }
+    /* NameVariableInstance */ .vi {  }
+    /* NameVariableMagic */ .vm {  }
+    /* Literal */ .l {  }
+    /* LiteralDate */ .ld {  }
+    /* LiteralString */ .s { color: #ba2121 }
+    /* LiteralStringAffix */ .sa { color: #ba2121 }
+    /* LiteralStringBacktick */ .sb { color: #ba2121 }
+    /* LiteralStringChar */ .sc { color: #ba2121 }
+    /* LiteralStringDelimiter */ .dl { color: #ba2121 }
+    /* LiteralStringDoc */ .sd { color: #ba2121; font-style: italic }
+    /* LiteralStringDouble */ .s2 { color: #ba2121 }
+    /* LiteralStringEscape */ .se { color: #bb6622; font-weight: bold }
+    /* LiteralStringHeredoc */ .sh { color: #ba2121 }
+    /* LiteralStringInterpol */ .si { color: #bb6688; font-weight: bold }
+    /* LiteralStringOther */ .sx { color: #008000 }
+    /* LiteralStringRegex */ .sr { color: #bb6688 }
+    /* LiteralStringSingle */ .s1 { color: #ba2121 }
+    /* LiteralStringSymbol */ .ss { color: #19177c }
+    /* LiteralNumber */ .m { color: #666666 }
+    /* LiteralNumberBin */ .mb { color: #666666 }
+    /* LiteralNumberFloat */ .mf { color: #666666 }
+    /* LiteralNumberHex */ .mh { color: #666666 }
+    /* LiteralNumberInteger */ .mi { color: #666666 }
+    /* LiteralNumberIntegerLong */ .il { color: #666666 }
+    /* LiteralNumberOct */ .mo { color: #666666 }
+    /* Operator */ .o { color: #666666 }
+    /* OperatorWord */ .ow { color: #aa22ff; font-weight: bold }
+    /* Punctuation */ .p {  }
+    /* Comment */ .c { color: #408080; font-style: italic }
+    /* CommentHashbang */ .ch { color: #408080; font-style: italic }
+    /* CommentMultiline */ .cm { color: #408080; font-style: italic }
+    /* CommentSingle */ .c1 { color: #408080; font-style: italic }
+    /* CommentSpecial */ .cs { color: #408080; font-style: italic }
+    /* CommentPreproc */ .cp { color: #bc7a00 }
+    /* CommentPreprocFile */ .cpf { color: #bc7a00 }
+    /* Generic */ .g {  }
+    /* GenericDeleted */ .gd { color: #a00000 }
+    /* GenericEmph */ .ge { font-style: italic }
+    /* GenericError */ .gr { color: #ff0000 }
+    /* GenericHeading */ .gh { color: #000080; font-weight: bold }
+    /* GenericInserted */ .gi { color: #00a000 }
+    /* GenericOutput */ .go { color: #888888 }
+    /* GenericPrompt */ .gp { color: #000080; font-weight: bold }
+    /* GenericStrong */ .gs { font-weight: bold }
+    /* GenericSubheading */ .gu { color: #800080; font-weight: bold }
+    /* GenericTraceback */ .gt { color: #0044dd }
+    /* GenericUnderline */ .gl { text-decoration: underline }
+    /* TextWhitespace */ .w { color: #bbbbbb }
+
+    .language-bash,.language-console {
+        /* **********************************
+        style=native
+        Used for bash
+        ********************************** */
+        color: #d0d0d0;
+        background-color: #202020;
+        .x {  }
+        .err { color: #a61717; background-color: #e3d2d2 }
+        .lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+        .lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; width: auto; overflow: auto; display: block; }
+        .hl { display: block; width: 100%;background-color: #ffffcc }
+        .lnt { margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #686868 }
+        .ln { margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #686868 }
+        .k { color: #6ab825; font-weight: bold }
+        .kc { color: #6ab825; font-weight: bold }
+        .kd { color: #6ab825; font-weight: bold }
+        .kn { color: #6ab825; font-weight: bold }
+        .kp { color: #6ab825 }
+        .kr { color: #6ab825; font-weight: bold }
+        .kt { color: #6ab825; font-weight: bold }
+        .n {  }
+        .na { color: #bbbbbb }
+        .nb { color: #24909d }
+        .bp {  }
+        .nc { color: #447fcf; text-decoration: underline }
+        .no { color: #40ffff }
+        .nd { color: #ffa500 }
+        .ni {  }
+        .ne { color: #bbbbbb }
+        .nf { color: #447fcf }
+        .fm {  }
+        .nl {  }
+        .nn { color: #447fcf; text-decoration: underline }
+        .nx {  }
+        .py {  }
+        .nt { color: #6ab825; font-weight: bold }
+        .nv { color: #40ffff }
+        .vc {  }
+        .vg {  }
+        .vi {  }
+        .vm {  }
+        .l {  }
+        .ld {  }
+        .s { color: #ed9d13 }
+        .sa { color: #ed9d13 }
+        .sb { color: #ed9d13 }
+        .sc { color: #ed9d13 }
+        .dl { color: #ed9d13 }
+        .sd { color: #ed9d13 }
+        .s2 { color: #ed9d13 }
+        .se { color: #ed9d13 }
+        .sh { color: #ed9d13 }
+        .si { color: #ed9d13 }
+        .sx { color: #ffa500 }
+        .sr { color: #ed9d13 }
+        .s1 { color: #ed9d13 }
+        .ss { color: #ed9d13 }
+        .m { color: #3677a9 }
+        .mb { color: #3677a9 }
+        .mf { color: #3677a9 }
+        .mh { color: #3677a9 }
+        .mi { color: #3677a9 }
+        .il { color: #3677a9 }
+        .mo { color: #3677a9 }
+        .o {  }
+        .ow { color: #6ab825; font-weight: bold }
+        .p {  }
+        .c { color: #999999; font-style: italic }
+        .ch { color: #999999; font-style: italic }
+        .cm { color: #999999; font-style: italic }
+        .c1 { color: #999999; font-style: italic }
+        .cs { color: #e50808; background-color: #520000; font-weight: bold }
+        .cp { color: #cd2828; font-weight: bold }
+        .cpf { color: #cd2828; font-weight: bold }
+        .g {  }
+        .gd { color: #d22323 }
+        .ge { font-style: italic }
+        .gr { color: #d22323 }
+        .gh { color: #ffffff; font-weight: bold }
+        .gi { color: #589819 }
+        .go { color: #cccccc }
+        .gp { color: #aaaaaa }
+        .gs { font-weight: bold }
+        .gu { color: #ffffff; text-decoration: underline }
+        .gt { color: #d22323 }
+        .gl { text-decoration: underline }
+        .w { color: #666666 }
+    }
+}
