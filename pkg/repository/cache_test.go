@@ -49,7 +49,7 @@ var _ = Describe("Cache", func() {
 		persisted.SetNamespace(objNamespace + "-ignored-submitted-one-is-used")
 	})
 
-	Describe("UnchangedSinceCached", func() {
+	Describe("UnchangedSinceCachedFromList", func() {
 		Context("when the submitted object has a name", func() {
 			var existingObjsOnAPIServer []*unstructured.Unstructured
 
@@ -59,7 +59,7 @@ var _ = Describe("Cache", func() {
 
 			Context("when the submitted object is not present in the cache", func() {
 				It("is false", func() {
-					Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
+					Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
 				})
 			})
 
@@ -71,7 +71,7 @@ var _ = Describe("Cache", func() {
 				It("is false", func() {
 					newSubmission := submitted.DeepCopy()
 					newSubmission.SetLabels(map[string]string{"now-with": "funky-labels"})
-					Expect(cache.UnchangedSinceCached(newSubmission, existingObjsOnAPIServer)).To(BeNil())
+					Expect(cache.UnchangedSinceCachedFromList(newSubmission, existingObjsOnAPIServer)).To(BeNil())
 				})
 			})
 
@@ -82,7 +82,7 @@ var _ = Describe("Cache", func() {
 
 				Context("when the existing object has no spec", func() {
 					It("is false", func() {
-						Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
+						Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
 					})
 				})
 
@@ -97,7 +97,7 @@ var _ = Describe("Cache", func() {
 						})
 
 						It("is false", func() {
-							Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
+							Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
 						})
 					})
 
@@ -109,7 +109,7 @@ var _ = Describe("Cache", func() {
 							})
 
 							It("is true", func() {
-								Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
+								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
 							})
 						})
 
@@ -120,7 +120,7 @@ var _ = Describe("Cache", func() {
 							})
 
 							It("is false", func() {
-								Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
+								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
 							})
 						})
 					})
@@ -145,9 +145,9 @@ var _ = Describe("Cache", func() {
 			})
 
 			It("the cache matches against the generateName instead", func() {
-				Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
+				Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
 				submitted.SetGenerateName("another-generate-name-")
-				Expect(cache.UnchangedSinceCached(submitted, existingObjsOnAPIServer)).To(BeNil())
+				Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
 			})
 		})
 	})

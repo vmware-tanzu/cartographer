@@ -169,7 +169,7 @@ var _ = Describe("Realizer", func() {
 			Expect(stampedObject.Object["kind"]).To(Equal("TestObj"))
 		})
 
-		Context("error on EnsureObjectExistsOnCluster", func() {
+		Context("error on EnsureImmutableObjectExistsOnCluster", func() {
 			BeforeEach(func() {
 				runnableRepo.EnsureObjectExistsOnClusterReturns(errors.New("some bad error"))
 			})

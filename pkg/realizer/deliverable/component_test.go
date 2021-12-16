@@ -316,7 +316,7 @@ var _ = Describe("Resource", func() {
 			})
 		})
 
-		When("unable to EnsureObjectExistsOnCluster the stamped object", func() {
+		When("unable to EnsureImmutableObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{

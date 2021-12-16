@@ -37,7 +37,8 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string, allowUpdate bool) error
+	EnsureImmutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error
+	EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error
 	GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error)
 	GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
@@ -48,6 +49,7 @@ type Repository interface {
 	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(ctx context.Context, object client.Object) error
 	GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error)
+	GetUnstructured(ctx context.Context, name, namespace string) (*unstructured.Unstructured, error)
 	ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
@@ -126,9 +128,35 @@ func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.Cl
 	return delivery, nil
 }
 
-func (r *repository) EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string, allowUpdate bool) error {
+func (r *repository) EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error {
 	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("EnsureObjectExistsOnCluster")
+	log.V(logger.DEBUG).Info("EnsureImmutableObjectExistsOnCluster")
+
+	existingObj, err := r.GetUnstructured(ctx, obj.GetName(), obj.GetNamespace())
+	log.V(logger.DEBUG).Info("considering object from api server",
+		"considered", obj)
+
+	if err != nil {
+		return err
+	}
+
+	if existingObj != nil {
+		cacheHit := r.rc.UnchangedSinceCached(obj, existingObj)
+		if cacheHit != nil {
+			*obj = *cacheHit
+			return nil
+		}
+		log.Info("patching object", "object", obj)
+		return r.patchUnstructured(ctx, existingObj, obj)
+	} else {
+		log.Info("creating object", "object", obj)
+		return r.createUnstructured(ctx, obj)
+	}
+}
+
+func (r *repository) EnsureImmutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("EnsureImmutableObjectExistsOnCluster")
 
 	unstructuredList, err := r.ListUnstructured(ctx, obj.GroupVersionKind(), obj.GetNamespace(), labels)
 
@@ -141,33 +169,36 @@ func (r *repository) EnsureObjectExistsOnCluster(ctx context.Context, obj *unstr
 		return err
 	}
 
-	cacheHit := r.rc.UnchangedSinceCached(obj, unstructuredList)
+	cacheHit := r.rc.UnchangedSinceCachedFromList(obj, unstructuredList)
 	if cacheHit != nil {
 		*obj = *cacheHit
 		return nil
 	}
 
-	var outdatedObject *unstructured.Unstructured
-	if allowUpdate {
-		outdatedObject = getOutdatedUnstructuredByName(obj, unstructuredList)
-	}
-
-	if outdatedObject != nil {
-		log.Info("patching object", "object", obj)
-		return r.patchUnstructured(ctx, outdatedObject, obj)
-	} else {
-		log.Info("creating object", "object", obj)
-		return r.createUnstructured(ctx, obj)
-	}
+	log.Info("creating object", "object", obj)
+	return r.createUnstructured(ctx, obj)
 }
 
-func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates []*unstructured.Unstructured) *unstructured.Unstructured {
-	for _, candidate := range candidates {
-		if candidate.GetName() == target.GetName() && candidate.GetNamespace() == target.GetNamespace() {
-			return candidate
-		}
+func (r *repository) GetUnstructured(ctx context.Context, name, namespace string) (*unstructured.Unstructured, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetUnstructured")
+
+	objKey := client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
 	}
-	return nil
+
+	log.V(logger.DEBUG).Info("get unstructured with name and namespace",
+		"name", name, "namespace", namespace)
+
+	var obj *unstructured.Unstructured
+	err := r.cl.Get(ctx, objKey, obj)
+	if err != nil {
+		log.Error(err, "unable to get from api server")
+		return nil, fmt.Errorf("unable to get from api server: %w", err)
+	}
+
+	return obj, nil
 }
 
 func (r *repository) ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error) {
