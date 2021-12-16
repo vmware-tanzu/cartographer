@@ -166,10 +166,18 @@ var _ = Describe("Resource", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				_, stampedObject, allowUpdate := fakeDeliverableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stampedObject, labels, allowUpdate := fakeDeliverableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 
 				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
+				Expect(labels).To(Equal(map[string]string{
+					"carto.run/cluster-delivery-name": "delivery-name",
+					"carto.run/resource-name":         "resource-1",
+					"carto.run/cluster-template-name": "source-template-1",
+					"carto.run/deliverable-name":      "",
+					"carto.run/deliverable-namespace": "",
+					"carto.run/template-kind":         "ClusterSourceTemplate",
+				}))
 
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
@@ -185,14 +193,6 @@ var _ = Describe("Resource", func() {
 						"controller":         true,
 						"blockOwnerDeletion": true,
 					},
-				}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/cluster-delivery-name": "delivery-name",
-					"carto.run/resource-name":         "resource-1",
-					"carto.run/cluster-template-name": "source-template-1",
-					"carto.run/deliverable-name":      "",
-					"carto.run/deliverable-namespace": "",
-					"carto.run/template-kind":         "ClusterSourceTemplate",
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 

@@ -167,9 +167,17 @@ var _ = Describe("Resource", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				_, stampedObject, allowUpdate := fakeWorkloadRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stampedObject, labels, allowUpdate := fakeWorkloadRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 				Expect(returnedStampedObject).To(Equal(stampedObject))
 				Expect(allowUpdate).To(BeTrue())
+				Expect(labels).To(Equal(map[string]string{
+					"carto.run/cluster-supply-chain-name": "supply-chain-name",
+					"carto.run/resource-name":             "resource-1",
+					"carto.run/cluster-template-name":     "image-template-1",
+					"carto.run/workload-name":             "",
+					"carto.run/workload-namespace":        "",
+					"carto.run/template-kind":             "ClusterImageTemplate",
+				}))
 
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
@@ -185,14 +193,6 @@ var _ = Describe("Resource", func() {
 						"controller":         true,
 						"blockOwnerDeletion": true,
 					},
-				}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/cluster-supply-chain-name": "supply-chain-name",
-					"carto.run/resource-name":             "resource-1",
-					"carto.run/cluster-template-name":     "image-template-1",
-					"carto.run/workload-name":             "",
-					"carto.run/workload-namespace":        "",
-					"carto.run/template-kind":             "ClusterImageTemplate",
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 

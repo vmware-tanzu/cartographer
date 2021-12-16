@@ -115,7 +115,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	err = r.deliverableRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, true)
+	err = r.deliverableRepo.EnsureObjectExistsOnCluster(ctx, stampedObject, labels, true)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{

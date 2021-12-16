@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,7 +37,7 @@ import (
 
 //counterfeiter:generate . Repository
 type Repository interface {
-	EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error
+	EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string, allowUpdate bool) error
 	GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error)
 	GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
@@ -47,7 +48,7 @@ type Repository interface {
 	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
 	StatusUpdate(ctx context.Context, object client.Object) error
 	GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error)
-	ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
 	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
@@ -125,11 +126,11 @@ func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.Cl
 	return delivery, nil
 }
 
-func (r *repository) EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error {
+func (r *repository) EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string, allowUpdate bool) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("EnsureObjectExistsOnCluster")
 
-	unstructuredList, err := r.ListUnstructured(ctx, obj)
+	unstructuredList, err := r.ListUnstructured(ctx, obj.GroupVersionKind(), obj.GetNamespace(), labels)
 
 	for _, considered := range unstructuredList {
 		log.V(logger.DEBUG).Info("considering objects from api server",
@@ -169,19 +170,19 @@ func getOutdatedUnstructuredByName(target *unstructured.Unstructured, candidates
 	return nil
 }
 
-func (r *repository) ListUnstructured(ctx context.Context, obj *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (r *repository) ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("ListUnstructured")
 
 	unstructuredList := &unstructured.UnstructuredList{}
-	unstructuredList.SetGroupVersionKind(obj.GroupVersionKind())
+	unstructuredList.SetGroupVersionKind(gvk)
 
 	opts := []client.ListOption{
-		client.InNamespace(obj.GetNamespace()),
-		client.MatchingLabels(obj.GetLabels()),
+		client.InNamespace(namespace),
+		client.MatchingLabels(labels),
 	}
 	log.V(logger.DEBUG).Info("list unstructured with namespace and labels",
-		"namespace", obj.GetNamespace(), "labels", obj.GetLabels())
+		"namespace", namespace, "labels", labels)
 	err := r.cl.List(ctx, unstructuredList, opts...)
 	if err != nil {
 		log.Error(err, "unable to list from api server")
@@ -193,7 +194,7 @@ func (r *repository) ListUnstructured(ctx context.Context, obj *unstructured.Uns
 	//FIXME: why are we taking a deep copy?
 	for i, item := range unstructuredList.Items {
 		log.V(logger.DEBUG).Info("unstructured that matched",
-			"namespace", obj.GetNamespace(), "labels", obj.GetLabels(), "unstructured", item)
+			"namespace", namespace, "labels", labels, "unstructured", item)
 		pointersToUnstructureds[i] = item.DeepCopy()
 	}
 	return pointersToUnstructureds, nil

@@ -108,7 +108,7 @@ var _ = Describe("Realizer", func() {
 
 			createdUnstructured = &unstructured.Unstructured{}
 
-			runnableRepo.EnsureObjectExistsOnClusterStub = func(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error {
+			runnableRepo.EnsureObjectExistsOnClusterStub = func(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string, allowUpdate bool) error {
 				createdUnstructured.Object = obj.Object
 				return nil
 			}
@@ -129,7 +129,7 @@ var _ = Describe("Realizer", func() {
 			))
 
 			Expect(runnableRepo.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
-			_, stamped, allowUpdate := runnableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+			_, stamped, labels, allowUpdate := runnableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 			Expect(allowUpdate).To(BeFalse())
 			Expect(stamped.Object).To(
 				MatchKeys(IgnoreExtras, Keys{
@@ -143,6 +143,10 @@ var _ = Describe("Realizer", func() {
 					}),
 				}),
 			)
+			Expect(labels).To(Equal(map[string]string{
+				"carto.run/run-template-name": "",
+				"carto.run/runnable-name":     "my-runnable",
+			}))
 		})
 
 		It("does not return an error", func() {
@@ -207,14 +211,15 @@ var _ = Describe("Realizer", func() {
 				_, _, _ = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
 
 				Expect(runnableRepo.ListUnstructuredCallCount()).To(Equal(2))
-				_, clientQueryObjectForSelector := runnableRepo.ListUnstructuredArgsForCall(0)
+				_, gvk, namespace, labels := runnableRepo.ListUnstructuredArgsForCall(0)
 
-				Expect(clientQueryObjectForSelector.GetAPIVersion()).To(Equal("apiversion-to-be-selected"))
-				Expect(clientQueryObjectForSelector.GetKind()).To(Equal("kind-to-be-selected"))
-				Expect(clientQueryObjectForSelector.GetLabels()).To(Equal(map[string]string{"expected-label": "expected-value"}))
+				Expect(gvk.Version).To(Equal("apiversion-to-be-selected"))
+				Expect(gvk.Kind).To(Equal("kind-to-be-selected"))
+				Expect(labels).To(Equal(map[string]string{"expected-label": "expected-value"}))
+				Expect(namespace).To(Equal("my-important-ns"))
 
 				Expect(runnableRepo.EnsureObjectExistsOnClusterCallCount()).To(Equal(1))
-				_, stamped, allowUpdate := runnableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stamped, labels, allowUpdate := runnableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
 				Expect(allowUpdate).To(BeFalse())
 				Expect(stamped.Object).To(
 					MatchKeys(IgnoreExtras, Keys{
@@ -230,6 +235,10 @@ var _ = Describe("Realizer", func() {
 						}),
 					}),
 				)
+				Expect(labels).To(Equal(map[string]string{
+					"carto.run/run-template-name": "",
+					"carto.run/runnable-name":     "my-runnable",
+				}))
 			})
 		})
 
@@ -317,7 +326,7 @@ var _ = Describe("Realizer", func() {
 
 			createdUnstructured = &unstructured.Unstructured{}
 
-			runnableRepo.EnsureObjectExistsOnClusterStub = func(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error {
+			runnableRepo.EnsureObjectExistsOnClusterStub = func(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string, allowUpdate bool) error {
 				createdUnstructured.Object = obj.Object
 				return nil
 			}

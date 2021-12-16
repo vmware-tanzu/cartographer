@@ -10,16 +10,18 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FakeRepository struct {
-	EnsureObjectExistsOnClusterStub        func(context.Context, *unstructured.Unstructured, bool) error
+	EnsureObjectExistsOnClusterStub        func(context.Context, *unstructured.Unstructured, map[string]string, bool) error
 	ensureObjectExistsOnClusterMutex       sync.RWMutex
 	ensureObjectExistsOnClusterArgsForCall []struct {
 		arg1 context.Context
 		arg2 *unstructured.Unstructured
-		arg3 bool
+		arg3 map[string]string
+		arg4 bool
 	}
 	ensureObjectExistsOnClusterReturns struct {
 		result1 error
@@ -195,11 +197,13 @@ type FakeRepository struct {
 		result1 *v1alpha1.Workload
 		result2 error
 	}
-	ListUnstructuredStub        func(context.Context, *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	ListUnstructuredStub        func(context.Context, schema.GroupVersionKind, string, map[string]string) ([]*unstructured.Unstructured, error)
 	listUnstructuredMutex       sync.RWMutex
 	listUnstructuredArgsForCall []struct {
 		arg1 context.Context
-		arg2 *unstructured.Unstructured
+		arg2 schema.GroupVersionKind
+		arg3 string
+		arg4 map[string]string
 	}
 	listUnstructuredReturns struct {
 		result1 []*unstructured.Unstructured
@@ -225,20 +229,21 @@ type FakeRepository struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRepository) EnsureObjectExistsOnCluster(arg1 context.Context, arg2 *unstructured.Unstructured, arg3 bool) error {
+func (fake *FakeRepository) EnsureObjectExistsOnCluster(arg1 context.Context, arg2 *unstructured.Unstructured, arg3 map[string]string, arg4 bool) error {
 	fake.ensureObjectExistsOnClusterMutex.Lock()
 	ret, specificReturn := fake.ensureObjectExistsOnClusterReturnsOnCall[len(fake.ensureObjectExistsOnClusterArgsForCall)]
 	fake.ensureObjectExistsOnClusterArgsForCall = append(fake.ensureObjectExistsOnClusterArgsForCall, struct {
 		arg1 context.Context
 		arg2 *unstructured.Unstructured
-		arg3 bool
-	}{arg1, arg2, arg3})
+		arg3 map[string]string
+		arg4 bool
+	}{arg1, arg2, arg3, arg4})
 	stub := fake.EnsureObjectExistsOnClusterStub
 	fakeReturns := fake.ensureObjectExistsOnClusterReturns
-	fake.recordInvocation("EnsureObjectExistsOnCluster", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("EnsureObjectExistsOnCluster", []interface{}{arg1, arg2, arg3, arg4})
 	fake.ensureObjectExistsOnClusterMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1
@@ -252,17 +257,17 @@ func (fake *FakeRepository) EnsureObjectExistsOnClusterCallCount() int {
 	return len(fake.ensureObjectExistsOnClusterArgsForCall)
 }
 
-func (fake *FakeRepository) EnsureObjectExistsOnClusterCalls(stub func(context.Context, *unstructured.Unstructured, bool) error) {
+func (fake *FakeRepository) EnsureObjectExistsOnClusterCalls(stub func(context.Context, *unstructured.Unstructured, map[string]string, bool) error) {
 	fake.ensureObjectExistsOnClusterMutex.Lock()
 	defer fake.ensureObjectExistsOnClusterMutex.Unlock()
 	fake.EnsureObjectExistsOnClusterStub = stub
 }
 
-func (fake *FakeRepository) EnsureObjectExistsOnClusterArgsForCall(i int) (context.Context, *unstructured.Unstructured, bool) {
+func (fake *FakeRepository) EnsureObjectExistsOnClusterArgsForCall(i int) (context.Context, *unstructured.Unstructured, map[string]string, bool) {
 	fake.ensureObjectExistsOnClusterMutex.RLock()
 	defer fake.ensureObjectExistsOnClusterMutex.RUnlock()
 	argsForCall := fake.ensureObjectExistsOnClusterArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeRepository) EnsureObjectExistsOnClusterReturns(result1 error) {
@@ -1060,19 +1065,21 @@ func (fake *FakeRepository) GetWorkloadReturnsOnCall(i int, result1 *v1alpha1.Wo
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) ListUnstructured(arg1 context.Context, arg2 *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (fake *FakeRepository) ListUnstructured(arg1 context.Context, arg2 schema.GroupVersionKind, arg3 string, arg4 map[string]string) ([]*unstructured.Unstructured, error) {
 	fake.listUnstructuredMutex.Lock()
 	ret, specificReturn := fake.listUnstructuredReturnsOnCall[len(fake.listUnstructuredArgsForCall)]
 	fake.listUnstructuredArgsForCall = append(fake.listUnstructuredArgsForCall, struct {
 		arg1 context.Context
-		arg2 *unstructured.Unstructured
-	}{arg1, arg2})
+		arg2 schema.GroupVersionKind
+		arg3 string
+		arg4 map[string]string
+	}{arg1, arg2, arg3, arg4})
 	stub := fake.ListUnstructuredStub
 	fakeReturns := fake.listUnstructuredReturns
-	fake.recordInvocation("ListUnstructured", []interface{}{arg1, arg2})
+	fake.recordInvocation("ListUnstructured", []interface{}{arg1, arg2, arg3, arg4})
 	fake.listUnstructuredMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1086,17 +1093,17 @@ func (fake *FakeRepository) ListUnstructuredCallCount() int {
 	return len(fake.listUnstructuredArgsForCall)
 }
 
-func (fake *FakeRepository) ListUnstructuredCalls(stub func(context.Context, *unstructured.Unstructured) ([]*unstructured.Unstructured, error)) {
+func (fake *FakeRepository) ListUnstructuredCalls(stub func(context.Context, schema.GroupVersionKind, string, map[string]string) ([]*unstructured.Unstructured, error)) {
 	fake.listUnstructuredMutex.Lock()
 	defer fake.listUnstructuredMutex.Unlock()
 	fake.ListUnstructuredStub = stub
 }
 
-func (fake *FakeRepository) ListUnstructuredArgsForCall(i int) (context.Context, *unstructured.Unstructured) {
+func (fake *FakeRepository) ListUnstructuredArgsForCall(i int) (context.Context, schema.GroupVersionKind, string, map[string]string) {
 	fake.listUnstructuredMutex.RLock()
 	defer fake.listUnstructuredMutex.RUnlock()
 	argsForCall := fake.listUnstructuredArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeRepository) ListUnstructuredReturns(result1 []*unstructured.Unstructured, result2 error) {
