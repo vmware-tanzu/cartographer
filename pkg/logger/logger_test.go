@@ -57,7 +57,6 @@ var _ = Describe("Logger", func() {
 			func(loglevel int, expected bool) {
 				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
 			},
-			Entry("error", ERROR, true),
 			Entry("info", INFO, true),
 			Entry("debug", DEBUG, false),
 		)
@@ -103,7 +102,6 @@ var _ = Describe("Logger", func() {
 				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
 
 			},
-			Entry("error", ERROR, true),
 			Entry("info", INFO, false),
 			Entry("debug", DEBUG, false),
 		)
@@ -148,7 +146,6 @@ var _ = Describe("Logger", func() {
 			func(loglevel int, expected bool) {
 				Expect(logger.V(loglevel).Enabled()).To(Equal(expected))
 			},
-			Entry("error", ERROR, true),
 			Entry("info", INFO, true),
 			Entry("debug", DEBUG, true),
 		)
