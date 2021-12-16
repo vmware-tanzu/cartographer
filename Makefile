@@ -1,3 +1,9 @@
+CONTROLLER_GEN ?= go run -modfile hack/tools/go.mod sigs.k8s.io/controller-tools/cmd/controller-gen
+ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
+GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
+GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
+
+
 .PHONY: build
 build: gen-objects gen-manifests
 	go build -o build/cartographer ./cmd/cartographer
@@ -10,16 +16,16 @@ crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/api
 crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
 
 pkg/apis/v1alpha1/zz_generated.deepcopy.go: $(crd_sources)
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+	$(CONTROLLER_GEN) \
                 object \
                 paths=./pkg/apis/v1alpha1
 
 config/crd/bases/*.yaml &: $(crd_sources)
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+	$(CONTROLLER_GEN) \
 		crd \
 		paths=./pkg/apis/v1alpha1 \
 		output:crd:artifacts:config=config/crd/bases
-	go run github.com/google/addlicense \
+	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
@@ -32,7 +38,7 @@ gen-manifests: config/crd/bases/*.yaml
 test_crd_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(wildcard tests/resources/*.go))
 
 tests/resources/zz_generated.deepcopy.go: $(test_crd_sources)
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+	$(CONTROLLER_GEN) \
                 object \
                 paths=./tests/resources
 
@@ -40,11 +46,11 @@ tests/resources/zz_generated.deepcopy.go: $(test_crd_sources)
 test-gen-objects: tests/resources/zz_generated.deepcopy.go
 
 tests/resources/crds/*.yaml: $(test_crd_sources)
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen \
+	$(CONTROLLER_GEN) \
 		crd \
 		paths=./tests/resources \
 		output:crd:artifacts:config=tests/resources/crds
-	go run github.com/google/addlicense \
+	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		tests/resources/crds
 
@@ -61,11 +67,11 @@ generate: clean-fakes
 
 .PHONY: test-unit
 test-unit: test-gen-objects
-	go run github.com/onsi/ginkgo/ginkgo -r pkg
+	$(GINKGO) -r pkg
 
 .PHONY: test-integration
 test-integration: test-gen-manifests test-gen-objects
-	go run github.com/onsi/ginkgo/ginkgo -r tests/integration
+	$(GINKGO) -r tests/integration
 
 .PHONY: test-kuttl
 test-kuttl: build test-gen-manifests
@@ -112,12 +118,12 @@ coverage:
 
 .PHONY: lint
 lint: copyright
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint --config lint-config.yaml run
+	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
 
 .PHONY: copyright
 copyright:
-	go run github.com/google/addlicense \
+	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		-ignore site/static/\*\* \
 		-ignore site/themes/\*\* \
