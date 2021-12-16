@@ -25,22 +25,17 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
 type ClusterConfigTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ConfigTemplateSpec   `json:"spec"`
-	Status            ConfigTemplateStatus `json:"status,omitempty"`
+	Spec              ConfigTemplateSpec `json:"spec"`
 }
 
 type ConfigTemplateSpec struct {
 	TemplateSpec `json:",inline"`
 	ConfigPath   string `json:"configPath"`
-}
-
-type ConfigTemplateStatus struct {
 }
 
 var _ webhook.Validator = &ClusterConfigTemplate{}

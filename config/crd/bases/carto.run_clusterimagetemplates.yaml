@@ -70,16 +70,12 @@ spec:
             required:
             - imagePath
             type: object
-          status:
-            type: object
         required:
         - metadata
         - spec
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
 status:
   acceptedNames:
     kind: ""
