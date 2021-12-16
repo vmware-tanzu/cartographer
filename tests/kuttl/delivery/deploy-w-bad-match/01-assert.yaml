@@ -25,11 +25,11 @@ status:
     - type: ResourcesSubmitted
       status: Unknown
       reason: ConditionNotMet
-      message: "Resource [deployer] condition not met: input [spec.value.some-key] and output [spec.value.bad-key] do not match: https://github.com/ekcasey/hello-world-ops != some-mismatching-value"
+      message: "resource [deployer] condition not met: input [spec.value.some-key] and output [spec.value.bad-key] do not match: https://github.com/ekcasey/hello-world-ops != some-mismatching-value"
     - type: Ready
       status: "Unknown"
       reason: ConditionNotMet
-      message: "Resource [deployer] condition not met: input [spec.value.some-key] and output [spec.value.bad-key] do not match: https://github.com/ekcasey/hello-world-ops != some-mismatching-value"
+      message: "resource [deployer] condition not met: input [spec.value.some-key] and output [spec.value.bad-key] do not match: https://github.com/ekcasey/hello-world-ops != some-mismatching-value"
   deliveryRef:
     name: delivery---deploy-w-bad-match
     kind: ClusterDelivery

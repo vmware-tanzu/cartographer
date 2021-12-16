@@ -42,14 +42,14 @@ var _ = Describe("Conditions", func() {
 				obj.SetNamespace("my-ns")
 
 				condition := deliverable.MissingValueAtPathCondition(obj, "spec.foo")
-				Expect(condition.Message).To(Equal("Waiting to read value [spec.foo] from resource [widget.thing.io/my-widget] in namespace [my-ns]"))
+				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget] in namespace [my-ns]"))
 			})
 		})
 
 		Context("stamped object does not have a namespace", func() {
 			It("has the correct message", func() {
 				condition := deliverable.MissingValueAtPathCondition(obj, "spec.foo")
-				Expect(condition.Message).To(Equal("Waiting to read value [spec.foo] from resource [widget.thing.io/my-widget]"))
+				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget]"))
 			})
 		})
 	})
