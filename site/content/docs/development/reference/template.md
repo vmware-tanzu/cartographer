@@ -139,7 +139,7 @@ spec:
     apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: $(workload.metadata.name)
+      name: $(workload.metadata.name)$
     data:
       service.yml: |
         ---
@@ -267,7 +267,7 @@ spec:
     apiVersion: kappctrl.k14s.io/v1alpha1
     kind: App
     metadata:
-      name: $(workload.metadata.name)
+      name: $(workload.metadata.name)$
     spec:
       serviceAccountName: service-account
       fetch:

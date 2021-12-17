@@ -34,24 +34,24 @@ Blueprints consist of:
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 ### Templates
-
-| Output      | Template |
-| ----------- | ----------- |
-| Config | [ClusterConfigTemplate](reference/template#clusterconfigtemplate) |
-| Image | [ClusterImageTemplate](reference/template#clusterimagetemplate) |
-| Source | [ClusterSourceTemplate](reference/template#clustersourcetemplate) |
-| Deployment | [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate) |
-| | [ClusterTemplate](reference/template#clustertemplate) |
-
 Templates create or update resources (i.e. kubectl apply).
 
 Templates consist of:
 * Parameters to pass to `spec.template` or `spec.ytt`
-* The Kubernetes resource yaml as `spec.template` or `spec.ytt` [see Templating](#tbd)
+* The Kubernetes resource yaml as `spec.template` or `spec.ytt` see [Templating](templating#templating)
 * **Output paths** which tell Cartographer where to find the output of the Kubernetes resource
   * The path field depends upon the specific template kind.
+  * These paths are interpolated and subsequent templates can use them via the input accessors. see [Inputs](templating#inputs)
 
 Templates are typed by the output their underlying resource produces.
+
+| Output      | Template | Output Path | Input Accessor |
+| ----------- | ----------- | ----------- | ----------- |
+| Config | [ClusterConfigTemplate](reference/template#clusterconfigtemplate) | `spec.configPath` |  `configs.<input-name>` |
+| Image | [ClusterImageTemplate](reference/template#clusterimagetemplate) | `spec.imagePath` | `images.<input-name>` |
+| Source | [ClusterSourceTemplate](reference/template#clustersourcetemplate) | `spec.urlPath`, `spec.revisionPath` | `sources.<input-name>.url`, `sources.<input-name>.revision` |
+| Deployment | [ClusterDeploymentTemplate](reference/template#clusterdeploymenttemplate) | `spec.urlPath`, `spec.revisionPath` | `sources.<input-name>.url`, `sources.<input-name>.revision` |
+| | [ClusterTemplate](reference/template#clustertemplate) |
 
 {{< figure src="../img/template.svg" alt="Template" width="400px" >}}
 
@@ -76,7 +76,7 @@ see [Workload](reference/workload#workload) and [Deliverable](reference/delivera
 
 {{< figure src="../img/owner.svg" alt="Owner" width="400px" >}}
 
-## Theory of operation
+## Theory of Operation
 
 Given an owner that matches a blueprint, Cartographer reconciles the resources referenced by the blueprint.
 The resources are only created when the inputs are satisfied, and a resource is only updated when its inputs change.
