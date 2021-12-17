@@ -130,7 +130,7 @@ func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.Cl
 
 func (r *repository) EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error {
 	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("EnsureImmutableObjectExistsOnCluster")
+	log.V(logger.DEBUG).Info("EnsureMutableObjectExistsOnCluster")
 
 	existingObj, err := r.GetUnstructured(ctx, obj.GetName(), obj.GetNamespace())
 	log.V(logger.DEBUG).Info("considering object from api server",
@@ -140,7 +140,7 @@ func (r *repository) EnsureMutableObjectExistsOnCluster(ctx context.Context, obj
 		return err
 	}
 
-	if existingObj != nil {
+	if existingObj.Object != nil {
 		cacheHit := r.rc.UnchangedSinceCached(obj, existingObj)
 		if cacheHit != nil {
 			*obj = *cacheHit
@@ -191,7 +191,7 @@ func (r *repository) GetUnstructured(ctx context.Context, name, namespace string
 	log.V(logger.DEBUG).Info("get unstructured with name and namespace",
 		"name", name, "namespace", namespace)
 
-	var obj *unstructured.Unstructured
+	obj := &unstructured.Unstructured{}
 	err := r.cl.Get(ctx, objKey, obj)
 	if err != nil {
 		log.Error(err, "unable to get from api server")

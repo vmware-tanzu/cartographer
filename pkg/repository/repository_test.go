@@ -99,7 +99,7 @@ spec:
 
 				_, namespacedName, obj := cl.GetArgsForCall(0)
 				Expect(namespacedName).To(Equal(types.NamespacedName{Namespace: "default", Name: "hello"}))
-				Expect(obj).To(BeNil())
+				Expect(obj.(*unstructured.Unstructured).Object).To(BeNil())
 			})
 
 			Context("when the apiServer errors when trying to get the object", func() {
@@ -182,7 +182,7 @@ spec:
 				})
 			})
 
-			FContext("and apiServer succeeds in getting the list of object(s)", func() {
+			Context("and apiServer succeeds in getting the list of object(s)", func() {
 				var (
 					existingObj *unstructured.Unstructured
 				)
@@ -206,14 +206,14 @@ spec:
 					Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 					Expect(cache.UnchangedSinceCachedCallCount()).To(Equal(1))
 
-					submitted, persisted := cache.UnchangedSinceCachedFromListArgsForCall(0)
+					submitted, persisted := cache.UnchangedSinceCachedArgsForCall(0)
 					Expect(*submitted).To(Equal(*stampedObj))
-					Expect(persisted[0]).To(Equal(existingObj))
+					Expect(persisted).To(Equal(existingObj))
 				})
 
 				Context("and the cache determines there has been no change since the last update", func() {
 					BeforeEach(func() {
-						cache.UnchangedSinceCachedFromListReturns(existingObj)
+						cache.UnchangedSinceCachedReturns(existingObj)
 					})
 
 					It("does not create or patch any objects", func() {
@@ -239,7 +239,7 @@ spec:
 
 				Context("and the cache determines there has been a change since the last update", func() {
 					BeforeEach(func() {
-						cache.UnchangedSinceCachedFromListReturns(nil)
+						cache.UnchangedSinceCachedReturns(nil)
 					})
 
 					Context("and allowUpdate is true", func() {
