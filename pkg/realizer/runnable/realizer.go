@@ -96,7 +96,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	}
 
 	// FIXME: why are we taking a DeepCopy?
-	err = runnableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), labels)
+	err = runnableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), map[string]string{"carto.run/runnable-name": runnable.Name})
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{

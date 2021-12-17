@@ -143,8 +143,7 @@ var _ = Describe("Realizer", func() {
 				}),
 			)
 			Expect(labels).To(Equal(map[string]string{
-				"carto.run/run-template-name": "",
-				"carto.run/runnable-name":     "my-runnable",
+				"carto.run/runnable-name": "my-runnable",
 			}))
 		})
 
@@ -234,8 +233,7 @@ var _ = Describe("Realizer", func() {
 					}),
 				)
 				Expect(labels).To(Equal(map[string]string{
-					"carto.run/run-template-name": "",
-					"carto.run/runnable-name":     "my-runnable",
+					"carto.run/runnable-name": "my-runnable",
 				}))
 			})
 		})
