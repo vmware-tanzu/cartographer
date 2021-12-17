@@ -160,16 +160,15 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
-				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object using the workload repository and returns the outputs and stampedObjects", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				_, stampedObject, allowUpdate := fakeWorkloadRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stampedObject := fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 				Expect(returnedStampedObject).To(Equal(stampedObject))
-				Expect(allowUpdate).To(BeTrue())
 
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
@@ -186,6 +185,7 @@ var _ = Describe("Resource", func() {
 						"blockOwnerDeletion": true,
 					},
 				}))
+				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
 					"carto.run/cluster-supply-chain-name": "supply-chain-name",
 					"carto.run/resource-name":             "resource-1",
@@ -194,7 +194,6 @@ var _ = Describe("Resource", func() {
 					"carto.run/workload-namespace":        "",
 					"carto.run/template-kind":             "ClusterImageTemplate",
 				}))
-				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 
 				Expect(out.Image).To(Equal("some-revision"))
 			})
@@ -304,7 +303,7 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
-				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -315,7 +314,7 @@ var _ = Describe("Resource", func() {
 			})
 		})
 
-		When("unable to EnsureObjectExistsOnCluster the stamped object", func() {
+		When("unable to EnsureImmutableObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
@@ -365,7 +364,7 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
-				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
+				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
 				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)

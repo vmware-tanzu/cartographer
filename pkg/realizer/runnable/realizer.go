@@ -96,7 +96,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	}
 
 	// FIXME: why are we taking a DeepCopy?
-	err = runnableRepo.EnsureObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), false)
+	err = runnableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), map[string]string{"carto.run/runnable-name": runnable.Name})
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{
@@ -105,16 +105,13 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	objectForListCall := stampedObject.DeepCopy()
-	objectForListCall.SetLabels(labels)
-
-	allRunnableStampedObjects, err := runnableRepo.ListUnstructured(ctx, objectForListCall)
+	allRunnableStampedObjects, err := runnableRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
 	if err != nil {
 		log.Error(err, "failed to list objects")
 		return stampedObject, nil, ListCreatedObjectsError{
 			Err:       err,
-			Namespace: objectForListCall.GetNamespace(),
-			Labels:    objectForListCall.GetLabels(),
+			Namespace: stampedObject.GetNamespace(),
+			Labels:    labels,
 		}
 	}
 
@@ -146,12 +143,8 @@ func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, r
 	if selector == nil {
 		return nil, nil
 	}
-	queryObj := &unstructured.Unstructured{}
-	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
-	queryObj.SetLabels(selector.MatchingLabels)
-	queryObj.SetNamespace(namespace)
 
-	results, err := repository.ListUnstructured(ctx, queryObj)
+	results, err := repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), namespace, selector.MatchingLabels)
 	if err != nil {
 		log.Error(err, "failed to list objects matching selector", "selector", selector.MatchingLabels)
 		return nil, fmt.Errorf("failed to list objects matching selector [%+v]: %w", selector.MatchingLabels, err)
@@ -174,7 +167,7 @@ func resolveClusterScopedSelector(ctx context.Context, selector *v1alpha1.Resour
 	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
 	queryObj.SetLabels(selector.MatchingLabels)
 
-	results, err := repository.ListUnstructured(ctx, queryObj)
+	results, err := repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), "", selector.MatchingLabels)
 	if err != nil {
 		log.Error(err, "failed to list objects matching selector", "selector", selector.MatchingLabels)
 		return nil, fmt.Errorf("failed to list objects matching selector [%+v]: %w", selector.MatchingLabels, err)

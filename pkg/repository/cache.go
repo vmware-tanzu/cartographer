@@ -29,7 +29,8 @@ type Logger interface {
 //counterfeiter:generate . RepoCache
 type RepoCache interface {
 	Set(submitted, persisted *unstructured.Unstructured)
-	UnchangedSinceCached(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
+	UnchangedSinceCached(submitted *unstructured.Unstructured, existingObj *unstructured.Unstructured) *unstructured.Unstructured
+	UnchangedSinceCachedFromList(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
 }
 
 func NewCache(l Logger) RepoCache {
@@ -52,51 +53,82 @@ func (c *cache) Set(submitted, persisted *unstructured.Unstructured) {
 	c.persistedCache[key] = *persisted
 }
 
-func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
+func (c *cache) UnchangedSinceCachedFromList(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
 	key := getKey(submitted)
 	c.logger.Info("checking for changes since cached", "key", key)
-	submittedCached, submittedFoundInCache := c.submittedCache[key]
-	submittedUnchanged := submittedFoundInCache && reflect.DeepEqual(submittedCached, *submitted)
-
-	persistedCached := c.getPersistedCached(key)
-
-	if submittedUnchanged {
-		c.logger.Info("no changes since last submission, checking existing objects on apiserver", "key", key)
-	} else {
-		if submittedFoundInCache {
-			c.logger.Info("miss: submitted object in cache is different from submitted object", "key", key)
-		} else {
-			c.logger.Info("miss: object not in cache", "key", key)
-		}
+	if !c.isSubmittedCacheHit(submitted, key) {
 		return nil
 	}
 
+	persistedCached := c.getPersistedCached(key)
+
 	for _, existing := range existingList {
-		c.logger.Info("considering object", "key", key, "existingName", existing.GetName())
-		existingSpec, ok := existing.Object["spec"]
-		if !ok {
-			c.logger.Info("object on apiserver has no spec", "key", key)
-			continue
-		}
-
-		persistedCachedSpec, ok := persistedCached.Object["spec"]
-		if !ok {
-			c.logger.Info("persisted object in cache has no spec", "key", key)
-			continue
-		}
-
-		sameSame := reflect.DeepEqual(existingSpec, persistedCachedSpec)
-		if sameSame {
-			c.logger.Info("hit: persisted object in cache matches spec on apiserver", "key", key)
+		if c.isPersistedCacheHit(key, existing, persistedCached) {
 			return existing
 		} else {
-			c.logger.Info("miss: persisted object in cache DOES NOT match spec on apiserver", "key", key)
 			continue
 		}
 	}
 
 	c.logger.Info("miss: no matching existing object on apiserver", "key", key)
 	return nil
+}
+
+func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingObj *unstructured.Unstructured) *unstructured.Unstructured {
+	key := getKey(submitted)
+	c.logger.Info("checking for changes since cached", "key", key)
+	if !c.isSubmittedCacheHit(submitted, key) {
+		return nil
+	}
+
+	persistedCached := c.getPersistedCached(key)
+
+	if c.isPersistedCacheHit(key, existingObj, persistedCached) {
+		return existingObj
+	} else {
+		return nil
+	}
+}
+
+func (c *cache) isSubmittedCacheHit(submitted *unstructured.Unstructured, key string) bool {
+	submittedCached, submittedFoundInCache := c.submittedCache[key]
+	submittedUnchanged := submittedFoundInCache && reflect.DeepEqual(submittedCached, *submitted)
+
+	if submittedUnchanged {
+		c.logger.Info("no changes since last submission, checking existing objects on apiserver", "key", key)
+		return true
+	} else {
+		if submittedFoundInCache {
+			c.logger.Info("miss: submitted object in cache is different from submitted object", "key", key)
+		} else {
+			c.logger.Info("miss: object not in cache", "key", key)
+		}
+		return false
+	}
+}
+
+func (c *cache) isPersistedCacheHit(key string, existingObj *unstructured.Unstructured, persistedCached *unstructured.Unstructured) bool {
+	c.logger.Info("considering object", "key", key, "existingName", existingObj.GetName())
+	existingSpec, ok := existingObj.Object["spec"]
+	if !ok {
+		c.logger.Info("object on apiserver has no spec", "key", key)
+		return false
+	}
+
+	persistedCachedSpec, ok := persistedCached.Object["spec"]
+	if !ok {
+		c.logger.Info("persisted object in cache has no spec", "key", key)
+		return false
+	}
+
+	sameSame := reflect.DeepEqual(existingSpec, persistedCachedSpec)
+	if sameSame {
+		c.logger.Info("hit: persisted object in cache matches spec on apiserver", "key", key)
+		return true
+	} else {
+		c.logger.Info("miss: persisted object in cache DOES NOT match spec on apiserver", "key", key)
+		return false
+	}
 }
 
 func getKey(obj *unstructured.Unstructured) string {
