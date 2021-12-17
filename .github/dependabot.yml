@@ -23,9 +23,9 @@ updates:
   - package-ecosystem: gomod
     labels: ["dependencies"]
     directory: /hack/tools
-      schedule:
-        interval: daily
-        time: "00:00"
+    schedule:
+      interval: daily
+      time: "00:00"
   - package-ecosystem: github-actions
     directory: /
     labels: ["dependencies"]
