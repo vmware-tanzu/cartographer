@@ -27,6 +27,8 @@ readonly GH_VERSION=${GH_VERSION:-2.0.0}
 readonly GH_CHECKSUM=${GH_CHECKSUM:-20c2d1b1915a0ff154df453576d9e97aab709ad4b236ce8313435b8b96d31e5c}
 readonly KUBECTL_TREE_CHECKSUM=${KUBECTL_TREE_CHECKSUM:-f4a3230d46b824889fca56525d051aad70815965a94623388ec0b5dc71781790}
 readonly KUBECTL_TREE_VERSION=${KUBECTL_TREE_VERSION:-0.4.1}
+readonly GRYPE_CHECKSUM=a0aaae28792a70fd465301cef0f3dc4bd09c2e707208f7a576e4085c8ea861d4
+readonly GRYPE_VERSION=0.27.2
 
 main() {
         cd $(mktemp -d)
@@ -47,6 +49,9 @@ main() {
                         ;;
                 tree)
                         install_kubectl_tree
+                        ;;
+                grype)
+                        install_grype
                         ;;
                 *) ;;
                 esac
@@ -106,6 +111,17 @@ install_kubectl_tree() {
         tar xzf $fname
 
         install -m 0755 ./kubectl-tree /usr/local/bin
+}
+
+install_grype() {
+        local url=https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz
+        local fname=grype_${GRYPE_VERSION}_linux_amd64.tar.gz
+
+        curl -sSOL $url
+        echo "${GRYPE_CHECKSUM}  $fname" | sha256sum -c
+        tar xzf $fname
+
+        install -m 0755 ./grype /usr/local/bin
 }
 
 main "$@"
