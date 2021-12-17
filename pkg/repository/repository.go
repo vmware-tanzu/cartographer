@@ -17,6 +17,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -198,8 +199,12 @@ func (r *repository) GetUnstructured(ctx context.Context, obj *unstructured.Unst
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
-		log.Error(err, "unable to get from api server")
-		return nil, fmt.Errorf("unable to get from api server: %w", err)
+		namespacedName := types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
+		}
+		log.Error(err, "failed to get unstructured from api server", "object", namespacedName)
+		return nil, fmt.Errorf("failed to get unstructured [%s] from api server: %w", namespacedName, err)
 	}
 
 	return returnObj, nil

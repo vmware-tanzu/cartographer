@@ -105,7 +105,7 @@ spec:
 
 				It("returns a helpful error", func() {
 					err := repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
-					Expect(err).To(MatchError(ContainSubstring("unable to get from api server: some-error")))
+					Expect(err).To(MatchError(ContainSubstring("failed to get unstructured [default/hello] from api server: some-error")))
 				})
 
 				It("does not create or patch any objects", func() {
@@ -329,7 +329,7 @@ spec:
 
 			Context("and apiServer succeeds in getting the list of objects", func() {
 				var (
-					existingObj *unstructured.Unstructured
+					existingObj     *unstructured.Unstructured
 					existingObjList unstructured.UnstructuredList
 				)
 
@@ -490,6 +490,85 @@ spec:
 				_, err := repo.GetSupplyChain(ctx, "sc-name")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get supply chain object from api server [sc-name]: failed to get object [sc-name] from api server: some get error"))
+			})
+		})
+
+		Context("GetUnstructured", func() {
+			Context("get returns an error", func() {
+				Context("the error is of type IsNotFound", func() {
+					BeforeEach(func() {
+						cl.GetReturns(kerrors.NewNotFound(schema.GroupResource{}, ""))
+					})
+
+					It("returns a nil object and no error", func() {
+						obj := &unstructured.Unstructured{}
+
+						obj.SetGroupVersionKind(schema.GroupVersionKind{
+							Group:   "my-group",
+							Version: "my-version",
+							Kind:    "my-kind",
+						})
+						obj.SetNamespace("my-ns")
+						obj.SetName("my-name")
+						returnedObj, err := repo.GetUnstructured(ctx, obj)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(returnedObj).To(BeNil())
+					})
+				})
+
+				Context("the error is not of type IsNotFound", func() {
+					BeforeEach(func() {
+						cl.GetReturns(errors.New("some get error"))
+					})
+
+					It("errors with a helfpul error message", func() {
+						obj := &unstructured.Unstructured{}
+
+						obj.SetGroupVersionKind(schema.GroupVersionKind{
+							Group:   "my-group",
+							Version: "my-version",
+							Kind:    "my-kind",
+						})
+						obj.SetNamespace("my-ns")
+						obj.SetName("my-name")
+						_, err := repo.GetUnstructured(ctx, obj)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("failed to get unstructured [my-ns/my-name] from api server: some get error"))
+					})
+				})
+			})
+
+			Context("get does not return an error", func() {
+				var existingObj *unstructured.Unstructured
+				BeforeEach(func() {
+					existingObj = &unstructured.Unstructured{}
+					existingObj.SetName("hello")
+					existingObj.SetNamespace("default")
+					existingObj.SetGeneration(5)
+
+					cl.GetStub = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+						objVal := reflect.ValueOf(obj)
+						existingVal := reflect.ValueOf(existingObj)
+
+						reflect.Indirect(objVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("successfully gets unstructured from api server", func() {
+					obj := &unstructured.Unstructured{}
+
+					obj.SetGroupVersionKind(schema.GroupVersionKind{
+						Group:   "my-group",
+						Version: "my-version",
+						Kind:    "my-kind",
+					})
+					obj.SetNamespace("my-ns")
+					obj.SetName("my-name")
+					returnedObj, err := repo.GetUnstructured(ctx, obj)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(returnedObj).To(Equal(existingObj))
+				})
 			})
 		})
 
