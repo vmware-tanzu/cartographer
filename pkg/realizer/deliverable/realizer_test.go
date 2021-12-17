@@ -33,8 +33,8 @@ var _ = Describe("Realize", func() {
 	var (
 		resourceRealizer *deliverablefakes.FakeResourceRealizer
 		delivery         *v1alpha1.ClusterDelivery
-		resource1        v1alpha1.ClusterDeliveryResource
-		resource2        v1alpha1.ClusterDeliveryResource
+		resource1        v1alpha1.DeliveryResource
+		resource2        v1alpha1.DeliveryResource
 		rlzr             realizer.Realizer
 		ctx              context.Context
 	)
@@ -44,16 +44,16 @@ var _ = Describe("Realize", func() {
 		rlzr = realizer.NewRealizer()
 
 		resourceRealizer = &deliverablefakes.FakeResourceRealizer{}
-		resource1 = v1alpha1.ClusterDeliveryResource{
+		resource1 = v1alpha1.DeliveryResource{
 			Name: "resource1",
 		}
-		resource2 = v1alpha1.ClusterDeliveryResource{
+		resource2 = v1alpha1.DeliveryResource{
 			Name: "resource2",
 		}
 		delivery = &v1alpha1.ClusterDelivery{
 			ObjectMeta: metav1.ObjectMeta{Name: "greatest-delivery"},
-			Spec: v1alpha1.ClusterDeliverySpec{
-				Resources: []v1alpha1.ClusterDeliveryResource{resource1, resource2},
+			Spec: v1alpha1.DeliverySpec{
+				Resources: []v1alpha1.DeliveryResource{resource1, resource2},
 			},
 		}
 	})
@@ -63,7 +63,7 @@ var _ = Describe("Realize", func() {
 
 		var executedResourceOrder []string
 
-		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.DeliveryResource, deliveryName string, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 			executedResourceOrder = append(executedResourceOrder, resource.Name)
 			Expect(deliveryName).To(Equal("greatest-delivery"))
 			if resource.Name == "resource1" {

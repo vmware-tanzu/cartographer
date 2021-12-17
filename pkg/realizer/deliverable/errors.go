@@ -25,12 +25,12 @@ import (
 
 const NoJsonpathContext = "<no jsonpath context>"
 
-type GetDeliveryClusterTemplateError struct {
+type GetDeliveryTemplateError struct {
 	Err         error
-	TemplateRef v1alpha1.DeliveryClusterTemplateReference
+	TemplateRef v1alpha1.DeliveryTemplateReference
 }
 
-func (e GetDeliveryClusterTemplateError) Error() string {
+func (e GetDeliveryTemplateError) Error() string {
 	return fmt.Errorf("unable to get template [%s]: %w", e.TemplateRef.Name, e.Err).Error()
 }
 
@@ -45,7 +45,7 @@ func (e ApplyStampedObjectError) Error() string {
 
 type StampError struct {
 	Err      error
-	Resource *v1alpha1.ClusterDeliveryResource
+	Resource *v1alpha1.DeliveryResource
 }
 
 func (e StampError) Error() string {
@@ -54,7 +54,7 @@ func (e StampError) Error() string {
 
 type RetrieveOutputError struct {
 	Err           error
-	Resource      *v1alpha1.ClusterDeliveryResource
+	Resource      *v1alpha1.DeliveryResource
 	StampedObject *unstructured.Unstructured
 }
 

@@ -14,7 +14,7 @@
 
 package deliverable
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
 	"context"
@@ -110,7 +110,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
-		case realizer.GetDeliveryClusterTemplateError:
+		case realizer.GetDeliveryTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.StampError:

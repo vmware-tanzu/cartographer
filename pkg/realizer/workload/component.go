@@ -28,7 +28,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
@@ -67,10 +67,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	apiTemplate, err := r.systemRepo.GetClusterTemplate(ctx, resource.TemplateRef)
+	apiTemplate, err := r.systemRepo.GetSupplyChainTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, GetClusterTemplateError{
+		return nil, nil, GetSupplyChainTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
 		}

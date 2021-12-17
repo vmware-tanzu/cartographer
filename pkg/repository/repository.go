@@ -17,23 +17,19 @@ package repository
 import (
 	"context"
 	"fmt"
-
 	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 
@@ -41,8 +37,8 @@ import (
 type Repository interface {
 	EnsureImmutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error
 	EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error
-	GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error)
-	GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
+	GetSupplyChainTemplate(ctx context.Context, ref v1alpha1.SupplyChainTemplateReference) (client.Object, error)
+	GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
 	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
@@ -241,13 +237,13 @@ func (r *repository) ListUnstructured(ctx context.Context, gvk schema.GroupVersi
 	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error) {
+func (r *repository) GetSupplyChainTemplate(ctx context.Context, ref v1alpha1.SupplyChainTemplateReference) (client.Object, error) {
 	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }
 
-func (r *repository) GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
+func (r *repository) GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("GetDeliveryClusterTemplate")
+	log.V(logger.DEBUG).Info("GetDeliveryTemplate")
 
 	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }

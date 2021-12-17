@@ -10,49 +10,22 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FakeRepository struct {
-	EnsureImmutableObjectExistsOnClusterStub        func(context.Context, *unstructured.Unstructured, map[string]string) error
-	ensureImmutableObjectExistsOnClusterMutex       sync.RWMutex
-	ensureImmutableObjectExistsOnClusterArgsForCall []struct {
+	EnsureObjectExistsOnClusterStub        func(context.Context, *unstructured.Unstructured, bool) error
+	ensureObjectExistsOnClusterMutex       sync.RWMutex
+	ensureObjectExistsOnClusterArgsForCall []struct {
 		arg1 context.Context
 		arg2 *unstructured.Unstructured
-		arg3 map[string]string
+		arg3 bool
 	}
-	ensureImmutableObjectExistsOnClusterReturns struct {
+	ensureObjectExistsOnClusterReturns struct {
 		result1 error
 	}
-	ensureImmutableObjectExistsOnClusterReturnsOnCall map[int]struct {
+	ensureObjectExistsOnClusterReturnsOnCall map[int]struct {
 		result1 error
-	}
-	EnsureMutableObjectExistsOnClusterStub        func(context.Context, *unstructured.Unstructured) error
-	ensureMutableObjectExistsOnClusterMutex       sync.RWMutex
-	ensureMutableObjectExistsOnClusterArgsForCall []struct {
-		arg1 context.Context
-		arg2 *unstructured.Unstructured
-	}
-	ensureMutableObjectExistsOnClusterReturns struct {
-		result1 error
-	}
-	ensureMutableObjectExistsOnClusterReturnsOnCall map[int]struct {
-		result1 error
-	}
-	GetClusterTemplateStub        func(context.Context, v1alpha1.ClusterTemplateReference) (client.Object, error)
-	getClusterTemplateMutex       sync.RWMutex
-	getClusterTemplateArgsForCall []struct {
-		arg1 context.Context
-		arg2 v1alpha1.ClusterTemplateReference
-	}
-	getClusterTemplateReturns struct {
-		result1 client.Object
-		result2 error
-	}
-	getClusterTemplateReturnsOnCall map[int]struct {
-		result1 client.Object
-		result2 error
 	}
 	GetDeliverableStub        func(context.Context, string, string) (*v1alpha1.Deliverable, error)
 	getDeliverableMutex       sync.RWMutex
@@ -97,17 +70,17 @@ type FakeRepository struct {
 		result1 *v1alpha1.ClusterDelivery
 		result2 error
 	}
-	GetDeliveryClusterTemplateStub        func(context.Context, v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
-	getDeliveryClusterTemplateMutex       sync.RWMutex
-	getDeliveryClusterTemplateArgsForCall []struct {
+	GetDeliveryTemplateStub        func(context.Context, v1alpha1.DeliveryTemplateReference) (client.Object, error)
+	getDeliveryTemplateMutex       sync.RWMutex
+	getDeliveryTemplateArgsForCall []struct {
 		arg1 context.Context
-		arg2 v1alpha1.DeliveryClusterTemplateReference
+		arg2 v1alpha1.DeliveryTemplateReference
 	}
-	getDeliveryClusterTemplateReturns struct {
+	getDeliveryTemplateReturns struct {
 		result1 client.Object
 		result2 error
 	}
-	getDeliveryClusterTemplateReturnsOnCall map[int]struct {
+	getDeliveryTemplateReturnsOnCall map[int]struct {
 		result1 client.Object
 		result2 error
 	}
@@ -179,6 +152,20 @@ type FakeRepository struct {
 		result1 *v1alpha1.ClusterSupplyChain
 		result2 error
 	}
+	GetSupplyChainTemplateStub        func(context.Context, v1alpha1.SupplyChainTemplateReference) (client.Object, error)
+	getSupplyChainTemplateMutex       sync.RWMutex
+	getSupplyChainTemplateArgsForCall []struct {
+		arg1 context.Context
+		arg2 v1alpha1.SupplyChainTemplateReference
+	}
+	getSupplyChainTemplateReturns struct {
+		result1 client.Object
+		result2 error
+	}
+	getSupplyChainTemplateReturnsOnCall map[int]struct {
+		result1 client.Object
+		result2 error
+	}
 	GetSupplyChainsForWorkloadStub        func(context.Context, *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
 	getSupplyChainsForWorkloadMutex       sync.RWMutex
 	getSupplyChainsForWorkloadArgsForCall []struct {
@@ -191,20 +178,6 @@ type FakeRepository struct {
 	}
 	getSupplyChainsForWorkloadReturnsOnCall map[int]struct {
 		result1 []*v1alpha1.ClusterSupplyChain
-		result2 error
-	}
-	GetUnstructuredStub        func(context.Context, *unstructured.Unstructured) (*unstructured.Unstructured, error)
-	getUnstructuredMutex       sync.RWMutex
-	getUnstructuredArgsForCall []struct {
-		arg1 context.Context
-		arg2 *unstructured.Unstructured
-	}
-	getUnstructuredReturns struct {
-		result1 *unstructured.Unstructured
-		result2 error
-	}
-	getUnstructuredReturnsOnCall map[int]struct {
-		result1 *unstructured.Unstructured
 		result2 error
 	}
 	GetWorkloadStub        func(context.Context, string, string) (*v1alpha1.Workload, error)
@@ -222,13 +195,11 @@ type FakeRepository struct {
 		result1 *v1alpha1.Workload
 		result2 error
 	}
-	ListUnstructuredStub        func(context.Context, schema.GroupVersionKind, string, map[string]string) ([]*unstructured.Unstructured, error)
+	ListUnstructuredStub        func(context.Context, *unstructured.Unstructured) ([]*unstructured.Unstructured, error)
 	listUnstructuredMutex       sync.RWMutex
 	listUnstructuredArgsForCall []struct {
 		arg1 context.Context
-		arg2 schema.GroupVersionKind
-		arg3 string
-		arg4 map[string]string
+		arg2 *unstructured.Unstructured
 	}
 	listUnstructuredReturns struct {
 		result1 []*unstructured.Unstructured
@@ -254,18 +225,18 @@ type FakeRepository struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRepository) EnsureImmutableObjectExistsOnCluster(arg1 context.Context, arg2 *unstructured.Unstructured, arg3 map[string]string) error {
-	fake.ensureImmutableObjectExistsOnClusterMutex.Lock()
-	ret, specificReturn := fake.ensureImmutableObjectExistsOnClusterReturnsOnCall[len(fake.ensureImmutableObjectExistsOnClusterArgsForCall)]
-	fake.ensureImmutableObjectExistsOnClusterArgsForCall = append(fake.ensureImmutableObjectExistsOnClusterArgsForCall, struct {
+func (fake *FakeRepository) EnsureObjectExistsOnCluster(arg1 context.Context, arg2 *unstructured.Unstructured, arg3 bool) error {
+	fake.ensureObjectExistsOnClusterMutex.Lock()
+	ret, specificReturn := fake.ensureObjectExistsOnClusterReturnsOnCall[len(fake.ensureObjectExistsOnClusterArgsForCall)]
+	fake.ensureObjectExistsOnClusterArgsForCall = append(fake.ensureObjectExistsOnClusterArgsForCall, struct {
 		arg1 context.Context
 		arg2 *unstructured.Unstructured
-		arg3 map[string]string
+		arg3 bool
 	}{arg1, arg2, arg3})
-	stub := fake.EnsureImmutableObjectExistsOnClusterStub
-	fakeReturns := fake.ensureImmutableObjectExistsOnClusterReturns
-	fake.recordInvocation("EnsureImmutableObjectExistsOnCluster", []interface{}{arg1, arg2, arg3})
-	fake.ensureImmutableObjectExistsOnClusterMutex.Unlock()
+	stub := fake.EnsureObjectExistsOnClusterStub
+	fakeReturns := fake.ensureObjectExistsOnClusterReturns
+	fake.recordInvocation("EnsureObjectExistsOnCluster", []interface{}{arg1, arg2, arg3})
+	fake.ensureObjectExistsOnClusterMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2, arg3)
 	}
@@ -275,173 +246,46 @@ func (fake *FakeRepository) EnsureImmutableObjectExistsOnCluster(arg1 context.Co
 	return fakeReturns.result1
 }
 
-func (fake *FakeRepository) EnsureImmutableObjectExistsOnClusterCallCount() int {
-	fake.ensureImmutableObjectExistsOnClusterMutex.RLock()
-	defer fake.ensureImmutableObjectExistsOnClusterMutex.RUnlock()
-	return len(fake.ensureImmutableObjectExistsOnClusterArgsForCall)
+func (fake *FakeRepository) EnsureObjectExistsOnClusterCallCount() int {
+	fake.ensureObjectExistsOnClusterMutex.RLock()
+	defer fake.ensureObjectExistsOnClusterMutex.RUnlock()
+	return len(fake.ensureObjectExistsOnClusterArgsForCall)
 }
 
-func (fake *FakeRepository) EnsureImmutableObjectExistsOnClusterCalls(stub func(context.Context, *unstructured.Unstructured, map[string]string) error) {
-	fake.ensureImmutableObjectExistsOnClusterMutex.Lock()
-	defer fake.ensureImmutableObjectExistsOnClusterMutex.Unlock()
-	fake.EnsureImmutableObjectExistsOnClusterStub = stub
+func (fake *FakeRepository) EnsureObjectExistsOnClusterCalls(stub func(context.Context, *unstructured.Unstructured, bool) error) {
+	fake.ensureObjectExistsOnClusterMutex.Lock()
+	defer fake.ensureObjectExistsOnClusterMutex.Unlock()
+	fake.EnsureObjectExistsOnClusterStub = stub
 }
 
-func (fake *FakeRepository) EnsureImmutableObjectExistsOnClusterArgsForCall(i int) (context.Context, *unstructured.Unstructured, map[string]string) {
-	fake.ensureImmutableObjectExistsOnClusterMutex.RLock()
-	defer fake.ensureImmutableObjectExistsOnClusterMutex.RUnlock()
-	argsForCall := fake.ensureImmutableObjectExistsOnClusterArgsForCall[i]
+func (fake *FakeRepository) EnsureObjectExistsOnClusterArgsForCall(i int) (context.Context, *unstructured.Unstructured, bool) {
+	fake.ensureObjectExistsOnClusterMutex.RLock()
+	defer fake.ensureObjectExistsOnClusterMutex.RUnlock()
+	argsForCall := fake.ensureObjectExistsOnClusterArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeRepository) EnsureImmutableObjectExistsOnClusterReturns(result1 error) {
-	fake.ensureImmutableObjectExistsOnClusterMutex.Lock()
-	defer fake.ensureImmutableObjectExistsOnClusterMutex.Unlock()
-	fake.EnsureImmutableObjectExistsOnClusterStub = nil
-	fake.ensureImmutableObjectExistsOnClusterReturns = struct {
+func (fake *FakeRepository) EnsureObjectExistsOnClusterReturns(result1 error) {
+	fake.ensureObjectExistsOnClusterMutex.Lock()
+	defer fake.ensureObjectExistsOnClusterMutex.Unlock()
+	fake.EnsureObjectExistsOnClusterStub = nil
+	fake.ensureObjectExistsOnClusterReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeRepository) EnsureImmutableObjectExistsOnClusterReturnsOnCall(i int, result1 error) {
-	fake.ensureImmutableObjectExistsOnClusterMutex.Lock()
-	defer fake.ensureImmutableObjectExistsOnClusterMutex.Unlock()
-	fake.EnsureImmutableObjectExistsOnClusterStub = nil
-	if fake.ensureImmutableObjectExistsOnClusterReturnsOnCall == nil {
-		fake.ensureImmutableObjectExistsOnClusterReturnsOnCall = make(map[int]struct {
+func (fake *FakeRepository) EnsureObjectExistsOnClusterReturnsOnCall(i int, result1 error) {
+	fake.ensureObjectExistsOnClusterMutex.Lock()
+	defer fake.ensureObjectExistsOnClusterMutex.Unlock()
+	fake.EnsureObjectExistsOnClusterStub = nil
+	if fake.ensureObjectExistsOnClusterReturnsOnCall == nil {
+		fake.ensureObjectExistsOnClusterReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.ensureImmutableObjectExistsOnClusterReturnsOnCall[i] = struct {
+	fake.ensureObjectExistsOnClusterReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakeRepository) EnsureMutableObjectExistsOnCluster(arg1 context.Context, arg2 *unstructured.Unstructured) error {
-	fake.ensureMutableObjectExistsOnClusterMutex.Lock()
-	ret, specificReturn := fake.ensureMutableObjectExistsOnClusterReturnsOnCall[len(fake.ensureMutableObjectExistsOnClusterArgsForCall)]
-	fake.ensureMutableObjectExistsOnClusterArgsForCall = append(fake.ensureMutableObjectExistsOnClusterArgsForCall, struct {
-		arg1 context.Context
-		arg2 *unstructured.Unstructured
-	}{arg1, arg2})
-	stub := fake.EnsureMutableObjectExistsOnClusterStub
-	fakeReturns := fake.ensureMutableObjectExistsOnClusterReturns
-	fake.recordInvocation("EnsureMutableObjectExistsOnCluster", []interface{}{arg1, arg2})
-	fake.ensureMutableObjectExistsOnClusterMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeRepository) EnsureMutableObjectExistsOnClusterCallCount() int {
-	fake.ensureMutableObjectExistsOnClusterMutex.RLock()
-	defer fake.ensureMutableObjectExistsOnClusterMutex.RUnlock()
-	return len(fake.ensureMutableObjectExistsOnClusterArgsForCall)
-}
-
-func (fake *FakeRepository) EnsureMutableObjectExistsOnClusterCalls(stub func(context.Context, *unstructured.Unstructured) error) {
-	fake.ensureMutableObjectExistsOnClusterMutex.Lock()
-	defer fake.ensureMutableObjectExistsOnClusterMutex.Unlock()
-	fake.EnsureMutableObjectExistsOnClusterStub = stub
-}
-
-func (fake *FakeRepository) EnsureMutableObjectExistsOnClusterArgsForCall(i int) (context.Context, *unstructured.Unstructured) {
-	fake.ensureMutableObjectExistsOnClusterMutex.RLock()
-	defer fake.ensureMutableObjectExistsOnClusterMutex.RUnlock()
-	argsForCall := fake.ensureMutableObjectExistsOnClusterArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeRepository) EnsureMutableObjectExistsOnClusterReturns(result1 error) {
-	fake.ensureMutableObjectExistsOnClusterMutex.Lock()
-	defer fake.ensureMutableObjectExistsOnClusterMutex.Unlock()
-	fake.EnsureMutableObjectExistsOnClusterStub = nil
-	fake.ensureMutableObjectExistsOnClusterReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeRepository) EnsureMutableObjectExistsOnClusterReturnsOnCall(i int, result1 error) {
-	fake.ensureMutableObjectExistsOnClusterMutex.Lock()
-	defer fake.ensureMutableObjectExistsOnClusterMutex.Unlock()
-	fake.EnsureMutableObjectExistsOnClusterStub = nil
-	if fake.ensureMutableObjectExistsOnClusterReturnsOnCall == nil {
-		fake.ensureMutableObjectExistsOnClusterReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.ensureMutableObjectExistsOnClusterReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeRepository) GetClusterTemplate(arg1 context.Context, arg2 v1alpha1.ClusterTemplateReference) (client.Object, error) {
-	fake.getClusterTemplateMutex.Lock()
-	ret, specificReturn := fake.getClusterTemplateReturnsOnCall[len(fake.getClusterTemplateArgsForCall)]
-	fake.getClusterTemplateArgsForCall = append(fake.getClusterTemplateArgsForCall, struct {
-		arg1 context.Context
-		arg2 v1alpha1.ClusterTemplateReference
-	}{arg1, arg2})
-	stub := fake.GetClusterTemplateStub
-	fakeReturns := fake.getClusterTemplateReturns
-	fake.recordInvocation("GetClusterTemplate", []interface{}{arg1, arg2})
-	fake.getClusterTemplateMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeRepository) GetClusterTemplateCallCount() int {
-	fake.getClusterTemplateMutex.RLock()
-	defer fake.getClusterTemplateMutex.RUnlock()
-	return len(fake.getClusterTemplateArgsForCall)
-}
-
-func (fake *FakeRepository) GetClusterTemplateCalls(stub func(context.Context, v1alpha1.ClusterTemplateReference) (client.Object, error)) {
-	fake.getClusterTemplateMutex.Lock()
-	defer fake.getClusterTemplateMutex.Unlock()
-	fake.GetClusterTemplateStub = stub
-}
-
-func (fake *FakeRepository) GetClusterTemplateArgsForCall(i int) (context.Context, v1alpha1.ClusterTemplateReference) {
-	fake.getClusterTemplateMutex.RLock()
-	defer fake.getClusterTemplateMutex.RUnlock()
-	argsForCall := fake.getClusterTemplateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeRepository) GetClusterTemplateReturns(result1 client.Object, result2 error) {
-	fake.getClusterTemplateMutex.Lock()
-	defer fake.getClusterTemplateMutex.Unlock()
-	fake.GetClusterTemplateStub = nil
-	fake.getClusterTemplateReturns = struct {
-		result1 client.Object
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeRepository) GetClusterTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
-	fake.getClusterTemplateMutex.Lock()
-	defer fake.getClusterTemplateMutex.Unlock()
-	fake.GetClusterTemplateStub = nil
-	if fake.getClusterTemplateReturnsOnCall == nil {
-		fake.getClusterTemplateReturnsOnCall = make(map[int]struct {
-			result1 client.Object
-			result2 error
-		})
-	}
-	fake.getClusterTemplateReturnsOnCall[i] = struct {
-		result1 client.Object
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeRepository) GetDeliverable(arg1 context.Context, arg2 string, arg3 string) (*v1alpha1.Deliverable, error) {
@@ -640,17 +484,17 @@ func (fake *FakeRepository) GetDeliveryReturnsOnCall(i int, result1 *v1alpha1.Cl
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetDeliveryClusterTemplate(arg1 context.Context, arg2 v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
-	fake.getDeliveryClusterTemplateMutex.Lock()
-	ret, specificReturn := fake.getDeliveryClusterTemplateReturnsOnCall[len(fake.getDeliveryClusterTemplateArgsForCall)]
-	fake.getDeliveryClusterTemplateArgsForCall = append(fake.getDeliveryClusterTemplateArgsForCall, struct {
+func (fake *FakeRepository) GetDeliveryTemplate(arg1 context.Context, arg2 v1alpha1.DeliveryTemplateReference) (client.Object, error) {
+	fake.getDeliveryTemplateMutex.Lock()
+	ret, specificReturn := fake.getDeliveryTemplateReturnsOnCall[len(fake.getDeliveryTemplateArgsForCall)]
+	fake.getDeliveryTemplateArgsForCall = append(fake.getDeliveryTemplateArgsForCall, struct {
 		arg1 context.Context
-		arg2 v1alpha1.DeliveryClusterTemplateReference
+		arg2 v1alpha1.DeliveryTemplateReference
 	}{arg1, arg2})
-	stub := fake.GetDeliveryClusterTemplateStub
-	fakeReturns := fake.getDeliveryClusterTemplateReturns
-	fake.recordInvocation("GetDeliveryClusterTemplate", []interface{}{arg1, arg2})
-	fake.getDeliveryClusterTemplateMutex.Unlock()
+	stub := fake.GetDeliveryTemplateStub
+	fakeReturns := fake.getDeliveryTemplateReturns
+	fake.recordInvocation("GetDeliveryTemplate", []interface{}{arg1, arg2})
+	fake.getDeliveryTemplateMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -660,46 +504,46 @@ func (fake *FakeRepository) GetDeliveryClusterTemplate(arg1 context.Context, arg
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeRepository) GetDeliveryClusterTemplateCallCount() int {
-	fake.getDeliveryClusterTemplateMutex.RLock()
-	defer fake.getDeliveryClusterTemplateMutex.RUnlock()
-	return len(fake.getDeliveryClusterTemplateArgsForCall)
+func (fake *FakeRepository) GetDeliveryTemplateCallCount() int {
+	fake.getDeliveryTemplateMutex.RLock()
+	defer fake.getDeliveryTemplateMutex.RUnlock()
+	return len(fake.getDeliveryTemplateArgsForCall)
 }
 
-func (fake *FakeRepository) GetDeliveryClusterTemplateCalls(stub func(context.Context, v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)) {
-	fake.getDeliveryClusterTemplateMutex.Lock()
-	defer fake.getDeliveryClusterTemplateMutex.Unlock()
-	fake.GetDeliveryClusterTemplateStub = stub
+func (fake *FakeRepository) GetDeliveryTemplateCalls(stub func(context.Context, v1alpha1.DeliveryTemplateReference) (client.Object, error)) {
+	fake.getDeliveryTemplateMutex.Lock()
+	defer fake.getDeliveryTemplateMutex.Unlock()
+	fake.GetDeliveryTemplateStub = stub
 }
 
-func (fake *FakeRepository) GetDeliveryClusterTemplateArgsForCall(i int) (context.Context, v1alpha1.DeliveryClusterTemplateReference) {
-	fake.getDeliveryClusterTemplateMutex.RLock()
-	defer fake.getDeliveryClusterTemplateMutex.RUnlock()
-	argsForCall := fake.getDeliveryClusterTemplateArgsForCall[i]
+func (fake *FakeRepository) GetDeliveryTemplateArgsForCall(i int) (context.Context, v1alpha1.DeliveryTemplateReference) {
+	fake.getDeliveryTemplateMutex.RLock()
+	defer fake.getDeliveryTemplateMutex.RUnlock()
+	argsForCall := fake.getDeliveryTemplateArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeRepository) GetDeliveryClusterTemplateReturns(result1 client.Object, result2 error) {
-	fake.getDeliveryClusterTemplateMutex.Lock()
-	defer fake.getDeliveryClusterTemplateMutex.Unlock()
-	fake.GetDeliveryClusterTemplateStub = nil
-	fake.getDeliveryClusterTemplateReturns = struct {
+func (fake *FakeRepository) GetDeliveryTemplateReturns(result1 client.Object, result2 error) {
+	fake.getDeliveryTemplateMutex.Lock()
+	defer fake.getDeliveryTemplateMutex.Unlock()
+	fake.GetDeliveryTemplateStub = nil
+	fake.getDeliveryTemplateReturns = struct {
 		result1 client.Object
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetDeliveryClusterTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
-	fake.getDeliveryClusterTemplateMutex.Lock()
-	defer fake.getDeliveryClusterTemplateMutex.Unlock()
-	fake.GetDeliveryClusterTemplateStub = nil
-	if fake.getDeliveryClusterTemplateReturnsOnCall == nil {
-		fake.getDeliveryClusterTemplateReturnsOnCall = make(map[int]struct {
+func (fake *FakeRepository) GetDeliveryTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
+	fake.getDeliveryTemplateMutex.Lock()
+	defer fake.getDeliveryTemplateMutex.Unlock()
+	fake.GetDeliveryTemplateStub = nil
+	if fake.getDeliveryTemplateReturnsOnCall == nil {
+		fake.getDeliveryTemplateReturnsOnCall = make(map[int]struct {
 			result1 client.Object
 			result2 error
 		})
 	}
-	fake.getDeliveryClusterTemplateReturnsOnCall[i] = struct {
+	fake.getDeliveryTemplateReturnsOnCall[i] = struct {
 		result1 client.Object
 		result2 error
 	}{result1, result2}
@@ -1020,6 +864,71 @@ func (fake *FakeRepository) GetSupplyChainReturnsOnCall(i int, result1 *v1alpha1
 	}{result1, result2}
 }
 
+func (fake *FakeRepository) GetSupplyChainTemplate(arg1 context.Context, arg2 v1alpha1.SupplyChainTemplateReference) (client.Object, error) {
+	fake.getSupplyChainTemplateMutex.Lock()
+	ret, specificReturn := fake.getSupplyChainTemplateReturnsOnCall[len(fake.getSupplyChainTemplateArgsForCall)]
+	fake.getSupplyChainTemplateArgsForCall = append(fake.getSupplyChainTemplateArgsForCall, struct {
+		arg1 context.Context
+		arg2 v1alpha1.SupplyChainTemplateReference
+	}{arg1, arg2})
+	stub := fake.GetSupplyChainTemplateStub
+	fakeReturns := fake.getSupplyChainTemplateReturns
+	fake.recordInvocation("GetSupplyChainTemplate", []interface{}{arg1, arg2})
+	fake.getSupplyChainTemplateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetSupplyChainTemplateCallCount() int {
+	fake.getSupplyChainTemplateMutex.RLock()
+	defer fake.getSupplyChainTemplateMutex.RUnlock()
+	return len(fake.getSupplyChainTemplateArgsForCall)
+}
+
+func (fake *FakeRepository) GetSupplyChainTemplateCalls(stub func(context.Context, v1alpha1.SupplyChainTemplateReference) (client.Object, error)) {
+	fake.getSupplyChainTemplateMutex.Lock()
+	defer fake.getSupplyChainTemplateMutex.Unlock()
+	fake.GetSupplyChainTemplateStub = stub
+}
+
+func (fake *FakeRepository) GetSupplyChainTemplateArgsForCall(i int) (context.Context, v1alpha1.SupplyChainTemplateReference) {
+	fake.getSupplyChainTemplateMutex.RLock()
+	defer fake.getSupplyChainTemplateMutex.RUnlock()
+	argsForCall := fake.getSupplyChainTemplateArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeRepository) GetSupplyChainTemplateReturns(result1 client.Object, result2 error) {
+	fake.getSupplyChainTemplateMutex.Lock()
+	defer fake.getSupplyChainTemplateMutex.Unlock()
+	fake.GetSupplyChainTemplateStub = nil
+	fake.getSupplyChainTemplateReturns = struct {
+		result1 client.Object
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetSupplyChainTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
+	fake.getSupplyChainTemplateMutex.Lock()
+	defer fake.getSupplyChainTemplateMutex.Unlock()
+	fake.GetSupplyChainTemplateStub = nil
+	if fake.getSupplyChainTemplateReturnsOnCall == nil {
+		fake.getSupplyChainTemplateReturnsOnCall = make(map[int]struct {
+			result1 client.Object
+			result2 error
+		})
+	}
+	fake.getSupplyChainTemplateReturnsOnCall[i] = struct {
+		result1 client.Object
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeRepository) GetSupplyChainsForWorkload(arg1 context.Context, arg2 *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	ret, specificReturn := fake.getSupplyChainsForWorkloadReturnsOnCall[len(fake.getSupplyChainsForWorkloadArgsForCall)]
@@ -1081,71 +990,6 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, resul
 	}
 	fake.getSupplyChainsForWorkloadReturnsOnCall[i] = struct {
 		result1 []*v1alpha1.ClusterSupplyChain
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeRepository) GetUnstructured(arg1 context.Context, arg2 *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	fake.getUnstructuredMutex.Lock()
-	ret, specificReturn := fake.getUnstructuredReturnsOnCall[len(fake.getUnstructuredArgsForCall)]
-	fake.getUnstructuredArgsForCall = append(fake.getUnstructuredArgsForCall, struct {
-		arg1 context.Context
-		arg2 *unstructured.Unstructured
-	}{arg1, arg2})
-	stub := fake.GetUnstructuredStub
-	fakeReturns := fake.getUnstructuredReturns
-	fake.recordInvocation("GetUnstructured", []interface{}{arg1, arg2})
-	fake.getUnstructuredMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeRepository) GetUnstructuredCallCount() int {
-	fake.getUnstructuredMutex.RLock()
-	defer fake.getUnstructuredMutex.RUnlock()
-	return len(fake.getUnstructuredArgsForCall)
-}
-
-func (fake *FakeRepository) GetUnstructuredCalls(stub func(context.Context, *unstructured.Unstructured) (*unstructured.Unstructured, error)) {
-	fake.getUnstructuredMutex.Lock()
-	defer fake.getUnstructuredMutex.Unlock()
-	fake.GetUnstructuredStub = stub
-}
-
-func (fake *FakeRepository) GetUnstructuredArgsForCall(i int) (context.Context, *unstructured.Unstructured) {
-	fake.getUnstructuredMutex.RLock()
-	defer fake.getUnstructuredMutex.RUnlock()
-	argsForCall := fake.getUnstructuredArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeRepository) GetUnstructuredReturns(result1 *unstructured.Unstructured, result2 error) {
-	fake.getUnstructuredMutex.Lock()
-	defer fake.getUnstructuredMutex.Unlock()
-	fake.GetUnstructuredStub = nil
-	fake.getUnstructuredReturns = struct {
-		result1 *unstructured.Unstructured
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeRepository) GetUnstructuredReturnsOnCall(i int, result1 *unstructured.Unstructured, result2 error) {
-	fake.getUnstructuredMutex.Lock()
-	defer fake.getUnstructuredMutex.Unlock()
-	fake.GetUnstructuredStub = nil
-	if fake.getUnstructuredReturnsOnCall == nil {
-		fake.getUnstructuredReturnsOnCall = make(map[int]struct {
-			result1 *unstructured.Unstructured
-			result2 error
-		})
-	}
-	fake.getUnstructuredReturnsOnCall[i] = struct {
-		result1 *unstructured.Unstructured
 		result2 error
 	}{result1, result2}
 }
@@ -1216,21 +1060,19 @@ func (fake *FakeRepository) GetWorkloadReturnsOnCall(i int, result1 *v1alpha1.Wo
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) ListUnstructured(arg1 context.Context, arg2 schema.GroupVersionKind, arg3 string, arg4 map[string]string) ([]*unstructured.Unstructured, error) {
+func (fake *FakeRepository) ListUnstructured(arg1 context.Context, arg2 *unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	fake.listUnstructuredMutex.Lock()
 	ret, specificReturn := fake.listUnstructuredReturnsOnCall[len(fake.listUnstructuredArgsForCall)]
 	fake.listUnstructuredArgsForCall = append(fake.listUnstructuredArgsForCall, struct {
 		arg1 context.Context
-		arg2 schema.GroupVersionKind
-		arg3 string
-		arg4 map[string]string
-	}{arg1, arg2, arg3, arg4})
+		arg2 *unstructured.Unstructured
+	}{arg1, arg2})
 	stub := fake.ListUnstructuredStub
 	fakeReturns := fake.listUnstructuredReturns
-	fake.recordInvocation("ListUnstructured", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("ListUnstructured", []interface{}{arg1, arg2})
 	fake.listUnstructuredMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1244,17 +1086,17 @@ func (fake *FakeRepository) ListUnstructuredCallCount() int {
 	return len(fake.listUnstructuredArgsForCall)
 }
 
-func (fake *FakeRepository) ListUnstructuredCalls(stub func(context.Context, schema.GroupVersionKind, string, map[string]string) ([]*unstructured.Unstructured, error)) {
+func (fake *FakeRepository) ListUnstructuredCalls(stub func(context.Context, *unstructured.Unstructured) ([]*unstructured.Unstructured, error)) {
 	fake.listUnstructuredMutex.Lock()
 	defer fake.listUnstructuredMutex.Unlock()
 	fake.ListUnstructuredStub = stub
 }
 
-func (fake *FakeRepository) ListUnstructuredArgsForCall(i int) (context.Context, schema.GroupVersionKind, string, map[string]string) {
+func (fake *FakeRepository) ListUnstructuredArgsForCall(i int) (context.Context, *unstructured.Unstructured) {
 	fake.listUnstructuredMutex.RLock()
 	defer fake.listUnstructuredMutex.RUnlock()
 	argsForCall := fake.listUnstructuredArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeRepository) ListUnstructuredReturns(result1 []*unstructured.Unstructured, result2 error) {
@@ -1348,20 +1190,16 @@ func (fake *FakeRepository) StatusUpdateReturnsOnCall(i int, result1 error) {
 func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.ensureImmutableObjectExistsOnClusterMutex.RLock()
-	defer fake.ensureImmutableObjectExistsOnClusterMutex.RUnlock()
-	fake.ensureMutableObjectExistsOnClusterMutex.RLock()
-	defer fake.ensureMutableObjectExistsOnClusterMutex.RUnlock()
-	fake.getClusterTemplateMutex.RLock()
-	defer fake.getClusterTemplateMutex.RUnlock()
+	fake.ensureObjectExistsOnClusterMutex.RLock()
+	defer fake.ensureObjectExistsOnClusterMutex.RUnlock()
 	fake.getDeliverableMutex.RLock()
 	defer fake.getDeliverableMutex.RUnlock()
 	fake.getDeliveriesForDeliverableMutex.RLock()
 	defer fake.getDeliveriesForDeliverableMutex.RUnlock()
 	fake.getDeliveryMutex.RLock()
 	defer fake.getDeliveryMutex.RUnlock()
-	fake.getDeliveryClusterTemplateMutex.RLock()
-	defer fake.getDeliveryClusterTemplateMutex.RUnlock()
+	fake.getDeliveryTemplateMutex.RLock()
+	defer fake.getDeliveryTemplateMutex.RUnlock()
 	fake.getRunTemplateMutex.RLock()
 	defer fake.getRunTemplateMutex.RUnlock()
 	fake.getRunnableMutex.RLock()
@@ -1372,10 +1210,10 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getServiceAccountSecretMutex.RUnlock()
 	fake.getSupplyChainMutex.RLock()
 	defer fake.getSupplyChainMutex.RUnlock()
+	fake.getSupplyChainTemplateMutex.RLock()
+	defer fake.getSupplyChainTemplateMutex.RUnlock()
 	fake.getSupplyChainsForWorkloadMutex.RLock()
 	defer fake.getSupplyChainsForWorkloadMutex.RUnlock()
-	fake.getUnstructuredMutex.RLock()
-	defer fake.getUnstructuredMutex.RUnlock()
 	fake.getWorkloadMutex.RLock()
 	defer fake.getWorkloadMutex.RUnlock()
 	fake.listUnstructuredMutex.RLock()

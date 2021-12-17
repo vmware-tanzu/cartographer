@@ -92,10 +92,10 @@ var _ = Describe("MapFunctions", func() {
 								Kind:       "ClusterDelivery",
 								APIVersion: "carto.run/v1alpha1",
 							},
-							Spec: v1alpha1.ClusterDeliverySpec{
-								Resources: []v1alpha1.ClusterDeliveryResource{
+							Spec: v1alpha1.DeliverySpec{
+								Resources: []v1alpha1.DeliveryResource{
 									{
-										TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+										TemplateRef: v1alpha1.DeliveryTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template-foo",
 										},
@@ -109,10 +109,10 @@ var _ = Describe("MapFunctions", func() {
 								APIVersion: "carto.run/v1alpha1",
 							},
 							ObjectMeta: metav1.ObjectMeta{Name: "good-supply-chain"},
-							Spec: v1alpha1.ClusterDeliverySpec{
-								Resources: []v1alpha1.ClusterDeliveryResource{
+							Spec: v1alpha1.DeliverySpec{
+								Resources: []v1alpha1.DeliveryResource{
 									{
-										TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+										TemplateRef: v1alpha1.DeliveryTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template",
 										},
@@ -271,7 +271,7 @@ var _ = Describe("MapFunctions", func() {
 							Spec: v1alpha1.SupplyChainSpec{
 								Resources: []v1alpha1.SupplyChainResource{
 									{
-										TemplateRef: v1alpha1.ClusterTemplateReference{
+										TemplateRef: v1alpha1.SupplyChainTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template-foo",
 										},
@@ -288,7 +288,7 @@ var _ = Describe("MapFunctions", func() {
 							Spec: v1alpha1.SupplyChainSpec{
 								Resources: []v1alpha1.SupplyChainResource{
 									{
-										TemplateRef: v1alpha1.ClusterTemplateReference{
+										TemplateRef: v1alpha1.SupplyChainTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template",
 										},
@@ -580,7 +580,7 @@ var _ = Describe("MapFunctions", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "myDelivery",
 				},
-				Spec: v1alpha1.ClusterDeliverySpec{
+				Spec: v1alpha1.DeliverySpec{
 					Selector: map[string]string{
 						"myLabel": "myLabelsValue",
 					},
@@ -628,7 +628,7 @@ var _ = Describe("MapFunctions", func() {
 			Context("no deliverables", func() {
 				BeforeEach(func() {
 					clusterDelivery = &v1alpha1.ClusterDelivery{
-						Spec: v1alpha1.ClusterDeliverySpec{
+						Spec: v1alpha1.DeliverySpec{
 							Selector: map[string]string{
 								"myLabel": "myLabelsValue",
 							},
@@ -680,7 +680,7 @@ var _ = Describe("MapFunctions", func() {
 							deliverable.Labels["myOtherLabel"] = "myOtherLabelsValue"
 
 							delivery := &v1alpha1.ClusterDelivery{
-								Spec: v1alpha1.ClusterDeliverySpec{
+								Spec: v1alpha1.DeliverySpec{
 									Selector: map[string]string{
 										"myLabel":      "myLabelsValue",
 										"myOtherLabel": "myOtherLabelsValue",
@@ -946,7 +946,7 @@ var _ = Describe("MapFunctions", func() {
 							Spec: v1alpha1.SupplyChainSpec{
 								Resources: []v1alpha1.SupplyChainResource{
 									{
-										TemplateRef: v1alpha1.ClusterTemplateReference{
+										TemplateRef: v1alpha1.SupplyChainTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template-foo",
 										},
@@ -959,7 +959,7 @@ var _ = Describe("MapFunctions", func() {
 							Spec: v1alpha1.SupplyChainSpec{
 								Resources: []v1alpha1.SupplyChainResource{
 									{
-										TemplateRef: v1alpha1.ClusterTemplateReference{
+										TemplateRef: v1alpha1.SupplyChainTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template",
 										},
@@ -1119,10 +1119,10 @@ var _ = Describe("MapFunctions", func() {
 				Context("there are multiple deliveries", func() {
 					BeforeEach(func() {
 						existingDelivery1 := &v1alpha1.ClusterDelivery{
-							Spec: v1alpha1.ClusterDeliverySpec{
-								Resources: []v1alpha1.ClusterDeliveryResource{
+							Spec: v1alpha1.DeliverySpec{
+								Resources: []v1alpha1.DeliveryResource{
 									{
-										TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+										TemplateRef: v1alpha1.DeliveryTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template-foo",
 										},
@@ -1132,10 +1132,10 @@ var _ = Describe("MapFunctions", func() {
 						}
 						existingDelivery2 := &v1alpha1.ClusterDelivery{
 							ObjectMeta: metav1.ObjectMeta{Name: "good-delivery"},
-							Spec: v1alpha1.ClusterDeliverySpec{
-								Resources: []v1alpha1.ClusterDeliveryResource{
+							Spec: v1alpha1.DeliverySpec{
+								Resources: []v1alpha1.DeliveryResource{
 									{
-										TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+										TemplateRef: v1alpha1.DeliveryTemplateReference{
 											Kind: "ClusterTemplate",
 											Name: "my-template",
 										},
@@ -3421,7 +3421,7 @@ var _ = Describe("MapFunctions", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "some-delivery",
 						},
-						Spec: v1alpha1.ClusterDeliverySpec{
+						Spec: v1alpha1.DeliverySpec{
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
@@ -3501,7 +3501,7 @@ var _ = Describe("MapFunctions", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "some-delivery",
 						},
-						Spec: v1alpha1.ClusterDeliverySpec{
+						Spec: v1alpha1.DeliverySpec{
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
@@ -3552,7 +3552,7 @@ var _ = Describe("MapFunctions", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "some-delivery",
 						},
-						Spec: v1alpha1.ClusterDeliverySpec{
+						Spec: v1alpha1.DeliverySpec{
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
@@ -3603,7 +3603,7 @@ var _ = Describe("MapFunctions", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "some-supply-chain",
 						},
-						Spec: v1alpha1.ClusterDeliverySpec{
+						Spec: v1alpha1.DeliverySpec{
 							Selector: map[string]string{
 								"some-label": "some-label-value",
 							},
