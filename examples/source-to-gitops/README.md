@@ -440,7 +440,7 @@ kind: GitRepository
 metadata:
   name: git-repository
 spec:
-  interval: 1m
+  interval: 1m0s
   url: https://github.com/kontinue/hello-world
   ref: {branch: main}
 ```
@@ -454,7 +454,7 @@ kind: GitRepository
 metadata:
   name: git-repository
 spec:
-  interval: 1m
+  interval: 1m0s
   url: https://github.com/kontinue/hello-world
   ref: {branch: main}
 status:
@@ -476,7 +476,7 @@ kind: GitRepository
 metadata:
   name: $(name_of_the_project)
 spec:
-  interval: 1m
+  interval: 1m0s
   url: $(developers_repository)$
   ref: {branch: $(branch_developers_want_to_deploy_from)}
 ```
@@ -556,7 +556,7 @@ spec:
     metadata:
       name: $(workload.name)$            #     `$(workload.*)$` provides access
     spec:                                #        to fields from the `Workload`
-      interval: 1m                       #              object submitted by the 
+      interval: 1m0s                     #              object submitted by the 
       url: $(workload.source.git.url)$   #                           developers
       ref: $(workload.source.git.ref)$
       gitImplementation: libgit2

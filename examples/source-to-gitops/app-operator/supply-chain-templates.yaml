@@ -36,7 +36,7 @@ spec:
     metadata:
       name: $(workload.metadata.name)$
     spec:
-      interval: 1m
+      interval: 1m0s
       url: $(workload.spec.source.git.url)$
       ref: $(workload.spec.source.git.ref)$
       gitImplementation: libgit2
