@@ -160,24 +160,15 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
-				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object using the workload repository and returns the outputs and stampedObjects", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				_, stampedObject, labels, allowUpdate := fakeWorkloadRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stampedObject := fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 				Expect(returnedStampedObject).To(Equal(stampedObject))
-				Expect(allowUpdate).To(BeTrue())
-				Expect(labels).To(Equal(map[string]string{
-					"carto.run/cluster-supply-chain-name": "supply-chain-name",
-					"carto.run/resource-name":             "resource-1",
-					"carto.run/cluster-template-name":     "image-template-1",
-					"carto.run/workload-name":             "",
-					"carto.run/workload-namespace":        "",
-					"carto.run/template-kind":             "ClusterImageTemplate",
-				}))
 
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
@@ -195,6 +186,14 @@ var _ = Describe("Resource", func() {
 					},
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
+					"carto.run/cluster-supply-chain-name": "supply-chain-name",
+					"carto.run/resource-name":             "resource-1",
+					"carto.run/cluster-template-name":     "image-template-1",
+					"carto.run/workload-name":             "",
+					"carto.run/workload-namespace":        "",
+					"carto.run/template-kind":             "ClusterImageTemplate",
+				}))
 
 				Expect(out.Image).To(Equal("some-revision"))
 			})
@@ -304,7 +303,7 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
-				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -365,7 +364,7 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
-				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
+				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
 				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)

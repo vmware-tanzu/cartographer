@@ -115,7 +115,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDel
 		}
 	}
 
-	err = r.deliverableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labels, true)
+	err = r.deliverableRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{

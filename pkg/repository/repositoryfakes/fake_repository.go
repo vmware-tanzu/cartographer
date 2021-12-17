@@ -193,12 +193,11 @@ type FakeRepository struct {
 		result1 []*v1alpha1.ClusterSupplyChain
 		result2 error
 	}
-	GetUnstructuredStub        func(context.Context, string, string) (*unstructured.Unstructured, error)
+	GetUnstructuredStub        func(context.Context, *unstructured.Unstructured) (*unstructured.Unstructured, error)
 	getUnstructuredMutex       sync.RWMutex
 	getUnstructuredArgsForCall []struct {
 		arg1 context.Context
-		arg2 string
-		arg3 string
+		arg2 *unstructured.Unstructured
 	}
 	getUnstructuredReturns struct {
 		result1 *unstructured.Unstructured
@@ -1086,20 +1085,19 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetUnstructured(arg1 context.Context, arg2 string, arg3 string) (*unstructured.Unstructured, error) {
+func (fake *FakeRepository) GetUnstructured(arg1 context.Context, arg2 *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	fake.getUnstructuredMutex.Lock()
 	ret, specificReturn := fake.getUnstructuredReturnsOnCall[len(fake.getUnstructuredArgsForCall)]
 	fake.getUnstructuredArgsForCall = append(fake.getUnstructuredArgsForCall, struct {
 		arg1 context.Context
-		arg2 string
-		arg3 string
-	}{arg1, arg2, arg3})
+		arg2 *unstructured.Unstructured
+	}{arg1, arg2})
 	stub := fake.GetUnstructuredStub
 	fakeReturns := fake.getUnstructuredReturns
-	fake.recordInvocation("GetUnstructured", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("GetUnstructured", []interface{}{arg1, arg2})
 	fake.getUnstructuredMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1113,17 +1111,17 @@ func (fake *FakeRepository) GetUnstructuredCallCount() int {
 	return len(fake.getUnstructuredArgsForCall)
 }
 
-func (fake *FakeRepository) GetUnstructuredCalls(stub func(context.Context, string, string) (*unstructured.Unstructured, error)) {
+func (fake *FakeRepository) GetUnstructuredCalls(stub func(context.Context, *unstructured.Unstructured) (*unstructured.Unstructured, error)) {
 	fake.getUnstructuredMutex.Lock()
 	defer fake.getUnstructuredMutex.Unlock()
 	fake.GetUnstructuredStub = stub
 }
 
-func (fake *FakeRepository) GetUnstructuredArgsForCall(i int) (context.Context, string, string) {
+func (fake *FakeRepository) GetUnstructuredArgsForCall(i int) (context.Context, *unstructured.Unstructured) {
 	fake.getUnstructuredMutex.RLock()
 	defer fake.getUnstructuredMutex.RUnlock()
 	argsForCall := fake.getUnstructuredArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeRepository) GetUnstructuredReturns(result1 *unstructured.Unstructured, result2 error) {

@@ -61,14 +61,12 @@ var _ = Describe("repository", func() {
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("EnsureImmutableObjectExistsOnCluster", func() {
+		Context("EnsureMutableObjectExistsOnCluster", func() {
 			var (
 				stampedObj *unstructured.Unstructured
-				labels     map[string]string
 			)
 
 			BeforeEach(func() {
-				labels = map[string]string{"foo": "bar"}
 				stampedObj = &unstructured.Unstructured{}
 				stampedObjManifest := `
 apiVersion: batch/v1
@@ -76,8 +74,6 @@ kind: Job
 metadata:
   name: hello
   namespace: default
-  labels:
-    foo: bar
 spec:
   template:
     spec:
@@ -99,7 +95,7 @@ spec:
 
 				_, namespacedName, obj := cl.GetArgsForCall(0)
 				Expect(namespacedName).To(Equal(types.NamespacedName{Namespace: "default", Name: "hello"}))
-				Expect(obj.(*unstructured.Unstructured).Object).To(BeNil())
+				Expect(obj.GetObjectKind().GroupVersionKind()).To(Equal(stampedObj.GroupVersionKind()))
 			})
 
 			Context("when the apiServer errors when trying to get the object", func() {
@@ -126,8 +122,9 @@ spec:
 
 			Context("and the apiServer attempts to get the object and it doesn't exist", func() {
 				BeforeEach(func() {
-					// default behavior is empty list - no need to stub
+					cl.GetReturns(kerrors.NewNotFound(schema.GroupResource{}, ""))
 				})
+
 				It("attempts to create the object", func() {
 					Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 
@@ -182,7 +179,7 @@ spec:
 				})
 			})
 
-			Context("and apiServer succeeds in getting the list of object(s)", func() {
+			Context("and apiServer succeeds in getting the object", func() {
 				var (
 					existingObj *unstructured.Unstructured
 				)
@@ -295,57 +292,152 @@ spec:
 							})
 						})
 					})
+				})
+			})
+		})
 
-					Context("and allowUpate is false", func() {
-						It("creates a new object", func() {
+		Context("EnsureImmutableObjectExistsOnCluster", func() {
+			var (
+				stampedObj *unstructured.Unstructured
+				labels     map[string]string
+			)
+
+			BeforeEach(func() {
+				labels = map[string]string{"foo": "bar"}
+				stampedObj = &unstructured.Unstructured{}
+				stampedObjManifest := `
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello
+  namespace: default
+  labels:
+    foo: bar
+spec:
+  template:
+    spec:
+      containers:
+      - name: hello
+        image: busybox
+        command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 3600']
+      restartPolicy: OnFailure
+`
+				dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+				_, _, err := dec.Decode([]byte(stampedObjManifest), nil, stampedObj)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("and apiServer succeeds in getting the list of objects", func() {
+				var (
+					existingObj *unstructured.Unstructured
+					existingObjList unstructured.UnstructuredList
+				)
+
+				BeforeEach(func() {
+					existingObj = &unstructured.Unstructured{}
+					existingObj.SetName("hello")
+					existingObj.SetNamespace("default")
+					existingObj.SetGeneration(5)
+
+					existingObjList = unstructured.UnstructuredList{
+						Items: []unstructured.Unstructured{*existingObj},
+					}
+
+					cl.ListStub = func(ctx context.Context, list client.ObjectList, options ...client.ListOption) error {
+						listVal := reflect.ValueOf(list)
+						existingVal := reflect.ValueOf(existingObjList)
+
+						reflect.Indirect(listVal).Set(reflect.Indirect(existingVal))
+						return nil
+					}
+				})
+
+				It("the cache is consulted to see if there was a change since the last time the cache was updated", func() {
+					Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
+					Expect(cache.UnchangedSinceCachedFromListCallCount()).To(Equal(1))
+
+					submitted, persisted := cache.UnchangedSinceCachedFromListArgsForCall(0)
+					Expect(*submitted).To(Equal(*stampedObj))
+					Expect(persisted[0]).To(Equal(existingObj))
+				})
+
+				Context("and the cache determines there has been no change since the last update", func() {
+					BeforeEach(func() {
+						cache.UnchangedSinceCachedFromListReturns(existingObj)
+					})
+
+					It("does not create any objects", func() {
+						Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
+						Expect(cl.CreateCallCount()).To(Equal(0))
+					})
+
+					It("does not write to the submitted or persisted cache", func() {
+						Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
+						Expect(cache.SetCallCount()).To(Equal(0))
+					})
+
+					It("populates the object passed into the function with the object in apiServer", func() {
+						originalStampedObj := stampedObj.DeepCopy()
+
+						_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+
+						Expect(stampedObj).To(Equal(existingObj))
+						Expect(stampedObj).NotTo(Equal(originalStampedObj))
+					})
+				})
+
+				Context("and the cache determines there has been a change since the last update", func() {
+					BeforeEach(func() {
+						cache.UnchangedSinceCachedReturns(nil)
+					})
+
+					It("creates a new object", func() {
+						Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
+						Expect(cl.CreateCallCount()).To(Equal(1))
+					})
+
+					Context("and the create succeeds", func() {
+						var returnedCreatedObj *unstructured.Unstructured
+
+						BeforeEach(func() {
+							returnedCreatedObj = stampedObj.DeepCopy()
+							Expect(utils.AlterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
+							cl.CreateStub = func(ctx context.Context, object client.Object, option ...client.CreateOption) error {
+								objVal := reflect.ValueOf(object)
+								returnVal := reflect.ValueOf(returnedCreatedObj)
+
+								reflect.Indirect(objVal).Set(reflect.Indirect(returnVal))
+								return nil
+							}
+						})
+
+						It("does not return an error", func() {
 							Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
-							Expect(cl.PatchCallCount()).To(Equal(0))
-							Expect(cl.CreateCallCount()).To(Equal(1))
 						})
 
-						Context("and the create succeeds", func() {
-							var returnedCreatedObj *unstructured.Unstructured
+						It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+							originalStampedObj := stampedObj.DeepCopy()
 
-							BeforeEach(func() {
-								returnedCreatedObj = stampedObj.DeepCopy()
-								Expect(utils.AlterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
-								cl.CreateStub = func(ctx context.Context, object client.Object, option ...client.CreateOption) error {
-									objVal := reflect.ValueOf(object)
-									returnVal := reflect.ValueOf(returnedCreatedObj)
+							Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
+							Expect(cache.SetCallCount()).To(Equal(1))
+							submitted, persisted := cache.SetArgsForCall(0)
+							Expect(*submitted).To(Equal(*originalStampedObj))
+							Expect(*persisted).To(Equal(*returnedCreatedObj))
+						})
+					})
 
-									reflect.Indirect(objVal).Set(reflect.Indirect(returnVal))
-									return nil
-								}
-							})
-
-							It("does not return an error", func() {
-								Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
-							})
-
-							It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
-								originalStampedObj := stampedObj.DeepCopy()
-
-								Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
-								Expect(cache.SetCallCount()).To(Equal(1))
-								submitted, persisted := cache.SetArgsForCall(0)
-								Expect(*submitted).To(Equal(*originalStampedObj))
-								Expect(*persisted).To(Equal(*returnedCreatedObj))
-							})
+					Context("and the create fails", func() {
+						BeforeEach(func() {
+							cl.CreateReturns(errors.New("some-error"))
+						})
+						It("returns a helpful error", func() {
+							err := repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+							Expect(err).To(MatchError(ContainSubstring("create: some-error")))
 						})
 
-						Context("and the create fails", func() {
-							BeforeEach(func() {
-								cl.CreateReturns(errors.New("some-error"))
-							})
-							It("returns a helpful error", func() {
-								err := repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
-								Expect(err).To(MatchError(ContainSubstring("create: some-error")))
-							})
-
-							It("does not write to the submitted or persisted cache", func() {
-								_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
-								Expect(cache.SetCallCount()).To(Equal(0))
-							})
+						It("does not write to the submitted or persisted cache", func() {
+							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+							Expect(cache.SetCallCount()).To(Equal(0))
 						})
 					})
 				})

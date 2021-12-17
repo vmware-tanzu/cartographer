@@ -159,25 +159,16 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
-				fakeDeliverableRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object and returns the outputs and stampedObjects", func() {
 				returnedStampedObject, out, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 
-				_, stampedObject, labels, allowUpdate := fakeDeliverableRepo.EnsureObjectExistsOnClusterArgsForCall(0)
+				_, stampedObject := fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 
 				Expect(returnedStampedObject).To(Equal(stampedObject))
-				Expect(allowUpdate).To(BeTrue())
-				Expect(labels).To(Equal(map[string]string{
-					"carto.run/cluster-delivery-name": "delivery-name",
-					"carto.run/resource-name":         "resource-1",
-					"carto.run/cluster-template-name": "source-template-1",
-					"carto.run/deliverable-name":      "",
-					"carto.run/deliverable-namespace": "",
-					"carto.run/template-kind":         "ClusterSourceTemplate",
-				}))
 
 				metadata := stampedObject.Object["metadata"]
 				metadataValues, ok := metadata.(map[string]interface{})
@@ -195,6 +186,14 @@ var _ = Describe("Resource", func() {
 					},
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
+					"carto.run/cluster-delivery-name": "delivery-name",
+					"carto.run/resource-name":         "resource-1",
+					"carto.run/cluster-template-name": "source-template-1",
+					"carto.run/deliverable-name":      "",
+					"carto.run/deliverable-namespace": "",
+					"carto.run/template-kind":         "ClusterSourceTemplate",
+				}))
 
 				Expect(out.Source.Revision).To(Equal("some-revision"))
 				Expect(out.Source.URL).To(Equal("some-url"))
@@ -305,7 +304,7 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
-				fakeDeliverableRepo.EnsureObjectExistsOnClusterReturns(nil)
+				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -366,7 +365,7 @@ var _ = Describe("Resource", func() {
 				}
 
 				fakeSystemRepo.GetDeliveryClusterTemplateReturns(templateAPI, nil)
-				fakeDeliverableRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
+				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 
 			It("returns ApplyStampedObjectError", func() {
