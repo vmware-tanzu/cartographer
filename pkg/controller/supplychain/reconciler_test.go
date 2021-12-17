@@ -82,14 +82,14 @@ var _ = Describe("Reconciler", func() {
 				Resources: []v1alpha1.SupplyChainResource{
 					{
 						Name: "first name",
-						TemplateRef: v1alpha1.ClusterTemplateReference{
+						TemplateRef: v1alpha1.SupplyChainTemplateReference{
 							Kind: "some-kind",
 							Name: "some-name",
 						},
 					},
 					{
 						Name: "second name",
-						TemplateRef: v1alpha1.ClusterTemplateReference{
+						TemplateRef: v1alpha1.SupplyChainTemplateReference{
 							Kind: "another-kind",
 							Name: "another-name",
 						},
@@ -115,7 +115,7 @@ var _ = Describe("Reconciler", func() {
 			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
 		}
 
-		repo.GetClusterTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
+		repo.GetSupplyChainTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
 	})
 
 	It("logs that it's begun", func() {
@@ -174,7 +174,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("get cluster template fails", func() {
 		BeforeEach(func() {
-			repo.GetClusterTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
+			repo.GetSupplyChainTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 		})
 
 		It("returns an unhandled error and requeues", func() {
@@ -185,8 +185,8 @@ var _ = Describe("Reconciler", func() {
 
 	Context("cannot find cluster template", func() {
 		BeforeEach(func() {
-			repo.GetClusterTemplateReturnsOnCall(0, &v1alpha1.ClusterTemplate{}, nil)
-			repo.GetClusterTemplateReturnsOnCall(1, nil, nil)
+			repo.GetSupplyChainTemplateReturnsOnCall(0, &v1alpha1.ClusterTemplate{}, nil)
+			repo.GetSupplyChainTemplateReturnsOnCall(1, nil, nil)
 		})
 
 		It("adds a positive templates NOT found condition", func() {

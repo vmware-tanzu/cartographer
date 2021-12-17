@@ -32,7 +32,7 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.DeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -60,14 +60,14 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.ClusterDeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryResource, deliveryName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	apiTemplate, err := r.systemRepo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
+	apiTemplate, err := r.systemRepo.GetDeliveryTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
-		return nil, nil, GetDeliveryClusterTemplateError{
+		return nil, nil, GetDeliveryTemplateError{
 			Err:         err,
 			TemplateRef: resource.TemplateRef,
 		}

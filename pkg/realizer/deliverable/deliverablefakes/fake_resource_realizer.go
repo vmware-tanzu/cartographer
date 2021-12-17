@@ -12,11 +12,11 @@ import (
 )
 
 type FakeResourceRealizer struct {
-	DoStub        func(context.Context, *v1alpha1.ClusterDeliveryResource, string, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	DoStub        func(context.Context, *v1alpha1.DeliveryResource, string, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.ClusterDeliveryResource
+		arg2 *v1alpha1.DeliveryResource
 		arg3 string
 		arg4 deliverable.Outputs
 	}
@@ -34,12 +34,12 @@ type FakeResourceRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 *v1alpha1.ClusterDeliveryResource, arg3 string, arg4 deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 *v1alpha1.DeliveryResource, arg3 string, arg4 deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.ClusterDeliveryResource
+		arg2 *v1alpha1.DeliveryResource
 		arg3 string
 		arg4 deliverable.Outputs
 	}{arg1, arg2, arg3, arg4})
@@ -62,13 +62,13 @@ func (fake *FakeResourceRealizer) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, *v1alpha1.ClusterDeliveryResource, string, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)) {
+func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, *v1alpha1.DeliveryResource, string, deliverable.Outputs) (*unstructured.Unstructured, *templates.Output, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
 }
 
-func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.ClusterDeliveryResource, string, deliverable.Outputs) {
+func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, *v1alpha1.DeliveryResource, string, deliverable.Outputs) {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	argsForCall := fake.doArgsForCall[i]

@@ -64,7 +64,7 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 	var resourcesNotFound []string
 
 	for _, resource := range delivery.Spec.Resources {
-		template, err := r.Repo.GetDeliveryClusterTemplate(ctx, resource.TemplateRef)
+		template, err := r.Repo.GetDeliveryTemplate(ctx, resource.TemplateRef)
 		if err != nil {
 			log.Error(err, "failed to get delivery cluster template", "template", resource.TemplateRef)
 			return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))

@@ -127,8 +127,8 @@ var _ = Describe("DeliverableReconciler", func() {
 			ObjectMeta: v1.ObjectMeta{
 				Name: name,
 			},
-			Spec: v1alpha1.ClusterDeliverySpec{
-				Resources: []v1alpha1.ClusterDeliveryResource{},
+			Spec: v1alpha1.DeliverySpec{
+				Resources: []v1alpha1.DeliveryResource{},
 				Selector:  selector,
 			},
 		}
@@ -269,10 +269,10 @@ var _ = Describe("DeliverableReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				delivery := newClusterDelivery("delivery-bob", map[string]string{"name": "webapp"})
-				delivery.Spec.Resources = []v1alpha1.ClusterDeliveryResource{
+				delivery.Spec.Resources = []v1alpha1.DeliveryResource{
 					{
 						Name: "fred-resource",
-						TemplateRef: v1alpha1.DeliveryClusterTemplateReference{
+						TemplateRef: v1alpha1.DeliveryTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "proper-template-bob",
 						},

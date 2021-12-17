@@ -61,7 +61,7 @@ var _ = Describe("Resource", func() {
 		ctx = context.Background()
 		resource = v1alpha1.SupplyChainResource{
 			Name: "resource-1",
-			TemplateRef: v1alpha1.ClusterTemplateReference{
+			TemplateRef: v1alpha1.SupplyChainTemplateReference{
 				Kind: "ClusterImageTemplate",
 				Name: "image-template-1",
 			},
@@ -159,7 +159,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
@@ -202,16 +202,16 @@ var _ = Describe("Resource", func() {
 
 		When("unable to get the template ref from repo", func() {
 			BeforeEach(func() {
-				fakeSystemRepo.GetClusterTemplateReturns(nil, errors.New("bad template"))
+				fakeSystemRepo.GetSupplyChainTemplateReturns(nil, errors.New("bad template"))
 			})
 
-			It("returns GetClusterTemplateError", func() {
+			It("returns GetSupplyChainTemplateError", func() {
 				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetClusterTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetSupplyChainTemplateError"))
 			})
 		})
 
@@ -227,7 +227,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeWorkloadRepo.GetClusterTemplateReturns(templateAPI, nil)
+				fakeWorkloadRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns a helpful error", func() {
@@ -255,7 +255,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
@@ -303,7 +303,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(nil)
 			})
 
@@ -364,7 +364,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetClusterTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {

@@ -184,12 +184,12 @@ type SupplyChainSpec struct {
 }
 
 type SupplyChainResource struct {
-	Name        string                   `json:"name"`
-	TemplateRef ClusterTemplateReference `json:"templateRef"`
-	Params      []DelegatableParam       `json:"params,omitempty"`
-	Sources     []ResourceReference      `json:"sources,omitempty"`
-	Images      []ResourceReference      `json:"images,omitempty"`
-	Configs     []ResourceReference      `json:"configs,omitempty"`
+	Name        string                       `json:"name"`
+	TemplateRef SupplyChainTemplateReference `json:"templateRef"`
+	Params      []DelegatableParam           `json:"params,omitempty"`
+	Sources     []ResourceReference          `json:"sources,omitempty"`
+	Images      []ResourceReference          `json:"images,omitempty"`
+	Configs     []ResourceReference          `json:"configs,omitempty"`
 }
 
 var ValidSupplyChainTemplates = []client.Object{
@@ -199,7 +199,7 @@ var ValidSupplyChainTemplates = []client.Object{
 	&ClusterTemplate{},
 }
 
-type ClusterTemplateReference struct {
+type SupplyChainTemplateReference struct {
 	//+kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
 	// +kubebuilder:validation:MinLength=1

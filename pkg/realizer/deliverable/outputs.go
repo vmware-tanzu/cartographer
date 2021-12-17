@@ -46,7 +46,7 @@ func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 	return output.Config
 }
 
-func (o Outputs) GenerateInputs(resource *v1alpha1.ClusterDeliveryResource) *templates.Inputs {
+func (o Outputs) GenerateInputs(resource *v1alpha1.DeliveryResource) *templates.Inputs {
 	inputs := &templates.Inputs{
 		Sources:    map[string]templates.SourceInput{},
 		Configs:    map[string]templates.ConfigInput{},

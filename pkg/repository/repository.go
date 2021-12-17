@@ -37,8 +37,8 @@ import (
 //counterfeiter:generate . Repository
 type Repository interface {
 	EnsureObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, allowUpdate bool) error
-	GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error)
-	GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error)
+	GetSupplyChainTemplate(ctx context.Context, ref v1alpha1.SupplyChainTemplateReference) (client.Object, error)
+	GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
 	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
@@ -199,13 +199,13 @@ func (r *repository) ListUnstructured(ctx context.Context, obj *unstructured.Uns
 	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetClusterTemplate(ctx context.Context, ref v1alpha1.ClusterTemplateReference) (client.Object, error) {
+func (r *repository) GetSupplyChainTemplate(ctx context.Context, ref v1alpha1.SupplyChainTemplateReference) (client.Object, error) {
 	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }
 
-func (r *repository) GetDeliveryClusterTemplate(ctx context.Context, ref v1alpha1.DeliveryClusterTemplateReference) (client.Object, error) {
+func (r *repository) GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("GetDeliveryClusterTemplate")
+	log.V(logger.DEBUG).Info("GetDeliveryTemplate")
 
 	return r.getTemplate(ctx, ref.Name, ref.Kind)
 }
