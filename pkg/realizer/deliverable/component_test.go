@@ -52,7 +52,7 @@ var _ = Describe("Resource", func() {
 		theSecret                *corev1.Secret
 		secretForBuiltClient     *corev1.Secret
 		r                        realizer.ResourceRealizer
-		deliveryParams           []v1alpha1.DelegatableParam
+		deliveryParams           []v1alpha1.BlueprintParam
 	)
 
 	BeforeEach(func() {
@@ -67,7 +67,7 @@ var _ = Describe("Resource", func() {
 
 		deliveryName = "delivery-name"
 
-		deliveryParams = []v1alpha1.DelegatableParam{}
+		deliveryParams = []v1alpha1.BlueprintParam{}
 
 		outputs = realizer.NewOutputs()
 

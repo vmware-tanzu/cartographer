@@ -62,10 +62,15 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the workload. More info: https://cartographer.sh/docs/latest/reference/workload/#workload'
             properties:
               build:
+                description: Build configuration, for the build resources in the supply
+                  chain
                 properties:
                   env:
+                    description: Env is an array of environment variables to propagate
+                      to build resources in the supply chain.
                     items:
                       description: EnvVar represents an environment variable present
                         in a Container.
@@ -176,6 +181,8 @@ spec:
                     type: array
                 type: object
               env:
+                description: Environment variables to be passed to the main container
+                  running the application.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -280,13 +287,16 @@ spec:
                   type: object
                 type: array
               image:
-                description: Image is a pre-built image in a registry. It is an alternative
-                  to defining source code.
+                description: Image refers to a pre-built image in a registry. It is
+                  an alternative to defining source code.
                 type: string
               params:
+                description: Additional parameters.
                 items:
                   properties:
                     name:
+                      description: Name of the parameter. Should match a blueprint
+                        or template parameter name.
                       type: string
                     value:
                       x-kubernetes-preserve-unknown-fields: true
@@ -296,7 +306,7 @@ spec:
                   type: object
                 type: array
               resources:
-                description: ResourceRequirements describes the compute resource requirements.
+                description: Resource constraints for the application. See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                 properties:
                   limits:
                     additionalProperties:
@@ -322,8 +332,14 @@ spec:
                     type: object
                 type: object
               serviceAccountName:
+                description: "ServiceAccountName refers to the Service account with
+                  permissions to create resources submitted by the supply chain. \n
+                  If not set, Cartographer will use serviceAccountName from supply
+                  chain. \n If that is also not set, Cartographer will use the default
+                  service account in the workload's namespace."
                 type: string
               serviceClaims:
+                description: ServiceClaims to be bound through ServiceBindings.
                 items:
                   properties:
                     name:
@@ -346,8 +362,11 @@ spec:
                   type: object
                 type: array
               source:
+                description: The location of the source code for the workload. Specify
+                  one of `spec.source` or `spec.image`
                 properties:
                   git:
+                    description: Source code location in a git repository.
                     properties:
                       ref:
                         properties:
@@ -363,15 +382,23 @@ spec:
                     type: object
                   image:
                     description: Image is an OCI image is a registry that contains
-                      source code
+                      source code OCI Image in a repository, containing the source
+                      code to be used throughout the supply chain.
                     type: string
                   subPath:
+                    description: Subpath inside the Git repository or Image to treat
+                      as the root of the application. Defaults to the root if left
+                      empty.
                     type: string
                 type: object
             type: object
           status:
+            description: 'Status conforms to the Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
             properties:
               conditions:
+                description: 'Conditions describing this resource''s reconcile state.
+                  The top level condition is of type `Ready`, and follows these Kubernetes
+                  conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -441,9 +468,13 @@ spec:
                   type: object
                 type: array
               observedGeneration:
+                description: ObservedGeneration refers to the metadata.Generation
+                  of the spec that resulted in the current `status`.
                 format: int64
                 type: integer
               supplyChainRef:
+                description: SupplyChainRef is the Supply Chain resource that was
+                  used when this status was set.
                 properties:
                   apiVersion:
                     type: string

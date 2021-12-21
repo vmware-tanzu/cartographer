@@ -54,6 +54,8 @@ spec:
                     default:
                       x-kubernetes-preserve-unknown-fields: true
                     name:
+                      description: Name of the parameter. Should match a template
+                        parameter name.
                       type: string
                     value:
                       x-kubernetes-preserve-unknown-fields: true
@@ -91,6 +93,8 @@ spec:
                           default:
                             x-kubernetes-preserve-unknown-fields: true
                           name:
+                            description: Name of the parameter. Should match a template
+                              parameter name.
                             type: string
                           value:
                             x-kubernetes-preserve-unknown-fields: true

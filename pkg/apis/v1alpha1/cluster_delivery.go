@@ -54,7 +54,7 @@ func (c *ClusterDelivery) GetSelector() map[string]string {
 type DeliverySpec struct {
 	Resources         []DeliveryResource `json:"resources"`
 	Selector          map[string]string  `json:"selector"`
-	Params            []DelegatableParam `json:"params,omitempty"`
+	Params            []BlueprintParam   `json:"params,omitempty"`
 	ServiceAccountRef ServiceAccountRef  `json:"serviceAccountRef,omitempty"`
 }
 
@@ -66,7 +66,7 @@ type DeliveryStatus struct {
 type DeliveryResource struct {
 	Name        string                    `json:"name"`
 	TemplateRef DeliveryTemplateReference `json:"templateRef"`
-	Params      []DelegatableParam        `json:"params,omitempty"`
+	Params      []BlueprintParam          `json:"params,omitempty"`
 	Sources     []ResourceReference       `json:"sources,omitempty"`
 	Deployment  *DeploymentReference      `json:"deployment,omitempty"`
 	Configs     []ResourceReference       `json:"configs,omitempty"`
@@ -161,7 +161,7 @@ func (c *ClusterDelivery) validateDeploymentTemplateDidNotReceiveConfig() error 
 
 func (c *ClusterDelivery) validateParams() error {
 	for _, param := range c.Spec.Params {
-		err := param.validateDelegatableParams()
+		err := param.validate()
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (c *ClusterDelivery) validateParams() error {
 
 	for _, resource := range c.Spec.Resources {
 		for _, param := range resource.Params {
-			err := param.validateDelegatableParams()
+			err := param.validate()
 			if err != nil {
 				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
 			}

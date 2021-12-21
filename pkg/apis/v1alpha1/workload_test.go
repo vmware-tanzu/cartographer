@@ -180,9 +180,9 @@ var _ = Describe("Workload", func() {
 		})
 	})
 
-	Describe("Workload Param", func() {
+	Describe("Workload OwnerParam", func() {
 		var (
-			workloadParam     v1alpha1.Param
+			workloadParam     v1alpha1.OwnerParam
 			workloadParamType reflect.Type
 		)
 

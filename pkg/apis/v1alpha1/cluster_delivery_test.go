@@ -79,7 +79,7 @@ var _ = Describe("Delivery Validation", func() {
 			Context("Top level params are malformed", func() {
 				Context("param does not specify a value or default", func() {
 					BeforeEach(func() {
-						delivery.Spec.Params = []v1alpha1.DelegatableParam{
+						delivery.Spec.Params = []v1alpha1.BlueprintParam{
 							{
 								Name: "some-param",
 							},
@@ -94,7 +94,7 @@ var _ = Describe("Delivery Validation", func() {
 
 				Context("param specifies both a value and a default", func() {
 					BeforeEach(func() {
-						delivery.Spec.Params = []v1alpha1.DelegatableParam{
+						delivery.Spec.Params = []v1alpha1.BlueprintParam{
 							{
 								Name:         "some-param",
 								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
@@ -114,7 +114,7 @@ var _ = Describe("Delivery Validation", func() {
 			Context("Params of an individual resource are malformed", func() {
 				Context("param does not specify a value or default", func() {
 					BeforeEach(func() {
-						delivery.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+						delivery.Spec.Resources[0].Params = []v1alpha1.BlueprintParam{
 							{
 								Name: "some-param",
 							},
@@ -129,7 +129,7 @@ var _ = Describe("Delivery Validation", func() {
 
 				Context("param specifies both a value and a default", func() {
 					BeforeEach(func() {
-						delivery.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+						delivery.Spec.Resources[0].Params = []v1alpha1.BlueprintParam{
 							{
 								Name:         "some-param",
 								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},

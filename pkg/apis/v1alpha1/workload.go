@@ -49,8 +49,14 @@ const (
 type Workload struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              WorkloadSpec   `json:"spec"`
-	Status            WorkloadStatus `json:"status,omitempty"`
+
+	// Spec describes the workload.
+	// More info: https://cartographer.sh/docs/latest/reference/workload/#workload
+	Spec WorkloadSpec `json:"spec"`
+
+	// Status conforms to the Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Status WorkloadStatus `json:"status,omitempty"`
 }
 
 type WorkloadServiceClaim struct {
@@ -65,26 +71,60 @@ type WorkloadServiceClaimReference struct {
 }
 
 type WorkloadSpec struct {
-	Params []Param         `json:"params,omitempty"`
-	Source *Source         `json:"source,omitempty"`
-	Build  WorkloadBuild   `json:"build,omitempty"`
-	Env    []corev1.EnvVar `json:"env,omitempty"`
-	// Image is a pre-built image in a registry. It is an alternative to defining source
-	// code.
-	Image              *string                      `json:"image,omitempty"`
-	Resources          *corev1.ResourceRequirements `json:"resources,omitempty"`
-	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
-	ServiceClaims      []WorkloadServiceClaim       `json:"serviceClaims,omitempty"`
+	// Additional parameters.
+	// +optional
+	Params []OwnerParam `json:"params,omitempty"`
+
+	// The location of the source code for the workload. Specify
+	// one of `spec.source` or `spec.image`
+	// +optional
+	Source *Source `json:"source,omitempty"`
+
+	// Build configuration, for the build resources in the supply chain
+	// +optional
+	Build WorkloadBuild `json:"build,omitempty"`
+
+	// Environment variables to be passed to the main container
+	// running the application.
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// Image refers to a pre-built image in a registry. It is an alternative to defining
+	// source code.
+	// +optional
+	Image *string `json:"image,omitempty"`
+
+	// Resource constraints for the application. See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// ServiceAccountName refers to the Service account with permissions to create resources
+	// submitted by the supply chain.
+	//
+	// If not set, Cartographer will use serviceAccountName from supply chain.
+	//
+	// If that is also not set, Cartographer will use the default service account in the
+	// workload's namespace.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// ServiceClaims to be bound through ServiceBindings.
+	// +optional
+	ServiceClaims []WorkloadServiceClaim `json:"serviceClaims,omitempty"`
 }
 
 type WorkloadBuild struct {
+	// Env is an array of environment variables to propagate to build resources in the
+	// supply chain.
+	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 type WorkloadStatus struct {
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	SupplyChainRef     ObjectReference    `json:"supplyChainRef,omitempty"`
+	OwnerStatus `json:",inline"`
+
+	// SupplyChainRef is the Supply Chain resource that was used when this status was set.
+	SupplyChainRef ObjectReference `json:"supplyChainRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

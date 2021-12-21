@@ -96,7 +96,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 
 func (c *ClusterSupplyChain) validateParams() error {
 	for _, param := range c.Spec.Params {
-		err := param.validateDelegatableParams()
+		err := param.validate()
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (c *ClusterSupplyChain) validateParams() error {
 
 	for _, resource := range c.Spec.Resources {
 		for _, param := range resource.Params {
-			err := param.validateDelegatableParams()
+			err := param.validate()
 			if err != nil {
 				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
 			}
@@ -179,14 +179,14 @@ func GetSelectorsFromObject(o client.Object) []string {
 type SupplyChainSpec struct {
 	Resources         []SupplyChainResource `json:"resources"`
 	Selector          map[string]string     `json:"selector"`
-	Params            []DelegatableParam    `json:"params,omitempty"`
+	Params            []BlueprintParam      `json:"params,omitempty"`
 	ServiceAccountRef ServiceAccountRef     `json:"serviceAccountRef,omitempty"`
 }
 
 type SupplyChainResource struct {
 	Name        string                       `json:"name"`
 	TemplateRef SupplyChainTemplateReference `json:"templateRef"`
-	Params      []DelegatableParam           `json:"params,omitempty"`
+	Params      []BlueprintParam             `json:"params,omitempty"`
 	Sources     []ResourceReference          `json:"sources,omitempty"`
 	Images      []ResourceReference          `json:"images,omitempty"`
 	Configs     []ResourceReference          `json:"configs,omitempty"`

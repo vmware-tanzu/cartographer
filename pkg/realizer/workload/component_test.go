@@ -52,7 +52,7 @@ var _ = Describe("Resource", func() {
 		r                               realizer.ResourceRealizer
 		out                             *Buffer
 		repoCache                       repository.RepoCache
-		supplyChainParams               []v1alpha1.DelegatableParam
+		supplyChainParams               []v1alpha1.BlueprintParam
 	)
 
 	BeforeEach(func() {
@@ -68,7 +68,7 @@ var _ = Describe("Resource", func() {
 		}
 
 		supplyChainName = "supply-chain-name"
-		supplyChainParams = []v1alpha1.DelegatableParam{}
+		supplyChainParams = []v1alpha1.BlueprintParam{}
 
 		outputs = realizer.NewOutputs()
 

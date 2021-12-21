@@ -18,8 +18,20 @@ import (
 	"fmt"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type OwnerStatus struct {
+	// ObservedGeneration refers to the metadata.Generation of the spec that resulted in
+	// the current `status`.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions describing this resource's reconcile state. The top level condition is
+	// of type `Ready`, and follows these Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
 
 type TemplateParams []TemplateParam
 
@@ -28,29 +40,33 @@ type TemplateParam struct {
 	DefaultValue apiextensionsv1.JSON `json:"default"`
 }
 
-type Param struct {
+type OwnerParam struct {
+	// Name of the parameter.
+	// Should match a blueprint or template parameter name.
 	Name  string               `json:"name"`
 	Value apiextensionsv1.JSON `json:"value"`
 }
 
-type DelegatableParam struct {
+type BlueprintParam struct {
+	// Name of the parameter.
+	// Should match a template parameter name.
 	Name         string                `json:"name"`
 	Value        *apiextensionsv1.JSON `json:"value,omitempty"`
 	DefaultValue *apiextensionsv1.JSON `json:"default,omitempty"`
 }
 
-func (p *DelegatableParam) validateDelegatableParams() error {
+func (p *BlueprintParam) validate() error {
 	if p.bothValuesSet() || p.neitherValueSet() {
 		return fmt.Errorf("param [%s] is invalid: must set exactly one of value and default", p.Name)
 	}
 	return nil
 }
 
-func (p *DelegatableParam) bothValuesSet() bool {
+func (p *BlueprintParam) bothValuesSet() bool {
 	return p.DefaultValue != nil && p.Value != nil
 }
 
-func (p *DelegatableParam) neitherValueSet() bool {
+func (p *BlueprintParam) neitherValueSet() bool {
 	return p.DefaultValue == nil && p.Value == nil
 }
 
@@ -60,9 +76,19 @@ type ResourceReference struct {
 }
 
 type Source struct {
+	// Source code location in a git repository.
+	// +optional
 	Git *GitSource `json:"git,omitempty"`
+
 	// Image is an OCI image is a registry that contains source code
-	Image   *string `json:"image,omitempty"`
+	// OCI Image in a repository, containing the source code to
+	// be used throughout the supply chain.
+	// +optional
+	Image *string `json:"image,omitempty"`
+
+	// Subpath inside the Git repository or Image to treat as the root
+	// of the application. Defaults to the root if left empty.
+	// +optional
 	Subpath *string `json:"subPath,omitempty"`
 }
 

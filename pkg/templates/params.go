@@ -24,9 +24,9 @@ type Params map[string]apiextensionsv1.JSON
 
 func ParamsBuilder(
 	templateParams []v1alpha1.TemplateParam,
-	blueprintParams []v1alpha1.DelegatableParam,
-	resourceParams []v1alpha1.DelegatableParam,
-	ownerParams []v1alpha1.Param,
+	blueprintParams []v1alpha1.BlueprintParam,
+	resourceParams []v1alpha1.BlueprintParam,
+	ownerParams []v1alpha1.OwnerParam,
 ) Params {
 	newParams := Params{}
 	for _, param := range templateParams {

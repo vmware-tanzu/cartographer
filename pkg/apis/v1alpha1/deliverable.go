@@ -53,20 +53,42 @@ const (
 type Deliverable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              DeliverableSpec   `json:"spec"`
-	Status            DeliverableStatus `json:"status,omitempty"`
+
+	// Spec describes the deliverable.
+	// More info: https://cartographer.sh/docs/latest/reference/workload/#deliverable
+	Spec DeliverableSpec `json:"spec"`
+
+	// Status conforms to the Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Status DeliverableStatus `json:"status,omitempty"`
 }
 
 type DeliverableSpec struct {
-	Params             []Param `json:"params,omitempty"`
-	Source             *Source `json:"source,omitempty"`
-	ServiceAccountName string  `json:"serviceAccountName,omitempty"`
+	// Additional parameters.
+	// +optional
+	Params []OwnerParam `json:"params,omitempty"`
+
+	// The location of the source configuration for the deliverable. Specify
+	// one of `spec.source` or `spec.image`
+	// +optional
+	Source *Source `json:"source,omitempty"`
+
+	// ServiceAccountName refers to the Service account with permissions to create resources
+	// submitted by the supply chain.
+	//
+	// If not set, Cartographer will use serviceAccountName from supply chain.
+	//
+	// If that is also not set, Cartographer will use the default service account in the
+	// workload's namespace.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 type DeliverableStatus struct {
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	DeliveryRef        ObjectReference    `json:"deliveryRef,omitempty"`
+	OwnerStatus `json:",inline"`
+
+	// DeliveryRef is the Delivery resource that was used when this status was set.
+	DeliveryRef ObjectReference `json:"deliveryRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true
