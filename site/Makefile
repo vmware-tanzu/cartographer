@@ -7,3 +7,7 @@ serve:
 release:
 	if [ -z "$$version" ]; then echo "\nERROR: must provide version=v#.#.#\n" && exit 1; fi
 	./hack/new-release.sh "$$version"
+
+.PHONY: gen-crd-reference
+gen-crd-reference:
+    ./hack/crds.rb

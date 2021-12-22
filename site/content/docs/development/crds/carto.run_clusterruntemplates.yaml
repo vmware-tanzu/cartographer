@@ -1,0 +1,7 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata: <object>
+spec:
+  outputs: <object>
+  template: <object>

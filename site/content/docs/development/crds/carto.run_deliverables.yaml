@@ -1,0 +1,45 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata: <object>
+
+# Spec describes the deliverable. More info:
+# https://cartographer.sh/docs/latest/reference/workload/#deliverable
+spec:
+  
+  # Additional parameters.
+  params:
+      
+    - # Name of the parameter. Should match a blueprint or
+      # template parameter name.
+      name: <string>
+      value: <>
+  
+  # ServiceAccountName refers to the Service account with
+  # permissions to create resources submitted by the supply chain.
+  # If not set, Cartographer will use serviceAccountName from
+  # supply chain. 
+  # If that is also not set, Cartographer will use the default
+  # service account in the workload's namespace.
+  serviceAccountName: <string>
+  
+  # The location of the source configuration for the deliverable.
+  # Specify one of `spec.source` or `spec.image`
+  source:
+    
+    # Source code location in a git repository.
+    git:
+      ref:
+        branch: <string>
+        commit: <string>
+        tag: <string>
+      url: <string>
+    
+    # Image is an OCI image is a registry that contains source
+    # code OCI Image in a repository, containing the source code
+    # to be used throughout the supply chain.
+    image: <string>
+    
+    # Subpath inside the Git repository or Image to treat as the
+    # root of the application. Defaults to the root if left empty.
+    subPath: <string>

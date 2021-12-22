@@ -1,0 +1,20 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeploymentTemplate
+metadata: <object>
+spec:
+  observedCompletion:
+    failed:
+      key: <string>
+      value: <string>
+    succeeded:
+      key: <string>
+      value: <string>
+  observedMatches:
+      input: <string>
+      output: <string>
+  params:
+      default: <>
+      name: <string>
+  template: <object>
+  ytt: <string>

@@ -1,0 +1,11 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata: <object>
+spec:
+  imagePath: <string>
+  params:
+      default: <>
+      name: <string>
+  template: <object>
+  ytt: <string>

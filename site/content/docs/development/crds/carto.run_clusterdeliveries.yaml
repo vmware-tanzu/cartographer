@@ -1,0 +1,36 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDelivery
+metadata: <object>
+spec:
+  params:
+      default: <>
+      
+    - # Name of the parameter. Should match a template parameter
+      # name.
+      name: <string>
+      value: <>
+  resources:
+      configs:
+          name: <string>
+          resource: <string>
+      deployment:
+        resource: <string>
+      name: <string>
+      params:
+          default: <>
+          
+        - # Name of the parameter. Should match a template
+          # parameter name.
+          name: <string>
+          value: <>
+      sources:
+          name: <string>
+          resource: <string>
+      templateRef:
+        kind: <string>
+        name: <string>
+  selector: <object>
+  serviceAccountRef:
+    name: <string>
+    namespace: <string>

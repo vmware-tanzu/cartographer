@@ -1,0 +1,3 @@
+{{ $filename := (path.Join "/content/docs" "development" "crds" (.Get 0)) }}
+{{ $file := $filename | readFile }}
+{{ (print "```yaml\n" $file "\n```") | markdownify }}

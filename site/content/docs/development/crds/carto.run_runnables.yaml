@@ -1,0 +1,15 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Runnable
+metadata: <object>
+spec:
+  inputs: <object>
+  runTemplateRef:
+    kind: <string>
+    name: <string>
+  selector:
+    matchingLabels: <object>
+    resource:
+      apiVersion: <string>
+      kind: <string>
+  serviceAccountName: <string>
