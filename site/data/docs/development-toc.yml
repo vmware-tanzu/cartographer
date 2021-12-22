@@ -45,6 +45,10 @@ toc:
     subfolderitems:
       - page: Troubleshooting
         url: /troubleshooting
+  - title: Runnable
+    subfolderitems:
+      - page: Architecture
+        url: /runnable/architecture
   - title: Documentation Style Guide
     subfolderitems:
       - page: Style Guide
