@@ -26,34 +26,54 @@ import (
 const NoJsonpathContext = "<no jsonpath context>"
 
 type GetDeliveryTemplateError struct {
-	Err         error
-	TemplateRef v1alpha1.DeliveryTemplateReference
+	Err          error
+	DeliveryName string
+	Resource     *v1alpha1.DeliveryResource
 }
 
 func (e GetDeliveryTemplateError) Error() string {
-	return fmt.Errorf("unable to get template [%s]: %w", e.TemplateRef.Name, e.Err).Error()
+	return fmt.Errorf("unable to get template [%s] for resource [%s] in delivery [%s]: %w",
+		e.Resource.TemplateRef.Name,
+		e.Resource.Name,
+		e.DeliveryName,
+		e.Err,
+	).Error()
 }
 
 type ApplyStampedObjectError struct {
 	Err           error
+	DeliveryName  string
 	StampedObject *unstructured.Unstructured
+	Resource      *v1alpha1.DeliveryResource
 }
 
 func (e ApplyStampedObjectError) Error() string {
-	return fmt.Errorf("unable to apply object [%s/%s]: %w", e.StampedObject.GetNamespace(), e.StampedObject.GetName(), e.Err).Error()
+	return fmt.Errorf("unable to apply object [%s/%s] for resource [%s] in delivery [%s]: %w",
+		e.StampedObject.GetNamespace(),
+		e.StampedObject.GetName(),
+		e.Resource.Name,
+		e.DeliveryName,
+		e.Err,
+	).Error()
 }
 
 type StampError struct {
-	Err      error
-	Resource *v1alpha1.DeliveryResource
+	Err          error
+	DeliveryName string
+	Resource     *v1alpha1.DeliveryResource
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object for resource [%s]: %w", e.Resource.Name, e.Err).Error()
+	return fmt.Errorf("unable to stamp object for resource [%s] in delivery [%s]: %w",
+		e.Resource.Name,
+		e.DeliveryName,
+		e.Err,
+	).Error()
 }
 
 type RetrieveOutputError struct {
 	Err           error
+	DeliveryName  string
 	Resource      *v1alpha1.DeliveryResource
 	StampedObject *unstructured.Unstructured
 }
@@ -64,15 +84,24 @@ type JsonPathErrorContext interface {
 
 func (e RetrieveOutputError) Error() string {
 	if e.JsonPathExpression() == NoJsonpathContext {
-		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
-			e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
+		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in delivery [%s]: %w",
+			e.StampedObject.GetNamespace(),
+			e.StampedObject.GetName(),
 			utils.GetFullyQualifiedType(e.StampedObject),
-			e.Resource.Name, e.Err).Error()
+			e.Resource.Name,
+			e.DeliveryName,
+			e.Err,
+		).Error()
 	}
-	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
-		e.JsonPathExpression(), e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
+	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s] in delivery [%s]: %w",
+		e.JsonPathExpression(),
+		e.StampedObject.GetNamespace(),
+		e.StampedObject.GetName(),
 		utils.GetFullyQualifiedType(e.StampedObject),
-		e.Resource.Name, e.Err).Error()
+		e.Resource.Name,
+		e.DeliveryName,
+		e.Err,
+	).Error()
 }
 
 func (e RetrieveOutputError) ResourceName() string {
