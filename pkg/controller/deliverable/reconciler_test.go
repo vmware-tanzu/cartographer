@@ -416,7 +416,8 @@ var _ = Describe("Reconciler", func() {
 				var templateError error
 				BeforeEach(func() {
 					templateError = realizer.GetDeliveryTemplateError{
-						Err: errors.New("some error"),
+						Resource: &v1alpha1.DeliveryResource{Name: "some-name"},
+						Err:      errors.New("some error"),
 					}
 					rlzr.RealizeReturns(nil, templateError)
 				})
@@ -437,8 +438,9 @@ var _ = Describe("Reconciler", func() {
 				var stampError realizer.StampError
 				BeforeEach(func() {
 					stampError = realizer.StampError{
-						Err:      errors.New("some error"),
-						Resource: &v1alpha1.DeliveryResource{Name: "some-name"},
+						Err:          errors.New("some error"),
+						Resource:     &v1alpha1.DeliveryResource{Name: "some-name"},
+						DeliveryName: "some-delivery",
 					}
 					rlzr.RealizeReturns(nil, stampError)
 				})
@@ -467,7 +469,7 @@ var _ = Describe("Reconciler", func() {
 					Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 					Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 					Expect(out).To(Say(`"delivery":"some-delivery"`))
-					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] in delivery \[some-delivery\]: some error"`))
 				})
 			})
 
@@ -477,6 +479,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObjectError = realizer.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
+						Resource:      &v1alpha1.DeliveryResource{Name: "some-name"},
 					}
 					rlzr.RealizeReturns(nil, stampedObjectError)
 				})
@@ -508,6 +511,8 @@ var _ = Describe("Reconciler", func() {
 					stampedObjectError = realizer.ApplyStampedObjectError{
 						Err:           kerrors.FromObject(status),
 						StampedObject: stampedObject1,
+						Resource:      &v1alpha1.DeliveryResource{Name: "some-name"},
+						DeliveryName:  deliveryName,
 					}
 
 					rlzr.RealizeReturns(nil, stampedObjectError)
@@ -523,7 +528,7 @@ var _ = Describe("Reconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\]: fantastic error"`))
+					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\] for resource \[some-name\] in delivery \[some-delivery\]: fantastic error"`))
 				})
 			})
 
@@ -545,6 +550,7 @@ var _ = Describe("Reconciler", func() {
 					retrieveError = realizer.RetrieveOutputError{
 						Err:           wrappedError,
 						Resource:      &v1alpha1.DeliveryResource{Name: "some-resource"},
+						DeliveryName:  deliveryName,
 						StampedObject: stampedObject,
 					}
 
@@ -573,7 +579,7 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
-						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: some error"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
 				})
 
@@ -599,7 +605,7 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
-						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: some error"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
 				})
 
@@ -625,7 +631,7 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
-						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: some error"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
 				})
 
@@ -651,7 +657,7 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
-						Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 					})
 				})
 
@@ -677,7 +683,7 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
-						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: some error"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
 				})
 			})

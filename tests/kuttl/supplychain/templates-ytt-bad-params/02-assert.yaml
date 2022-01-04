@@ -25,7 +25,7 @@ status:
     - type: ResourcesSubmitted
       status: "False"
       reason: TemplateStampFailure
-      message: "unable to stamp object for resource [params]: unable to apply ytt template: ytt: Error: \n- key \"waciuma-com/quality\" not in struct\n    in <toplevel>\n      stdin.yml:8 |   best_name: #@ data.values.params[\"waciuma-com/quality\"]\n"
+      message: "unable to stamp object for resource [params] in supply chain [responsible-ops---templates-ytt-bad-params]: unable to apply ytt template: ytt: Error: \n- key \"waciuma-com/quality\" not in struct\n    in <toplevel>\n      stdin.yml:8 |   best_name: #@ data.values.params[\"waciuma-com/quality\"]\n"
     - type: Ready
       status: "False"
       reason: TemplateStampFailure

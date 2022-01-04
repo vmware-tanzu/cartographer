@@ -71,8 +71,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
 		return nil, nil, GetSupplyChainTemplateError{
-			Err:         err,
-			TemplateRef: resource.TemplateRef,
+			Err:             err,
+			SupplyChainName: supplyChainName,
+			Resource:        resource,
 		}
 	}
 
@@ -117,8 +118,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
 		return nil, nil, StampError{
-			Err:      err,
-			Resource: resource,
+			Err:             err,
+			Resource:        resource,
+			SupplyChainName: supplyChainName,
 		}
 	}
 
@@ -126,8 +128,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, ApplyStampedObjectError{
-			Err:           err,
-			StampedObject: stampedObject,
+			Err:             err,
+			StampedObject:   stampedObject,
+			SupplyChainName: supplyChainName,
+			Resource:        resource,
 		}
 	}
 
@@ -137,9 +141,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return stampedObject, nil, RetrieveOutputError{
-			Err:           err,
-			Resource:      resource,
-			StampedObject: stampedObject,
+			Err:             err,
+			Resource:        resource,
+			SupplyChainName: supplyChainName,
+			StampedObject:   stampedObject,
 		}
 	}
 

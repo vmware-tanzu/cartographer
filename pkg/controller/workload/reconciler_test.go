@@ -405,7 +405,8 @@ var _ = Describe("Reconciler", func() {
 				var templateError error
 				BeforeEach(func() {
 					templateError = realizer.GetSupplyChainTemplateError{
-						Err: errors.New("some error"),
+						Err:      errors.New("some error"),
+						Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
 					}
 					rlzr.RealizeReturns(nil, templateError)
 				})
@@ -426,8 +427,9 @@ var _ = Describe("Reconciler", func() {
 				var stampError realizer.StampError
 				BeforeEach(func() {
 					stampError = realizer.StampError{
-						Err:      errors.New("some error"),
-						Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
+						Err:             errors.New("some error"),
+						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
+						SupplyChainName: supplyChainName,
 					}
 					rlzr.RealizeReturns(nil, stampError)
 				})
@@ -454,7 +456,7 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] in supply chain \[some-supply-chain\]: some error"`))
 				})
 			})
 
@@ -464,6 +466,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObjectError = realizer.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
+						Resource:      &v1alpha1.SupplyChainResource{Name: "some-name"},
 					}
 					rlzr.RealizeReturns(nil, stampedObjectError)
 				})
@@ -493,8 +496,10 @@ var _ = Describe("Reconciler", func() {
 					stampedObject1.SetName("a-name")
 
 					stampedObjectError = realizer.ApplyStampedObjectError{
-						Err:           kerrors.FromObject(status),
-						StampedObject: stampedObject1,
+						Err:             kerrors.FromObject(status),
+						StampedObject:   stampedObject1,
+						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
+						SupplyChainName: supplyChainName,
 					}
 
 					rlzr.RealizeReturns(nil, stampedObjectError)
@@ -510,7 +515,7 @@ var _ = Describe("Reconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\]: fantastic error"`))
+					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\] for resource \[some-name\] in supply chain \[some-supply-chain\]: fantastic error"`))
 				})
 			})
 
@@ -528,9 +533,10 @@ var _ = Describe("Reconciler", func() {
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = realizer.RetrieveOutputError{
-						Err:           jsonPathError,
-						Resource:      &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						StampedObject: stampedObject,
+						Err:             jsonPathError,
+						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
+						StampedObject:   stampedObject,
+						SupplyChainName: supplyChainName,
 					}
 					rlzr.RealizeReturns(nil, retrieveError)
 				})
@@ -551,7 +557,7 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-					Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
+					Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in supply chain \[some-supply-chain\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 				})
 			})
 

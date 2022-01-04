@@ -24,13 +24,15 @@ import (
 )
 
 type GetRunTemplateError struct {
-	Err      error
-	Runnable *v1alpha1.Runnable
+	Err         error
+	TemplateRef *v1alpha1.TemplateReference
 }
 
 func (e GetRunTemplateError) Error() string {
-	return fmt.Errorf("unable to get runnable [%s/%s]: %w",
-		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
+	return fmt.Errorf("unable to get run template [%s]: %w",
+		e.TemplateRef.Name,
+		e.Err,
+	).Error()
 }
 
 type ResolveSelectorError struct {
@@ -43,22 +45,26 @@ func (e ResolveSelectorError) Error() string {
 		e.Selector.MatchingLabels,
 		e.Selector.Resource.APIVersion,
 		e.Selector.Resource.Kind,
-		e.Err).Error()
+		e.Err,
+	).Error()
 }
 
 type StampError struct {
-	Err      error
-	Runnable *v1alpha1.Runnable
+	Err         error
+	TemplateRef *v1alpha1.TemplateReference
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object [%s/%s]: %w",
-		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
+	return fmt.Errorf("unable to stamp object for run template [%s]: %w",
+		e.TemplateRef.Name,
+		e.Err,
+	).Error()
 }
 
 type ApplyStampedObjectError struct {
 	Err           error
 	StampedObject *unstructured.Unstructured
+	TemplateRef   *v1alpha1.TemplateReference
 }
 
 func (e ApplyStampedObjectError) Error() string {
@@ -66,8 +72,12 @@ func (e ApplyStampedObjectError) Error() string {
 	if name == "" {
 		name = e.StampedObject.GetGenerateName()
 	}
-	return fmt.Errorf("unable to apply stamped object [%s/%s]: %w",
-		e.StampedObject.GetNamespace(), name, e.Err).Error()
+	return fmt.Errorf("unable to apply object [%s/%s] for run template [%s]: %w",
+		e.StampedObject.GetNamespace(),
+		name,
+		e.TemplateRef.Name,
+		e.Err,
+	).Error()
 }
 
 type ListCreatedObjectsError struct {
@@ -78,13 +88,16 @@ type ListCreatedObjectsError struct {
 
 func (e ListCreatedObjectsError) Error() string {
 	return fmt.Errorf("unable to list objects in namespace [%s] with labels [%v]: %w",
-		e.Namespace, e.Labels, e.Err).Error()
+		e.Namespace,
+		e.Labels,
+		e.Err,
+	).Error()
 }
 
 type RetrieveOutputError struct {
 	Err           error
-	Runnable      *v1alpha1.Runnable
 	StampedObject *unstructured.Unstructured
+	TemplateRef   *v1alpha1.TemplateReference
 }
 
 func (e RetrieveOutputError) Error() string {
@@ -93,8 +106,11 @@ func (e RetrieveOutputError) Error() string {
 		name = e.StampedObject.GetGenerateName()
 	}
 
-	return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for runnable [%s/%s]: %w",
-		e.StampedObject.GetNamespace(), name,
+	return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for run template [%s]: %w",
+		e.StampedObject.GetNamespace(),
+		name,
 		utils.GetFullyQualifiedType(e.StampedObject),
-		e.Runnable.Namespace, e.Runnable.Name, e.Err).Error()
+		e.TemplateRef.Name,
+		e.Err,
+	).Error()
 }

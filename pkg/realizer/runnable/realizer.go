@@ -56,8 +56,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	if err != nil {
 		log.Error(err, "failed to get runnable cluster template")
 		return nil, nil, GetRunTemplateError{
-			Err:      err,
-			Runnable: runnable,
+			Err:         err,
+			TemplateRef: &runnable.Spec.RunTemplateRef,
 		}
 	}
 
@@ -90,8 +90,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
 		return nil, nil, StampError{
-			Err:      err,
-			Runnable: runnable,
+			Err:         err,
+			TemplateRef: &runnable.Spec.RunTemplateRef,
 		}
 	}
 
@@ -102,6 +102,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
+			TemplateRef:   &runnable.Spec.RunTemplateRef,
 		}
 	}
 
@@ -123,8 +124,8 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		log.Error(err, "failed to retrieve output from object")
 		return stampedObject, nil, RetrieveOutputError{
 			Err:           err,
-			Runnable:      runnable,
 			StampedObject: stampedObject,
+			TemplateRef:   &runnable.Spec.RunTemplateRef,
 		}
 	}
 	log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)

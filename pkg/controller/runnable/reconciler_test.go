@@ -364,8 +364,8 @@ var _ = Describe("Reconcile", func() {
 				var err error
 				BeforeEach(func() {
 					err = realizer.GetRunTemplateError{
-						Err:      errors.New("some error"),
-						Runnable: &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+						Err:         errors.New("some error"),
+						TemplateRef: &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 					}
 					rlzr.RealizeReturns(nil, nil, err)
 				})
@@ -378,7 +378,7 @@ var _ = Describe("Reconcile", func() {
 				It("returns an unhandled error and requeues", func() {
 					_, err := reconciler.Reconcile(ctx, request)
 
-					Expect(err.Error()).To(ContainSubstring("unable to get runnable [my-ns/my-runnable]: some error"))
+					Expect(err.Error()).To(ContainSubstring("unable to get run template [my-run-template]: some error"))
 				})
 			})
 
@@ -421,8 +421,8 @@ var _ = Describe("Reconcile", func() {
 				var err error
 				BeforeEach(func() {
 					err = realizer.StampError{
-						Err:      errors.New("some error"),
-						Runnable: &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+						Err:         errors.New("some error"),
+						TemplateRef: &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 					}
 					rlzr.RealizeReturns(nil, nil, err)
 				})
@@ -449,7 +449,7 @@ var _ = Describe("Reconcile", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling runnable"`))
-					Expect(out).To(Say(`"handled error":"unable to stamp object \[my-ns/my-runnable\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object for run template \[my-run-template\]: some error"`))
 				})
 			})
 
@@ -459,6 +459,7 @@ var _ = Describe("Reconcile", func() {
 					err = realizer.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
+						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 					}
 					rlzr.RealizeReturns(nil, nil, err)
 				})
@@ -471,7 +472,7 @@ var _ = Describe("Reconcile", func() {
 				It("returns an unhandled error and requeues", func() {
 					_, err := reconciler.Reconcile(ctx, request)
 
-					Expect(err.Error()).To(ContainSubstring("unable to apply stamped object"))
+					Expect(err.Error()).To(ContainSubstring("unable to apply object"))
 				})
 			})
 
@@ -495,6 +496,7 @@ var _ = Describe("Reconcile", func() {
 					stampedObjectError = realizer.ApplyStampedObjectError{
 						Err:           kerrors.FromObject(status),
 						StampedObject: stampedObject,
+						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 					}
 
 					rlzr.RealizeReturns(nil, nil, stampedObjectError)
@@ -510,7 +512,7 @@ var _ = Describe("Reconcile", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(out).To(Say(`"level":"info"`))
-					Expect(out).To(Say(`"handled error":"unable to apply stamped object \[a-namespace/a-name\]: fantastic error"`))
+					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\] for run template \[my-run-template\]: fantastic error"`))
 				})
 			})
 
@@ -553,7 +555,7 @@ var _ = Describe("Reconcile", func() {
 
 					err = realizer.RetrieveOutputError{
 						Err:           errors.New("some error"),
-						Runnable:      &v1alpha1.Runnable{ObjectMeta: metav1.ObjectMeta{Name: "my-runnable", Namespace: "my-ns"}},
+						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 						StampedObject: stampedObject,
 					}
 					rlzr.RealizeReturns(nil, nil, err)
@@ -574,7 +576,7 @@ var _ = Describe("Reconcile", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling runnable"`))
-					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for runnable \[my-ns/my-runnable\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for run template \[my-run-template\]: some error"`))
 				})
 			})
 

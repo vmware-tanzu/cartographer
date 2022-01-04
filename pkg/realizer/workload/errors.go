@@ -24,43 +24,68 @@ import (
 )
 
 type GetSupplyChainTemplateError struct {
-	Err         error
-	TemplateRef v1alpha1.SupplyChainTemplateReference
+	Err             error
+	SupplyChainName string
+	Resource        *v1alpha1.SupplyChainResource
 }
 
 func (e GetSupplyChainTemplateError) Error() string {
-	return fmt.Errorf("unable to get template [%s]: %w", e.TemplateRef.Name, e.Err).Error()
+	return fmt.Errorf("unable to get template [%s] for resource [%s] in supply chain [%s]: %w",
+		e.Resource.TemplateRef.Name,
+		e.Resource.Name,
+		e.SupplyChainName,
+		e.Err,
+	).Error()
 }
 
 type ApplyStampedObjectError struct {
-	Err           error
-	StampedObject *unstructured.Unstructured
+	Err             error
+	SupplyChainName string
+	StampedObject   *unstructured.Unstructured
+	Resource        *v1alpha1.SupplyChainResource
 }
 
 func (e ApplyStampedObjectError) Error() string {
-	return fmt.Errorf("unable to apply object [%s/%s]: %w", e.StampedObject.GetNamespace(), e.StampedObject.GetName(), e.Err).Error()
+	return fmt.Errorf("unable to apply object [%s/%s] for resource [%s] in supply chain [%s]: %w",
+		e.StampedObject.GetNamespace(),
+		e.StampedObject.GetName(),
+		e.Resource.Name,
+		e.SupplyChainName,
+		e.Err,
+	).Error()
 }
 
 type StampError struct {
-	Err      error
-	Resource *v1alpha1.SupplyChainResource
+	Err             error
+	SupplyChainName string
+	Resource        *v1alpha1.SupplyChainResource
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object for resource [%s]: %w", e.Resource.Name, e.Err).Error()
+	return fmt.Errorf("unable to stamp object for resource [%s] in supply chain [%s]: %w",
+		e.Resource.Name,
+		e.SupplyChainName,
+		e.Err,
+	).Error()
 }
 
 type RetrieveOutputError struct {
-	Err           error
-	Resource      *v1alpha1.SupplyChainResource
-	StampedObject *unstructured.Unstructured
+	Err             error
+	SupplyChainName string
+	Resource        *v1alpha1.SupplyChainResource
+	StampedObject   *unstructured.Unstructured
 }
 
 func (e RetrieveOutputError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s]: %w",
-		e.JsonPathExpression(), e.StampedObject.GetNamespace(), e.StampedObject.GetName(),
+	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s] in supply chain [%s]: %w",
+		e.JsonPathExpression(),
+		e.StampedObject.GetNamespace(),
+		e.StampedObject.GetName(),
 		utils.GetFullyQualifiedType(e.StampedObject),
-		e.Resource.Name, e.Err).Error()
+		e.Resource.Name,
+		e.SupplyChainName,
+		e.Err,
+	).Error()
 }
 
 type JsonPathErrorContext interface {

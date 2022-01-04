@@ -68,8 +68,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
 		return nil, nil, GetDeliveryTemplateError{
-			Err:         err,
-			TemplateRef: resource.TemplateRef,
+			Err:          err,
+			DeliveryName: deliveryName,
+			Resource:     resource,
 		}
 	}
 
@@ -110,8 +111,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
 		return nil, nil, StampError{
-			Err:      err,
-			Resource: resource,
+			Err:          err,
+			Resource:     resource,
+			DeliveryName: deliveryName,
 		}
 	}
 
@@ -121,6 +123,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 		return nil, nil, ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
+			DeliveryName:  deliveryName,
+			Resource:      resource,
 		}
 	}
 
@@ -133,6 +137,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 		return stampedObject, nil, RetrieveOutputError{
 			Err:           err,
 			Resource:      resource,
+			DeliveryName:  deliveryName,
 			StampedObject: stampedObject,
 		}
 	}
