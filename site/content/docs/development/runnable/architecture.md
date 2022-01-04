@@ -7,7 +7,8 @@ immutable test resources. Tekton does not allow updating an object, and so we'll
 test new commits.
 
 ## Concepts
-### Event vs level trigger
+[comment]: <> (### Edge vs level-driven triggers)
+[comment]: <> (TODO)
 
 ### ClusterRunTemplate
 With the addition of Runnable, there is a new template, `ClusterRunTemplate`. A `ClusterRunTemplate` will _always_
@@ -25,18 +26,42 @@ ClusterRunTemplate consists of:
 They consist of:
 * **RunTemplateRef**: a reference to a `ClusterRunTemplate` which contains the yaml of the immutable resource to be
 created
-* **Selector**: the resource that it matches with is availble in the template data as `selected`
+* **Selector**: the resource that it matches with is available in the template data as `selected`
 * **Inputs**: triggers
 
 {{< figure src="../../img/runnable/runnable-outline.svg" alt="Runnable" width="400px" >}}
 
 ### Template Data
-See [Template Data](templating#template-data)
+See [Template Data](templating#template-data) for templating in Cartographer.
 
 The ClusterRunTemplate is provided a data structure that contains:
 - runnable
 - selected
 
+#### Runnable
+The entire runnable resource is available for retrieving values. To use a runnable value, use the format:
+
+- **Simple template**: `$(runnable.<field-name>.(...))$`
+- **ytt**: not currently supported, see [issue](https://github.com/vmware-tanzu/cartographer/issues/214)
+
+##### Runnable Examples
+
+| Simple template | ytt | 
+| ----------- | ----------- | 
+| `$(runnable.metadata.name)$`| N/A | 
+| `$(runnable.spec.inputs)$`| N/A | 
+
+#### Selected
+The entire selected resource is available for retrieving values. To use selected value, use the format:
+
+- **Simple template**: `$(selected.<field-name>.(...))$`
+- **ytt**: not currently supported, see [issue](https://github.com/vmware-tanzu/cartographer/issues/214)
+
+##### Selected Examples
+
+| Simple template | ytt | 
+| ----------- | ----------- | 
+| `$(selected.metadata.name)$`| N/A |
 
 ## Theory of Operation
 
@@ -54,7 +79,6 @@ When Cartographer reconciles a runnable, each resource in the matching blueprint
 
 
 ## Runnable Details
-### IDK
 The `Runnable` CRD enables updating what are normally immutable test resources.
 
 ![Runnable](../../img/runnable/runnable-new.jpg)
