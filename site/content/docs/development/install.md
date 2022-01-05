@@ -5,11 +5,7 @@
 - cert-manager, see [cert-manager Installation](https://cert-manager.io/docs/installation/)
 
 ## Install
-1. Create namespace
-   ```bash
-   kubectl create namespace cartographer-system
-   ```
-2. Apply `cartographer.yaml`
+1. Apply `cartographer.yaml`
    ```bash
    kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
    ```
