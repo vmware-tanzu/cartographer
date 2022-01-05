@@ -20,7 +20,7 @@ spec:
   serviceAccountName: service-account-with-role-to-create-taskruns
 
   runTemplateRef:
-    name: tekton-pipelinerun
+    name: tekton-taskrun
 
   inputs:
     blob-url: https://github.com/kontinue/hello-world

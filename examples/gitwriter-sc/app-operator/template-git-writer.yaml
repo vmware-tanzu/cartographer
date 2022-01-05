@@ -1,0 +1,66 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#@ load("@ytt:data", "data")
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: git-writer
+spec:
+  params:
+    - name: git_writer_username
+      default: #@ data.values.git_writer.username
+    - name: git_writer_user_email
+      default: #@ data.values.git_writer.user_email
+    - name: git_writer_commit_message
+      default: #@ data.values.git_writer.message
+    - name: git_writer_ssh_user
+      default: #@ data.values.git_writer.ssh_user
+    - name: git_writer_server
+      default: #@ data.values.git_writer.server
+    - name: git_writer_port
+      default: #@ data.values.git_writer.port
+    - name: git_writer_repository
+      default: #@ data.values.git_writer.repository
+    - name: git_writer_branch
+      default: #@ data.values.git_writer.branch
+    - name: git_writer_skip_host_checking
+      default: false
+    - name: git_writer_ssh_variant
+      default: ssh
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Runnable
+    metadata:
+      name: $(workload.metadata.name)$-git-writer
+    spec:
+      runTemplateRef:
+        name: git-writer
+
+      inputs:
+        input_config_map_name: $(workload.metadata.name)$
+        input_config_map_field: manifest.yaml
+
+        git_username: $(params.git_writer_username)$
+        git_user_email: $(params.git_writer_user_email)$
+        commit_message: $(params.git_writer_commit_message)$
+        git_ssh_user: $(params.git_writer_ssh_user)$
+        git_server: $(params.git_writer_server)$
+        git_server_port: $(params.git_writer_port)$
+        git_repository: $(params.git_writer_repository)$
+        branch: $(params.git_writer_branch)$
+        skip_host_checking: $(params.git_writer_skip_host_checking)$
+        git_ssh_variant: $(params.git_writer_ssh_variant)$
+        data: $(config)$

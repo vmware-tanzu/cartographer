@@ -38,6 +38,22 @@ readonly SECRETGEN_CONTROLLER_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.30.0
 
+readonly GIT_WRITER_SSH_USER=${GIT_WRITER_SSH_USER:-"ssh://git"}
+readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-$HOST_ADDR}
+readonly GIT_WRITER_SERVER_PORT=${GIT_WRITER_SERVER_PORT:-"222"}
+readonly GIT_WRITER_USERNAME=${GIT_WRITER_USERNAME:-"example"}
+readonly GIT_WRITER_SSH_USER_EMAIL=${GIT_WRITER_SSH_USER_EMAIL:-"example@example.com"}
+readonly GIT_WRITER_PROJECT=${GIT_WRITER_PROJECT:-"example"}
+readonly GIT_WRITER_REPOSITORY=${GIT_WRITER_REPOSITORY:-"test-tekton-git-cli"}
+
+if [[ -z "$(which ssh)" ]]; then
+      apt-get -yq update && apt-get -yq install openssh-client
+fi
+
+if [[ -n "$GIT_WRITER_SERVER_PORT" ]]; then
+      readonly PORT_FLAG="-p $GIT_WRITER_SERVER_PORT"
+fi
+
 main() {
         test $# -eq 0 && show_usage_help
         display_vars "$@"
@@ -57,10 +73,12 @@ main() {
                         ;;
 
                 example-dependencies)
+                        start_repository
                         install_source_controller
                         install_kpack
                         install_knative_serving
                         install_tekton
+                        install_tekton_git_cli_task
                         ;;
 
                 example)
@@ -75,6 +93,8 @@ main() {
                         test_example_sc "testing-sc"
                         teardown_example_sc "testing-sc"
 
+                        test_gitops
+
                         log "all tests passed!!"
                         ;;
 
@@ -82,10 +102,12 @@ main() {
                         teardown_runnable_example
                         teardown_example_sc "basic-sc"
                         teardown_example_sc "testing-sc"
+                        teardown_gitops_example
                         ;;
 
                 teardown)
                         delete_containers
+                        delete_repository
                         ;;
 
                 *)
@@ -169,6 +191,113 @@ start_registry() {
                 --name "$REGISTRY_CONTAINER_NAME" \
                 --publish "${REGISTRY_PORT}":5000 \
                 registry:2
+}
+
+start_repository() {
+        log "start repository"
+
+        # Check if repository exists
+        add_ssh_token &&
+          git ls-remote "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" 1> /dev/null 2> /dev/null &&
+          echo 'repository found' &&
+          return || true
+
+        # Check if gitea server exists
+        if docker ps | grep gitea > /dev/null; then
+          # Check if user exists
+          CONTAINER_ID=$(docker ps --filter name=gitea | cut -d ' ' -f1 | head -2 | tail -1)
+          if docker exec -u git "$CONTAINER_ID" gitea admin user list | grep "$GIT_WRITER_SSH_USER_EMAIL" 1> /dev/null 2> /dev/null; then
+            echo 'bad state: user exists on gitea server but expected repository does not'
+            echo 'teardown gitea server and rerun'
+            exit 1
+          fi
+        fi
+
+        # Bring up gitea server container
+        docker-compose -f hack/docker-compose.yaml up -d
+
+        # Apply gitea configuration
+        CONTAINER_ID=$(docker ps --filter name=gitea | cut -d ' ' -f1 | head -2 | tail -1)
+        docker cp hack/golden-app.ini "$CONTAINER_ID:/data/gitea/conf/app.ini"
+        docker restart "$CONTAINER_ID"
+
+        # Create user in server
+        DOCKER_EXEC_SUCCESS=false
+        until $DOCKER_EXEC_SUCCESS
+        do
+          GITEA_TOKEN="$(docker exec -u git "$CONTAINER_ID" gitea admin user create \
+            --username "$GIT_WRITER_USERNAME" \
+            --password hi \
+            --email "$GIT_WRITER_SSH_USER_EMAIL" \
+            --admin \
+            --access-token \
+            --must-change-password=false |
+            tee >(cat 1>&2) |
+            head -1 |
+            rev |
+            cut -d ' ' -f1 |
+            rev)" && DOCKER_EXEC_SUCCESS=true || echo "attempting docker exec again" && sleep 5
+        done
+
+        # Generate public/private key
+        ssh-keygen -t rsa -b 4096 -C "$GIT_WRITER_SSH_USER_EMAIL" -f hack/gitea-key -P ""
+        GITEA_KEY_PUB="$(cat hack/gitea-key.pub)"
+
+        # Add the public key to the user on the server
+        CURL_SUCCEED=false
+        until $CURL_SUCCEED
+        do
+          curl -X 'POST' \
+            "http://localhost:3000/api/v1/admin/users/$GIT_WRITER_USERNAME/keys" \
+            -H 'accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -d "{\"key\": \"$GITEA_KEY_PUB\", \"read_only\": false, \"title\": \"string\"}" \
+            --fail && CURL_SUCCEED=true || echo "retrying curl" && sleep 5
+        done
+
+        # Create a repo on the server
+        curl -X 'POST'   'http://localhost:3000/api/v1/user/repos'   -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{"name": "'"$GIT_WRITER_REPOSITORY"'", "private": false}' -H "Authorization: token $GITEA_TOKEN"
+
+        GIT_WRITER_SERVER_PUBLIC_TOKEN=${GIT_WRITER_SERVER_PUBLIC_TOKEN:-"$(ssh-keyscan "$PORT_FLAG" "$GIT_WRITER_SERVER")"}
+        echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" > hack/gitea-server-public-key
+
+        add_ssh_token
+
+        pushd "$(mktemp -d)"
+                touch README.md
+
+                git init
+
+                git config --local user.email "$GIT_WRITER_USERNAME"
+                git config --local user.name "$GIT_WRITER_SSH_USER_EMAIL"
+                git config --local init.defaultBranch main
+
+                git add README.md
+                git commit -m "first commit"
+                git remote add origin "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
+                git branch -m main
+                git push -u origin main
+        popd
+}
+
+add_ssh_token() {
+  if [[ -z ${GIT_WRITER_SSH_TOKEN+nullword} ]]; then
+    if [[ -f hack/gitea-key ]]; then
+      GIT_WRITER_SSH_TOKEN="$(cat hack/gitea-key)"
+    else
+      return 1
+    fi
+  fi
+
+  ssh-add -t 1000 - <<< "$GIT_WRITER_SSH_TOKEN" 2> /dev/null || {
+        mkdir -p ~/.ssh
+        cp hack/gitea-key ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+  }
+
+  GIT_WRITER_SERVER_PUBLIC_TOKEN=$(cat hack/gitea-server-public-key)
+  echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" >> ~/.ssh/known_hosts
 }
 
 start_local_cluster() {
@@ -263,6 +392,10 @@ install_tekton() {
                 kapp deploy --yes -a tekton -f-
 }
 
+install_tekton_git_cli_task() {
+  kapp deploy --yes -a tekton-git-cli -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
+}
+
 setup_example_sc() {
         export test_name="$1"
         kapp deploy --yes -a "setup-example-$test_name" \
@@ -280,8 +413,7 @@ setup_example_sc() {
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
                 --data-value workload_name="$test_name" \
-                --data-value image_prefix="$REGISTRY/example-$test_name-") \
-
+                --data-value image_prefix="$REGISTRY/example-$test_name-")
 }
 
 teardown_example_sc() {
@@ -319,6 +451,44 @@ test_example_sc() {
         exit 1
 }
 
+teardown_gitops_example() {
+      clean_up_git_repo
+      rm hack/git_entropy || true
+      test_name="gitwriter-sc"
+      kapp delete --yes -a "example-$test_name"
+      kapp delete --yes -a "setup-example-$test_name"
+      kapp delete --yes -a example-deliver
+#      until [[ -z $(kubectl get pods -l "serving.knative.dev/configuration=$test_name" -o name) ]]; do sleep 1; done
+      log "teardown of '$test_name' complete"
+}
+
+clean_up_git_repo() {
+      if [[ ! -f hack/git_entropy ]]; then
+        return 0
+      fi
+
+      log "cleaning up git repo"
+
+      BRANCH="$(cat hack/git_entropy)"
+
+      add_ssh_token
+
+      pushd "$(mktemp -d)"
+            git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
+            pushd "$GIT_WRITER_REPOSITORY"
+                  git ls-remote --heads origin "$BRANCH"
+                  readonly BRANCH_EXISTS="$(git ls-remote --heads origin "$BRANCH")"
+
+                  if [[ -n "$BRANCH_EXISTS" ]]; then
+                        git push -d origin "$BRANCH"
+                  fi
+            popd
+      popd
+
+      log "done"
+      return 0
+}
+
 test_runnable_example() {
       log "test runnable"
       first_output_revision=""
@@ -331,7 +501,7 @@ test_runnable_example() {
       counter=0
       until [[ -n $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep True) ]]; do
         sleep 5
-        if [[ $counter -gt 12 ]]; then
+        if [[ $counter -gt 20 ]]; then
           log "runnable test fails"
           exit 1
         else
@@ -348,7 +518,7 @@ test_runnable_example() {
       counter=0
       until [[ -n $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep False) ]]; do
         sleep 5
-        if [[ $counter -gt 12 ]]; then
+        if [[ $counter -gt 20 ]]; then
           log "runnable test fails"
           exit 1
         else
@@ -369,7 +539,7 @@ test_runnable_example() {
       counter=0
       until [[ $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep True | wc -l) -eq 2 ]]; do
         sleep 5
-        if [[ $counter -gt 12 ]]; then
+        if [[ $counter -gt 20 ]]; then
           log "runnable test fails"
           exit 1
         else
@@ -396,9 +566,122 @@ teardown_runnable_example() {
       log "teardown of runnable example complete"
 }
 
+test_gitops() {
+      setup_source_to_gitops
+      test_source_to_gitops
+      setup_gitops_to_app
+      test_example_sc "gitwriter-sc"
+      teardown_gitops_example
+}
+
+setup_source_to_gitops() {
+      log "setting up source-to-gitops"
+
+      export test_name="gitwriter-sc"
+
+      touch hack/git_entropy
+      echo $RANDOM | base64 > hack/git_entropy
+
+      GIT_WRITER_SERVER_PUBLIC_TOKEN=${GIT_WRITER_SERVER_PUBLIC_TOKEN:-"$(cat hack/gitea-server-public-key)"}
+
+      kapp deploy --yes -a "setup-example-$test_name" \
+          -f <(ytt --ignore-unknown-comments \
+              -f "$DIR/../examples/shared" \
+              -f "$DIR/../examples/$test_name/values.yaml" \
+              --data-value registry.server="$REGISTRY" \
+              --data-value registry.username=admin \
+              --data-value registry.password=admin \
+              --data-value image_prefix="$REGISTRY/example-$test_name-")
+      kapp deploy --yes -a "example-$test_name" \
+          -f <(ytt --ignore-unknown-comments \
+              -f "$DIR/../examples/$test_name" \
+              --data-value registry.server="$REGISTRY" \
+              --data-value registry.username=admin \
+              --data-value registry.password=admin \
+              --data-value workload_name="$test_name" \
+              --data-value image_prefix="$REGISTRY/example-$test_name-" \
+              --data-value git_writer.message="Some perturbation: $(cat hack/git_entropy)" \
+              --data-value git_writer.ssh_user="$GIT_WRITER_SSH_USER" \
+              --data-value git_writer.username="$GIT_WRITER_USERNAME" \
+              --data-value git_writer.user_email="$GIT_WRITER_SSH_USER_EMAIL" \
+              --data-value git_writer.server="$GIT_WRITER_SERVER" \
+              --data-value git_writer.port="$GIT_WRITER_SERVER_PORT" \
+              --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git" \
+              --data-value git_writer.branch="$(cat hack/git_entropy)" \
+              --data-value git_writer.base64_encoded_ssh_key="$(echo "$(cat hack/gitea-key)" | base64)" \
+              --data-value git_writer.base64_encoded_known_hosts="$(echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" | base64)")
+}
+
+test_source_to_gitops() {
+        log "testing source-to-gitops"
+
+        GIT_ENTROPY="$(cat hack/git_entropy)"
+        BRANCH="$GIT_ENTROPY"
+
+        EXPECTED_GIT_MESSAGE="Some perturbation: $GIT_ENTROPY"
+
+        SUCCESS=false
+
+        add_ssh_token
+
+        pushd "$(mktemp -d)"
+              git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
+              echo "looking for branch $BRANCH"
+              pushd "$GIT_WRITER_REPOSITORY"
+                    for i in {20..1}; do
+                            echo "- attempt $i"
+
+                            git fetch --all --prune
+                            if [[ ! "$(git branch --show-current)" = "$BRANCH" ]]; then
+                                  git checkout "$BRANCH" > /dev/null 2> /dev/null || sleep "$i" && continue
+                            fi
+
+                            git pull #> /dev/null 2> /dev/null
+                            MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
+
+                            if [[ "$EXPECTED_GIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
+                                    log 'gitops worked! sweet'
+                                    SUCCESS=true
+                                    break
+                            fi
+
+                            sleep "$i"
+                    done
+              popd
+        popd
+
+        if [[ "$SUCCESS" = true ]]; then
+              return 0
+        else
+              log 'FAILED :('
+              exit 1
+        fi
+}
+
+setup_gitops_to_app() {
+        log "setting up gitops-to-app"
+
+        GIT_WRITER_SERVER_PUBLIC_TOKEN=${GIT_WRITER_SERVER_PUBLIC_TOKEN:-"$(cat hack/gitea-server-public-key)"}
+
+        ytt --ignore-unknown-comments \
+                -f "$DIR/../examples/basic-delivery" \
+                --data-value git_writer.server="$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT" \
+                --data-value git_writer.repository="$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY" \
+                --data-value git_writer.branch="$(cat hack/git_entropy)" \
+                --data-value git_writer.base64_encoded_ssh_key="$(echo "$(cat hack/gitea-key)" | base64)" \
+                --data-value git_writer.base64_encoded_known_hosts="$(echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" | base64)" |
+                kapp deploy --yes -a example-deliver -f-
+}
+
 delete_containers() {
-        docker rm -f $REGISTRY_CONTAINER_NAME || true
-        docker rm -f $KUBERNETES_CONTAINER_NAME || true
+      docker rm -f $REGISTRY_CONTAINER_NAME || true
+      docker rm -f $KUBERNETES_CONTAINER_NAME || true
+}
+
+delete_repository() {
+      docker-compose -f hack/docker-compose.yaml down -v
+      rm -rf "$DIR/gitea" || true
+      rm hack/gitea-key.pub hack/gitea-key hack/gitea-server-public-key || true
 }
 
 log() {

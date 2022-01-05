@@ -1,7 +1,11 @@
 # App Operator
 
 In this directory you'll find Kubernetes objects necessary for the app
-operators to submit to Kubernetes to power any number of development teams that
-wish to have their code going through the same software supply chain without
-necessarily needing to know about the intricacies of the resources utilized
-under the hood.
+operators to submit to Kubernetes:
+
+- a cluster run template that accepts values from a runnable
+- a cluster source template that creates a runnable
+- a supply chain that includes the cluster source template
+
+Note: The supply chain also references resources that are created in the examples/shared
+directory.

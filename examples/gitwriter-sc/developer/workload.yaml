@@ -12,24 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#@ load("@ytt:data", "data")
+---
 apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
+kind: Workload
 metadata:
-  name: tekton-taskrun
+  name: #@ data.values.workload_name
+  labels:
+    app.tanzu.vmware.com/workload-type: web
+    app.kubernetes.io/part-of: hello-world
 spec:
-  outputs:
-    url: spec.params[?(@.name=="blob-url")].value
-    revision: spec.params[?(@.name=="blob-revision")].value
-  template:
-    apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
-    metadata:
-      generateName: test-
-    spec:
-      taskRef:
-        name: test
-      params:
-        - name: blob-url
-          value: $(runnable.spec.inputs.blob-url)$
-        - name: blob-revision
-          value: $(runnable.spec.inputs.blob-revision)$
+  serviceAccountName: #@ data.values.service_account_name
+  source:
+    git:
+      url: https://github.com/kontinue/hello-world
+      ref:
+        branch: main
+  build:
+    env:
+      - name: CGO_ENABLED
+        value: "0"

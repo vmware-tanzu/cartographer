@@ -40,7 +40,7 @@ spec:
       serviceAccountName: $(workload.spec.serviceAccountName)$
 
       runTemplateRef:
-        name: tekton-pipelinerun
+        name: tekton-taskrun
 
       selector:
         resource:

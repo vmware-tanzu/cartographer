@@ -21,3 +21,7 @@ path to production. The suggested order is:
   configuration can then be read by a Delivery in another cluster. This allows all
   build processes to be isolated in a cluster completely separate from the
   production cluster exposed to customers and end users.
+- [Delivery: Git => App](basic-delivery/README.md): this example picks up app
+  configuration that has been written to git (it is written to work with the gitwriter
+  example above). The configuration is then applied to the cluster. This minimizes
+  processes occuring in the production cluster exposed to customers and end users.
