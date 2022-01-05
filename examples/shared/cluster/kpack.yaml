@@ -43,7 +43,7 @@ metadata:
   name: go-builder
 spec:
   serviceAccountRef:
-    name: service-account
+    name: cartographer-example-registry-creds-sa
     namespace: default
   tag: #@ data.values.image_prefix + "go-builder"
   stack:

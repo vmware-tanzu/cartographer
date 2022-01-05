@@ -13,8 +13,8 @@ Cartographer is a Kubernetes-native [Choreographer].
 Detailed documentation for Cartographer can be found in the `site` folder of this repository:
 
 * [About Cartographer](https://cartographer.sh/docs/latest/): Details the design and philosophy of Cartographer
-* [Examples](examples/source-to-knative-service/README.md): Contains an example of using Cartographer to create a Supply
-  Chain that takes a repository, creates an image, and deploys it to a cluster
+* [Examples](examples/testing-sc/README.md): Contains an example of using Cartographer to create a
+  Supply Chain that takes a repository, creates an image, and deploys it to a cluster
 * Spec Reference: Detailed descriptions of the CRD Specs for Cartographer
   * [GVK](https://cartographer.sh/docs/latest/reference/gvk/)
   * [Workload and Supply Chains](https://cartographer.sh/docs/latest/reference/workload/)
@@ -24,9 +24,11 @@ Detailed documentation for Cartographer can be found in the `site` folder of thi
 
 ## Getting Started
 
-An example of using Cartographer to define a Supply Chain that pulls code from a repository, builds an image for the
-code, and deploys it to the same cluster can be found in
-the [examples folder of this repository](examples/source-to-knative-service/README.md)
+Examples of using Cartographer can be found in the
+[examples folder of this repository](examples/README.md).
+The examples begin by demonstrating how to define a Supply Chain that pulls code from a repository,
+builds an image for the code, and deploys in the same cluster. Enhancements of that example
+(e.g. adding tests) are then demonstrated.
 
 ## Installation
 

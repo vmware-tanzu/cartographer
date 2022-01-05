@@ -1,0 +1,49 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#
+
+
+# `image` instantiates a `kpack/Image` object, responsible for ensuring that
+# there's a container image built and pushed to a container image registry
+# whenever there's either new source code, or its image builder gets na update.
+#
+#
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: image
+spec:
+  params:
+    - name: image_prefix
+      default: some-default-prefix-
+
+  imagePath: .status.latestImage
+
+  template:
+    apiVersion: kpack.io/v1alpha2
+    kind: Image
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      tag: $(params.image_prefix)$$(workload.metadata.name)$
+      serviceAccountName: cartographer-example-registry-creds-sa
+      builder:
+        kind: ClusterBuilder
+        name: go-builder
+      source:
+        blob:
+          url: $(sources.source.url)$
+      build:
+        env: $(workload.spec.build.env)$
