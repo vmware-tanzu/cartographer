@@ -1,4 +1,4 @@
-# Source to Knative Service
+# Updatable Test Objects
 
 **before you proceed**: the example in this directory illustrates the use of
 the latest components and functionality of Cartographer (including some that

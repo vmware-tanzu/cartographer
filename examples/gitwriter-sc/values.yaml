@@ -12,24 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
-metadata:
-  name: tekton-taskrun
-spec:
-  outputs:
-    url: spec.params[?(@.name=="blob-url")].value
-    revision: spec.params[?(@.name=="blob-revision")].value
-  template:
-    apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
-    metadata:
-      generateName: test-
-    spec:
-      taskRef:
-        name: test
-      params:
-        - name: blob-url
-          value: $(runnable.spec.inputs.blob-url)$
-        - name: blob-revision
-          value: $(runnable.spec.inputs.blob-revision)$
+#@data/values
+---
+service_account_name: cartographer-example-basic-sc-sa
+image_prefix: a-project-id-i-own/an-image-prefix-i-like-
+workload_name: dev
+registry:
+  server: https://index.docker.io/v1/
+  username: a-username-of-mine
+  password: a-very-hard-to-guess-password
+git_writer:
+  message: "Update app configuration"
+  ssh_user: git
+  server: github.com
+  repository: example/example.git
+  base64_encoded_ssh_key: a-key
+  base64_encoded_known_hosts: a-host
+  branch: main
+  username: example
+  user_email: example@example.com
+  port: ""

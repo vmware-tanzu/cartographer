@@ -13,23 +13,26 @@
 # limitations under the License.
 
 apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
+kind: ClusterDelivery
 metadata:
-  name: tekton-taskrun
+  name: deliver
 spec:
-  outputs:
-    url: spec.params[?(@.name=="blob-url")].value
-    revision: spec.params[?(@.name=="blob-revision")].value
-  template:
-    apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
-    metadata:
-      generateName: test-
-    spec:
-      taskRef:
-        name: test
-      params:
-        - name: blob-url
-          value: $(runnable.spec.inputs.blob-url)$
-        - name: blob-revision
-          value: $(runnable.spec.inputs.blob-revision)$
+  selector:
+    app.tanzu.vmware.com/workload-type: deliver
+
+  #
+  #
+  #   source-provider <--[src]--   deployer
+  #     GitRepository               App
+  resources:
+    - name: source-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: gitops-source
+
+    - name: deployer
+      templateRef:
+        kind: ClusterDeploymentTemplate
+        name: app-deploy
+      deployment:
+        resource: source-provider

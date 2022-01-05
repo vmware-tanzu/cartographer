@@ -1,4 +1,4 @@
-# Source to Knative Service
+# Source to Knative Service with Testing
 
 **before you proceed**: the example in this directory illustrates the use of
 the latest components and functionality of Cartographer (including some that
@@ -50,10 +50,12 @@ objects would be set by the different personas in the system:
 
 ## Running the example in this directory
 
+### Location of files
+
 As with [basic-sc], this example uses two directories with sub-directories of Kubernetes resources:
 [../shared](../shared) and [testing-sc (.)](.).
 
-The shared directory has a subdirectory for cluster-wide configuration: [./00-cluster](./00-cluster)
+The shared directory has a subdirectory for cluster-wide configuration: [../shared/cluster](../shared/cluster)
 
 There is a subdirectory of cartographer-specific files that an App Operator would submit
 in both this and in the shared directory:
@@ -65,7 +67,15 @@ App Developer would submit in both this and in the shared directory:
 
 ### Configuring the example
 
-Follow the [example configuration steps in basic-sc](../basic-sc/README.md#configuring-the-example)
+Follow the [example configuration steps in basic-sc](../basic-sc/README.md#configuring-the-example).
+
+### Deploying the files
+
+Similar to the [deploy instructions in basic-sc](../basic-sc/README.md#deploying-the-files):
+
+```bash
+kapp deploy --yes -a example -f <(ytt --ignore-unknown-comments -f .) -f <(ytt --ignore-unknown-comments -f ../shared/ -f ./values.yaml)
+```
 
 ### Observing the example
 
@@ -191,7 +201,7 @@ spec:
       serviceAccountName: $(workload.spec.serviceAccountName)$
 
       runTemplateRef:
-        name: tekton-pipelinerun
+        name: tekton-taskrun
 
       inputs:
         params:

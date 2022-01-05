@@ -13,23 +13,30 @@
 # limitations under the License.
 
 apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
+kind: ClusterDeploymentTemplate
 metadata:
-  name: tekton-taskrun
+  name: app-deploy
 spec:
-  outputs:
-    url: spec.params[?(@.name=="blob-url")].value
-    revision: spec.params[?(@.name=="blob-revision")].value
+
+  observedCompletion:
+    succeeded:
+      key: '.status.conditions[?(@.type=="ReconcileSucceeded")].status'
+      value: 'True'
+    failed:
+      key: '.status.conditions[?(@.type=="ReconcileSucceeded")].status'
+      value: 'False'
+
   template:
-    apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
+    apiVersion: kappctrl.k14s.io/v1alpha1
+    kind: App
     metadata:
-      generateName: test-
+      name: $(deliverable.metadata.name)$
     spec:
-      taskRef:
-        name: test
-      params:
-        - name: blob-url
-          value: $(runnable.spec.inputs.blob-url)$
-        - name: blob-revision
-          value: $(runnable.spec.inputs.blob-revision)$
+      serviceAccountName: default
+      fetch:
+        - http:
+            url: $(deployment.url)$
+      template:
+        - ytt: {}
+      deploy:
+        - kapp: {}

@@ -13,23 +13,21 @@
 # limitations under the License.
 
 apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
+kind: ClusterSourceTemplate
 metadata:
-  name: tekton-taskrun
+  name: gitops-source
 spec:
-  outputs:
-    url: spec.params[?(@.name=="blob-url")].value
-    revision: spec.params[?(@.name=="blob-revision")].value
+  urlPath: .status.artifact.url
+  revisionPath: .status.artifact.revision
+
   template:
-    apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
+    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    kind: GitRepository
     metadata:
-      generateName: test-
+      name: $(deliverable.metadata.name)$
     spec:
-      taskRef:
-        name: test
-      params:
-        - name: blob-url
-          value: $(runnable.spec.inputs.blob-url)$
-        - name: blob-revision
-          value: $(runnable.spec.inputs.blob-revision)$
+      interval: 1m0s
+      url: $(deliverable.spec.source.git.url)$
+      ref: $(deliverable.spec.source.git.ref)$
+      secretRef:
+        name: gitops-ssh-secret

@@ -90,6 +90,8 @@ supplychain, forms something powerful.
 
 ## Running the example in this directory
 
+### Location of files
+
 This example uses two directories with sub-directories of Kubernetes resources:
 [../shared](../shared) and [basic-sc (.)](.).
 
@@ -154,6 +156,8 @@ You can update [`values.yaml`](./values.yaml) with a desired name:
 # a name that won't collide with other service accounts
 service_account_name: cartographer-example-basic-sc-sa
 ```
+
+### Deploying the files
 
 That done, we can make use of `ytt` to interpolate those values into the
 templates, and then pass the result to [kapp] for submitting to Kubernetes
