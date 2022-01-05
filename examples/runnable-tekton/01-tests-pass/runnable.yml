@@ -12,11 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#@data/values
----
-service_account_name: workload-service-account
-image_prefix: projectcartographer/demo-
-registry:
-  server: https://index.docker.io/v1/
-  username: projectcartographer
-  password: a-very-hard-to-guess-password
+apiVersion: carto.run/v1alpha1
+kind: Runnable
+metadata:
+  name: test
+spec:
+  serviceAccountName: service-account-with-role-to-create-taskruns
+
+  runTemplateRef:
+    name: tekton-pipelinerun
+
+  inputs:
+    blob-url: https://github.com/kontinue/hello-world
+    blob-revision: 19769456b6b229b3e78f2b90eced15a353eb4e7c

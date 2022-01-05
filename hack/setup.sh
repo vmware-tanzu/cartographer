@@ -64,12 +64,24 @@ main() {
                         ;;
 
                 example)
-                        setup_example
-                        test_example
+                        test_runnable_example
+                        teardown_runnable_example
+
+                        setup_example_sc "basic-sc"
+                        test_example_sc "basic-sc"
+                        teardown_example_sc "basic-sc"
+
+                        setup_example_sc "testing-sc"
+                        test_example_sc "testing-sc"
+                        teardown_example_sc "testing-sc"
+
+                        log "all tests passed!!"
                         ;;
 
                 teardown-example)
-                        teardown_example
+                        teardown_runnable_example
+                        teardown_example_sc "basic-sc"
+                        teardown_example_sc "testing-sc"
                         ;;
 
                 teardown)
@@ -216,6 +228,9 @@ install_kpack() {
 }
 
 install_kapp_controller() {
+        # Ensure script halts if kubectl is not installed
+        kubectl version --client
+
         kubectl create clusterrolebinding default-admin \
                 --clusterrole=cluster-admin \
                 --serviceaccount=default:default || true
@@ -248,44 +263,137 @@ install_tekton() {
                 kapp deploy --yes -a tekton -f-
 }
 
-setup_example() {
-        ytt --ignore-unknown-comments \
-                -f "$DIR/../examples/source-to-knative-service" \
+setup_example_sc() {
+        export test_name="$1"
+        kapp deploy --yes -a "setup-example-$test_name" \
+            -f <(ytt --ignore-unknown-comments \
+                -f "$DIR/../examples/shared" \
+                -f "$DIR/../examples/$test_name/values.yaml" \
                 --data-value registry.server="$REGISTRY" \
                 --data-value registry.username=admin \
                 --data-value registry.password=admin \
-                --data-value image_prefix="$REGISTRY/example-" |
-                kapp deploy --yes -a example -f-
+                --data-value image_prefix="$REGISTRY/example-$test_name-")
+        kapp deploy --yes -a "example-$test_name" \
+            -f <(ytt --ignore-unknown-comments \
+                -f "$DIR/../examples/$test_name" \
+                --data-value registry.server="$REGISTRY" \
+                --data-value registry.username=admin \
+                --data-value registry.password=admin \
+                --data-value workload_name="$test_name" \
+                --data-value image_prefix="$REGISTRY/example-$test_name-") \
+
 }
 
-teardown_example() {
-        kapp delete --yes -a example
+teardown_example_sc() {
+        export test_name="$1"
+        kapp delete --yes -a "example-$test_name"
+        kapp delete --yes -a "setup-example-$test_name"
+#        until [[ -z $(kubectl get pods -l "serving.knative.dev/configuration=$test_name" -o name) ]]; do sleep 1; done
+        log "teardown of '$test_name' complete"
 }
 
-test_example() {
-        log "testing"
+test_example_sc() {
+        export test_name="$1"
+        log "testing '$test_name'"
 
         for _ in {1..5}; do
                 for sleep_duration in {15..1}; do
                         local deployed_pods
                         deployed_pods=$(kubectl get pods \
-                                -l 'serving.knative.dev/configuration=dev' \
+                                -l "serving.knative.dev/configuration=$test_name" \
                                 -o name)
 
-                        if [[ -n "$deployed_pods" ]]; then
-                                log 'SUCCEEDED! sweet'
-                                exit 0
+                        if [[ "$deployed_pods" == *"$test_name"* ]]; then
+                                log "testing '$test_name' SUCCEEDED! sweet"
+                                return 0
                         fi
 
                         echo "- waiting $sleep_duration seconds"
                         sleep "$sleep_duration"
                 done
 
-                kubectl tree workload dev
+                kubectl tree workload "$test_name"
         done
 
-        log 'FAILED :('
+        log "testing '$test_name' FAILED :("
         exit 1
+}
+
+test_runnable_example() {
+      log "test runnable"
+      first_output_revision=""
+      second_output_revision=""
+      third_output_revision=""
+
+      kubectl apply -f "$DIR/../examples/runnable-tekton/00-setup"
+      kubectl apply -f "$DIR/../examples/runnable-tekton/01-tests-pass"
+
+      counter=0
+      until [[ -n $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep True) ]]; do
+        sleep 5
+        if [[ $counter -gt 12 ]]; then
+          log "runnable test fails"
+          exit 1
+        else
+          echo "waiting 5 seconds for expected passing test to succeed"
+          (( counter+1 ))
+        fi
+      done
+
+      sleep 5
+      first_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
+
+      kubectl patch runnable test --type merge --patch "$(cat "$DIR/../examples/runnable-tekton/02-tests-fail/runnable-patch.yml")"
+
+      counter=0
+      until [[ -n $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep False) ]]; do
+        sleep 5
+        if [[ $counter -gt 12 ]]; then
+          log "runnable test fails"
+          exit 1
+        else
+          echo "waiting 5 seconds for expected failing test to fail"
+          (( counter+1 ))
+        fi
+      done
+
+      sleep 5
+      second_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
+      if [[ "$first_output_revision" != "$second_output_revision" ]]; then
+        log "runnable test fails"
+        exit 1
+      fi
+
+      kubectl patch runnable test --type merge --patch "$(cat "$DIR/../examples/runnable-tekton/03-tests-pass/runnable-patch.yml")"
+
+      counter=0
+      until [[ $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep True | wc -l) -eq 2 ]]; do
+        sleep 5
+        if [[ $counter -gt 12 ]]; then
+          log "runnable test fails"
+          exit 1
+        else
+          echo "waiting 5 seconds for expected passing test to succeed"
+          (( counter+1 ))
+        fi
+      done
+
+      sleep 5
+      third_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
+      if [[ "$first_output_revision" == "$third_output_revision" ]]; then
+        log "runnable test fails"
+        exit 1
+      fi
+
+      log "runnable test passes"
+      return 0
+}
+
+teardown_runnable_example() {
+      kubectl delete -f "$DIR/../examples/runnable-tekton/00-setup" --ignore-not-found
+      kubectl delete -f "$DIR/../examples/runnable-tekton/01-tests-pass" --ignore-not-found
+
+      log "teardown of runnable example complete"
 }
 
 delete_containers() {

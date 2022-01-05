@@ -12,19 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: carto.run/v1alpha1
-kind: ClusterRunTemplate
-metadata:
-  name: tekton-pipelinerun
 spec:
-  outputs:
-    url: spec.params[?(@.name=="blob-url")].value
-    revision: spec.params[?(@.name=="blob-revision")].value
-  template:
-    apiVersion: tekton.dev/v1beta1
-    kind: TaskRun
-    metadata:
-      generateName: $(runnable.metadata.name)$-
-    spec:
-      taskRef: {name: $(selected.metadata.name)$}
-      params: $(runnable.spec.inputs.params)$
+  inputs:
+    blob-revision: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4

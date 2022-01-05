@@ -1,4 +1,4 @@
-# cluster setup
+# Cluster setup
 
 Aside from having [cartographer] installed in the cluster, here we also
 pre-load a secret with some credentials so anyone running this example can get
