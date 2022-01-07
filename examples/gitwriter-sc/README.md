@@ -57,7 +57,7 @@ TEKTON_VERSION=0.30.0 kubectl apply -f https://storage.googleapis.com/tekton-rel
   [tekton catalog](https://github.com/tektoncd/catalog). This is used to write to the git repo.
 
 ```bash
-kapp deploy --yes -a tekton-git-cli https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
+kapp deploy --yes -a tekton-git-cli -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
 ```
 
 ## Running the example in this directory
