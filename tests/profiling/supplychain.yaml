@@ -1,0 +1,28 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: template
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: $(workload.metadata.name)$
+      labels: {} #$(workload.metadata.labels)$
+    data:
+      foo: bar
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: supplychain
+spec:
+  selector:
+    foo: bar
+  resources:
+    - name: template
+      templateRef:
+        name: template
+        kind: ClusterTemplate

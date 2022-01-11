@@ -1,0 +1,8 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: workload
+  labels:
+    foo: bar
+spec: {}
