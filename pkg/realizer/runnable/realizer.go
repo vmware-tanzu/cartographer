@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -129,6 +131,11 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 	log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)
+
+	err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
+	if err != nil {
+		log.Error(err, "failed to cleanup runnable stamped objects")
+	}
 
 	if len(outputs) == 0 {
 		log.V(logger.DEBUG).Info("no outputs retrieved, getting outputs from runnable.Status.Outputs")

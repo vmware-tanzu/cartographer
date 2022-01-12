@@ -56,6 +56,21 @@ spec:
                   object created for this runnable. Reference inputs in the template
                   using the jsonPath: $(runnable.spec.inputs.<key>)$'
                 type: object
+              retentionPolicy:
+                default:
+                  numFailedRuns: 5
+                  numSuccessfulRuns: 3
+                properties:
+                  numFailedRuns:
+                    format: int64
+                    type: integer
+                  numSuccessfulRuns:
+                    format: int64
+                    type: integer
+                required:
+                - numFailedRuns
+                - numSuccessfulRuns
+                type: object
               runTemplateRef:
                 description: RunTemplateRef identifies the run template used to produce
                   resources for this runnable.

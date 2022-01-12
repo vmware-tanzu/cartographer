@@ -20,6 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
+
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 
 	. "github.com/MakeNowJust/heredoc/dot"
 	. "github.com/onsi/ginkgo"
@@ -105,7 +110,6 @@ var _ = Describe("Realizer", func() {
 			}
 
 			systemRepo.GetRunTemplateReturns(templateAPI, nil)
-
 			createdUnstructured = &unstructured.Unstructured{}
 
 			runnableRepo.EnsureImmutableObjectExistsOnClusterStub = func(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error {
@@ -165,6 +169,89 @@ var _ = Describe("Realizer", func() {
 			}))
 			Expect(stampedObject.Object["apiVersion"]).To(Equal("test.run/v1alpha1"))
 			Expect(stampedObject.Object["kind"]).To(Equal("TestObj"))
+		})
+
+		It("garbage collects failed and successful runnable stamped objects according to retention policy", func() {
+			runnable.Spec.RetentionPolicy.NumFailedRuns = 1
+			runnable.Spec.RetentionPolicy.NumSuccessfulRuns = 1
+
+			success1 := &unstructured.Unstructured{}
+			success2 := &unstructured.Unstructured{}
+			failed1 := &unstructured.Unstructured{}
+			failed2 := &unstructured.Unstructured{}
+			t0 := time.Now()
+
+			stampedObjManifest := utils.HereYaml(`
+				apiVersion: test.run/v1alpha1
+				kind: TestObj
+				metadata:
+				  name: success2
+				  namespace: default
+				  creationTimestamp: ` + t0.Add(-1*time.Hour).Format(time.RFC3339) + `
+				status:
+				  conditions:
+					- type: Succeeded
+					  status: "True"
+			`)
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjManifest), nil, success2)
+			Expect(err).NotTo(HaveOccurred())
+			stampedObjManifest = utils.HereYaml(`
+				apiVersion: test.run/v1alpha1
+				kind: TestObj
+				metadata:
+				  name: failed1
+				  namespace: default
+				  creationTimestamp: ` + t0.Add(-1*time.Hour).Format(time.RFC3339) + `
+				status:
+				  conditions:
+					- type: Succeeded
+					  status: "False"
+			`)
+			_, _, err = dec.Decode([]byte(stampedObjManifest), nil, failed1)
+			Expect(err).NotTo(HaveOccurred())
+			stampedObjManifest = utils.HereYaml(`
+				apiVersion: test.run/v1alpha1
+				kind: TestObj
+				metadata:
+				  name: failed2
+				  namespace: default
+				  creationTimestamp: ` + t0.Add(-2*time.Hour).Format(time.RFC3339) + `
+				status:
+				  conditions:
+					- type: Succeeded
+					  status: "False"
+				`)
+			_, _, err = dec.Decode([]byte(stampedObjManifest), nil, failed2)
+			Expect(err).NotTo(HaveOccurred())
+
+			runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{success2, failed1, failed2}, nil)
+
+			runnableRepo.EnsureImmutableObjectExistsOnClusterStub = func(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error {
+				success1.Object = obj.Object
+				success1.SetName("success1")
+				success1.SetCreationTimestamp(metav1.Time{Time: t0})
+				success1.Object["status"] = map[string]interface{}{
+					"conditions": []map[string]interface{}{
+						{
+							"type":   "Succeeded",
+							"status": "True",
+						},
+					},
+				}
+				runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{success1, success2, failed1, failed2}, nil)
+				return nil
+			}
+
+			_, _, err = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(runnableRepo.DeleteCallCount()).To(Equal(2))
+
+			_, deleted1 := runnableRepo.DeleteArgsForCall(0)
+			_, deleted2 := runnableRepo.DeleteArgsForCall(1)
+			allDeletedObjects := []*unstructured.Unstructured{deleted2, deleted1}
+			Expect(allDeletedObjects).To(ConsistOf(success2, failed2))
 		})
 
 		Context("error on EnsureImmutableObjectExistsOnCluster", func() {

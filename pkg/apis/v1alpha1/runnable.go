@@ -83,6 +83,14 @@ type RunnableSpec struct {
 	// runnable's namespace.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// +kubebuilder:default={numFailedRuns: 5, numSuccessfulRuns: 3}
+	RetentionPolicy RetentionPolicy `json:"retentionPolicy,omitempty"`
+}
+
+type RetentionPolicy struct {
+	NumFailedRuns     int64 `json:"numFailedRuns"`
+	NumSuccessfulRuns int64 `json:"numSuccessfulRuns"`
 }
 
 type ResourceSelector struct {
