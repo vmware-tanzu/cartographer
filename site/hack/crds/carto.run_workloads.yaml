@@ -1,8 +1,13 @@
 ---
-commentWrapAt: 80
+commentWrapAt: 64
 version: v1alpha1
 fields:
+  apiVersion:
+    hideDescription: true
+  kind:
+    hideDescription: true
   spec:
+    hideDescription: true
     fields:
       build:
         fields:
@@ -18,5 +23,6 @@ fields:
         maxDepth: 1
       resources:
         hideChildDescriptions: true
+        maxDepth: 1
   status:
     hide: true

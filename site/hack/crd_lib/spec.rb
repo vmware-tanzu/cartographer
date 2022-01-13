@@ -90,7 +90,7 @@ class Spec
       end
 
       def type_string
-        @node_hash["type"] || any_of_type_string || "unknown"
+        @node_hash["type"] || any_of_type_string || "any"
       end
 
       def to_y(writer)

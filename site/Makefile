@@ -10,4 +10,4 @@ release:
 
 .PHONY: gen-crd-reference
 gen-crd-reference:
-    ./hack/crds.rb
+	./hack/crds.rb

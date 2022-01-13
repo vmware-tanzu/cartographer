@@ -1,8 +1,8 @@
 #! /usr/bin/env ruby
 require 'yaml'
 require 'fileutils'
-require_relative 'lib/config'
-require_relative 'lib/spec'
+require_relative 'crd_lib/config'
+require_relative 'crd_lib/spec'
 
 CONFIG_DIR = File.join(__dir__, "crds")
 CRD_DIR = File.join(__dir__, "..", "..", "config", "crd", "bases")
@@ -24,6 +24,9 @@ def main
     puts "\tSource CRD: #{File.absolute_path(input_filename)}"
 
     crd = YAML.load_file(input_filename)
+
+    config.apply!(crd)
+
     spec = Spec.new(crd["spec"])
 
     # Create/Open Target Spec Yaml
