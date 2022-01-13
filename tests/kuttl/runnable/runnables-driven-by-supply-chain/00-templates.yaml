@@ -54,7 +54,7 @@ spec:
       labels:
         my-label: this-is-it
     spec:
-      serviceAccountName: $(params.service-account-name)$
+      serviceAccountName: $(workload.spec.serviceAccountName)$
 
       runTemplateRef:
         name: my-run-template-driven-by-supply-chain
