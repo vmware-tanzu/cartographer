@@ -85,6 +85,7 @@ type WorkloadStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 	SupplyChainRef     ObjectReference    `json:"supplyChainRef,omitempty"`
+	Artifacts          []Artifact         `json:"artifacts,omitempty"`
 }
 
 // +kubebuilder:object:root=true

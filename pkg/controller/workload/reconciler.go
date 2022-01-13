@@ -159,11 +159,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
-	var changed bool
-	workload.Status.Conditions, changed = r.conditionManager.Finalize()
+	var conditionsChanged bool
+	var artifactsChanged bool
+
+	workload.Status.Conditions, conditionsChanged = r.conditionManager.Finalize()
+
+	workload.Status.Artifacts, artifactsChanged = r.artifactManager.Finalize()
 
 	var updateErr error
-	if changed || (workload.Status.ObservedGeneration != workload.Generation) {
+	if conditionsChanged || artifactsChanged || (workload.Status.ObservedGeneration != workload.Generation) {
 		workload.Status.ObservedGeneration = workload.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, workload)
 		if updateErr != nil {
