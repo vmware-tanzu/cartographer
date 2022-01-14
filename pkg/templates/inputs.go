@@ -15,18 +15,18 @@
 package templates
 
 type SourceInput struct {
-	URL      interface{} `json:"url"`
-	Revision interface{} `json:"revision"`
+	URL      string `json:"url"`
+	Revision string `json:"revision"`
 	Name     string      `json:"name"`
 }
 
 type ImageInput struct {
-	Image interface{} `json:"image"`
+	Image string `json:"image"`
 	Name  string      `json:"name"`
 }
 
 type ConfigInput struct {
-	Config interface{} `json:"config"`
+	Config string `json:"config"`
 	Name   string      `json:"name"`
 }
 
@@ -46,20 +46,20 @@ func (i Inputs) OnlySource() *SourceInput {
 	return nil
 }
 
-func (i Inputs) OnlyImage() interface{} {
+func (i Inputs) OnlyImage() string {
 	if len(i.Images) == 1 {
 		for _, imageInput := range i.Images {
 			return imageInput.Image
 		}
 	}
-	return nil
+	return ""
 }
 
-func (i Inputs) OnlyConfig() interface{} {
+func (i Inputs) OnlyConfig() string {
 	if len(i.Configs) == 1 {
 		for _, configInput := range i.Configs {
 			return configInput.Config
 		}
 	}
-	return nil
+	return ""
 }

@@ -76,7 +76,7 @@ func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templat
 		image := o.getResourceImage(referenceImage.Resource)
 		if image != "" {
 			inputs.Images[referenceImage.Name] = templates.ImageInput{
-				Image: image,
+				Image: string(image),
 				Name:  referenceImage.Name,
 			}
 		}
@@ -86,7 +86,7 @@ func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templat
 		config := o.getResourceConfig(referenceConfig.Resource)
 		if config != "" {
 			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
-				Config: config,
+				Config: string(config),
 				Name:   referenceConfig.Name,
 			}
 		}

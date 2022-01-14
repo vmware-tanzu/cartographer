@@ -68,7 +68,7 @@ func (o Outputs) GenerateInputs(resource *v1alpha1.DeliveryResource) *templates.
 		config := o.getResourceConfig(referenceConfig.Resource)
 		if config != "" {
 			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
-				Config: config,
+				Config: string(config),
 				Name:   referenceConfig.Name,
 			}
 		}

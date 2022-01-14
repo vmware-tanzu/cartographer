@@ -99,7 +99,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	}
 
 	// Todo: this belongs in Stamp.
-	if inputs.OnlyConfig() != nil {
+	if inputs.OnlyConfig() != "" {
 		templatingContext["config"] = inputs.OnlyConfig()
 	}
 	if inputs.OnlySource() != nil {
