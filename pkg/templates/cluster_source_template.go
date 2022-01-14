@@ -48,7 +48,7 @@ func (t *clusterSourceTemplate) SetStampedObject(stampedObject *unstructured.Uns
 }
 
 func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
-	var source *Source
+	var source Source
 
 	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
@@ -82,7 +82,7 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 		return nil, errors.New("invalid value at path; revision must be type string")
 	}
 
-	return &Output{Source: source}, nil
+	return &Output{Source: &source}, nil
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
