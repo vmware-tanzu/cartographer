@@ -251,7 +251,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				metadata:
 				  name: my-config-template
 				spec:
-				  configPath: status.conditions[?(@.type=="Ready")]
+				  configPath: status.conditions[?(@.type=="Ready")].status
 			      template:
 					apiVersion: test.run/v1alpha1
 					kind: TestObj

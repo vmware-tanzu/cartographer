@@ -410,8 +410,8 @@ var _ = Describe("Deliveries", func() {
 				metadata:
 				  name: my-source-template
 				spec:
-				  urlPath: status.conditions[?(@.type=="Ready")]
-				  revisionPath: status.conditions[?(@.type=="Succeeded")]
+				  urlPath: status.conditions[?(@.type=="Ready")].status
+				  revisionPath: status.conditions[?(@.type=="Succeeded")].status
 			      template:
 					apiVersion: test.run/v1alpha1
 					kind: TestObj

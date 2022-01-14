@@ -318,7 +318,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					  name: source
 					spec:
 					  urlPath: .spec.value.url
-					  revisionPath: .spec.value.ref
+					  revisionPath: .spec.value.ref.branch
 					
 					  template:
 						apiVersion: test.run/v1alpha1
