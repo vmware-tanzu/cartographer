@@ -75,7 +75,7 @@ var _ = Describe("ClusterImageTemplate", func() {
 				Expect(path).To(Equal("some.path"))
 				Expect(obj).To(Equal(stampedObject.UnstructuredContent()))
 
-				Expect(output.Image).To(Equal("some value"))
+				Expect(output.Image).To(BeEquivalentTo("some value"))
 			})
 		})
 

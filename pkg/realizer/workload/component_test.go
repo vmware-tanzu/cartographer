@@ -195,7 +195,7 @@ var _ = Describe("Resource", func() {
 					"carto.run/template-kind":             "ClusterImageTemplate",
 				}))
 
-				Expect(out.Image).To(Equal("some-revision"))
+				Expect(out.Image).To(BeEquivalentTo("some-revision"))
 			})
 		})
 

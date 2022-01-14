@@ -75,7 +75,7 @@ var _ = Describe("ClusterConfigTemplate", func() {
 				Expect(path).To(Equal("some.path"))
 				Expect(obj).To(Equal(stampedObject.UnstructuredContent()))
 
-				Expect(output.Config).To(Equal("some value"))
+				Expect(output.Config).To(BeEquivalentTo("some value"))
 			})
 		})
 		When("passed a stamped object for which the evaluator cannot return a value at the configPath", func() {

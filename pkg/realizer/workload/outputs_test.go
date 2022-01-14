@@ -95,7 +95,7 @@ var _ = Describe("Outputs", func() {
 					inputs := outs.GenerateInputs(resource)
 					Expect(inputs.Images).To(HaveLen(1))
 					Expect(inputs.Images["image-ref"].Name).To(Equal("image-ref"))
-					Expect(inputs.Images["image-ref"].Image).To(Equal("image12345"))
+					Expect(inputs.Images["image-ref"].Image).To(BeEquivalentTo("image12345"))
 				})
 			})
 
@@ -139,7 +139,7 @@ var _ = Describe("Outputs", func() {
 					inputs := outs.GenerateInputs(resource)
 					Expect(inputs.Configs).To(HaveLen(1))
 					Expect(inputs.Configs["config-ref"].Name).To(Equal("config-ref"))
-					Expect(inputs.Configs["config-ref"].Config).To(Equal("config12345"))
+					Expect(inputs.Configs["config-ref"].Config).To(BeEquivalentTo("config12345"))
 				})
 			})
 

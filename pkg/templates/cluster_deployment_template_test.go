@@ -153,22 +153,6 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						})
 					})
 
-					When("templating context includes an incomplete deployment", func() {
-						BeforeEach(func() {
-							inputs = &templates.Inputs{
-								Deployment: &templates.SourceInput{
-									Revision: "prod",
-								},
-							}
-						})
-						It("returns the incomplete deployment as a source", func() {
-							expectedOutput := templates.Source{
-								Revision: "prod",
-							}
-							Expect(*output.Source).To(Equal(expectedOutput))
-						})
-					})
-
 					When("templating context does not include a deployment", func() {
 						BeforeEach(func() {
 							inputs = &templates.Inputs{}
@@ -265,22 +249,6 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					})
 
 					ItDoesNotReturnAnError()
-				})
-
-				When("templating context includes an incomplete deployment", func() {
-					BeforeEach(func() {
-						inputs = &templates.Inputs{
-							Deployment: &templates.SourceInput{
-								Revision: "prod",
-							},
-						}
-					})
-					It("returns the incomplete deployment as a source", func() {
-						expectedOutput := templates.Source{
-							Revision: "prod",
-						}
-						Expect(*output.Source).To(Equal(expectedOutput))
-					})
 				})
 
 				When("templating context does not include a deployment", func() {
