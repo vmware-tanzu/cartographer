@@ -15,6 +15,7 @@
 package templates
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -47,6 +48,8 @@ func (t *clusterSourceTemplate) SetStampedObject(stampedObject *unstructured.Uns
 }
 
 func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
+	var source *Source
+
 	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, t.stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
@@ -54,6 +57,13 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 				t.template.Spec.URLPath, err),
 			expression: t.template.Spec.URLPath,
 		}
+	}
+
+	val, ok := url.(string)
+	if ok {
+		source.URL = val
+	} else {
+		return nil, errors.New("invalid value at path; url must be type string")
 	}
 
 	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, t.stampedObject.UnstructuredContent())
@@ -64,12 +74,15 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 			expression: t.template.Spec.RevisionPath,
 		}
 	}
-	return &Output{
-		Source: &Source{
-			URL:      url,
-			Revision: revision,
-		},
-	}, nil
+
+	val, ok = revision.(string)
+	if ok {
+		source.Revision = val
+	} else {
+		return nil, errors.New("invalid value at path; revision must be type string")
+	}
+
+	return &Output{Source: source}, nil
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

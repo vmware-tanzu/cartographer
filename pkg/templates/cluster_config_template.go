@@ -15,6 +15,7 @@
 package templates
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -56,9 +57,14 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 		}
 	}
 
-	return &Output{
-		Config: config,
-	}, nil
+	val, ok := config.(string)
+	if ok {
+		return &Output{
+			Config: Config(val),
+		}, nil
+	} else {
+		return nil, errors.New("invalid value at path; config must be type string")
+	}
 }
 
 func (t *clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

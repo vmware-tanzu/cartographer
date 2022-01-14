@@ -15,13 +15,13 @@
 package templates
 
 type Source struct {
-	URL      interface{} `json:"url"`
-	Revision interface{} `json:"revision"`
+	URL      string `json:"url"`
+	Revision string `json:"revision"`
 }
 
-type Image interface{}
+type Image string
 
-type Config interface{}
+type Config string
 
 type Output struct {
 	Source *Source

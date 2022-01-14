@@ -17,6 +17,7 @@ package templates
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -58,9 +59,14 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 		}
 	}
 
-	return &Output{
-		Image: image,
-	}, nil
+	val, ok := image.(string)
+	if ok {
+		return &Output{
+			Image: Image(val),
+		}, nil
+	} else {
+		return nil, errors.New("invalid value at path; image must be type string")
+	}
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

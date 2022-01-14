@@ -15,6 +15,7 @@
 package templates
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -60,8 +61,19 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 		return nil, fmt.Errorf("deployment not found in upstream template")
 	}
 
-	output.Source.URL = t.inputs.Deployment.URL
-	output.Source.Revision = t.inputs.Deployment.Revision
+	val, ok := t.inputs.Deployment.URL.(string)
+	if ok {
+		output.Source.URL = val
+	} else {
+		return nil, errors.New("invalid value at path; url must be type string")
+	}
+
+	val, ok = t.inputs.Deployment.Revision.(string)
+	if ok {
+		output.Source.Revision = val
+	} else {
+		return nil, errors.New("invalid value at path; revision must be type string")
+	}
 
 	return output, nil
 }

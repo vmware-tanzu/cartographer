@@ -41,7 +41,7 @@ func (o Outputs) getResourceSource(resourceName string) *templates.Source {
 func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 	output := o[resourceName]
 	if output == nil {
-		return nil
+		return ""
 	}
 	return output.Config
 }
@@ -66,7 +66,7 @@ func (o Outputs) GenerateInputs(resource *v1alpha1.DeliveryResource) *templates.
 
 	for _, referenceConfig := range resource.Configs {
 		config := o.getResourceConfig(referenceConfig.Resource)
-		if config != nil {
+		if config != "" {
 			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
 				Config: config,
 				Name:   referenceConfig.Name,
