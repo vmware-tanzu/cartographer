@@ -112,9 +112,9 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 type Artifact struct {
 	Id     string         `json:"id"`
 	Passed PassedResource `json:"passed"`
-	Source SourceArtifact `json:"source,omitempty"`
-	Image  ImageArtifact  `json:"image,omitempty"`
-	Config ConfigArtifact `json:"config,omitempty"`
+	Source *SourceArtifact `json:"source,omitempty"`
+	Image  *ImageArtifact  `json:"image,omitempty"`
+	Config *ConfigArtifact `json:"config,omitempty"`
 }
 
 type SourceArtifact struct {

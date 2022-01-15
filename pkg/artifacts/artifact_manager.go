@@ -64,16 +64,22 @@ func CreateArtifact(passedContext templates.Stamper, resource *unstructured.Unst
 	}
 
 	if output.Config != "" {
-		artifact.Config.Config = string(output.Config)
+		artifact.Config = &v1alpha1.ConfigArtifact{
+			Config: string(output.Config),
+		}
 	}
 
 	if output.Image != "" {
-		artifact.Image.Image = string(output.Image)
+		artifact.Image = &v1alpha1.ImageArtifact{
+			Image: string(output.Image),
+		}
 	}
 
 	if output.Source != nil {
-		artifact.Source.Revision = output.Source.Revision
-		artifact.Source.Url = output.Source.URL
+		artifact.Source = &v1alpha1.SourceArtifact{
+			Url:      output.Source.URL,
+			Revision: output.Source.Revision,
+		}
 	}
 
 	artifactJson, err := json.Marshal(artifact)
@@ -89,6 +95,10 @@ func CreateArtifact(passedContext templates.Stamper, resource *unstructured.Unst
 }
 
 func (a *artifactManager) Add(artifact *v1alpha1.Artifact) {
+	if artifact.Source == nil && artifact.Image == nil && artifact.Config == nil {
+		return
+	}
+
 	isNewArtifact := true
 
 	for _, previousArtifact := range a.previousArtifacts {
