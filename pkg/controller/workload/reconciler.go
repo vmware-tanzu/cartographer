@@ -19,6 +19,7 @@ package workload
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/artifacts"
 
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +44,7 @@ type Reconciler struct {
 	Realizer                realizer.Realizer
 	DynamicTracker          tracker.DynamicTracker
 	conditionManager        conditions.ConditionManager
+	artifactManager			artifacts.ArtifactManager
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -66,6 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.WorkloadReady, workload.Status.Conditions)
+	r.artifactManager = artifacts.NewArtifactManager(workload.Status.Artifacts)
 
 	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
@@ -109,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
+	stampedObjects, newArtifacts, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -137,6 +140,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
+		for _, artifact := range newArtifacts {
+			r.artifactManager.Add(artifact)
+		}
 	}
 
 	var trackingError error
@@ -163,8 +169,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alp
 	var artifactsChanged bool
 
 	workload.Status.Conditions, conditionsChanged = r.conditionManager.Finalize()
-
-	workload.Status.Artifacts, artifactsChanged = r.artifactManager.Finalize()
+	//workload.Status.Artifacts, artifactsChanged = r.artifactManager.Finalize()
 
 	var updateErr error
 	if conditionsChanged || artifactsChanged || (workload.Status.ObservedGeneration != workload.Generation) {

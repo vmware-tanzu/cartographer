@@ -17,6 +17,7 @@ package workload
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/artifacts"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, *v1alpha1.Artifact, error)
 }
 
 type resourceRealizer struct {
@@ -63,14 +64,14 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, *v1alpha1.Artifact, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
 	apiTemplate, err := r.systemRepo.GetSupplyChainTemplate(ctx, resource.TemplateRef)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, GetSupplyChainTemplateError{
+		return nil, nil, nil, GetSupplyChainTemplateError{
 			Err:             err,
 			SupplyChainName: supplyChainName,
 			Resource:        resource,
@@ -80,7 +81,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
+		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 
 	}
 
@@ -117,7 +118,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
-		return nil, nil, StampError{
+		return nil, nil, nil, StampError{
 			Err:             err,
 			Resource:        resource,
 			SupplyChainName: supplyChainName,
@@ -127,7 +128,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return nil, nil, ApplyStampedObjectError{
+		return nil, nil, nil, ApplyStampedObjectError{
 			Err:             err,
 			StampedObject:   stampedObject,
 			SupplyChainName: supplyChainName,
@@ -140,7 +141,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		return stampedObject, nil, RetrieveOutputError{
+		return stampedObject, nil, nil, RetrieveOutputError{
 			Err:             err,
 			Resource:        resource,
 			SupplyChainName: supplyChainName,
@@ -148,5 +149,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	return stampedObject, output, nil
+	artifact, err := artifacts.CreateArtifact(stampContext,stampedObject,output,resource.Name)
+	if err != nil{
+		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+		return nil, nil, nil, err
+	}
+
+	return stampedObject, output, artifact, nil
 }

@@ -371,6 +371,62 @@ spec:
             type: object
           status:
             properties:
+              artifacts:
+                items:
+                  properties:
+                    config:
+                      properties:
+                        config:
+                          type: string
+                      required:
+                      - config
+                      type: object
+                    id:
+                      type: string
+                    image:
+                      properties:
+                        image:
+                          type: string
+                      required:
+                      - image
+                      type: object
+                    passed:
+                      properties:
+                        apiVersion:
+                          type: string
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        resource-name:
+                          type: string
+                        resourceVersion:
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      - namespace
+                      - resource-name
+                      - resourceVersion
+                      type: object
+                    source:
+                      properties:
+                        revision:
+                          type: string
+                        url:
+                          type: string
+                      required:
+                      - revision
+                      - url
+                      type: object
+                  required:
+                  - id
+                  - passed
+                  type: object
+                type: array
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current

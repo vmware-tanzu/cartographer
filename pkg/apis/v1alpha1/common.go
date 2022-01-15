@@ -110,44 +110,24 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 }
 
 type Artifact struct {
+	Id     string         `json:"id"`
+	Passed PassedResource `json:"passed"`
 	Source SourceArtifact `json:"source,omitempty"`
 	Image  ImageArtifact  `json:"image,omitempty"`
 	Config ConfigArtifact `json:"config,omitempty"`
 }
 
-type SubArtifact interface {
-	GetID() string
-}
-
 type SourceArtifact struct {
-	Id       string           `json:"id"`
-	Url      string           `json:"url"`
-	Revision string           `json:"revision"`
-	Passed   []PassedResource `json:"passed"`
+	Url      string `json:"url"`
+	Revision string `json:"revision"`
 }
 
 type ImageArtifact struct {
-	Id       string           `json:"id"`
-	Image      string           `json:"image"`
-	Passed   []PassedResource `json:"passed"`
+	Image string `json:"image"`
 }
 
 type ConfigArtifact struct {
-	Id       string           `json:"id"`
-	Config      string           `json:"config"`
-	Passed   []PassedResource `json:"passed"`
-}
-
-func (s *SourceArtifact) GetID() string {
-	return s.Id
-}
-
-func (i *ImageArtifact) GetID() string {
-	return i.Id
-}
-
-func (c *ConfigArtifact) GetID() string {
-	return c.Id
+	Config string `json:"config"`
 }
 
 type PassedResource struct {

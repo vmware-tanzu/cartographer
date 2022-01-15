@@ -28,7 +28,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, []*v1alpha1.Artifact, error)
 }
 
 type realizer struct{}
@@ -37,28 +37,30 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, []*v1alpha1.Artifact, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
+	var artifacts []*v1alpha1.Artifact
 	var stampedObjects []*unstructured.Unstructured
 
 	for i := range supplyChain.Spec.Resources {
 		resource := supplyChain.Spec.Resources[i]
-		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
+		stampedObject, out, artifact, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
 				"object", stampedObject)
 			stampedObjects = append(stampedObjects, stampedObject)
 		}
+		artifacts = append(artifacts, artifact)
 		if err != nil {
 			log.Error(err, "failed to realize resource")
-			return stampedObjects, err
+			return stampedObjects, artifacts, err
 		}
 
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return stampedObjects, nil
+	return stampedObjects, artifacts, nil
 }
