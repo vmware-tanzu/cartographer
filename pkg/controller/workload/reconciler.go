@@ -169,7 +169,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alp
 	var artifactsChanged bool
 
 	workload.Status.Conditions, conditionsChanged = r.conditionManager.Finalize()
-	//workload.Status.Artifacts, artifactsChanged = r.artifactManager.Finalize()
+	workload.Status.Artifacts, artifactsChanged = r.artifactManager.Finalize()
 
 	var updateErr error
 	if conditionsChanged || artifactsChanged || (workload.Status.ObservedGeneration != workload.Generation) {

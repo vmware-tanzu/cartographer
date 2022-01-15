@@ -105,36 +105,36 @@ status:
     kind: ClusterSupplyChain
   artifacts:
     - source:
-        id: 330a1a9d8cec803601184ecff15803c85bdca71ad66d7f626101769f2143daf6
         url: Value
         revision: AnotherValue
-        passed:
-          - resource-name: source-provider
-            kind: ConfigMap
-            apiVersion: v1
-            name: test-configmap-source
-#            namespace: ???
-#            resourceVersion: "11125094"
+#      id: 330a1a9d8cec803601184ecff15803c85bdca71ad66d7f626101769f2143daf6
+      passed:
+        resource-name: source-provider
+        kind: ConfigMap
+        apiVersion: v1
+        name: test-configmap-source
+#        namespace: ???
+#        resourceVersion: "11125094"
     - image:
-        id: 3e164ca12de8655fc51f8006f1c3db6ada1c09cfde929e5acc0ad4916b63e143
         image: "Cosmic latte"
-        passed:
-          - resource-name: image-provider
-            kind: ConfigMap
-            apiVersion: v1
-            name: test-configmap-image
-#            namespace: my-namespace
-#            resourceVersion: "11126348"
+#      id: 3e164ca12de8655fc51f8006f1c3db6ada1c09cfde929e5acc0ad4916b63e143
+      passed:
+        resource-name: image-provider
+        kind: ConfigMap
+        apiVersion: v1
+        name: test-configmap-image
+#        namespace: my-namespace
+#        resourceVersion: "11126348"
     - config:
-        id: 47f52c8dcbce02ecdbe68bfd89abac988abcde38190f84f029671214a7405b84
         config: Brown
-        passed:
-            resource-name: config-provider
-            kind: ConfigMap
-            apiVersion: v1
-            name: test-configmap-config
-#            namespace: my-namespace
-#            resourceVersion: "11181186"
+#      id: 47f52c8dcbce02ecdbe68bfd89abac988abcde38190f84f029671214a7405b84
+      passed:
+        resource-name: config-provider
+        kind: ConfigMap
+        apiVersion: v1
+        name: test-configmap-config
+#        namespace: my-namespace
+#        resourceVersion: "11181186"
 
 ---
 
