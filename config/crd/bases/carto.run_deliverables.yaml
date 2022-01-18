@@ -73,6 +73,7 @@ spec:
                         or template parameter name.
                       type: string
                     value:
+                      description: Value of the parameter.
                       x-kubernetes-preserve-unknown-fields: true
                   required:
                   - name

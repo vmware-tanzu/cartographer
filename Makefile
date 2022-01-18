@@ -152,3 +152,8 @@ docs-serve:
 .PHONY: docs-release
 docs-release:
 	$(MAKE) -C site release
+
+
+.PHONY: docs-gen-crds
+docs-gen-crds: gen-manifests
+	$(MAKE) -C site gen-crd-reference

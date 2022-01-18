@@ -89,8 +89,13 @@ spec:
                 items:
                   properties:
                     default:
+                      description: DefaultValue of the parameter. Causes the parameter
+                        to be optional; If the Owner or Template does not specify
+                        this parameter, this value is used.
                       x-kubernetes-preserve-unknown-fields: true
                     name:
+                      description: Name of a parameter the template accepts from the
+                        Blueprint or Owner.
                       type: string
                   required:
                   - default

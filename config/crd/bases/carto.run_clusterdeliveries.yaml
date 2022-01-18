@@ -52,12 +52,17 @@ spec:
                 items:
                   properties:
                     default:
+                      description: DefaultValue of the parameter. Causes the parameter
+                        to be optional; If the Owner does not specify this parameter,
+                        this value is used.
                       x-kubernetes-preserve-unknown-fields: true
                     name:
                       description: Name of the parameter. Should match a template
                         parameter name.
                       type: string
                     value:
+                      description: Value of the parameter. If specified, owner properties
+                        are ignored.
                       x-kubernetes-preserve-unknown-fields: true
                   required:
                   - name
@@ -91,12 +96,17 @@ spec:
                       items:
                         properties:
                           default:
+                            description: DefaultValue of the parameter. Causes the
+                              parameter to be optional; If the Owner does not specify
+                              this parameter, this value is used.
                             x-kubernetes-preserve-unknown-fields: true
                           name:
                             description: Name of the parameter. Should match a template
                               parameter name.
                             type: string
                           value:
+                            description: Value of the parameter. If specified, owner
+                              properties are ignored.
                             x-kubernetes-preserve-unknown-fields: true
                         required:
                         - name
@@ -141,8 +151,11 @@ spec:
               serviceAccountRef:
                 properties:
                   name:
+                    description: Name of the service account being referred to
                     type: string
                   namespace:
+                    description: Namespace of the service account being referred to
+                      if omitted, the Owner's namespace is used.
                     type: string
                 required:
                 - name

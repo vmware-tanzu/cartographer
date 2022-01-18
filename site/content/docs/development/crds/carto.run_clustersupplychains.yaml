@@ -1,0 +1,123 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata: {}
+spec:
+
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+  # +optional
+  params:
+    - # DefaultValue of the parameter. Causes the parameter to be
+      # optional; If the Owner does not specify this parameter,
+      # this value is used.
+      # +optional
+      default: <any>
+
+      # Name of the parameter. Should match a template parameter
+      # name.
+      name: <string>
+
+      # Value of the parameter. If specified, owner properties are
+      # ignored.
+      # +optional
+      value: <any>
+
+  # Resources that are responsible for bringing the application to
+  # a deliverable state.
+  resources:
+    - # Configs is a list of references to other 'config'
+      # resources in this list. A config resource has the kind
+      # ClusterConfigTemplate 
+      # In a template, configs can be consumed as:  
+      # $(configs.<name>.config)$ 
+      # If there is only one image, it can be consumed as:  
+      # $(config)$
+      # +optional
+      configs:
+        - name: <string>
+          resource: <string>
+
+      # Images is a list of references to other 'image' resources
+      # in this list. An image resource has the kind
+      # ClusterImageTemplate 
+      # In a template, images can be consumed as:  
+      # $(images.<name>.image)$ 
+      # If there is only one image, it can be consumed as:  
+      # $(image)$
+      # +optional
+      images:
+        - name: <string>
+          resource: <string>
+
+      # Name of the resource. Used as a reference for inputs, as
+      # well as being the name presented in workload statuses to
+      # identify this resource.
+      name: <string>
+
+      # Params are a list of parameters to provide to the template
+      # in TemplateRef Template params do not have to be specified
+      # here, unless you want to force a particular value, or add
+      # a default value. 
+      # Parameters are consumed in a template with the syntax:  
+      # $(params.<name>)$
+      # +optional
+      params:
+        - # DefaultValue of the parameter. Causes the parameter to
+          # be optional; If the Owner does not specify this
+          # parameter, this value is used.
+          # +optional
+          default: <any>
+
+          # Name of the parameter. Should match a template
+          # parameter name.
+          name: <string>
+
+          # Value of the parameter. If specified, owner properties
+          # are ignored.
+          # +optional
+          value: <any>
+
+      # Sources is a list of references to other 'source'
+      # resources in this list. A source resource has the kind
+      # ClusterSourceTemplate 
+      # In a template, sources can be consumed as:   
+      # $(sources.<name>.url)$ and $(sources.<name>.revision)$ 
+      # If there is only one source, it can be consumed as:   
+      # $(source.url)$ and $(source.revision)$
+      # +optional
+      sources:
+        - name: <string>
+          resource: <string>
+
+      # TemplateRef identifies the template used to produce this
+      # resource
+      templateRef:
+
+        # Kind of the template to apply
+        kind: <[ClusterSourceTemplate|ClusterImageTemplate|ClusterTemplate|ClusterConfigTemplate]>
+
+        # Name of the template to apply
+        name: <string>
+
+  # Specifies the label key-value pairs used to select workloads
+  # See:
+  # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  selector: {}
+
+  # ServiceAccountName refers to the Service account with
+  # permissions to create resources submitted by the supply chain.
+  # If not set, Cartographer will use serviceAccountName from
+  # supply chain. 
+  # If that is also not set, Cartographer will use the default
+  # service account in the workload's namespace.
+  # +optional
+  serviceAccountRef:
+
+    # Name of the service account being referred to
+    name: <string>
+
+    # Namespace of the service account being referred to if
+    # omitted, the Owner's namespace is used.
+    # +optional
+    namespace: <string>

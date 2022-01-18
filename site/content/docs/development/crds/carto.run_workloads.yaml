@@ -43,13 +43,16 @@ spec:
   # +optional
   image: <string>
 
-  # Additional parameters.
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
   # +optional
   params:
     - # Name of the parameter. Should match a blueprint or
       # template parameter name.
       name: <string>
-      value: <unknown>
+
+      # Value of the parameter.
+      value: <any>
 
   # Resource constraints for the application. See
   # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/

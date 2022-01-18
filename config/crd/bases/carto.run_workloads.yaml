@@ -291,7 +291,7 @@ spec:
                   an alternative to defining source code.
                 type: string
               params:
-                description: Additional parameters.
+                description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
                   properties:
                     name:
@@ -299,6 +299,7 @@ spec:
                         or template parameter name.
                       type: string
                     value:
+                      description: Value of the parameter.
                       x-kubernetes-preserve-unknown-fields: true
                   required:
                   - name

@@ -83,21 +83,29 @@ class Spec
         @required
       end
 
+      def to_y(writer)
+        writer.comment(description, !required?)
+        value = @node_hash.dig("value") || "<#{type_string}>"
+        writer.puts "#{name}: #{value}"
+      end
+
+      private
+
       def any_of_type_string
         any_of = @node_hash["anyOf"] || []
         return nil if any_of.empty?
         "[" + any_of.map { |of| of.dig("type") }.join("|") + "]"
       end
 
-      def type_string
-        @node_hash["type"] || any_of_type_string || "any"
+      def enum_type_string
+        return unless @node_hash.has_key?("enum")
+        "[#{@node_hash["enum"].join("|")}]"
       end
 
-      def to_y(writer)
-        writer.comment(description, !required?)
-        value = @node_hash.dig("value") || "<#{type_string}>"
-        writer.puts "#{name}: #{value}"
+      def type_string
+        enum_type_string || @node_hash["type"] || any_of_type_string || "any"
       end
+
     end
 
     class ObjectNode

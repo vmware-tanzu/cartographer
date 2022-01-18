@@ -72,6 +72,7 @@ type WorkloadServiceClaimReference struct {
 
 type WorkloadSpec struct {
 	// Additional parameters.
+	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
 	// +optional
 	Params []OwnerParam `json:"params,omitempty"`
 

@@ -318,8 +318,72 @@ tear it down.
 ./hack/setup.sh teardown
 ```
 
-ps.: those commands can be all specified at once, for instance:
+
+## Maintaining Documentation
+
+### CRD definitions
+CRD manifests must include clear documentation. Use go doc comments liberally in the CRD objects under `/pkg/api`
+
+The doc comments are presented in both `kubectl explain` documentation as well in our documentation website.
+It's important to realise there are limitations to formatting in both situations. In `kubectl explain` the entire comment
+runs together, eg:
+
+```
+	// Sources is a list of references to other 'source' resources in this list.
+	// A source resource has the kind ClusterSourceTemplate
+	//
+	// In a template, sources can be consumed as:
+	//    $(sources.<name>.url)$ and $(sources.<name>.revision)$
+	//
+	// If there is only one source, it can be consumed as:
+	//    $(source.url)$ and $(source.revision)$
+```
+
+becomes:
+```text
+  sources	<[]Object>
+     Sources is a list of references to other 'source' resources in this list. A
+     source resource has the kind ClusterSourceTemplate In a template, these can
+     be consumed as: $(sources.<name>.url)$ and $(sources.<name>.revision)$ If there
+     is only one source, it can be consumed as: $(source.url)$
+     and $(sources.revision)$
+```
+
+#### Use conjunctions and comma seperated lists.
+```
+// aye
+// bee
+// cee
+```
+should be:
+```
+// aye, bee and cee
+```
+
+#### Stops at the end of every sentence, capitals at the start of every sentence.
+```text
+Talking about one thing
+
+talking about another
+```
+presents as:
+```
+Talking about one thing talking about another
+```
+
+instead use:
+
+```text
+Talking about one thing.
+
+Talking about another.
+```
+which is presented as:
+```
+Talking about one thing. Talking about another.
+```
 
 [carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
 [imgpkg bundle]: https://carvel.dev/imgpkg/docs/latest/
  
+

@@ -36,22 +36,37 @@ type OwnerStatus struct {
 type TemplateParams []TemplateParam
 
 type TemplateParam struct {
-	Name         string               `json:"name"`
+	// Name of a parameter the template accepts from the
+	// Blueprint or Owner.
+	Name string `json:"name"`
+
+	// DefaultValue of the parameter.
+	// Causes the parameter to be optional; If the Owner or Template
+	// does not specify this parameter, this value is used.
 	DefaultValue apiextensionsv1.JSON `json:"default"`
 }
 
 type OwnerParam struct {
 	// Name of the parameter.
 	// Should match a blueprint or template parameter name.
-	Name  string               `json:"name"`
+	Name string `json:"name"`
+
+	// Value of the parameter.
 	Value apiextensionsv1.JSON `json:"value"`
 }
 
 type BlueprintParam struct {
 	// Name of the parameter.
 	// Should match a template parameter name.
-	Name         string                `json:"name"`
-	Value        *apiextensionsv1.JSON `json:"value,omitempty"`
+	Name string `json:"name"`
+
+	// Value of the parameter.
+	// If specified, owner properties are ignored.
+	Value *apiextensionsv1.JSON `json:"value,omitempty"`
+
+	// DefaultValue of the parameter.
+	// Causes the parameter to be optional; If the Owner does not specify
+	// this parameter, this value is used.
 	DefaultValue *apiextensionsv1.JSON `json:"default,omitempty"`
 }
 
@@ -111,7 +126,10 @@ type ObjectReference struct {
 }
 
 type ServiceAccountRef struct {
-	Name      string `json:"name"`
+	// Name of the service account being referred to
+	Name string `json:"name"`
+	// Namespace of the service account being referred to
+	// if omitted, the Owner's namespace is used.
 	Namespace string `json:"namespace,omitempty"`
 }
 
