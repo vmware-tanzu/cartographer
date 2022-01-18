@@ -14,7 +14,7 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: ClusterSourceTemplate
+kind: ClusterTemplate
 metadata: {}
 spec:
 
@@ -31,12 +31,6 @@ spec:
       # Blueprint or Owner.
       name: <string>
 
-  # RevisionPath is a path into the templated object's data that
-  # contains a revision. The revision, along with the URL,
-  # represents the output of the Template. RevisionPath is
-  # specified in jsonpath format, eg: .status.artifact.revision
-  revisionPath: <string>
-
   # Template defines a resource template for a Kubernetes Resource
   # or Custom Resource which is applied to the server each time
   # the blueprint is applied. Templates support simple value
@@ -46,12 +40,6 @@ spec:
   # define both Template and Ytt at the same time.
   # +optional
   template: {}
-
-  # URLPath is a path into the templated object's data that
-  # contains a URL. The URL, along with the revision, represents
-  # the output of the Template. URLPath is specified in jsonpath
-  # format, eg: .status.artifact.url
-  urlPath: <string>
 
   # Ytt defines a resource template written in `ytt` for a
   # Kubernetes Resource or Custom Resource which is applied to the

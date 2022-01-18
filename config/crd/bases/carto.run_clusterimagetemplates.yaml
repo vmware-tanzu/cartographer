@@ -47,8 +47,14 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the image template. More info: https://cartographer.sh/docs/latest/reference/template/#clusterimagetemplate'
             properties:
               imagePath:
+                description: 'ImagePath is a path into the templated object''s data
+                  that contains a valid image digest. This might be a URL or in some
+                  cases just a repository path and digest. The final spec for this
+                  field may change as we implement RFC-0016 https://github.com/vmware-tanzu/cartographer/blob/main/rfc/rfc-0016-validate-template-outputs.md
+                  ImagePath is specified in jsonpath format, eg: .status.artifact.image_digest'
                 type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'

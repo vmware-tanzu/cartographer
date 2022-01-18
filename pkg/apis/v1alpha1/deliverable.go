@@ -83,7 +83,6 @@ type DeliverableSpec struct {
 	// workload's namespace.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
 }
 
 type DeliverableStatus struct {

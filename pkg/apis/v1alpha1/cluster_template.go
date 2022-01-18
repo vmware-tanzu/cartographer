@@ -34,7 +34,10 @@ import (
 type ClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              TemplateSpec `json:"spec"`
+
+	// Spec describes the template.
+	// More info: https://cartographer.sh/docs/latest/reference/template/#clustertemplate
+	Spec TemplateSpec `json:"spec"`
 }
 
 type TemplateSpec struct {
@@ -53,12 +56,12 @@ type TemplateSpec struct {
 	// interpolation using the $()$ marker format. For more
 	// information, see: https://cartographer.sh/docs/latest/templating/
 	// You cannot define both Template and Ytt at the same time.
-	Ytt      string                `json:"ytt,omitempty"`
+	Ytt string `json:"ytt,omitempty"`
 
 	// Additional parameters.
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
 	// +optional
-	Params   TemplateParams        `json:"params,omitempty"`
+	Params TemplateParams `json:"params,omitempty"`
 }
 
 var _ webhook.Validator = &ClusterTemplate{}

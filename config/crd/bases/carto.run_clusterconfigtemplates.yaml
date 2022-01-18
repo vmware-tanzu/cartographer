@@ -47,8 +47,13 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the config template. More info: https://cartographer.sh/docs/latest/reference/template/#clusterconfigtemplate'
             properties:
               configPath:
+                description: 'ConfigPath is a path into the templated object''s data
+                  that contains valid yaml. This is typically the information that
+                  will configure the components of the deployable image. ConfigPath
+                  is specified in jsonpath format, eg: .data'
                 type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'

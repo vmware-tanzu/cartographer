@@ -22,40 +22,7 @@ The `ClusterImageTemplate` requires definition of an `imagePath`. `ClusterImageT
 an `image` value, which is a reflection of the value at the path on the created object. The supply chain may make this
 value available to other resources.
 
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterImageTemplate
-metadata:
-  name: kpack-battery
-spec:
-  # default set of parameters. see ClusterSourceTemplate for more
-  # information. (optional)
-  #
-  params: [ ]
-
-  # jsonpath expression to instruct where in the object templated out container
-  # image information can be found. (required)
-  #
-  imagePath: .status.latestImage
-
-  # template for instantiating the image provider.
-  # same data available for interpolation as any other `*Template`. (required)
-  #
-  template:
-    apiVersion: kpack.io/v1alpha2
-    kind: Image
-    metadata:
-      name: $(workload.metadata.name)$-image
-    spec:
-      tag: projectcartographer/demo/$(workload.metadata.name)$
-      serviceAccount: service-account
-      builder:
-        kind: ClusterBuilder
-        name: java-builder
-      source:
-        blob:
-          url: $(sources.provider.url)$
-```
+{{< crd  carto.run_clusterimagetemplates.yaml >}}
 
 _ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_image_template.go)_
 
@@ -68,45 +35,8 @@ The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfi
 emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make
 this value available to other resources.
 
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterConfigTemplate
-metadata:
-  name: deployer
-spec:
-  # default parameters. see ClusterSourceTemplate for more info. (optional)
-  #
-  params: [ ]
 
-  # jsonpath expression to instruct where in the object templated out config
-  # information can be found. (required)
-  #
-  configPath: .data
-  
-  # how to template out the kubernetes object. (required)
-  #
-  template:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: $(workload.metadata.name)$
-    data:
-      service.yml: |
-        ---
-        apiVersion: serving.knative.dev/v1
-        kind: Service
-        metadata:
-          name: links
-          labels:
-            app.kubernetes.io/part-of: $(workload.metadata.labels['app\.kubernetes\.io/part-of'])$
-        spec:
-          template:
-            spec:
-              containers:
-                - image: $(images.<name-of-image-provider>.image)$
-                  securityContext:
-                    runAsUser: 1000
-```
+{{< crd  carto.run_clusterconfigtemplates.yaml >}}
 
 _ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
 
@@ -201,60 +131,6 @@ ancestor resources.
 
 The `ClusterTemplate` does not emit values to the supply chain.
 
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterTemplate
-metadata:
-  name: deployer
-spec:
-  # default parameters. see ClusterSourceTemplate for more info. (optional)
-  #
-  params: [ ]
-
-  # how to template out the kubernetes object. (required)
-  #
-  template:
-    apiVersion: kappctrl.k14s.io/v1alpha1
-    kind: App
-    metadata:
-      name: $(workload.metadata.name)$
-    spec:
-      serviceAccountName: service-account
-      fetch:
-        - inline:
-            paths:
-              manifest.yml: |
-                ---
-                apiVersion: kapp.k14s.io/v1alpha1
-                kind: Config
-                rebaseRules:
-                  - path: [metadata, annotations, serving.knative.dev/creator]
-                    type: copy
-                    sources: [new, existing]
-                    resourceMatchers: &matchers
-                      - apiVersionKindMatcher: {apiVersion: serving.knative.dev/v1, kind: Service}
-                  - path: [metadata, annotations, serving.knative.dev/lastModifier]
-                    type: copy
-                    sources: [new, existing]
-                    resourceMatchers: *matchers
-                ---
-                apiVersion: serving.knative.dev/v1
-                kind: Service
-                metadata:
-                  name: links
-                  labels:
-                    app.kubernetes.io/part-of: $(workload.metadata.labels['app\.kubernetes\.io/part-of'])$
-                spec:
-                  template:
-                    spec:
-                      containers:
-                        - image: $(images.<name-of-image-provider>.image)$
-                          securityContext:
-                            runAsUser: 1000
-      template:
-        - ytt: { }
-      deploy:
-        - kapp: { }
-```
+{{< crd  carto.run_clustertemplates.yaml >}}
 
 _ref: [pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_template.go)_

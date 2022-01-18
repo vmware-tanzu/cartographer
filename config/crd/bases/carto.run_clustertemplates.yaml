@@ -47,6 +47,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the template. More info: https://cartographer.sh/docs/latest/reference/template/#clustertemplate'
             properties:
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
