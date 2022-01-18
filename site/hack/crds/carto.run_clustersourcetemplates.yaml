@@ -1,0 +1,12 @@
+---
+commentWrapAt: 64
+version: v1alpha1
+metadata:
+  hide: true
+fields:
+  apiVersion:
+    hideDescription: true
+  kind:
+    hideDescription: true
+  spec:
+    hideDescription: true

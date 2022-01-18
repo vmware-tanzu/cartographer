@@ -38,9 +38,26 @@ type ClusterTemplate struct {
 }
 
 type TemplateSpec struct {
+	// Template defines a resource template for a Kubernetes Resource or
+	// Custom Resource which is applied to the server each time
+	// the blueprint is applied. Templates support simple value
+	// interpolation using the $()$ marker format. For more
+	// information, see: https://cartographer.sh/docs/latest/templating/
+	// You cannot define both Template and Ytt at the same time.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template *runtime.RawExtension `json:"template,omitempty"`
+
+	// Ytt defines a resource template written in `ytt` for a Kubernetes Resource or
+	// Custom Resource which is applied to the server each time
+	// the blueprint is applied. Templates support simple value
+	// interpolation using the $()$ marker format. For more
+	// information, see: https://cartographer.sh/docs/latest/templating/
+	// You cannot define both Template and Ytt at the same time.
 	Ytt      string                `json:"ytt,omitempty"`
+
+	// Additional parameters.
+	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+	// +optional
 	Params   TemplateParams        `json:"params,omitempty"`
 }
 

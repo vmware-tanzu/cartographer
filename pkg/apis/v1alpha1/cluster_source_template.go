@@ -30,12 +30,25 @@ import (
 type ClusterSourceTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
+
+	// Spec describes the workload.
+	// More info: https://cartographer.sh/docs/latest/reference/template/#clustersourcetemplate
 	Spec              SourceTemplateSpec `json:"spec"`
 }
 
 type SourceTemplateSpec struct {
 	TemplateSpec `json:",inline"`
+
+	// URLPath is a path into the templated object's
+	// data that contains a URL. The URL, along with the revision,
+	// represents the output of the Template.
+	// URLPath is specified in jsonpath format, eg: .status.artifact.url
 	URLPath      string `json:"urlPath"`
+
+	// RevisionPath is a path into the templated object's
+	// data that contains a revision. The revision, along with the URL,
+	// represents the output of the Template.
+	// RevisionPath is specified in jsonpath format, eg: .status.artifact.revision
 	RevisionPath string `json:"revisionPath"`
 }
 

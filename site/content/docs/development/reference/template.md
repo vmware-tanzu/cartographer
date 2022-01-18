@@ -9,57 +9,7 @@ The `ClusterSourceTemplate` requires definition of a `urlPath` and `revisionPath
 its status to emit `url` and `revision` values, which are reflections of the values at the path on the created objects.
 The supply chain may make these values available to other resources.
 
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterSourceTemplate
-metadata:
-  name: git-repository-battery
-spec:
-  # default set of parameters. (optional)
-  #
-  params:
-    # name of the parameter (required, unique in this list)
-    #
-    - name: git-implementation
-      # default value if not specified in the resource that references
-      # this templateClusterSupplyChain (required)
-      #
-      default: libgit2
-
-  # jsonpath expression to instruct where in the object templated out source
-  # code url information can be found. (required)
-  #
-  urlPath: .status.artifact.url
-
-  # jsonpath expression to instruct where in the object templated out
-  # source code revision information can be found. (required)
-  #
-  revisionPath: .status.artifact.revision
-
-  # template for instantiating the source provider.
-  #
-  # data available for interpolation (`$(<json_path>)$`:
-  #
-  #     - workload  (access to the whole workload object)
-  #     - params
-  #     - sources   (if specified in the supply chain)
-  #     - images    (if specified in the supply chain)
-  #     - configs   (if specified in the supply chain)
-  #
-  # (required)
-  #
-  template:
-    apiVersion: source.toolkit.fluxcd.io/v1beta1
-    kind: GitRepository
-    metadata:
-      name: $(workload.metadata.name)$-source
-    spec:
-      interval: 3m
-      url: $(workload.spec.source.git.url)$
-      ref: $(workload.spec.source.git.ref)$
-      gitImplementation: $(params.git-implementation.value)$
-      ignore: ""
-```
+{{< crd  carto.run_clustersourcetemplates.yaml >}}
 
 _ref: [pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_source_template.go)_
 
