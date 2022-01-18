@@ -48,7 +48,7 @@ type RunTemplateSpec struct {
 	// from the last successful object stamped by the template.
 	// E.g: 	my-output: .status.results[?(@.name=="IMAGE-DIGEST")].value
 	// +optional
-	Outputs  map[string]string    `json:"outputs,omitempty"`
+	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
 // +kubebuilder:object:root=true
