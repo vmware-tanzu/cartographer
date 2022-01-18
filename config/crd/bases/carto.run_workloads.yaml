@@ -70,7 +70,7 @@ spec:
                 properties:
                   env:
                     description: Env is an array of environment variables to propagate
-                      to build resources in the supply chain.
+                      to build resources in the supply chain. See https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
                     items:
                       description: EnvVar represents an environment variable present
                         in a Container.
@@ -182,7 +182,7 @@ spec:
                 type: object
               env:
                 description: Environment variables to be passed to the main container
-                  running the application.
+                  running the application. See https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.

@@ -65,10 +65,11 @@ type Deliverable struct {
 
 type DeliverableSpec struct {
 	// Additional parameters.
+	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
 	// +optional
 	Params []OwnerParam `json:"params,omitempty"`
 
-	// The location of the source configuration for the deliverable. Specify
+	// The location of the source code for the workload. Specify
 	// one of `spec.source` or `spec.image`
 	// +optional
 	Source *Source `json:"source,omitempty"`
@@ -82,6 +83,7 @@ type DeliverableSpec struct {
 	// workload's namespace.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
 }
 
 type DeliverableStatus struct {

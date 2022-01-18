@@ -12,13 +12,9 @@ fields:
       build:
         fields:
           env:
-            # really should be in the docs
-            appendDescription: See https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
             hideChildDescriptions: true
             maxDepth: 1
       env:
-        # really should be in the docs
-        appendDescription: See https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
         hideChildDescriptions: true
         maxDepth: 1
       resources:

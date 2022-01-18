@@ -87,6 +87,7 @@ type WorkloadSpec struct {
 
 	// Environment variables to be passed to the main container
 	// running the application.
+	// See https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
@@ -117,6 +118,7 @@ type WorkloadSpec struct {
 type WorkloadBuild struct {
 	// Env is an array of environment variables to propagate to build resources in the
 	// supply chain.
+	// See https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }

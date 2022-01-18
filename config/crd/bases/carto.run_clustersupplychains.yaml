@@ -47,7 +47,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: 'Spec describes the workload. More info: https://cartographer.sh/docs/latest/reference/workload/#workload'
+            description: 'Spec describes the suppply chain. More info: https://cartographer.sh/docs/latest/reference/workload/#clustersupplychain'
             properties:
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'

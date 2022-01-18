@@ -47,8 +47,10 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the delivery. More info: https://cartographer.sh/docs/latest/reference/deliverable/#clusterdelivery'
             properties:
               params:
+                description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
                   properties:
                     default:
@@ -69,9 +71,15 @@ spec:
                   type: object
                 type: array
               resources:
+                description: Resources that are responsible for deploying and validating
+                  the deliverable
                 items:
                   properties:
                     configs:
+                      description: "Configs is a list of references to other 'config'
+                        resources in this list. A config resource has the kind ClusterConfigTemplate
+                        \n In a template, configs can be consumed as:   $(configs.<name>.config)$
+                        \n If there is only one image, it can be consumed as:   $(config)$"
                       items:
                         properties:
                           name:
@@ -84,6 +92,10 @@ spec:
                         type: object
                       type: array
                     deployment:
+                      description: "Deployment is a reference to a 'deployment' resource.
+                        A deployment resource has the kind ClusterDeploymentTemplate
+                        \n In a template, the deployment can be consumed as:    $(deployment.url)$
+                        and $(deployment.revision)$"
                       properties:
                         resource:
                           type: string
@@ -91,8 +103,16 @@ spec:
                       - resource
                       type: object
                     name:
+                      description: Name of the resource. Used as a reference for inputs,
+                        as well as being the name presented in deliverable statuses
+                        to identify this resource.
                       type: string
                     params:
+                      description: "Params are a list of parameters to provide to
+                        the template in TemplateRef Template params do not have to
+                        be specified here, unless you want to force a particular value,
+                        or add a default value. \n Parameters are consumed in a template
+                        with the syntax:   $(params.<name>)$"
                       items:
                         properties:
                           default:
@@ -113,6 +133,12 @@ spec:
                         type: object
                       type: array
                     sources:
+                      description: "Sources is a list of references to other 'source'
+                        resources in this list. A source resource has the kind ClusterSourceTemplate
+                        or ClusterDeploymentTemplate \n In a template, sources can
+                        be consumed as:    $(sources.<name>.url)$ and $(sources.<name>.revision)$
+                        \n If there is only one source, it can be consumed as:    $(source.url)$
+                        and $(source.revision)$"
                       items:
                         properties:
                           name:
@@ -125,14 +151,18 @@ spec:
                         type: object
                       type: array
                     templateRef:
+                      description: TemplateRef identifies the template used to produce
+                        this resource
                       properties:
                         kind:
+                          description: Kind of the template to apply
                           enum:
                           - ClusterSourceTemplate
                           - ClusterDeploymentTemplate
                           - ClusterTemplate
                           type: string
                         name:
+                          description: Name of the template to apply
                           minLength: 1
                           type: string
                       required:
@@ -147,8 +177,15 @@ spec:
               selector:
                 additionalProperties:
                   type: string
+                description: 'Specifies the label key-value pairs used to select deliverables
+                  See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
                 type: object
               serviceAccountRef:
+                description: "ServiceAccountName refers to the Service account with
+                  permissions to create resources submitted by the supply chain. \n
+                  If not set, Cartographer will use serviceAccountName from supply
+                  chain. \n If that is also not set, Cartographer will use the default
+                  service account in the workload's namespace."
                 properties:
                   name:
                     description: Name of the service account being referred to
@@ -165,6 +202,7 @@ spec:
             - selector
             type: object
           status:
+            description: 'Status conforms to the Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
             properties:
               conditions:
                 items:

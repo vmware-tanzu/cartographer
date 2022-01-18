@@ -1,10 +1,7 @@
 ---
 apiVersion: carto.run/v1alpha1
 kind: Workload
-metadata:
-  labels:
-    # label to be matched against a `ClusterSupplyChain`s label selector.
-    app.tanzu.vmware.com/workload-type: web   # (1)
+metadata: {}
 spec:
 
   # Build configuration, for the build resources in the supply
@@ -13,8 +10,7 @@ spec:
   build:
 
     # Env is an array of environment variables to propagate to
-    # build resources in the supply chain.
-    # See
+    # build resources in the supply chain. See
     # https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
     # +optional
     env:
@@ -26,8 +22,7 @@ spec:
         valueFrom: {}
 
   # Environment variables to be passed to the main container
-  # running the application.
-  # See
+  # running the application. See
   # https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
   # +optional
   env:

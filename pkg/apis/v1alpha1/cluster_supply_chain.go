@@ -44,8 +44,8 @@ type ClusterSupplyChain struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	// Spec describes the workload.
-	// More info: https://cartographer.sh/docs/latest/reference/workload/#workload
+	// Spec describes the suppply chain.
+	// More info: https://cartographer.sh/docs/latest/reference/workload/#clustersupplychain
 	Spec SupplyChainSpec `json:"spec"`
 
 	// Status conforms to the Kubernetes conventions:

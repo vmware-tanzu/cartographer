@@ -65,7 +65,7 @@ spec:
             description: 'Spec describes the deliverable. More info: https://cartographer.sh/docs/latest/reference/workload/#deliverable'
             properties:
               params:
-                description: Additional parameters.
+                description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
                   properties:
                     name:
@@ -88,8 +88,8 @@ spec:
                   service account in the workload's namespace."
                 type: string
               source:
-                description: The location of the source configuration for the deliverable.
-                  Specify one of `spec.source` or `spec.image`
+                description: The location of the source code for the workload. Specify
+                  one of `spec.source` or `spec.image`
                 properties:
                   git:
                     description: Source code location in a git repository.
