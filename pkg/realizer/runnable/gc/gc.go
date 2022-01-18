@@ -51,7 +51,7 @@ func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObject
 		}
 		if status == "True" {
 			successfulFound++
-			if successfulFound > retentionPolicy.NumSuccessfulRuns {
+			if successfulFound > retentionPolicy.MaxSuccessfulRuns {
 				err = repo.Delete(context.TODO(), runnableStampedObject)
 				if err != nil {
 					log.Error(err, "failed to delete runnable stamped object", "stampedObject", runnableStampedObject)
@@ -59,7 +59,7 @@ func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObject
 			}
 		} else if status == "False" {
 			failedFound++
-			if failedFound > retentionPolicy.NumFailedRuns {
+			if failedFound > retentionPolicy.MaxFailedRuns {
 				err = repo.Delete(context.TODO(), runnableStampedObject)
 				if err != nil {
 					log.Error(err, "failed to delete runnable stamped object", "stampedObject", runnableStampedObject)

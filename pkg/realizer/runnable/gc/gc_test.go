@@ -75,7 +75,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 
 		repo = &repositoryfakes.FakeRepository{}
 
-		retentionPolicy = v1alpha1.RetentionPolicy{NumFailedRuns: 2, NumSuccessfulRuns: 3}
+		retentionPolicy = v1alpha1.RetentionPolicy{MaxFailedRuns: 2, MaxSuccessfulRuns: 3}
 	})
 
 	It("should not error, but log a warning, when a stamped object that doesnt have a Succeeded status is handled", func() {

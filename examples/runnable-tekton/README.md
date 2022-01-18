@@ -511,6 +511,23 @@ status:
     a-great-output: "2021-12-14T17:57:14Z"
 ```
 
+#### Automatic deletion of older created objects
+
+Over time, the objects created by runnables can accumulate and consume resources in the cluster. For this reason
+Cartographer will only retain a limited number of runs. By default, this is 5 failed and 3 successful runs. If
+necessary, this can be customized:
+
+```yaml
+kind: Runnable
+metadata:
+  name: some-runnable
+spec:
+  retentionPolicy:
+    maxFailedRuns: 3
+    maxSuccessfulRuns: 1
+  ...
+```
+
 ### Wrapping Tekton in Runnable
 
 We can now put together Tekton and Runnables. We'll submit to the cluster

@@ -89,8 +89,8 @@ type RunnableSpec struct {
 }
 
 type RetentionPolicy struct {
-	NumFailedRuns     int64 `json:"numFailedRuns"`
-	NumSuccessfulRuns int64 `json:"numSuccessfulRuns"`
+	MaxFailedRuns     int64 `json:"maxFailedRuns"`
+	MaxSuccessfulRuns int64 `json:"maxSuccessfulRuns"`
 }
 
 type ResourceSelector struct {

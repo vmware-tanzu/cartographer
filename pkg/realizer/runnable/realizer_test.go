@@ -172,8 +172,8 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("garbage collects failed and successful runnable stamped objects according to retention policy", func() {
-			runnable.Spec.RetentionPolicy.NumFailedRuns = 1
-			runnable.Spec.RetentionPolicy.NumSuccessfulRuns = 1
+			runnable.Spec.RetentionPolicy.MaxFailedRuns = 1
+			runnable.Spec.RetentionPolicy.MaxSuccessfulRuns = 1
 
 			success1 := &unstructured.Unstructured{}
 			success2 := &unstructured.Unstructured{}

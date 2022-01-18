@@ -58,18 +58,18 @@ spec:
                 type: object
               retentionPolicy:
                 default:
-                  numFailedRuns: 5
-                  numSuccessfulRuns: 3
+                  maxFailedRuns: 5
+                  maxSuccessfulRuns: 3
                 properties:
-                  numFailedRuns:
+                  maxFailedRuns:
                     format: int64
                     type: integer
-                  numSuccessfulRuns:
+                  maxSuccessfulRuns:
                     format: int64
                     type: integer
                 required:
-                - numFailedRuns
-                - numSuccessfulRuns
+                - maxFailedRuns
+                - maxSuccessfulRuns
                 type: object
               runTemplateRef:
                 description: RunTemplateRef identifies the run template used to produce
