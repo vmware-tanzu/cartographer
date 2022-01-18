@@ -35,7 +35,6 @@ The `ClusterConfigTemplate` requires definition of a `configPath`. `ClusterConfi
 emit a `config` value, which is a reflection of the value at the path on the created object. The supply chain may make
 this value available to other resources.
 
-
 {{< crd  carto.run_clusterconfigtemplates.yaml >}}
 
 _ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
@@ -54,71 +53,7 @@ its role in configuring the environment. Once the criteria are met, the `Cluster
 the `deployment`
 values. The criteria may be specified in `spec.observedMatches` or in `spec.observedCompletion`.
 
-```yaml
-apiVersion: carto.run/v1alpha1
-kind: ClusterDeploymentTemplate
-metadata:
-  name: app-deploy---deliverable
-spec:
-  # criteria for determining templated object has completed configuration of environment.
-  # (mutually exclusive with observedCompletion; one or the other required)
-  observedMatches:
-    # set of input:output pairs
-    # when the value of input == output for each set, the criteria has been satisfied
-    #
-    # (one or more required)
-    - input: "spec.value.some-key"
-      output: "status.some-key"
-      # input is expected to be some field specified before the templated object is reconciled
-    - input: "spec.value.another-key"
-      # output is expected to be some field set after reconciliation (e.g. in the status)
-      output: "status.another-key"
-
-  # criteria for determining templated object has completed configuration of environment.
-  # this criteria requires that the templated object reports `status.observedGeneration`
-  #
-  # if templated object's:
-  # 1. `status.observedGeneration` == `metadata.generation`
-  # 2.  the field at the specified succeeded key == the specified value
-  # then the criteria has been satisfied
-  #
-  # if the templated object's:
-  # 1. `status.observedGeneration` == `metadata.generation`
-  # 2.  the field at the specified failed key == the specified value
-  # then the criteria cannot be met
-  #
-  # (mutually exclusive with observedMatches; one or the other required)
-  observedCompletion:
-    # (required)
-    succeeded:
-      # field to inspect on the templated object
-      # (required)
-      key: 'status.conditions[?(@.type=="Succeeded")].status'
-      # value to expect at the inspected field
-      # (required)
-      value: "True"
-    # (optional)
-    failed:
-      # (required)
-      key: 'status.conditions[?(@.type=="Failed")].status'
-      # (required)
-      value: "True"
-  # template for configuring the environment/deploying an application
-  template:
-    apiVersion: kappctrl.k14s.io/v1alpha1
-    kind: App
-    metadata:
-      name: $(deliverable.metadata.name)$
-    spec:
-      serviceAccountName: default
-      fetch:
-        - http:
-            url: $(source.url)$
-      template:
-        - ytt: { }
-      deploy:
-        - kapp: { }
-```
+{{< crd  carto.run_clusterdeploymenttemplates.yaml >}}
 
 _ref: [pkg/apis/v1alpha1/cluster_deployment_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_deployment_template.go)_
 
