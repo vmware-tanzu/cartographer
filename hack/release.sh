@@ -25,9 +25,6 @@ readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
 readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
-readonly YTT_VERSION=0.36.0
-readonly YTT_CHECKSUM=d81ecf6c47209f6ac527e503a6fd85e999c3c2f8369e972794047bddc7e5fbe2
-
 main() {
         readonly RELEASE_VERSION="v0.0.0-dev"
         readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
@@ -35,7 +32,6 @@ main() {
         show_vars
         cd $ROOT
 
-        download_ytt_to_kodata
         create_imgpkg_bundle
         create_carvel_packaging_objects
 
@@ -53,27 +49,7 @@ show_vars() {
 	PREVIOUS_VERSION:	$PREVIOUS_VERSION
 	ROOT:	       		  $ROOT
 	SCRATCH:       		$SCRATCH
-	YTT_VERSION		    $YTT_VERSION
 	"
-}
-
-download_ytt_to_kodata() {
-        local url=https://github.com/vmware-tanzu/carvel-ytt/releases/download/v${YTT_VERSION}/ytt-linux-amd64
-        local fname=ytt-linux-amd64
-
-        local dest
-        dest=$(realpath ./cmd/cartographer/kodata/$fname)
-
-        test -x $dest && echo "${YTT_CHECKSUM}  $dest" | sha256sum -c && {
-                echo "ytt already found in kodata."
-                return
-        }
-
-        pushd "$(mktemp -d)"
-        curl -sSOL $url
-        echo "${YTT_CHECKSUM}  $fname" | sha256sum -c
-        install -m 0755 $fname $dest
-        popd
 }
 
 # creates, in a scratch location, an imgpkg bundle following the convention that
