@@ -89,7 +89,9 @@ type RunnableSpec struct {
 }
 
 type RetentionPolicy struct {
-	MaxFailedRuns     int64 `json:"maxFailedRuns"`
+	// +kubebuilder:validation:Minimum:=1
+	MaxFailedRuns int64 `json:"maxFailedRuns"`
+	// +kubebuilder:validation:Minimum:=1
 	MaxSuccessfulRuns int64 `json:"maxSuccessfulRuns"`
 }
 

@@ -118,6 +118,11 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
+	err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
+	if err != nil {
+		log.Error(err, "failed to cleanup runnable stamped objects")
+	}
+
 	outputs, evaluatedStampedObject, err := template.GetOutput(allRunnableStampedObjects)
 	if err != nil {
 		for _, obj := range allRunnableStampedObjects {
@@ -131,11 +136,6 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 	log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)
-
-	err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
-	if err != nil {
-		log.Error(err, "failed to cleanup runnable stamped objects")
-	}
 
 	if len(outputs) == 0 {
 		log.V(logger.DEBUG).Info("no outputs retrieved, getting outputs from runnable.Status.Outputs")

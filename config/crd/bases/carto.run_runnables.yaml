@@ -63,9 +63,11 @@ spec:
                 properties:
                   maxFailedRuns:
                     format: int64
+                    minimum: 1
                     type: integer
                   maxSuccessfulRuns:
                     format: int64
+                    minimum: 1
                     type: integer
                 required:
                 - maxFailedRuns
