@@ -95,7 +95,6 @@ type Source struct {
 	// +optional
 	Git *GitSource `json:"git,omitempty"`
 
-	// Image is an OCI image is a registry that contains source code
 	// OCI Image in a repository, containing the source code to
 	// be used throughout the supply chain.
 	// +optional
