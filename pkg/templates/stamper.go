@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	yttcmd "github.com/k14s/ytt/pkg/cmd/template"
@@ -192,6 +193,10 @@ func (s *Stamper) applyTemplate(resourceTemplateJSON []byte) (*unstructured.Unst
 
 func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.Unstructured, error) {
 	log := logr.FromContextOrDiscard(ctx)
+
+	// limit execution duration to protect against infinite loops or cpu wasting templates
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
 
 	yttOpts := yttcmd.NewOptions()
 
