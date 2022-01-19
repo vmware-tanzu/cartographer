@@ -2,16 +2,15 @@
 
 ## Summary
 
-The Developer Productivity team would like to be able to write 1 supply chain
-which can dynamically use Template A or Template B in a component depending
-on the state of the workload. This RFC proposes methods for achieving that
-outcome.
+Platform creators will need to handle multiple types of workloads. Cartographer
+must support that behavior through either multiple supply chains, or with
+supply chains that can substitute templates dynamically.
 
 ## Motivation
 
 The Developer Productivity program auto-generates workloads from CLI commands.
 Those workloads match with supplychains and templates that are written by the
-dev-prod team as well. The team would liek to limit the number of supplychains
+dev-prod team as well. The team would like to limit the number of supplychains
 that must be written and maintained. Small differences in workload can lead to
 needing an entirely different supply chain. For example, what code source is used.
 
@@ -20,13 +19,90 @@ See also this [discussion](https://vmware.slack.com/archives/C01UX69LJCB/p162940
 
 ## Possible Solutions
 
-Kontinue could choose which template to use based on a flag specified in the workload.
-Alternatively, Kontinue could attempt to deploy the default template and if the necessary
-values are not found, fall back to attempt a different template.
+Cartographer could make conditional choices based on labels on the workload.
+Alternatively, Cartographer could consider all fields available in the templating context when
+making conditional choices.
 
-### Switch on Flag
-A supply chain component could reference a template based on the presence of a
-flag in the workload. Below is a proposed example using the keyword `requisite`:
+### Use label selectors
+
+#### Selecting among multiple supply chains
+
+Cartographer is already capable of matching a supply chain to a workload through selectors.
+With no further effort, a platform can be created that has multiple supply chains with different
+purposes or requirements. By specifying characteristics of workloads in the workload labels,
+devs can provide information to operators necessary to choose the right supply chain for
+each workload.
+
+While this behavior is currently possible, relying only on this selection would lead to a platform
+with a large number of supply chains.
+
+Workarounds, for example templates that use ytt templating to embed conditional behavior,
+would represent a code smell that this primitive is not adequate for Cartographer consumers.
+
+#### Selecting among multiple templates at a given step in a supply chain
+
+A supply chain resource could reference a template based on the presence of a
+label in the workload. Below is a possible example:
+
+```yaml
+apiVersion: kontinue.io/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: responsible-ops
+spec:
+  selector:
+    app: web
+  resources:
+    - name: source-provider
+      templateRefs:                               # <--- now a list
+      - kind: ClusterSourceTemplate
+        name: git-template
+        selector:
+          app.tanzu.vmware.com/source-type: git    # <--- label whose presence will trigger use of this template
+      - kind: ClusterSourceTemplate
+        name: imgpkg-bundle-template
+        selector:
+          app.tanzu.vmware.com/source-type: imgpkg-bundle # <--- alternate label for alternate template
+
+---
+apiVersion: kontinue.io/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+  labels:
+    app: web
+    app.tanzu.vmware.com/source-type: git # <--- selector on the workload
+spec:
+  source:
+    git:
+      url: https://github.com/spring-projects/spring-petclinic.git
+      ref:
+        branch: main
+```
+
+This approach allows far fewer (potentially just one) supply chain to under gird an app
+platform.
+
+One shortfall of this approach is that the app-dev must explicitly provide all information
+about the workload when submitting the workload object. This assumes that the app operator
+has been able to communicate all the requisite information required.
+
+This concern (the need for the dev to be aware of all information necessary to provide) could
+be alleviated through auto-labelling. This could be achieved with a mutating webhook on
+workloads, which could apply a label to a workload based on characteristics of the workload.
+Such an approach would work for all characteristics observable from the workload, but would
+likely exclude code characteristics (for example, language of the app).
+
+The label approach also assumes that all relevant information is knowable at workload submission
+time. But it is conceivable that transformations that take place during the supply chain (for example,
+application of a convention), could have conditional impact on later supply chain steps.
+
+### Condition on any/all information available in the templating context
+
+When a supply chain arrives at a resource/step, it provides a templating context to the template.
+Therein the template can access all artifacts provided from previous steps, params defined and the
+workload object itself (including the spec and the metadata). Allowing the supply chain to leverage
+this field would add additional power to the conditional.
 
 ```yaml
 apiVersion: kontinue.io/v1alpha1
@@ -38,17 +114,17 @@ spec:
     app: web
   components:
     - name: source-provider
-      templateRefs:                               # <--- now a list
+      templateRefs:                               # <--- again, a list
       - kind: ClusterSourceTemplate
         name: git-template
         requisite:
-          path: workload.spec.flags.source-type    # <--- path to field in workload
-          value: git                              # <--- value that will trigger use of this template
+          path: workload.spec.source.git        # <--- path to field in template context
+          value: *                              # <--- value that will trigger use of this template, in this case any value
       - kind: ClusterSourceTemplate
         name: imgpkg-bundle-template
         requisite:
-          path: workload.spec.flags.source-type    # <--- ideally path is same for all templateRefs in component
-          value: imgpkg-bundle
+          path: workload.spec.source.image      # <--- Alternate value for alternate conditional
+          value: *
 
 ---
 apiVersion: kontinue.io/v1alpha1
@@ -59,66 +135,17 @@ metadata:
     app: web
 spec:
   source:
-    git:
+    git:                                        # <--- Presence of this field will determine the conditional
       url: https://github.com/spring-projects/spring-petclinic.git
       ref:
         branch: main
-  flags:                                           # <--- map[string]string
-    source-type: git
 ```
 
-### Switch through fall-back strategy
-Kontinue could allow users to define fall-back values if a given value does not work.
-This could happen in 2 different ways:
-- Allow a supply-chain component to define a fallback template if the first creation attempt fails
-- Allow a template to define a fallback value if the first templated value does not resolve
-
-#### Supply Chain defines fall-back template
-Replace the single template ref for each component with a list of template refs. Kontinue would try them in order and when one successfully deploys, it would proceed to creating the next component, skipping the other template refs for the current component. An example definition:
-
-```
-apiVersion: kontinue.io/v1alpha1
-kind: ClusterSupplyChain
-metadata:
-  name: responsible-ops
-spec:
-  selector:
-    ...
-  components:
-    - name: source-provider
-      templateRefs:
-      - kind: ClusterSourceTemplate
-        name: git-resource-template
-      - kind: ClusterSourceTemplate
-        name: imgpkg-template
-      - kind: ClusterSourceTemplate
-        name: image-template
-```
-
-#### Template defines a fallback value
-a BuildTemplate might have some definition:
-
-```
-apiVersion: kontinue.io/v1alpha1
-kind: ClusterBuildTemplate
-metadata:
-  name: example-build
-spec:
-  params:
-    - name: url
-      default: some-url
-  template:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: example-build-configmap
-    data:
-      templated-field: $(sources[0].url|params[?(@.name=="url")].value)$
-  imagePath: ...
-```
-
-We can see the introduction of the `|` character to separate possible paths to use to fill this field.
-
-## Cross References and Prior Art
-
-{{Reference other similar implementations, and resources you are using to draw inspiration from}}
+1. As labels are present in the workload metadata, any behavior possible using just label selectors
+  will be possible using the entire templating context.
+2. As the templating context is updated during the processing of the supply chain, the context
+  can support conditionals that rely on information emergent during the supply chain processing.
+3. As the templating context has access to all of the information that would be available to a
+  mutating webhook, it obviates the need for such a webhook. Rather than specify "If workload spec
+  has characteristic X, apply label Y" and later "If label Y is present, do Z", the template context
+  approach can simply state "If workload spec has characteristic X, do Z".
