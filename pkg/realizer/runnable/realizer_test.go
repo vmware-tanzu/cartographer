@@ -22,10 +22,6 @@ import (
 	"reflect"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
-
 	. "github.com/MakeNowJust/heredoc/dot"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,10 +30,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 

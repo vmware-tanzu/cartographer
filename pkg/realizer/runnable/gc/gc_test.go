@@ -177,7 +177,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 				deletedObject2,
 				deletedObject3,
 				deletedObject4}).NotTo(ContainElements(failedRunnableStampedObjectToBeIgnored1, failedRunnableStampedObjectToBeIgnored2))
-
+			Expect(out).To(Say("deleting runnable stamped object"))
 		})
 	})
 })

@@ -22,13 +22,9 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	. "github.com/onsi/gomega/gbytes"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/vmware-tanzu/cartographer/tests/resources"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gbytes"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,11 +35,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("repository", func() {

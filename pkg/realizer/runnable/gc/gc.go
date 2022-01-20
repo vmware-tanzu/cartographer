@@ -23,6 +23,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
@@ -35,7 +36,8 @@ func (a ByCreationTimestamp) Less(i, j int) bool {
 func (a ByCreationTimestamp) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObjects []*unstructured.Unstructured, retentionPolicy v1alpha1.RetentionPolicy, repo repository.Repository) error {
-	log := logr.FromContextOrDiscard(ctx).WithName("runnable-stamped-object-cleanup").WithValues("huh", "what")
+	log := logr.FromContextOrDiscard(ctx).WithName("runnable-stamped-object-cleanup")
+	ctx = logr.NewContext(ctx, log)
 
 	succeededConditionStatusPath := `status.conditions[?(@.type=="Succeeded")].status`
 	evaluator := eval.EvaluatorBuilder()
@@ -45,25 +47,23 @@ func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObject
 	var successfulFound int64
 	var failedFound int64
 	for _, runnableStampedObject := range allRunnableStampedObjects {
+		shouldDelete := false
 		status, err := evaluator.EvaluateJsonPath(succeededConditionStatusPath, runnableStampedObject.UnstructuredContent())
 		if err != nil {
 			log.Error(err, "failed evaluating jsonpath to determine runnable stamped object success", "stampedObject", runnableStampedObject)
 		}
 		if status == "True" {
 			successfulFound++
-			if successfulFound > retentionPolicy.MaxSuccessfulRuns {
-				err = repo.Delete(context.TODO(), runnableStampedObject)
-				if err != nil {
-					log.Error(err, "failed to delete runnable stamped object", "stampedObject", runnableStampedObject)
-				}
-			}
+			shouldDelete = successfulFound > retentionPolicy.MaxSuccessfulRuns
 		} else if status == "False" {
 			failedFound++
-			if failedFound > retentionPolicy.MaxFailedRuns {
-				err = repo.Delete(context.TODO(), runnableStampedObject)
-				if err != nil {
-					log.Error(err, "failed to delete runnable stamped object", "stampedObject", runnableStampedObject)
-				}
+			shouldDelete = failedFound > retentionPolicy.MaxFailedRuns
+		}
+		if shouldDelete {
+			log.V(logger.INFO).Info("deleting runnable stamped object", "stampedObject", runnableStampedObject)
+			err = repo.Delete(ctx, runnableStampedObject)
+			if err != nil {
+				log.Error(err, "failed to delete runnable stamped object", "stampedObject", runnableStampedObject)
 			}
 		}
 	}

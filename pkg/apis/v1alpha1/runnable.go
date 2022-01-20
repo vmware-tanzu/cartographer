@@ -84,7 +84,7 @@ type RunnableSpec struct {
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// +kubebuilder:default={numFailedRuns: 5, numSuccessfulRuns: 3}
+	// +kubebuilder:default={maxFailedRuns: 10, maxSuccessfulRuns: 10}
 	RetentionPolicy RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
 
