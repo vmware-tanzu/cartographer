@@ -34,7 +34,8 @@ spec:
       valueFrom: {}
 
   # Image refers to a pre-built image in a registry. It is an
-  # alternative to defining source code.
+  # alternative to specifying the location of source code for the
+  # workload. Specify one of `spec.source` or `spec.image`.
   # +optional
   image: <string>
 
@@ -88,9 +89,8 @@ spec:
         tag: <string>
       url: <string>
 
-    # Image is an OCI image is a registry that contains source
-    # code OCI Image in a repository, containing the source code
-    # to be used throughout the supply chain.
+    # OCI Image in a repository, containing the source code to be
+    # used throughout the supply chain.
     # +optional
     image: <string>
 
