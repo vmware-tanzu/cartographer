@@ -58,8 +58,8 @@ spec:
                 type: object
               retentionPolicy:
                 default:
-                  maxFailedRuns: 5
-                  maxSuccessfulRuns: 3
+                  maxFailedRuns: 10
+                  maxSuccessfulRuns: 10
                 properties:
                   maxFailedRuns:
                     format: int64
