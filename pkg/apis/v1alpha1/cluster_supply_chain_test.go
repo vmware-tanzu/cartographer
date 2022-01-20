@@ -154,7 +154,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 						},
 					},
 					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
-					Params: []v1alpha1.DelegatableParam{
+					Params: []v1alpha1.BlueprintParam{
 						{
 							Name:  "some-param",
 							Value: &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
@@ -233,7 +233,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 			Context("Top level params are malformed", func() {
 				Context("param does not specify a value or default", func() {
 					BeforeEach(func() {
-						supplyChain.Spec.Params = []v1alpha1.DelegatableParam{
+						supplyChain.Spec.Params = []v1alpha1.BlueprintParam{
 							{
 								Name: "some-param",
 							},
@@ -258,7 +258,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 				Context("param specifies both a value and a default", func() {
 					BeforeEach(func() {
-						supplyChain.Spec.Params = []v1alpha1.DelegatableParam{
+						supplyChain.Spec.Params = []v1alpha1.BlueprintParam{
 							{
 								Name:         "some-param",
 								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},
@@ -288,7 +288,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 			Context("Params of an individual resource are malformed", func() {
 				Context("param does not specify a value or default", func() {
 					BeforeEach(func() {
-						supplyChain.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+						supplyChain.Spec.Resources[0].Params = []v1alpha1.BlueprintParam{
 							{
 								Name: "some-param",
 							},
@@ -313,7 +313,7 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 				Context("param specifies both a value and a default", func() {
 					BeforeEach(func() {
-						supplyChain.Spec.Resources[0].Params = []v1alpha1.DelegatableParam{
+						supplyChain.Spec.Resources[0].Params = []v1alpha1.BlueprintParam{
 							{
 								Name:         "some-param",
 								Value:        &apiextensionsv1.JSON{Raw: []byte(`"some value"`)},

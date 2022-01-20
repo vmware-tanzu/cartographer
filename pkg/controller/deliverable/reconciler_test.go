@@ -95,7 +95,7 @@ var _ = Describe("Reconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.DelegatableParam) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.BlueprintParam) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -159,7 +159,9 @@ var _ = Describe("Reconciler", func() {
 
 		Expect(*updatedDeliverable.(*v1alpha1.Deliverable)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
-				"ObservedGeneration": BeEquivalentTo(1),
+				"OwnerStatus": MatchFields(IgnoreExtras, Fields{
+					"ObservedGeneration": BeEquivalentTo(1),
+				}),
 			}),
 		}))
 	})
@@ -190,7 +192,9 @@ var _ = Describe("Reconciler", func() {
 
 		Expect(*updatedDeliverable.(*v1alpha1.Deliverable)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
-				"Conditions": Equal(someConditions),
+				"OwnerStatus": MatchFields(IgnoreExtras, Fields{
+					"Conditions": Equal(someConditions),
+				}),
 			}),
 		}))
 	})

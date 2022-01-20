@@ -43,8 +43,14 @@ const (
 type ClusterDelivery struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              DeliverySpec   `json:"spec"`
-	Status            DeliveryStatus `json:"status,omitempty"`
+
+	// Spec describes the delivery.
+	// More info: https://cartographer.sh/docs/latest/reference/deliverable/#clusterdelivery
+	Spec DeliverySpec `json:"spec"`
+
+	// Status conforms to the Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Status DeliveryStatus `json:"status,omitempty"`
 }
 
 func (c *ClusterDelivery) GetSelector() map[string]string {
@@ -52,10 +58,28 @@ func (c *ClusterDelivery) GetSelector() map[string]string {
 }
 
 type DeliverySpec struct {
-	Resources         []DeliveryResource `json:"resources"`
-	Selector          map[string]string  `json:"selector"`
-	Params            []DelegatableParam `json:"params,omitempty"`
-	ServiceAccountRef ServiceAccountRef  `json:"serviceAccountRef,omitempty"`
+	// Resources that are responsible for deploying and validating
+	// the deliverable
+	Resources []DeliveryResource `json:"resources"`
+
+	// Specifies the label key-value pairs used to select deliverables
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	Selector map[string]string `json:"selector"`
+
+	// Additional parameters.
+	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+	// +optional
+	Params []BlueprintParam `json:"params,omitempty"`
+
+	// ServiceAccountName refers to the Service account with permissions to create resources
+	// submitted by the supply chain.
+	//
+	// If not set, Cartographer will use serviceAccountName from supply chain.
+	//
+	// If that is also not set, Cartographer will use the default service account in the
+	// workload's namespace.
+	// +optional
+	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
 }
 
 type DeliveryStatus struct {
@@ -64,12 +88,47 @@ type DeliveryStatus struct {
 }
 
 type DeliveryResource struct {
-	Name        string                    `json:"name"`
+	// Name of the resource. Used as a reference for inputs, as well as being
+	// the name presented in deliverable statuses to identify this resource.
+	Name string `json:"name"`
+
+	// TemplateRef identifies the template used to produce this resource
 	TemplateRef DeliveryTemplateReference `json:"templateRef"`
-	Params      []DelegatableParam        `json:"params,omitempty"`
-	Sources     []ResourceReference       `json:"sources,omitempty"`
-	Deployment  *DeploymentReference      `json:"deployment,omitempty"`
-	Configs     []ResourceReference       `json:"configs,omitempty"`
+
+	// Params are a list of parameters to provide to the template in TemplateRef
+	// Template params do not have to be specified here, unless you want to
+	// force a particular value, or add a default value.
+	//
+	// Parameters are consumed in a template with the syntax:
+	//   $(params.<name>)$
+	Params []BlueprintParam `json:"params,omitempty"`
+
+	// Sources is a list of references to other 'source' resources in this list.
+	// A source resource has the kind ClusterSourceTemplate or ClusterDeploymentTemplate
+	//
+	// In a template, sources can be consumed as:
+	//    $(sources.<name>.url)$ and $(sources.<name>.revision)$
+	//
+	// If there is only one source, it can be consumed as:
+	//    $(source.url)$ and $(source.revision)$
+	Sources []ResourceReference `json:"sources,omitempty"`
+
+	// Deployment is a reference to a 'deployment' resource.
+	// A deployment resource has the kind ClusterDeploymentTemplate
+	//
+	// In a template, the deployment can be consumed as:
+	//    $(deployment.url)$ and $(deployment.revision)$
+	Deployment *DeploymentReference `json:"deployment,omitempty"`
+
+	// Configs is a list of references to other 'config' resources in this list.
+	// A config resource has the kind ClusterConfigTemplate
+	//
+	// In a template, configs can be consumed as:
+	//   $(configs.<name>.config)$
+	//
+	// If there is only one image, it can be consumed as:
+	//   $(config)$
+	Configs []ResourceReference `json:"configs,omitempty"`
 }
 
 type DeploymentReference struct {
@@ -83,8 +142,10 @@ var ValidDeliveryTemplates = []client.Object{
 }
 
 type DeliveryTemplateReference struct {
+	// Kind of the template to apply
 	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
 	Kind string `json:"kind"`
+	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
@@ -161,7 +222,7 @@ func (c *ClusterDelivery) validateDeploymentTemplateDidNotReceiveConfig() error 
 
 func (c *ClusterDelivery) validateParams() error {
 	for _, param := range c.Spec.Params {
-		err := param.validateDelegatableParams()
+		err := param.validate()
 		if err != nil {
 			return err
 		}
@@ -169,7 +230,7 @@ func (c *ClusterDelivery) validateParams() error {
 
 	for _, resource := range c.Spec.Resources {
 		for _, param := range resource.Params {
-			err := param.validateDelegatableParams()
+			err := param.validate()
 			if err != nil {
 				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
 			}

@@ -43,8 +43,14 @@ const (
 type ClusterSupplyChain struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              SupplyChainSpec   `json:"spec"`
-	Status            SupplyChainStatus `json:"status,omitempty"`
+
+	// Spec describes the suppply chain.
+	// More info: https://cartographer.sh/docs/latest/reference/workload/#clustersupplychain
+	Spec SupplyChainSpec `json:"spec"`
+
+	// Status conforms to the Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Status SupplyChainStatus `json:"status,omitempty"`
 }
 
 func (c *ClusterSupplyChain) validateNewState() error {
@@ -96,7 +102,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 
 func (c *ClusterSupplyChain) validateParams() error {
 	for _, param := range c.Spec.Params {
-		err := param.validateDelegatableParams()
+		err := param.validate()
 		if err != nil {
 			return err
 		}
@@ -104,7 +110,7 @@ func (c *ClusterSupplyChain) validateParams() error {
 
 	for _, resource := range c.Spec.Resources {
 		for _, param := range resource.Params {
-			err := param.validateDelegatableParams()
+			err := param.validate()
 			if err != nil {
 				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
 			}
@@ -177,19 +183,75 @@ func GetSelectorsFromObject(o client.Object) []string {
 }
 
 type SupplyChainSpec struct {
-	Resources         []SupplyChainResource `json:"resources"`
-	Selector          map[string]string     `json:"selector"`
-	Params            []DelegatableParam    `json:"params,omitempty"`
-	ServiceAccountRef ServiceAccountRef     `json:"serviceAccountRef,omitempty"`
+	// Resources that are responsible for bringing the application to a
+	// deliverable state.
+	Resources []SupplyChainResource `json:"resources"`
+
+	// Specifies the label key-value pairs used to select workloads
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	Selector map[string]string `json:"selector"`
+
+	// Additional parameters.
+	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+	// +optional
+	Params []BlueprintParam `json:"params,omitempty"`
+
+	// ServiceAccountName refers to the Service account with permissions to create resources
+	// submitted by the supply chain.
+	//
+	// If not set, Cartographer will use serviceAccountName from supply chain.
+	//
+	// If that is also not set, Cartographer will use the default service account in the
+	// workload's namespace.
+	// +optional
+	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
 }
 
 type SupplyChainResource struct {
-	Name        string                       `json:"name"`
+	// Name of the resource. Used as a reference for inputs, as well as being
+	// the name presented in workload statuses to identify this resource.
+	Name string `json:"name"`
+
+	// TemplateRef identifies the template used to produce this resource
 	TemplateRef SupplyChainTemplateReference `json:"templateRef"`
-	Params      []DelegatableParam           `json:"params,omitempty"`
-	Sources     []ResourceReference          `json:"sources,omitempty"`
-	Images      []ResourceReference          `json:"images,omitempty"`
-	Configs     []ResourceReference          `json:"configs,omitempty"`
+
+	// Params are a list of parameters to provide to the template in TemplateRef
+	// Template params do not have to be specified here, unless you want to
+	// force a particular value, or add a default value.
+	//
+	// Parameters are consumed in a template with the syntax:
+	//   $(params.<name>)$
+	Params []BlueprintParam `json:"params,omitempty"`
+
+	// Sources is a list of references to other 'source' resources in this list.
+	// A source resource has the kind ClusterSourceTemplate
+	//
+	// In a template, sources can be consumed as:
+	//    $(sources.<name>.url)$ and $(sources.<name>.revision)$
+	//
+	// If there is only one source, it can be consumed as:
+	//    $(source.url)$ and $(source.revision)$
+	Sources []ResourceReference `json:"sources,omitempty"`
+
+	// Images is a list of references to other 'image' resources in this list.
+	// An image resource has the kind ClusterImageTemplate
+	//
+	// In a template, images can be consumed as:
+	//   $(images.<name>.image)$
+	//
+	// If there is only one image, it can be consumed as:
+	//   $(image)$
+	Images []ResourceReference `json:"images,omitempty"`
+
+	// Configs is a list of references to other 'config' resources in this list.
+	// A config resource has the kind ClusterConfigTemplate
+	//
+	// In a template, configs can be consumed as:
+	//   $(configs.<name>.config)$
+	//
+	// If there is only one image, it can be consumed as:
+	//   $(config)$
+	Configs []ResourceReference `json:"configs,omitempty"`
 }
 
 var ValidSupplyChainTemplates = []client.Object{
@@ -200,8 +262,10 @@ var ValidSupplyChainTemplates = []client.Object{
 }
 
 type SupplyChainTemplateReference struct {
+	// Kind of the template to apply
 	//+kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
+	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }

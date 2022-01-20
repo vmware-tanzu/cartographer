@@ -30,12 +30,21 @@ import (
 type ClusterConfigTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ConfigTemplateSpec `json:"spec"`
+
+	// Spec describes the config template.
+	// More info: https://cartographer.sh/docs/latest/reference/template/#clusterconfigtemplate
+	Spec ConfigTemplateSpec `json:"spec"`
 }
 
 type ConfigTemplateSpec struct {
 	TemplateSpec `json:",inline"`
-	ConfigPath   string `json:"configPath"`
+
+	// ConfigPath is a path into the templated object's
+	// data that contains valid yaml. This
+	// is typically the information that will configure the
+	// components of the deployable image.
+	// ConfigPath is specified in jsonpath format, eg: .data
+	ConfigPath string `json:"configPath"`
 }
 
 var _ webhook.Validator = &ClusterConfigTemplate{}

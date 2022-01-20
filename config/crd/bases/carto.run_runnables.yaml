@@ -47,12 +47,18 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the runnable. More info: https://cartographer.sh/docs/latest/reference/runnable/#runnable'
             properties:
               inputs:
                 additionalProperties:
                   x-kubernetes-preserve-unknown-fields: true
+                description: 'Inputs are key/values providing inputs to the templated
+                  object created for this runnable. Reference inputs in the template
+                  using the jsonPath: $(runnable.spec.inputs.<key>)$'
                 type: object
               runTemplateRef:
+                description: RunTemplateRef identifies the run template used to produce
+                  resources for this runnable.
                 properties:
                   kind:
                     type: string
@@ -63,12 +69,18 @@ spec:
                 - name
                 type: object
               selector:
+                description: 'Selector refers to an additional object that the template
+                  can refer to using: $(selected)$.'
                 properties:
                   matchingLabels:
                     additionalProperties:
                       type: string
+                    description: MatchingLabels must match on a single target object,
+                      making the object available in the template as $(selected)$
                     type: object
                   resource:
+                    description: Resource is the GVK that must match the selected
+                      object.
                     properties:
                       apiVersion:
                         type: string
@@ -80,11 +92,16 @@ spec:
                 - resource
                 type: object
               serviceAccountName:
+                description: "ServiceAccountName refers to the Service account with
+                  permissions to create resources submitted by the ClusterRunTemplate.
+                  \n If not set, Cartographer will use the default service account
+                  in the runnable's namespace."
                 type: string
             required:
             - runTemplateRef
             type: object
           status:
+            description: 'Status conforms to the Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
             properties:
               conditions:
                 items:

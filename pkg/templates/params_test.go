@@ -30,42 +30,42 @@ var _ = Describe("Params", func() {
 		DefaultValue: apiextensionsv1.JSON{Raw: []byte("from the template")},
 	}
 
-	delegatingBlueprintParam := &v1alpha1.DelegatableParam{
+	delegatingBlueprintParam := &v1alpha1.BlueprintParam{
 		Name:         "target-name",
 		DefaultValue: &apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
 	}
 
-	nonDelegatingBlueprintParam := &v1alpha1.DelegatableParam{
+	nonDelegatingBlueprintParam := &v1alpha1.BlueprintParam{
 		Name:  "target-name",
 		Value: &apiextensionsv1.JSON{Raw: []byte("from the blueprint")},
 	}
 
-	delegatingResourceParam := &v1alpha1.DelegatableParam{
+	delegatingResourceParam := &v1alpha1.BlueprintParam{
 		Name:         "target-name",
 		DefaultValue: &apiextensionsv1.JSON{Raw: []byte("from the resource")},
 	}
 
-	nonDelegatingResourceParam := &v1alpha1.DelegatableParam{
+	nonDelegatingResourceParam := &v1alpha1.BlueprintParam{
 		Name:  "target-name",
 		Value: &apiextensionsv1.JSON{Raw: []byte("from the resource")},
 	}
 
-	ownerParam := &v1alpha1.Param{
+	ownerParam := &v1alpha1.OwnerParam{
 		Name:  "target-name",
 		Value: apiextensionsv1.JSON{Raw: []byte("from the owner")},
 	}
 
 	DescribeTable("ParamsBuilder",
 		func(templateParam *v1alpha1.TemplateParam,
-			blueprintParam *v1alpha1.DelegatableParam,
-			resourceParam *v1alpha1.DelegatableParam,
-			ownerParam *v1alpha1.Param,
+			blueprintParam *v1alpha1.BlueprintParam,
+			resourceParam *v1alpha1.BlueprintParam,
+			ownerParam *v1alpha1.OwnerParam,
 			expected string) {
 			var (
 				templateParams  []v1alpha1.TemplateParam
-				resourceParams  []v1alpha1.DelegatableParam
-				blueprintParams []v1alpha1.DelegatableParam
-				ownerParams     []v1alpha1.Param
+				resourceParams  []v1alpha1.BlueprintParam
+				blueprintParams []v1alpha1.BlueprintParam
+				ownerParams     []v1alpha1.OwnerParam
 			)
 
 			if templateParam != nil {

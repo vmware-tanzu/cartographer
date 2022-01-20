@@ -30,11 +30,21 @@ import (
 type ClusterImageTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ImageTemplateSpec `json:"spec"`
+
+	// Spec describes the image template.
+	// More info: https://cartographer.sh/docs/latest/reference/template/#clusterimagetemplate
+	Spec ImageTemplateSpec `json:"spec"`
 }
 type ImageTemplateSpec struct {
 	TemplateSpec `json:",inline"`
-	ImagePath    string `json:"imagePath"`
+
+	// ImagePath is a path into the templated object's
+	// data that contains a valid image digest. This
+	// might be a URL or in some cases just a repository path and digest.
+	// The final spec for this field may change as we implement
+	// RFC-0016 https://github.com/vmware-tanzu/cartographer/blob/main/rfc/rfc-0016-validate-template-outputs.md
+	// ImagePath is specified in jsonpath format, eg: .status.artifact.image_digest
+	ImagePath string `json:"imagePath"`
 }
 
 var _ webhook.Validator = &ClusterImageTemplate{}

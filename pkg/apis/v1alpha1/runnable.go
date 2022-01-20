@@ -45,8 +45,14 @@ const (
 type Runnable struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              RunnableSpec   `json:"spec"`
-	Status            RunnableStatus `json:"status,omitempty"`
+
+	// Spec describes the runnable.
+	// More info: https://cartographer.sh/docs/latest/reference/runnable/#runnable
+	Spec RunnableSpec `json:"spec"`
+
+	// Status conforms to the Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Status RunnableStatus `json:"status,omitempty"`
 }
 
 type RunnableStatus struct {
@@ -56,15 +62,35 @@ type RunnableStatus struct {
 }
 
 type RunnableSpec struct {
+	// RunTemplateRef identifies the run template used to produce resources
+	// for this runnable.
 	// +kubebuilder:validation:Required
-	RunTemplateRef     TemplateReference               `json:"runTemplateRef"`
-	Selector           *ResourceSelector               `json:"selector,omitempty"`
-	Inputs             map[string]apiextensionsv1.JSON `json:"inputs,omitempty"`
-	ServiceAccountName string                          `json:"serviceAccountName,omitempty"`
+	RunTemplateRef TemplateReference `json:"runTemplateRef"`
+
+	// Selector refers to an additional object that the template can refer
+	// to using: $(selected)$.
+	// +optional
+	Selector *ResourceSelector `json:"selector,omitempty"`
+
+	// Inputs are key/values providing inputs to the templated object created for this runnable.
+	// Reference inputs in the template using the jsonPath: $(runnable.spec.inputs.<key>)$
+	Inputs map[string]apiextensionsv1.JSON `json:"inputs,omitempty"`
+
+	// ServiceAccountName refers to the Service account with permissions to create resources
+	// submitted by the ClusterRunTemplate.
+	//
+	// If not set, Cartographer will use the default service account in the
+	// runnable's namespace.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 type ResourceSelector struct {
-	Resource       ResourceType      `json:"resource"`
+	// Resource is the GVK that must match the selected object.
+	Resource ResourceType `json:"resource"`
+
+	// MatchingLabels must match on a single target object, making the object
+	// available in the template as $(selected)$
 	MatchingLabels map[string]string `json:"matchingLabels"`
 }
 
@@ -75,6 +101,7 @@ type ResourceType struct {
 
 type TemplateReference struct {
 	Kind string `json:"kind,omitempty"`
+
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }

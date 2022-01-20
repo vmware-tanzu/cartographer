@@ -29,13 +29,26 @@ import (
 type ClusterRunTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              RunTemplateSpec `json:"spec"`
+
+	// Spec describes the run template.
+	// More info: https://cartographer.sh/docs/latest/reference/runnable/#clusterruntemplate
+	Spec RunTemplateSpec `json:"spec"`
 }
 
 type RunTemplateSpec struct {
+	// Template defines a resource template for a Kubernetes Resource or
+	// Custom Resource which is applied to the server each time
+	// the blueprint is applied. Templates support simple value
+	// interpolation using the $()$ marker format. For more
+	// information, see: https://cartographer.sh/docs/latest/templating/
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
-	Outputs  map[string]string    `json:"outputs,omitempty"`
+
+	// Outputs are a named list of jsonPaths that are used to gather results
+	// from the last successful object stamped by the template.
+	// E.g: 	my-output: .status.results[?(@.name=="IMAGE-DIGEST")].value
+	// +optional
+	Outputs map[string]string `json:"outputs,omitempty"`
 }
 
 // +kubebuilder:object:root=true

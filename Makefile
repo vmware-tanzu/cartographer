@@ -126,6 +126,7 @@ copyright:
 	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		-ignore site/static/\*\* \
+		-ignore site/content/docs/development/crds/\*.yaml \
 		-ignore site/themes/\*\* \
 		.
 
@@ -152,3 +153,8 @@ docs-serve:
 .PHONY: docs-release
 docs-release:
 	$(MAKE) -C site release
+
+
+.PHONY: docs-gen-crds
+docs-gen-crds: gen-manifests
+	$(MAKE) -C site gen-crd-reference

@@ -47,13 +47,20 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the template. More info: https://cartographer.sh/docs/latest/reference/template/#clustertemplate'
             properties:
               params:
+                description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
                   properties:
                     default:
+                      description: DefaultValue of the parameter. Causes the parameter
+                        to be optional; If the Owner or Template does not specify
+                        this parameter, this value is used.
                       x-kubernetes-preserve-unknown-fields: true
                     name:
+                      description: Name of a parameter the template accepts from the
+                        Blueprint or Owner.
                       type: string
                   required:
                   - default
@@ -61,9 +68,20 @@ spec:
                   type: object
                 type: array
               template:
+                description: 'Template defines a resource template for a Kubernetes
+                  Resource or Custom Resource which is applied to the server each
+                  time the blueprint is applied. Templates support simple value interpolation
+                  using the $()$ marker format. For more information, see: https://cartographer.sh/docs/latest/templating/
+                  You cannot define both Template and Ytt at the same time.'
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               ytt:
+                description: 'Ytt defines a resource template written in `ytt` for
+                  a Kubernetes Resource or Custom Resource which is applied to the
+                  server each time the blueprint is applied. Templates support simple
+                  value interpolation using the $()$ marker format. For more information,
+                  see: https://cartographer.sh/docs/latest/templating/ You cannot
+                  define both Template and Ytt at the same time.'
                 type: string
             type: object
         required:

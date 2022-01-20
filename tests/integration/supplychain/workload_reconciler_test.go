@@ -75,7 +75,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		workload.Spec.ServiceAccountName = "my-service-account"
-		workload.Spec.Params = []v1alpha1.Param{{Name: "foo", Value: apiextensionsv1.JSON{
+		workload.Spec.Params = []v1alpha1.OwnerParam{{Name: "foo", Value: apiextensionsv1.JSON{
 			Raw: []byte(`"definitelybar"`),
 		}}}
 		err = c.Update(context.Background(), workload)

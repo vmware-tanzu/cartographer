@@ -34,14 +34,34 @@ import (
 type ClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              TemplateSpec `json:"spec"`
+
+	// Spec describes the template.
+	// More info: https://cartographer.sh/docs/latest/reference/template/#clustertemplate
+	Spec TemplateSpec `json:"spec"`
 }
 
 type TemplateSpec struct {
+	// Template defines a resource template for a Kubernetes Resource or
+	// Custom Resource which is applied to the server each time
+	// the blueprint is applied. Templates support simple value
+	// interpolation using the $()$ marker format. For more
+	// information, see: https://cartographer.sh/docs/latest/templating/
+	// You cannot define both Template and Ytt at the same time.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template *runtime.RawExtension `json:"template,omitempty"`
-	Ytt      string                `json:"ytt,omitempty"`
-	Params   TemplateParams        `json:"params,omitempty"`
+
+	// Ytt defines a resource template written in `ytt` for a Kubernetes Resource or
+	// Custom Resource which is applied to the server each time
+	// the blueprint is applied. Templates support simple value
+	// interpolation using the $()$ marker format. For more
+	// information, see: https://cartographer.sh/docs/latest/templating/
+	// You cannot define both Template and Ytt at the same time.
+	Ytt string `json:"ytt,omitempty"`
+
+	// Additional parameters.
+	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+	// +optional
+	Params TemplateParams `json:"params,omitempty"`
 }
 
 var _ webhook.Validator = &ClusterTemplate{}

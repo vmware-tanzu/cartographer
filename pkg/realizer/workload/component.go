@@ -39,14 +39,14 @@ type resourceRealizer struct {
 	workload          *v1alpha1.Workload
 	systemRepo        repository.Repository
 	workloadRepo      repository.Repository
-	supplyChainParams []v1alpha1.DelegatableParam
+	supplyChainParams []v1alpha1.BlueprintParam
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (ResourceRealizer, error) {
+	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
 		workloadClient, err := clientBuilder(secret)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)

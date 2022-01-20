@@ -92,7 +92,7 @@ var _ = Describe("Reconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.DelegatableParam) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -156,7 +156,9 @@ var _ = Describe("Reconciler", func() {
 
 		Expect(*updatedWorkload.(*v1alpha1.Workload)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
-				"ObservedGeneration": BeEquivalentTo(1),
+				"OwnerStatus": MatchFields(IgnoreExtras, Fields{
+					"ObservedGeneration": BeEquivalentTo(1),
+				}),
 			}),
 		}))
 	})
@@ -186,7 +188,9 @@ var _ = Describe("Reconciler", func() {
 		_, updatedWorkload := repo.StatusUpdateArgsForCall(0)
 		Expect(*updatedWorkload.(*v1alpha1.Workload)).To(MatchFields(IgnoreExtras, Fields{
 			"Status": MatchFields(IgnoreExtras, Fields{
-				"Conditions": Equal(someConditions),
+				"OwnerStatus": MatchFields(IgnoreExtras, Fields{
+					"Conditions": Equal(someConditions),
+				}),
 			}),
 		}))
 	})

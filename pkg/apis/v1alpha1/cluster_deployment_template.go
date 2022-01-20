@@ -32,27 +32,54 @@ import (
 type ClusterDeploymentTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              DeploymentSpec `json:"spec"`
+
+	// Spec describes the deployment template.
+	// More info: https://cartographer.sh/docs/latest/reference/template/#clusterdeploymenttemplate
+	Spec DeploymentSpec `json:"spec"`
 }
 
 type DeploymentSpec struct {
+	TemplateSpec `json:",inline"`
+
+	// ObservedMatches describe the criteria for determining that the templated object
+	// completed configuration of environment.
+	// These criteria assert completion when an output (usually a field in .status)
+	// matches an input (usually a field in .spec)
+	// Cannot specify both ObservedMatches and ObservedCompletion.
+	ObservedMatches []ObservedMatch `json:"observedMatches,omitempty"`
+
+	// ObservedCompletion describe the criteria for determining that the templated object
+	// completed configuration of environment.
+	// These criteria assert completion when metadata.Generation and status.ObservedGeneration
+	// match, AND success or failure criteria match.
+	// Cannot specify both ObservedMatches and ObservedCompletion.
 	ObservedCompletion *ObservedCompletion `json:"observedCompletion,omitempty"`
-	ObservedMatches    []ObservedMatch     `json:"observedMatches,omitempty"`
-	TemplateSpec       `json:",inline"`
 }
 
 type ObservedMatch struct {
-	Input  string `json:"input"`
+	// Input is a jsonPath to a value that is fulfilled before the templated object is reconciled.
+	// Usually a value in the .spec of the object
+	Input string `json:"input"`
+	// Output is a jsonPath to a value that is fulfilled after the templated object is reconciled.
+	// Usually a value in the .status of the object
 	Output string `json:"output"`
 }
 
 type ObservedCompletion struct {
-	SucceededCondition Condition  `json:"succeeded"`
-	FailedCondition    *Condition `json:"failed,omitempty"`
+	// SucceededCondition, when matched, indicates that the input was successfully deployed.
+	SucceededCondition Condition `json:"succeeded"`
+
+	// FailedCondition, when matched, indicates that the input did not deploy successfully.
+	FailedCondition *Condition `json:"failed,omitempty"`
 }
 
 type Condition struct {
-	Key   string `json:"key"`
+	// Key is a jsonPath expression pointing to the field to inspect on the templated
+	// object, eg: 'status.conditions[?(@.type=="Succeeded")].status'
+	Key string `json:"key"`
+
+	// Value is the expected value that, when matching the key's actual value,
+	// makes this condition true.
 	Value string `json:"value"`
 }
 

@@ -47,24 +47,42 @@ spec:
           metadata:
             type: object
           spec:
+            description: 'Spec describes the deployment template. More info: https://cartographer.sh/docs/latest/reference/template/#clusterdeploymenttemplate'
             properties:
               observedCompletion:
+                description: ObservedCompletion describe the criteria for determining
+                  that the templated object completed configuration of environment.
+                  These criteria assert completion when metadata.Generation and status.ObservedGeneration
+                  match, AND success or failure criteria match. Cannot specify both
+                  ObservedMatches and ObservedCompletion.
                 properties:
                   failed:
+                    description: FailedCondition, when matched, indicates that the
+                      input did not deploy successfully.
                     properties:
                       key:
+                        description: 'Key is a jsonPath expression pointing to the
+                          field to inspect on the templated object, eg: ''status.conditions[?(@.type=="Succeeded")].status'''
                         type: string
                       value:
+                        description: Value is the expected value that, when matching
+                          the key's actual value, makes this condition true.
                         type: string
                     required:
                     - key
                     - value
                     type: object
                   succeeded:
+                    description: SucceededCondition, when matched, indicates that
+                      the input was successfully deployed.
                     properties:
                       key:
+                        description: 'Key is a jsonPath expression pointing to the
+                          field to inspect on the templated object, eg: ''status.conditions[?(@.type=="Succeeded")].status'''
                         type: string
                       value:
+                        description: Value is the expected value that, when matching
+                          the key's actual value, makes this condition true.
                         type: string
                     required:
                     - key
@@ -74,11 +92,22 @@ spec:
                 - succeeded
                 type: object
               observedMatches:
+                description: ObservedMatches describe the criteria for determining
+                  that the templated object completed configuration of environment.
+                  These criteria assert completion when an output (usually a field
+                  in .status) matches an input (usually a field in .spec) Cannot specify
+                  both ObservedMatches and ObservedCompletion.
                 items:
                   properties:
                     input:
+                      description: Input is a jsonPath to a value that is fulfilled
+                        before the templated object is reconciled. Usually a value
+                        in the .spec of the object
                       type: string
                     output:
+                      description: Output is a jsonPath to a value that is fulfilled
+                        after the templated object is reconciled. Usually a value
+                        in the .status of the object
                       type: string
                   required:
                   - input
@@ -86,11 +115,17 @@ spec:
                   type: object
                 type: array
               params:
+                description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
                   properties:
                     default:
+                      description: DefaultValue of the parameter. Causes the parameter
+                        to be optional; If the Owner or Template does not specify
+                        this parameter, this value is used.
                       x-kubernetes-preserve-unknown-fields: true
                     name:
+                      description: Name of a parameter the template accepts from the
+                        Blueprint or Owner.
                       type: string
                   required:
                   - default
@@ -98,9 +133,20 @@ spec:
                   type: object
                 type: array
               template:
+                description: 'Template defines a resource template for a Kubernetes
+                  Resource or Custom Resource which is applied to the server each
+                  time the blueprint is applied. Templates support simple value interpolation
+                  using the $()$ marker format. For more information, see: https://cartographer.sh/docs/latest/templating/
+                  You cannot define both Template and Ytt at the same time.'
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               ytt:
+                description: 'Ytt defines a resource template written in `ytt` for
+                  a Kubernetes Resource or Custom Resource which is applied to the
+                  server each time the blueprint is applied. Templates support simple
+                  value interpolation using the $()$ marker format. For more information,
+                  see: https://cartographer.sh/docs/latest/templating/ You cannot
+                  define both Template and Ytt at the same time.'
                 type: string
             type: object
         required:

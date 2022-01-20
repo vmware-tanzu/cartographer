@@ -141,7 +141,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		err := c.Get(context.Background(), client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, deliverable)
 		Expect(err).NotTo(HaveOccurred())
 
-		deliverable.Spec.Params = []v1alpha1.Param{{Name: "foo", Value: apiextensionsv1.JSON{
+		deliverable.Spec.Params = []v1alpha1.OwnerParam{{Name: "foo", Value: apiextensionsv1.JSON{
 			Raw: []byte(`"definitelybar"`),
 		}}}
 		err = c.Update(context.Background(), deliverable)
