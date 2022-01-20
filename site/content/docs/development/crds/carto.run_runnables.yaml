@@ -10,6 +10,19 @@ spec:
   # +optional
   inputs: {}
 
+  # RetentionPolicy specifies how many successful and failed runs
+  # should be retained. Runs older than this (ordered by creation
+  # time) will be deleted.
+  # +optional
+  retentionPolicy:
+
+    # MaxFailedRuns is the number of failed runs to retain.
+    maxFailedRuns: <integer>
+
+    # MaxSuccessfulRuns is the number of successful runs to
+    # retain.
+    maxSuccessfulRuns: <integer>
+
   # RunTemplateRef identifies the run template used to produce
   # resources for this runnable.
   runTemplateRef:
