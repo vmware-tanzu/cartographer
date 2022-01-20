@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
 type clusterDeploymentTemplate struct {
@@ -134,7 +135,15 @@ func (t *clusterDeploymentTemplate) observedCompletionReady(stampedObject *unstr
 
 	observedCompletion := t.template.Spec.ObservedCompletion
 	if t.template.Spec.ObservedCompletion.FailedCondition != nil {
-		failedObserved, _ := t.evaluator.EvaluateJsonPath(observedCompletion.FailedCondition.Key, stampedObject.UnstructuredContent())
+		failedObserved, err := t.evaluator.EvaluateJsonPath(observedCompletion.FailedCondition.Key, stampedObject.UnstructuredContent())
+		if err != nil {
+			if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
+				return JsonPathError{
+					Err:        fmt.Errorf("failed to evaluate %s: %w", observedCompletion.FailedCondition.Key, err),
+					expression: observedCompletion.FailedCondition.Key,
+				}
+			}
+		}
 
 		if failedObserved == observedCompletion.FailedCondition.Value {
 			return DeploymentFailedConditionMetError{

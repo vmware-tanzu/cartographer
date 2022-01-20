@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/templates/templatesfakes"
 )
@@ -142,12 +143,23 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 
 							When("failure criterion path does not exist", func() {
 								BeforeEach(func() {
-									evaluator.EvaluateJsonPathReturnsOnCall(2, "", fmt.Errorf("some error"))
+									evaluator.EvaluateJsonPathReturnsOnCall(2, "", eval.JsonPathDoesNotExistError{Path: "failure.path"})
 									evaluator.EvaluateJsonPathReturnsOnCall(3, happyPathValue, nil)
 								})
 
 								It("does not return an error", func() {
 									Expect(err).To(BeNil())
+								})
+							})
+
+							When("evaluating failure criterion path errors", func() {
+								BeforeEach(func() {
+									evaluator.EvaluateJsonPathReturnsOnCall(2, "", fmt.Errorf("some-error"))
+									evaluator.EvaluateJsonPathReturnsOnCall(3, happyPathValue, nil)
+								})
+
+								It("returns an error", func() {
+									Expect(err).To(HaveOccurred())
 								})
 							})
 						})

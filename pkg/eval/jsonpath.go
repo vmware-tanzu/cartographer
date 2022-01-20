@@ -53,7 +53,7 @@ func (e Evaluator) EvaluateJsonPath(path string, obj interface{}) (interface{}, 
 	}
 
 	if len(interfaceList) == 0 {
-		return "", fmt.Errorf("jsonpath returned empty list: %s", path)
+		return "", JsonPathDoesNotExistError{Path: path}
 	}
 
 	return interfaceList[0], nil
@@ -73,4 +73,12 @@ func ensureValidWrapping(jsonpathExpression string) string {
 	}
 
 	return jsonpathExpression
+}
+
+type JsonPathDoesNotExistError struct {
+	Path string
+}
+
+func (e JsonPathDoesNotExistError) Error() string {
+	return fmt.Sprintf("jsonpath returned empty list: %s", e.Path)
 }
