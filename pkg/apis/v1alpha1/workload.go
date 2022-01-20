@@ -91,8 +91,9 @@ type WorkloadSpec struct {
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	// Image refers to a pre-built image in a registry. It is an alternative to defining
-	// source code.
+	// Image refers to a pre-built image in a registry. It is an alternative
+	// to specifying the location of source code for the workload. Specify
+	// one of `spec.source` or `spec.image`.
 	// +optional
 	Image *string `json:"image,omitempty"`
 
