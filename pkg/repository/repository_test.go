@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gbytes"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,11 +35,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("repository", func() {
@@ -45,10 +49,13 @@ var _ = Describe("repository", func() {
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
 		ctx   context.Context
+		out   *Buffer
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
+		out = NewBuffer()
+		logger := zap.New(zap.WriteTo(out))
+		ctx = logr.NewContext(context.Background(), logger)
 
 		cache = &repositoryfakes.FakeRepoCache{}
 	})
@@ -921,6 +928,7 @@ spec:
 
 		BeforeEach(func() {
 			scheme = runtime.NewScheme()
+			Expect(resources.AddToScheme(scheme)).To(Succeed())
 			Expect(v1alpha1.AddToScheme(scheme)).To(Succeed())
 			Expect(v1.AddToScheme(scheme)).To(Succeed())
 		})
@@ -1187,6 +1195,60 @@ spec:
 					supplyChains, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(supplyChains)).To(Equal(0))
+				})
+			})
+		})
+
+		Context("Delete", func() {
+			Context("when the object to be deleted does not exist", func() {
+				It("logs and returns an error if the object is not present", func() {
+					testObj := &unstructured.Unstructured{}
+					stampedObjManifest := utils.HereYaml(`
+						apiVersion: test.run/v1alpha1
+						kind: TestObj
+						metadata:
+						  name: hello
+						  namespace: default
+						`)
+					dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+					_, _, err := dec.Decode([]byte(stampedObjManifest), nil, testObj)
+					Expect(err).NotTo(HaveOccurred())
+					err = repo.Delete(ctx, testObj)
+
+					Expect(err).To(MatchError("failed to delete object [default/hello]: testobjs.test.run \"hello\" not found"))
+					Expect(out).To(Say("failed to delete object"))
+				})
+			})
+
+			Context("when the object to be deleted exists", func() {
+				var testObj *unstructured.Unstructured
+
+				BeforeEach(func() {
+					testObj = &unstructured.Unstructured{}
+					stampedObjManifest := utils.HereYaml(`
+						apiVersion: test.run/v1alpha1
+						kind: TestObj
+						metadata:
+						  name: hello
+						  namespace: default
+						`)
+					dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+					_, _, err := dec.Decode([]byte(stampedObjManifest), nil, testObj)
+					Expect(err).NotTo(HaveOccurred())
+
+					clientObjects = []client.Object{testObj}
+				})
+
+				It("throws no error and the object is gone", func() {
+					err := repo.Delete(ctx, testObj)
+					Expect(err).NotTo(HaveOccurred())
+
+					obj := &resources.TestObj{}
+					err = cl.Get(ctx, client.ObjectKey{
+						Namespace: "default",
+						Name:      "hello",
+					}, obj)
+					Expect(err).To(MatchError("testobjs.test.run \"hello\" not found"))
 				})
 			})
 		})

@@ -83,6 +83,20 @@ type RunnableSpec struct {
 	// runnable's namespace.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// RetentionPolicy specifies how many successful and failed runs should be retained.
+	// Runs older than this (ordered by creation time) will be deleted.
+	// +kubebuilder:default={maxFailedRuns: 10, maxSuccessfulRuns: 10}
+	RetentionPolicy RetentionPolicy `json:"retentionPolicy,omitempty"`
+}
+
+type RetentionPolicy struct {
+	// MaxFailedRuns is the number of failed runs to retain.
+	// +kubebuilder:validation:Minimum:=1
+	MaxFailedRuns int64 `json:"maxFailedRuns"`
+	// MaxSuccessfulRuns is the number of successful runs to retain.
+	// +kubebuilder:validation:Minimum:=1
+	MaxSuccessfulRuns int64 `json:"maxSuccessfulRuns"`
 }
 
 type ResourceSelector struct {

@@ -26,6 +26,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -114,6 +115,11 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 			Namespace: stampedObject.GetNamespace(),
 			Labels:    labels,
 		}
+	}
+
+	err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
+	if err != nil {
+		log.Error(err, "failed to cleanup runnable stamped objects")
 	}
 
 	outputs, evaluatedStampedObject, err := template.GetOutput(allRunnableStampedObjects)

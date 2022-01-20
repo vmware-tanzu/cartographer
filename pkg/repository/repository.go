@@ -54,6 +54,7 @@ type Repository interface {
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
 	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
+	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
 }
 
 type RepositoryBuilder func(client client.Client, repoCache RepoCache) Repository
@@ -68,6 +69,21 @@ func NewRepository(client client.Client, repoCache RepoCache) Repository {
 		rc: repoCache,
 		cl: client,
 	}
+}
+
+func (r *repository) Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error {
+	log := logr.FromContextOrDiscard(ctx).WithValues("delete object", fmt.Sprintf("%s/%s", objToDelete.GetNamespace(), objToDelete.GetName()))
+	ctx = logr.NewContext(ctx, log)
+	log.V(logger.DEBUG).Info("Delete")
+
+	err := r.deleteObject(ctx, objToDelete)
+	if err != nil {
+		log.Error(err, "failed to delete object")
+		return fmt.Errorf("failed to delete object [%s/%s]: %w", objToDelete.GetNamespace(), objToDelete.GetName(), err)
+	}
+
+	log.V(logger.DEBUG).Info("object deleted successfully")
+	return nil
 }
 
 func (r *repository) GetServiceAccountSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
@@ -394,6 +410,12 @@ func (r *repository) getObject(ctx context.Context, name string, namespace strin
 	}
 
 	return nil
+}
+
+func (r *repository) deleteObject(ctx context.Context, unstructuredObj *unstructured.Unstructured) error {
+	err := r.cl.Delete(ctx, unstructuredObj)
+
+	return err
 }
 
 func (r *repository) GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error) {
