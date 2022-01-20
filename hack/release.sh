@@ -25,8 +25,8 @@ readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
 readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
-readonly YTT_VERSION=0.36.0
-readonly YTT_CHECKSUM=d81ecf6c47209f6ac527e503a6fd85e999c3c2f8369e972794047bddc7e5fbe2
+readonly YTT_VERSION=0.38.0
+readonly YTT_CHECKSUM=2ca800c561464e0b252e5ee5cacff6aa53831e65e2fb9a09cf388d764013c40d
 
 main() {
         readonly RELEASE_VERSION="v0.0.0-dev"
