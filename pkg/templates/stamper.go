@@ -240,7 +240,7 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 	log.V(logger.DEBUG).Info("ytt result", "output", string(outputBytes))
 
 	stampedObject := &unstructured.Unstructured{}
-	if err = yaml.Unmarshal(outputBytes, stampedObject); err != nil {
+	if err := yaml.Unmarshal(outputBytes, stampedObject); err != nil {
 		// ytt should never return invalid yaml
 		return nil, err
 	}
