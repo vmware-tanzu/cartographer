@@ -195,7 +195,7 @@ func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.
 	log := logr.FromContextOrDiscard(ctx)
 
 	// limit execution duration to protect against infinite loops or cpu wasting templates
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	_, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	yttOpts := yttcmd.NewOptions()
