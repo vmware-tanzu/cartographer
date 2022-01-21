@@ -2,8 +2,8 @@
 
 ## Overview
 
-Runnable is an open source component of Cartographer. The `Runnable` CRD enables updating what are normally
-immutable test resources. Tekton does not allow updating an object, and so we'll update Runnable to
+Runnable is a component of Cartographer. The `Runnable` CRD provides an intermediate layer to update 
+immutable resources. For example, Tekton does not allow updating TaskRuns and PipelineRuns, so we'll update Runnable to
 test new commits.
 
 ## Concepts
@@ -23,28 +23,29 @@ ClusterRunTemplate consists of:
 {{< figure src="../../img/runnable/clusterruntemplate.svg" alt="Template" width="400px" >}}
 
 ### Runnable
-They consist of:
+Runnables consist of:
 * **RunTemplateRef**: a reference to a `ClusterRunTemplate` which contains the yaml of the immutable resource to be
 created
-* **Selector**: the resource that it matches with is available in the template data as `selected`
-* **Inputs**: triggers
+* **Selector**: used to dynamically discover a resource that is needed in the `ClusterRunTemplate`. The matching resource
+is available in the template data as `selected`.
+* **Inputs**: arbitrary key, value pairs that are passed along to the `ClusterRunTemplate`.
 
 {{< figure src="../../img/runnable/runnable-outline.svg" alt="Runnable" width="400px" >}}
 
 ### Template Data
-See [Template Data](templating#template-data) for templating in Cartographer.
+See [Template Data](../../templating#template-data) for templating in Cartographer.
 
 The ClusterRunTemplate is provided a data structure that contains:
 - runnable
 - selected
 
 #### Runnable
-The entire runnable resource is available for retrieving values. To use a runnable value, use the format:
+The entire Runnable resource is available for retrieving values. To use a Runnable value, use the format:
 
 - **Simple template**: `$(runnable.<field-name>.(...))$`
 - **ytt**: not currently supported, see [issue](https://github.com/vmware-tanzu/cartographer/issues/214)
 
-##### Runnable Examples
+**Runnable Examples**
 
 | Simple template | ytt | 
 | ----------- | ----------- | 
@@ -57,7 +58,7 @@ The entire selected resource is available for retrieving values. To use selected
 - **Simple template**: `$(selected.<field-name>.(...))$`
 - **ytt**: not currently supported, see [issue](https://github.com/vmware-tanzu/cartographer/issues/214)
 
-##### Selected Examples
+**Selected Examples**
 
 | Simple template | ytt | 
 | ----------- | ----------- | 
@@ -65,21 +66,20 @@ The entire selected resource is available for retrieving values. To use selected
 
 ## Theory of Operation
 
-When Cartographer reconciles a runnable, each resource in the matching blueprint is applied:
+When Cartographer reconciles a Runnable, the resource in the specified `ClusterRunTemplate` is applied:
 
-1. **Resolve Selector**: Using the **blueprint resource's** `inputs` as a reference, select outputs from previously applied **Kubernetes resources**
-2. **Generate and apply resource spec**: Apply the result of interpolating `spec.template`, **selected** and the **runnable spec**. 
-3. **Retrieve Output**: 
+1. **Resolve Selector**: attempt to find a resource that matches the selector
+2. **Generate and apply resource spec**: Apply the result of interpolating `spec.template` in the `ClusterRunTemplate`, 
+**selected**, and the **runnable spec**.
+3. **Retrieve Output**: The output to use is specified in the **template output path**
    1. Get the output from the most recently created resource, where `status.conditions[?(@.type=="Succeeded")].status == True`.
-   2. The output to use is specified in the **template output path**. 
-   3. Store the output in `runnable.status.outputs`.
+   2. Store the output in `runnable.status.outputs`.
 
 ![Realize](../../img/runnable/runnable-realize-new.jpg)
 <!-- https://miro.com/app/board/uXjVOeb8u5o=/ -->
 
 
-## Runnable Details
-The `Runnable` CRD enables updating what are normally immutable test resources.
+## Runnable In Action
 
 ![Runnable](../../img/runnable/runnable-new.jpg)
 
