@@ -1,0 +1,20 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata: {}
+spec:
+
+  # Outputs are a named list of jsonPaths that are used to gather
+  # results from the last successful object stamped by the
+  # template. E.g: 	my-output:
+  # .status.results[?(@.name=="IMAGE-DIGEST")].value
+  # +optional
+  outputs: {}
+
+  # Template defines a resource template for a Kubernetes Resource
+  # or Custom Resource which is applied to the server each time
+  # the blueprint is applied. Templates support simple value
+  # interpolation using the $()$ marker format. For more
+  # information, see:
+  # https://cartographer.sh/docs/latest/templating/
+  template: {}

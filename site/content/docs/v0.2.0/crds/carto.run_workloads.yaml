@@ -1,0 +1,100 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata: {}
+spec:
+
+  # Build configuration, for the build resources in the supply
+  # chain
+  # +optional
+  build:
+
+    # Env is an array of environment variables to propagate to
+    # build resources in the supply chain. See
+    # https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
+    # +optional
+    env:
+      - # EnvVar represents an environment variable present in a
+        # Container.
+        # +optional
+        name: <string>
+        value: <string>
+        valueFrom: {}
+
+  # Environment variables to be passed to the main container
+  # running the application. See
+  # https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
+  # +optional
+  env:
+    - # EnvVar represents an environment variable present in a
+      # Container.
+      # +optional
+      name: <string>
+      value: <string>
+      valueFrom: {}
+
+  # Image refers to a pre-built image in a registry. It is an
+  # alternative to specifying the location of source code for the
+  # workload. Specify one of `spec.source` or `spec.image`.
+  # +optional
+  image: <string>
+
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+  # +optional
+  params:
+    - # Name of the parameter. Should match a blueprint or
+      # template parameter name.
+      name: <string>
+
+      # Value of the parameter.
+      value: <any>
+
+  # Resource constraints for the application. See
+  # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  # +optional
+  resources:
+    limits: {}
+    requests: {}
+
+  # ServiceAccountName refers to the Service account with
+  # permissions to create resources submitted by the supply chain.
+  # If not set, Cartographer will use serviceAccountName from
+  # supply chain. 
+  # If that is also not set, Cartographer will use the default
+  # service account in the workload's namespace.
+  # +optional
+  serviceAccountName: <string>
+
+  # ServiceClaims to be bound through ServiceBindings.
+  # +optional
+  serviceClaims:
+    - name: <string>
+      ref:
+        apiVersion: <string>
+        kind: <string>
+        name: <string>
+
+  # The location of the source code for the workload. Specify one
+  # of `spec.source` or `spec.image`
+  # +optional
+  source:
+
+    # Source code location in a git repository.
+    # +optional
+    git:
+      ref:
+        branch: <string>
+        commit: <string>
+        tag: <string>
+      url: <string>
+
+    # OCI Image in a repository, containing the source code to be
+    # used throughout the supply chain.
+    # +optional
+    image: <string>
+
+    # Subpath inside the Git repository or Image to treat as the
+    # root of the application. Defaults to the root if left empty.
+    # +optional
+    subPath: <string>

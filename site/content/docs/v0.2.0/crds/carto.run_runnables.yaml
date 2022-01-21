@@ -1,0 +1,52 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Runnable
+metadata: {}
+spec:
+
+  # Inputs are key/values providing inputs to the templated object
+  # created for this runnable. Reference inputs in the template
+  # using the jsonPath: $(runnable.spec.inputs.<key>)$
+  # +optional
+  inputs: {}
+
+  # RetentionPolicy specifies how many successful and failed runs
+  # should be retained. Runs older than this (ordered by creation
+  # time) will be deleted.
+  # +optional
+  retentionPolicy:
+
+    # MaxFailedRuns is the number of failed runs to retain.
+    maxFailedRuns: <integer>
+
+    # MaxSuccessfulRuns is the number of successful runs to
+    # retain.
+    maxSuccessfulRuns: <integer>
+
+  # RunTemplateRef identifies the run template used to produce
+  # resources for this runnable.
+  runTemplateRef:
+    kind: <string>
+    name: <string>
+
+  # Selector refers to an additional object that the template can
+  # refer to using: $(selected)$.
+  # +optional
+  selector:
+
+    # MatchingLabels must match on a single target object, making
+    # the object available in the template as $(selected)$
+    matchingLabels: {}
+
+    # Resource is the GVK that must match the selected object.
+    resource:
+      apiVersion: <string>
+      kind: <string>
+
+  # ServiceAccountName refers to the Service account with
+  # permissions to create resources submitted by the
+  # ClusterRunTemplate. 
+  # If not set, Cartographer will use the default service account
+  # in the runnable's namespace.
+  # +optional
+  serviceAccountName: <string>
