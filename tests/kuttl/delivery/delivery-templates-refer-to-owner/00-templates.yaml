@@ -1,0 +1,115 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source---delivery-templates-refer-to-owner
+spec:
+  urlPath: .spec.value.url
+  revisionPath: .spec.value.ref
+
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(owner.metadata.name)$
+    spec:
+      value:
+        url: $(owner.spec.source.git.url)$
+        ref: $(owner.spec.source.git.ref)$
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: additional---delivery-templates-refer-to-owner
+spec:
+  urlPath: .spec.value.creepy
+  revisionPath: .spec.value.spooky
+
+  params:
+    - name: uses-delivery
+      default: clowns
+    - name: uses-default
+      default: snakes
+    - name: uses-deliverable
+      default: monster
+
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(owner.metadata.name)$-additional
+    spec:
+      value:
+        creepy: $(params.uses-delivery)$
+        scary: $(params.uses-default)$
+        spooky: $(params.uses-deliverable)$
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeploymentTemplate
+metadata:
+  name: app-deploy---delivery-templates-refer-to-owner
+spec:
+  observedMatches:
+    - input: "spec.value.some-key"
+      output: "spec.value.duplicate-of-some-key"
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(owner.metadata.name)$-1
+    spec:
+      value:
+        some-key: $(deployment.url)$
+        duplicate-of-some-key: $(deployment.url)$
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeploymentTemplate
+metadata:
+  name: sidecar-deploy---delivery-templates-refer-to-owner
+spec:
+  observedMatches:
+    - input: "spec.value.some-key"
+      output: "spec.value.duplicate-of-some-key"
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: $(owner.metadata.name)$-sidecar
+    spec:
+      value:
+        some-key: $(deployment.url)$
+        duplicate-of-some-key: $(deployment.url)$
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: git-merge---delivery-templates-refer-to-owner
+spec:
+  ytt: |
+    #@ load("@ytt:data", "data")
+
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      name: #@ data.values.owner.metadata.name + "-merge"
+    spec:
+      value:
+        merge-key: #@ data.values.source.url
