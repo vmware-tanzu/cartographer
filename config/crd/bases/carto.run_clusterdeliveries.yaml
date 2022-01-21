@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: clusterdeliveries.carto.run
 spec:
@@ -78,8 +77,8 @@ spec:
                     configs:
                       description: "Configs is a list of references to other 'config'
                         resources in this list. A config resource has the kind ClusterConfigTemplate
-                        \n In a template, configs can be consumed as:   $(configs.<name>.config)$
-                        \n If there is only one image, it can be consumed as:   $(config)$"
+                        \n In a template, configs can be consumed as: $(configs.<name>.config)$
+                        \n If there is only one image, it can be consumed as: $(config)$"
                       items:
                         properties:
                           name:
@@ -94,7 +93,7 @@ spec:
                     deployment:
                       description: "Deployment is a reference to a 'deployment' resource.
                         A deployment resource has the kind ClusterDeploymentTemplate
-                        \n In a template, the deployment can be consumed as:    $(deployment.url)$
+                        \n In a template, the deployment can be consumed as: $(deployment.url)$
                         and $(deployment.revision)$"
                       properties:
                         resource:
@@ -112,7 +111,7 @@ spec:
                         the template in TemplateRef Template params do not have to
                         be specified here, unless you want to force a particular value,
                         or add a default value. \n Parameters are consumed in a template
-                        with the syntax:   $(params.<name>)$"
+                        with the syntax: $(params.<name>)$"
                       items:
                         properties:
                           default:
@@ -136,8 +135,8 @@ spec:
                       description: "Sources is a list of references to other 'source'
                         resources in this list. A source resource has the kind ClusterSourceTemplate
                         or ClusterDeploymentTemplate \n In a template, sources can
-                        be consumed as:    $(sources.<name>.url)$ and $(sources.<name>.revision)$
-                        \n If there is only one source, it can be consumed as:    $(source.url)$
+                        be consumed as: $(sources.<name>.url)$ and $(sources.<name>.revision)$
+                        \n If there is only one source, it can be consumed as: $(source.url)$
                         and $(source.revision)$"
                       items:
                         properties:
@@ -209,13 +208,12 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{     // Represents the observations of a
-                    foo's current state.     // Known .status.conditions.type are:
-                    \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
-                    \    // +patchStrategy=merge     // +listType=map     // +listMapKey=type
-                    \    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                    \n     // other fields }"
+                    type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                   properties:
                     lastTransitionTime:
                       description: lastTransitionTime is the last time the condition
