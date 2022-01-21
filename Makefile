@@ -126,7 +126,7 @@ copyright:
 	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		-ignore site/static/\*\* \
-		-ignore site/content/docs/development/crds/\*.yaml \
+		-ignore site/content/docs/\*/crds/\*.yaml \
 		-ignore site/themes/\*\* \
 		.
 
