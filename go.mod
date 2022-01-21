@@ -13,7 +13,7 @@ require (
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	k8s.io/api v0.23.2
-	k8s.io/apiextensions-apiserver v0.23.1
+	k8s.io/apiextensions-apiserver v0.23.2
 	k8s.io/apimachinery v0.23.2
 	k8s.io/apiserver v0.23.2
 	k8s.io/client-go v0.23.2
