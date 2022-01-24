@@ -1,8 +1,3 @@
----
-name: Pull request
-about: Submit changes to the code
-
----
 <!--
 Thanks for submitting a pull request to Cartographer!
 
