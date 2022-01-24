@@ -98,11 +98,6 @@ rules:
   - apiGroups:
       - carto.run
     resources:
-      - clustersupplychains
-      - clustersourcetemplates
-      - clusterimagetemplates
-      - clustertemplates
-      - clusterdeliveries
       - workloads
       - deliveries
     verbs:
