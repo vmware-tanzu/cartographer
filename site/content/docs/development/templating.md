@@ -29,16 +29,12 @@ The entire owner resource is available for retrieving values. To use an owner va
  - **Simple template**: `$(<workload|deliverable>.<field-name>.(...))$`
  - **ytt**: `#@ data.values.<workload|deliverable>.<field-name>.(...)`
 
-The alias `owner` is available to replace workload and deliverable. This usage allows a template's use
-in both Supply Chain and Delivery.
-
 #### Owner Examples
 
 | Simple template | ytt | 
 | ----------- | ----------- | 
-| `$(workload.spec.serviceAccountName)$`| `#@ data.values.workload.spec.serviceAccountName` | 
+| `$(workload.metadata.name)$`| `#@ data.values.workload.metadata.name` | 
 | `$(deliverable.spec.source.url)$`| `#@ data.values.deliverable.spec.source.url` | 
-| `$(owner.metadata.name)$`| `#@ data.values.owner.metadata.name` | 
 
 ### Inputs
 The template specifies the inputs required in the blueprint.
