@@ -60,3 +60,48 @@ rules:
       - watch
       - get
       - list
+
+# These ClusterRoles are used to provide aggregated permissions to the
+# built-in Kubernetes default aggregated roles: admin, edit, view
+# See https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cartographer-user-admin
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+rules:
+  - apiGroups:
+      - carto.run
+    resources:
+      - workloads
+      - deliveries
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cartographer-user-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+  - apiGroups:
+      - carto.run
+    resources:
+      - workloads
+      - deliveries
+    verbs:
+      - get
+      - list
+      - watch
+
