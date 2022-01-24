@@ -92,7 +92,6 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	inputs := outputs.GenerateInputs(resource)
 	templatingContext := map[string]interface{}{
 		"deliverable": r.deliverable,
-		"owner":       r.deliverable,
 		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.deliveryParams, resource.Params, r.deliverable.Spec.Params),
 		"sources":     inputs.Sources,
 		"configs":     inputs.Configs,
