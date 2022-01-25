@@ -3,8 +3,8 @@
 - Name: RFC Process
 - Start Date: 2022-01-24
 - Author(s): @martyspiewak
-- Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
-- RFC Pull Request: (leave blank)
+- Status: Approved <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
+- RFC Pull Request: N/A
 - Supersedes: N/A
 
 # Summary
