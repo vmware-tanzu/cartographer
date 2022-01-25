@@ -7,6 +7,7 @@ require (
 	github.com/go-logr/logr v1.2.2
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/ginkgo/v2 v2.0.0
 	github.com/onsi/gomega v1.18.0
 	github.com/valyala/fasttemplate v1.2.1
 	go.uber.org/zap v1.20.0

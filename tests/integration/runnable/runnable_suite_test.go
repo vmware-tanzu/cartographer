@@ -52,7 +52,7 @@ var (
 	workingDir       string
 	cancel           context.CancelFunc
 	controllerError  chan error
-	controller       *cmd.Command
+
 	controllerBuffer *gbytes.Buffer
 )
 
