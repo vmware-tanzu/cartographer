@@ -29,9 +29,9 @@ spec:
     - # Configs is a list of references to other 'config'
       # resources in this list. A config resource has the kind
       # ClusterConfigTemplate 
-      # In a template, configs can be consumed as:  
+      # In a template, configs can be consumed as:
       # $(configs.<name>.config)$ 
-      # If there is only one image, it can be consumed as:  
+      # If there is only one image, it can be consumed as:
       # $(config)$
       # +optional
       configs:
@@ -41,9 +41,9 @@ spec:
       # Images is a list of references to other 'image' resources
       # in this list. An image resource has the kind
       # ClusterImageTemplate 
-      # In a template, images can be consumed as:  
+      # In a template, images can be consumed as:
       # $(images.<name>.image)$ 
-      # If there is only one image, it can be consumed as:  
+      # If there is only one image, it can be consumed as:
       # $(image)$
       # +optional
       images:
@@ -59,7 +59,7 @@ spec:
       # in TemplateRef Template params do not have to be specified
       # here, unless you want to force a particular value, or add
       # a default value. 
-      # Parameters are consumed in a template with the syntax:  
+      # Parameters are consumed in a template with the syntax:
       # $(params.<name>)$
       # +optional
       params:
@@ -81,9 +81,9 @@ spec:
       # Sources is a list of references to other 'source'
       # resources in this list. A source resource has the kind
       # ClusterSourceTemplate 
-      # In a template, sources can be consumed as:   
+      # In a template, sources can be consumed as:
       # $(sources.<name>.url)$ and $(sources.<name>.revision)$ 
-      # If there is only one source, it can be consumed as:   
+      # If there is only one source, it can be consumed as:
       # $(source.url)$ and $(source.revision)$
       # +optional
       sources:

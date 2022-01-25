@@ -12,7 +12,8 @@ spec:
 
   # RetentionPolicy specifies how many successful and failed runs
   # should be retained. Runs older than this (ordered by creation
-  # time) will be deleted.
+  # time) will be deleted. Setting higher values will increase
+  # memory footprint.
   # +optional
   retentionPolicy:
 
