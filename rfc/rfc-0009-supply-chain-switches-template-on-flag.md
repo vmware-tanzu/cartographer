@@ -1,10 +1,11 @@
-# Draft RFC <0009> Supply Chain Switches Template Dynamically
+# Draft RFC 0009 Supply Chain Switches Template in single step
 
 ## Summary
 
-Platform creators will need to handle multiple types of workloads. Cartographer
-must support that behavior through either multiple supply chains, or with
-supply chains that can substitute templates dynamically.
+Platform creators will need to handle multiple types of workloads. While Cartographer
+supports that behavior currently through allowing multiple supply chains, it should
+reduce the number of supply chains necessary by allowing individual supply chains
+to choose between templates within a step.
 
 ## Motivation
 
@@ -17,15 +18,9 @@ needing an entirely different supply chain. For example, what code source is use
 Further info on their use case can be read [here](https://docs.google.com/document/d/1TVqlNqTyCMlp_yNs9_F80QAIQSC5bxm05vSyWyeGMSw/edit).
 See also this [discussion](https://vmware.slack.com/archives/C01UX69LJCB/p1629408443051200).
 
-## Possible Solutions
+## Explanation
 
-Cartographer could make conditional choices based on labels on the workload.
-Alternatively, Cartographer could consider all fields available in the templating context when
-making conditional choices.
-
-### Use label selectors
-
-#### Selecting among multiple supply chains
+### Current state of Cartographer
 
 Cartographer is already capable of matching a supply chain to a workload through selectors.
 With no further effort, a platform can be created that has multiple supply chains with different
@@ -37,9 +32,90 @@ While this behavior is currently possible, relying only on this selection would 
 with a large number of supply chains.
 
 Workarounds, for example templates that use ytt templating to embed conditional behavior,
-would represent a code smell that this primitive is not adequate for Cartographer consumers.
+would represent a code smell that this primitive is not adequate for Cartographer users.
 
-#### Selecting among multiple templates at a given step in a supply chain
+### Condition template choice on information available from the workload
+
+When creating objects of the supply chain, Cartographer has the workload definition available.
+Allowing the supply chain to leverage the workload would add additional power to the conditional.
+
+```yaml
+apiVersion: kontinue.io/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: responsible-ops
+spec:
+  selector:
+    app: web
+  components:
+    - name: source-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        options:                                  # <--- a list
+        - name: git-template
+          matchExpressions:
+            - key: workload.spec.source.git       # <--- path to field in template context
+              operator: Exists
+        - name: imgpkg-bundle-template
+          matchExpressions:
+            - key: workload.spec.source.image       # <--- path to field in template context
+              operator: Exists
+
+---
+apiVersion: kontinue.io/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+  labels:
+    app: web
+spec:
+  source:
+    git:                                        # <--- Presence of this field will determine the conditional
+      url: https://github.com/spring-projects/spring-petclinic.git
+      ref:
+        branch: main
+```
+
+1. As labels are present in the workload metadata, any behavior possible using just label selectors
+  will be possible using the entire templating context.
+
+## Open choices
+
+1. Should options be an ordered list?
+   1. Having options as an ordered list allows 'tie-breakers'. If two options are fulfillable, the earlier one in the
+      list would be chosen.
+   2. Users may be least surprised if options is not ordered. In this case, if multiple options are fulfillable,
+      Cartographer would throw a helpful error.
+2. What syntax should we use for matching fields?
+   1. Cartographer currently has ObservedConditions specifying a `key` and `value`. A condition evaluates to true
+      when the value found at the specified key (path) on the object matches the given value.
+   2. Kubernetes resources "such as Job, Deployment, ReplicaSet, and DaemonSet, support set-based requirements". The
+      syntax for matchExpressions allows for asserting `In` or `NotIn` a specified array of values, or to assert
+      that a key `Exists` or `DoesNotExist`. matchExpressions is a list of assertions, which are ANDed.
+      [link](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements) 
+
+## Notes
+
+1. While this RFC has referred to workloads and supply chains throughout, the proposal is to apply this
+  behavior to Delivery/Deliverable as well.
+2. This RFC benefited from comments in the pull request, discussions of the Cartographer team and community
+  and ideas in [this proposal](https://gist.github.com/squeedee/723be000c4f2ee40ce4c9ac020cbf4fc) 
+  from [Rasheed Abdul-Aziz] (https://github.com/squeedee)
+
+## Concerns
+
+Deterministic supply chains are desirable. That is, given a workload it is valuable to be able to
+state which supply chain will be chosen and what the path through that supply chain will be.
+
+However, it is not certain that Cartographer will have the luxury of determinism. It is possible that the
+output of a choreographed resource may be important to the next step of a supply chain. Essentially, what if
+an object emits some values that can be handled by controller A, and other objects that can only be handled
+by controller B? There would need to be a step which could switch on the emitted values. This RFC does not
+handle this case. An RFC to use the entire templating context for template choice would address this use case.
+
+## Alternatives
+
+### Label selectors for choosing templates
 
 A supply chain resource could reference a template based on the presence of a
 label in the workload. Below is a possible example:
@@ -80,7 +156,7 @@ spec:
         branch: main
 ```
 
-This approach allows far fewer (potentially just one) supply chain to under gird an app
+This approach similarly allows far fewer (potentially just one) supply chain to under gird an app
 platform.
 
 One shortfall of this approach is that the app-dev must explicitly provide all information
@@ -93,59 +169,14 @@ workloads, which could apply a label to a workload based on characteristics of t
 Such an approach would work for all characteristics observable from the workload, but would
 likely exclude code characteristics (for example, language of the app).
 
+However, as the workload has access to all of the information that would be available to a
+mutating webhook, the approach recommended in this RFC obviates the need for such a webhook.
+Rather than specify "If workload spec has characteristic X, apply label Y" and later "If
+label Y is present, do Z", the whole workload approach can simply state "If workload spec
+has characteristic X, do Z".
+
 The label approach also assumes that all relevant information is knowable at workload submission
-time. But it is conceivable that transformations that take place during the supply chain (for example,
-application of a convention), could have conditional impact on later supply chain steps.
-
-### Condition on any/all information available in the templating context
-
-When a supply chain arrives at a resource/step, it provides a templating context to the template.
-Therein the template can access all artifacts provided from previous steps, params defined and the
-workload object itself (including the spec and the metadata). Allowing the supply chain to leverage
-this field would add additional power to the conditional.
-
-```yaml
-apiVersion: kontinue.io/v1alpha1
-kind: ClusterSupplyChain
-metadata:
-  name: responsible-ops
-spec:
-  selector:
-    app: web
-  components:
-    - name: source-provider
-      templateRefs:                               # <--- again, a list
-      - kind: ClusterSourceTemplate
-        name: git-template
-        requisite:
-          path: workload.spec.source.git        # <--- path to field in template context
-          value: *                              # <--- value that will trigger use of this template, in this case any value
-      - kind: ClusterSourceTemplate
-        name: imgpkg-bundle-template
-        requisite:
-          path: workload.spec.source.image      # <--- Alternate value for alternate conditional
-          value: *
-
----
-apiVersion: kontinue.io/v1alpha1
-kind: Workload
-metadata:
-  name: petclinic
-  labels:
-    app: web
-spec:
-  source:
-    git:                                        # <--- Presence of this field will determine the conditional
-      url: https://github.com/spring-projects/spring-petclinic.git
-      ref:
-        branch: main
-```
-
-1. As labels are present in the workload metadata, any behavior possible using just label selectors
-  will be possible using the entire templating context.
-2. As the templating context is updated during the processing of the supply chain, the context
-  can support conditionals that rely on information emergent during the supply chain processing.
-3. As the templating context has access to all of the information that would be available to a
-  mutating webhook, it obviates the need for such a webhook. Rather than specify "If workload spec
-  has characteristic X, apply label Y" and later "If label Y is present, do Z", the template context
-  approach can simply state "If workload spec has characteristic X, do Z".
+time. But as mentioned in `Concerns`, it is conceivable that in the future there will be
+outputs in the supply chain that could have conditional impact on later supply chain steps. It
+is not clear that the label approach could be leveraged to handle that case. That is choosing the
+label approach introduces more risk of rewriting in the future.
