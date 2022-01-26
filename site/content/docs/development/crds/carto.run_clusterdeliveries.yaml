@@ -29,9 +29,9 @@ spec:
     - # Configs is a list of references to other 'config'
       # resources in this list. A config resource has the kind
       # ClusterConfigTemplate 
-      # In a template, configs can be consumed as:  
+      # In a template, configs can be consumed as:
       # $(configs.<name>.config)$ 
-      # If there is only one image, it can be consumed as:  
+      # If there is only one image, it can be consumed as:
       # $(config)$
       # +optional
       configs:
@@ -40,7 +40,7 @@ spec:
 
       # Deployment is a reference to a 'deployment' resource. A
       # deployment resource has the kind ClusterDeploymentTemplate
-      # In a template, the deployment can be consumed as:   
+      # In a template, the deployment can be consumed as:
       # $(deployment.url)$ and $(deployment.revision)$
       # +optional
       deployment:
@@ -55,7 +55,7 @@ spec:
       # in TemplateRef Template params do not have to be specified
       # here, unless you want to force a particular value, or add
       # a default value. 
-      # Parameters are consumed in a template with the syntax:  
+      # Parameters are consumed in a template with the syntax:
       # $(params.<name>)$
       # +optional
       params:
@@ -77,9 +77,9 @@ spec:
       # Sources is a list of references to other 'source'
       # resources in this list. A source resource has the kind
       # ClusterSourceTemplate or ClusterDeploymentTemplate 
-      # In a template, sources can be consumed as:   
+      # In a template, sources can be consumed as:
       # $(sources.<name>.url)$ and $(sources.<name>.revision)$ 
-      # If there is only one source, it can be consumed as:   
+      # If there is only one source, it can be consumed as:
       # $(source.url)$ and $(source.revision)$
       # +optional
       sources:

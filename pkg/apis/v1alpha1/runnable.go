@@ -85,7 +85,8 @@ type RunnableSpec struct {
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// RetentionPolicy specifies how many successful and failed runs should be retained.
-	// Runs older than this (ordered by creation time) will be deleted.
+	// Runs older than this (ordered by creation time) will be deleted. Setting higher
+	// values will increase memory footprint.
 	// +kubebuilder:default={maxFailedRuns: 10, maxSuccessfulRuns: 10}
 	RetentionPolicy RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
