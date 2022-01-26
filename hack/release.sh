@@ -149,7 +149,7 @@ create_release_notes() {
         local assets_checksums
         assets_checksums=$(checksums ./release)
 
-        release_body "$changeset" "$assets_checksums" >./release/CHANGELOG.md
+        release_body "$changeset" "$assets_checksums" "$PREVIOUS_VERSION" >./release/CHANGELOG.md
 }
 
 # generates the final release directory containing the files that are meant to
@@ -223,16 +223,37 @@ git_previous_version() {
 release_body() {
         local changeset="$1"
         local checksums="$2"
+        local previous_version="$3"
 
         readonly fmt='
+# 😎 Easy Installation
+
+```
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/download/<NEW_TAG>/cartographer.yaml
+```
+
+# 🚨 Breaking Changes
+
+- <REPLACE_ME>
+
+# 🚀 New Features
+
+- <REPLACE_ME>
+
+# 🐛 Bug Fixes
+
+- <REPLACE_ME>
+
+# ❤️ Thanks
+
+Thanks to these contributors who contributed to <NEW_TAG>!
+- <REPLACE_ME>
+
+**Full Changelog**: https://github.com/vmware-tanzu/cartographer/compare/%s...<NEW_TAG>
+
 # Change Set
 
 %s
-
-
-# Installation
-
-See https://github.com/vmware-tanzu/cartographer#installation.
 
 
 # Checksums
@@ -241,7 +262,7 @@ See https://github.com/vmware-tanzu/cartographer#installation.
 %s
 ```
   '
-        printf "$fmt" "$changeset" "$checksums"
+        printf "$fmt" "$previous_version" "$changeset" "$checksums"
 }
 
 main "$@"
