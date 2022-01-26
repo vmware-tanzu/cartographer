@@ -53,35 +53,35 @@ Each workload/Deliverable will include in their status an artifacts field:
 ```yaml
 status:
   artifacts:
-    # oneOf(source,image,config)
+    # oneOf(source,image,config, object)
     - source:
         # the sha256 of the ordered JSON of all other non-from fields
         id: <SHA:string>
         # exposed fields - in this case url and revision
         uri: <:string>
         revision: <:string>
-        # an ordered list of resources from which this artifact has been exposed
+        # the object which produced this artifact
         passed:
-            # name of the resource in the supply chain
-            resource-name: <:string>
-            # GVK of the resource
-            kind: <:string>
-            apiVersion: <:string>
-            # name of the resource on the cluster
-            name: <:string>
-            # namespace of the resource
-            namespace: <:string>
-            # resource version of the object
-            resourceVersion: <:string>
+          # name of the resource in the supply chain
+          resource-name: <:string>
+          # GVK of the resource
+          kind: <:string>
+          apiVersion: <:string>
+          # name of the resource on the cluster
+          name: <:string>
+          # namespace of the resource
+          namespace: <:string>
+          # resource version of the object
+          resourceVersion: <:string>
         from:
-          - # id of the previous resource that was transformed into this one
+          - # id of any artifact(s) that were inputs to the template
             id: <SHA:string>
 ```
 
 example:
-Assume a supply chain that stamps out a GitRepository, Runnable, Image and config in a configmap.
-Assume that a new commit was just made, so that the GitRepository has just changed url/revision
-but the Runnable has not yet updated.
+We'll consider a supply chain that stamps out a GitRepository, Runnable (to test the source code), Image, config in a
+configmap, and finally a Kapp App. We'll assume that a new commit was just made, so that the GitRepository has
+just changed url/revision but the Runnable has not yet updated.
 
 Previous Source output:
 uri: https://www.some-site.com/my-project/my-repo
@@ -94,48 +94,55 @@ revision: b31d09004503e52e84ff633e547f4d5b40503ab3
 ```yaml
 status:
   artifacts:
-    - source:
-        id: e2212e77caf0cb64a25dfa1aca39599b69d72015dbb4ed2ad740f0666af35968
+    - source:   # <--- new revision output by the GitRepository object
+        id: 146c7d74eb956191487236b579e8e4e68462fc7d97c4f1a4677b0ded39e2a3ca
         uri: https://www.some-site.com/my-project/my-repo
         revision: b31d09004503e52e84ff633e547f4d5b40503ab3
         passed:
-          - resource-name: source-provider
-            kind: GitRepository
-            apiVersion: source.toolkit.fluxcd.io/v1beta1
-            name: my-app
-            namespace: my-namespace
-            resourceVersion: "11125094"
-    - source:
-        id: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+          resource-name: source-provider
+          kind: GitRepository
+          apiVersion: source.toolkit.fluxcd.io/v1beta1
+          name: my-app
+          namespace: my-namespace
+          resourceVersion: "11125094"
+    - source:   # <--- old revision from GitRepository. This source is still reported as another artifact still relies on it
+        id: 23156c7ac2170fe95f85a1ad42522c408e67038f8393eea6cd8551e07457c5d7 # <--- the sha256sum of the passed, revision and uri fields
         uri: https://www.some-site.com/my-project/my-repo
         revision: b974272e27c47a01e7a7da07cf8e4415bdb83dae
         passed:
-          - resource-name: source-provider
-            kind: GitRepository
-            apiVersion: source.toolkit.fluxcd.io/v1beta1
-            name: my-app
-            namespace: my-namespace
-            resourceVersion: "11125090"
-          - resource-name: source-tester
-            kind: Runnable
-            apiVersion: carto.run/v1alpha1
-            name: my-app
-            namespace: my-namespace
-            resourceVersion: "11125545"
+          resource-name: source-provider
+          kind: GitRepository
+          apiVersion: source.toolkit.fluxcd.io/v1beta1
+          name: my-app
+          namespace: my-namespace
+          resourceVersion: "11125090"
+    - source:   # <--- source artifact from the Runnable
+        id: 74cb6607d64da1e0324196517340ac7a668042f0e9dfbdd58f8a00a5d0ee9580
+        uri: https://www.some-site.com/my-project/my-repo
+        revision: b974272e27c47a01e7a7da07cf8e4415bdb83dae
+        passed:
+          resource-name: source-tester
+          kind: Runnable
+          apiVersion: carto.run/v1alpha1
+          name: my-app
+          namespace: my-namespace
+          resourceVersion: "11125545"
+        from:
+          - id: 23156c7ac2170fe95f85a1ad42522c408e67038f8393eea6cd8551e07457c5d7 # <--- The id noted above, as the source-tester consumes the source artifact from source-provider
     - image:
-        id: 373c0dc7d3cccd8ef31cd3dcf0f07b6bcc3a9ad1270db8fe43f84e26595af32a
+        id: bde9bc48c3d7a9dd20e94e138422264efca9770c9beb32ac18227eb204315a4a
         image: 10.138.0.2:5000/example-testing-sc-testing-sc@sha256:9aca70a5408b7d5615724bcb8e5eea3bf0765f95eac177433993cf6002311d9b
         passed:
-          - resource-name: image-builder
-            kind: Image
-            apiVersion: kpack.io/v1alpha2
-            name: my-app
-            namespace: my-namespace
-            resourceVersion: "11126348"
+          resource-name: image-builder
+          kind: Image
+          apiVersion: kpack.io/v1alpha2
+          name: my-app
+          namespace: my-namespace
+          resourceVersion: "11126348"
         from:
-          - id: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+          - id: 74cb6607d64da1e0324196517340ac7a668042f0e9dfbdd58f8a00a5d0ee9580
     - config:
-        id: 22fe69c924b55327ce3e8ca079d7295a947a3641b5ab74bdf7541dc680258c81
+        id: 6e0c84490ecb71a4c5a970383c05a520f4c94546033f48a81c06472fe61f1aad
         config: |
             apiVersion: serving.knative.dev/v1
             kind: Service
@@ -159,14 +166,25 @@ status:
                   imagePullSecrets:
                     - name: registry-credentials
         passed:
-            resource-name: config-provider
-            kind: ConfigMap
-            apiVersion: v1
-            name: my-app
-            namespace: my-namespace
-            resourceVersion: "11181186"
+          resource-name: config-provider
+          kind: ConfigMap
+          apiVersion: v1
+          name: my-app
+          namespace: my-namespace
+          resourceVersion: "11181186"
         from:
-          - id: 373c0dc7d3cccd8ef31cd3dcf0f07b6bcc3a9ad1270db8fe43f84e26595af32a
+          - id: bde9bc48c3d7a9dd20e94e138422264efca9770c9beb32ac18227eb204315a4a
+    - object:
+        id: a03aed19284140c8093fe65a43cb1df5d16ecc12874d76aee63e4da4d7855436
+        passed:
+          resource-name: app-deploy
+          kind: App
+          apiVersion: kappctrl.k14s.io/v1alpha1
+          name: my-app
+          namespace: my-namespace
+          resourceVersion: "21212378"
+        from:
+          - id: 6e0c84490ecb71a4c5a970383c05a520f4c94546033f48a81c06472fe61f1aad
 ```
 
 ## Rationale and Alternatives
@@ -177,4 +195,8 @@ See [RFC 14 discussion](https://github.com/vmware-tanzu/cartographer/pull/274)
 
 As cartographer iterates over the resources of the supply chain and reads values, it will save those values for writing
 to the status of the workload. This can be accomplished through the use of an `artifact-manager` patterned from the
-current implementation of the `condition-manager`.
+current implementation of the `condition-manager`. An example spike on this can be found
+[here](https://github.com/vmware-tanzu/cartographer/tree/waciuma/spike-rfc-18).
+
+[RFC 20](https://github.com/vmware-tanzu/cartographer/pull/556) is a prerequisite to achieve the `from` field behavior
+specified here.
