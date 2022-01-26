@@ -11,23 +11,41 @@ From [RFC 14](https://github.com/paulcwarren/cartographer/blob/rfc-0014-change-t
 
 ### Context
 
-At the core of the architecture of cartographer is the concept that a supply chain is the choreography of objects and their controllers.
+At the core of the architecture of cartographer is the concept that a supply chain is the choreography of objects and
+their controllers.
 
-A supply chain, as the name suggests, chains together a set of objects defining how the (status) fields of one object feeds into the spec (and sometimes data) fields of another. Thus creating an ordered chain of interacting objects. Because controllers continuously reconcile their objects towards a desired state. A supply chain is, therefore, able to choreograph an otherwise set of independent objects (and their controllers).
+A supply chain, as the name suggests, chains together a set of objects defining how the (status) fields of one object
+feeds into the spec (and sometimes data) fields of another. Thus creating an ordered chain of interacting objects.
+Because controllers continuously reconcile their objects towards a desired state. A supply chain is, therefore, able to
+choreograph an otherwise set of independent objects (and their controllers).
 
-A workload acts as input into this supply chain seeding initial values into an object to make the first controller do work. The supply chain manages this workload input data and outputs from each object as it propagates through the supply chain.
+A workload acts as input into this supply chain seeding initial values into an object to make the first controller do
+work. The supply chain manages this workload input data and outputs from each object as it propagates through the
+supply chain.
 
-It is important to note however, that a workload can have multiple inputs and input into several objects in the supply chain all at the same time. As a result when a workload changes, it may cause several controllers to do work simultaneously.
+It is important to note however, that a workload can have multiple inputs and input into several objects in the supply
+chain all at the same time. As a result when a workload changes, it may cause several controllers to do work
+simultaneously.
 
-It is also important to note that a controller may also do work outside of the work that the supply chain is choreographing. Kpack images, for example, are often choreographed as part of a supply chain. But the kpack controller may also do work in response to a base OS image update. Nothing to do with the supply chain but impacting it none-the-less. As a result the supply chain may be triggered part way through by this input.
+It is also important to note that a controller may also do work outside of the work that the supply chain is
+choreographing. Kpack images, for example, are often choreographed as part of a supply chain. But the kpack controller
+may also do work in response to a base OS image update. Nothing to do with the supply chain but impacting it
+none-the-less. As a result the supply chain may be triggered part way through by this input.
 
 ### Problem
 
-Whilst, on the one hand, the behavior described above is virtuous and generally beneficial to automated outer loop workflows. On the other hand, this behavior can be problematic for more user-centric, imperative workflows, such as those often found in the inner loop. Those of debugging and live update.
+Whilst, on the one hand, the behavior described above is virtuous and generally beneficial to automated outer loop
+workflows. On the other hand, this behavior can be problematic for more user-centric, imperative workflows, such as
+those often found in the inner loop. Those of debugging and live update.
 
 ### Providing a real world example.
 
-Given a supply chain that has several inputs, let’s say source code image and a debug flag. When a developer applies a workload after changing their source code and turning on debug. Several services in the supply chain may trigger at the same time and these inputs will traverse through the supply chain at different times. But the developer, initiating the debug session will want to wait for that specific source code change to arrive “in cluster” in an image prepped for debugging before attaching their debugger. So, it is important to know when both inputs have fully traversed the supply chain.
+Given a supply chain that has several inputs, let’s say source code image and a debug flag. When a developer applies a
+workload after changing their source code and turning on debug. Several services in the supply chain may trigger at the
+same time and these inputs will traverse through the supply chain at different times. But the developer, initiating the
+debug session will want to wait for that specific source code change to arrive “in cluster” in an image prepped for
+debugging before attaching their debugger. So, it is important to know when both inputs have fully traversed the supply
+chain.
 
 ## Detailed Explanation
 
