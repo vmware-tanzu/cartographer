@@ -17,14 +17,14 @@ status:
   artifacts:
     # oneOf(source,image,config)
     - source:
-        # the sha256 of the ordered JSON of exposed values
+        # the sha256 of the ordered JSON of all other non-from fields
         id: <SHA:string>
         # exposed fields - in this case url and revision
         uri: <:string>
         revision: <:string>
         # an ordered list of resources from which this artifact has been exposed
         passed:
-          - # name of the resource in the supply chain
+            # name of the resource in the supply chain
             resource-name: <:string>
             # GVK of the resource
             kind: <:string>
