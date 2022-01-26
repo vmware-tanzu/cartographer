@@ -216,7 +216,6 @@ git_previous_version() {
 
         git tag --sort=-v:refname -l |
                 grep -A30 $version_filter |
-                tail -n +2 |
                 grep -E '^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$' |
                 head -n1
 }
