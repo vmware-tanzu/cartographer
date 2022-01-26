@@ -3,7 +3,7 @@
 ## Summary
 
 Workload/Deliverable status should report the artifacts currently exposed by the resources of the Supply Chain/Delivery.
-Those artifacts should the values exposed, as well as the resources from which that value has been read.
+Those artifacts should report the values exposed, as well as the resources from which that value has been read.
 
 ## Motivation
 
