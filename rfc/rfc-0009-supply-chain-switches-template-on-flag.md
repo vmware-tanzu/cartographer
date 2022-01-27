@@ -1,4 +1,4 @@
-# Draft RFC 0009 Supply Chain Switches Template in single step
+# RFC 0009 Supply Chain Switches Templates
 
 ## Summary
 
@@ -45,6 +45,16 @@ would represent a code smell that this primitive is not adequate for Cartographe
 When creating objects of the supply chain, Cartographer has the workload definition available.
 Allowing the supply chain to leverage the workload would add additional power to the conditional.
 
+Each step/resource in a supply chain will continue to define a templateRef, which will continue to
+specify a single template kind (e.g. ClusterImageTemplate). Rather than specifying the name of a
+particular template, authors can provide `options` which is a list of options. An option is
+a `name` and a `selector`. The only selector adopted by this RFC is `MatchFields` (though other
+selectors can be added later). A MatchFields contains:
+- `key`: a path on the workload object. The path must be prefixed by `workload`.
+- `operator`: One of `In`, `NotIn`, `Exists`, `DoesNotExist`
+- `values`: Required and allowed only when the operator is either `In` or `NotIn`. A list of json values.
+  (e.g. both strings and integers are valid values)
+
 ```yaml
 apiVersion: kontinue.io/v1alpha1
 kind: ClusterSupplyChain
@@ -60,12 +70,12 @@ spec:
         options:                                  # <--- a list
         - name: git-template
           selector:
-            matchExpressions:
+            matchFields:
               - key: workload.spec.source.git       # <--- path to field in template context
                 operator: Exists
         - name: imgpkg-bundle-template
           selector:
-            matchExpressions:
+            matchFields:
               - key: workload.spec.source.image       # <--- path to field in template context
                 operator: Exists
 
