@@ -47,7 +47,7 @@ metadata:
 spec:
   selector:
     app: web
-  components:
+  resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
