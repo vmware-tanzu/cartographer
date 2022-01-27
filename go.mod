@@ -12,11 +12,11 @@ require (
 	go.uber.org/zap v1.20.0
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	k8s.io/api v0.23.2
+	k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver v0.23.2
 	k8s.io/apimachinery v0.23.3
 	k8s.io/apiserver v0.23.2
-	k8s.io/client-go v0.23.2
+	k8s.io/client-go v0.23.3
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	sigs.k8s.io/cluster-api v1.0.2
 	sigs.k8s.io/controller-runtime v0.11.0
