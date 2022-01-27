@@ -57,7 +57,7 @@ To get an RFC into Cartographer, first the RFC needs to be merged into the repo.
 
 Once a pull request is opened, the RFC is now in development and the following will happen:
 
-- It will be discussed in a future community meeting. Community meetings happen on a weekly cadence barring exceptions.
+- It will be discussed in a future office hours meeting. Office hours happen on a weekly cadence barring exceptions.
 - The team will discuss as much as possible in the RFC pull request directly. Any outside discussion will be summarized in the comment thread.
 - When deemed "ready", a team member will propose a "motion for final comment period (FCP)" along with a disposition of the outcome (merge, close, or postpone). This is step taken when enough discussion of the tradeoffs have taken place and the team is in a position to make a decision. Before entering FCP, a super majority of the team must sign off.
 - The FCP will last 7 days. If there's unanimous agreement among the team the FCP can close early.
