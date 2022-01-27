@@ -95,7 +95,7 @@ spec:
 ```
 
 1. As labels are present in the workload metadata, any behavior possible using just label selectors
-  will be possible using the entire templating context.
+  will be possible using the entire workload.
 
 ### Error conditions
 
