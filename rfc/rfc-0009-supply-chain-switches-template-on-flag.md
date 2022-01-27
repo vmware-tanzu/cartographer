@@ -9,14 +9,20 @@ to choose between templates within a step.
 
 ## Motivation
 
-The Developer Productivity program auto-generates workloads from CLI commands.
-Those workloads match with supplychains and templates that are written by the
-dev-prod team as well. The team would like to limit the number of supplychains
-that must be written and maintained. Small differences in workload can lead to
-needing an entirely different supply chain. For example, what code source is used.
+A team creating a developer platform on top of Cartographer reached out because
+they maintain supply chains for their platform. They have found that there are
+many small differences in workloads that necessitate making a change to one
+template or another. Currently, such a difference can be handled by:
 
-Further info on their use case can be read [here](https://docs.google.com/document/d/1TVqlNqTyCMlp_yNs9_F80QAIQSC5bxm05vSyWyeGMSw/edit).
-See also this [discussion](https://vmware.slack.com/archives/C01UX69LJCB/p1629408443051200).
+1. Using ytt within one template to define two different objects.
+2. Creating two templates for to handle the difference and then two supply chains
+   that are the same identical except for one step that uses template A or B.
+
+The team has expressed that they prefer having separate templates (as opposed to
+maintaining ytt templates) but is concerned about the number of supply chains that
+will be needed to pursue this approach. Their hope is to keep the number of
+supply chains small, even as many small differences between workloads could lead to
+a combinatoric explosion of paths to prod.
 
 ## Explanation
 
