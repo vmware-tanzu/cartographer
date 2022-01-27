@@ -53,13 +53,15 @@ spec:
         kind: ClusterSourceTemplate
         options:                                  # <--- a list
         - name: git-template
-          matchExpressions:
-            - key: workload.spec.source.git       # <--- path to field in template context
-              operator: Exists
+          selector:
+            matchExpressions:
+              - key: workload.spec.source.git       # <--- path to field in template context
+                operator: Exists
         - name: imgpkg-bundle-template
-          matchExpressions:
-            - key: workload.spec.source.image       # <--- path to field in template context
-              operator: Exists
+          selector:
+            matchExpressions:
+              - key: workload.spec.source.image       # <--- path to field in template context
+                operator: Exists
 
 ---
 apiVersion: kontinue.io/v1alpha1
@@ -79,20 +81,17 @@ spec:
 1. As labels are present in the workload metadata, any behavior possible using just label selectors
   will be possible using the entire templating context.
 
-## Open choices
+### Error conditions
 
-1. Should options be an ordered list?
-   1. Having options as an ordered list allows 'tie-breakers'. If two options are fulfillable, the earlier one in the
-      list would be chosen.
-   2. Users may be least surprised if options is not ordered. In this case, if multiple options are fulfillable,
-      Cartographer would throw a helpful error.
-2. What syntax should we use for matching fields?
-   1. Cartographer currently has ObservedConditions specifying a `key` and `value`. A condition evaluates to true
-      when the value found at the specified key (path) on the object matches the given value.
-   2. Kubernetes resources "such as Job, Deployment, ReplicaSet, and DaemonSet, support set-based requirements". The
-      syntax for matchExpressions allows for asserting `In` or `NotIn` a specified array of values, or to assert
-      that a key `Exists` or `DoesNotExist`. matchExpressions is a list of assertions, which are ANDed.
-      [link](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements) 
+Exactly one template should be chosen at each step. If no template is chosen, or multiple templates match, an error
+should be thrown.
+
+### Matching syntax
+
+Kubernetes resources "such as Job, Deployment, ReplicaSet, and DaemonSet, support set-based requirements". The
+syntax for matchExpressions allows for asserting `In` or `NotIn` a specified array of values, or to assert
+that a key `Exists` or `DoesNotExist`. matchExpressions is a list of assertions, which are ANDed.
+[link](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements)
 
 ## Notes
 
