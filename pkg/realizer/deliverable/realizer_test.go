@@ -88,10 +88,12 @@ var _ = Describe("Realize", func() {
 		Expect(stampedObjects).To(HaveLen(2))
 	})
 
-	It("returns any error encountered realizing a resource", func() {
-		resourceRealizer.DoReturns(nil, nil, errors.New("realizing is hard"))
+	It("returns the first error encountered realizing a resource and continues to realize", func() {
+		resourceRealizer.DoReturnsOnCall(0, nil, nil, errors.New("realizing is hard"))
+		resourceRealizer.DoReturnsOnCall(1, &unstructured.Unstructured{}, nil, nil)
+
 		stampedObjects, err := rlzr.Realize(ctx, resourceRealizer, delivery)
 		Expect(err).To(MatchError("realizing is hard"))
-		Expect(stampedObjects).To(HaveLen(0))
+		Expect(stampedObjects).To(HaveLen(1))
 	})
 })
