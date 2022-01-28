@@ -43,7 +43,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
-	var errorToReturn error
+	var firstError error
 
 	for i := range delivery.Spec.Resources {
 		resource := delivery.Spec.Resources[i]
@@ -58,13 +58,13 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		if err != nil {
 			log.Error(err, "failed to realize resource")
 
-			if errorToReturn == nil {
-				errorToReturn = err
+			if firstError == nil {
+				firstError = err
 			}
 		}
 
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return stampedObjects, errorToReturn
+	return stampedObjects, firstError
 }
