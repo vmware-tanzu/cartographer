@@ -50,7 +50,7 @@ spec:
   imagePath: $(status.latestImage)$
   observedCompletion:
     succeeded:
-      - key: status.conditions[?(@.type=="Succeeded")].status
+      - key: status.conditions[?(@.type=="Ready")].status
         value: True
 ```
 
