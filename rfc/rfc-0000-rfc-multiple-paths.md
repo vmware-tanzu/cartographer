@@ -10,7 +10,7 @@
 # Summary
 [summary]: #summary
 
-Extend [RFC 0009] to support input matching in options. This provides a mechanism for an option to be chosen as part of 
+Extend [RFC 0009](https://github.com/vmware-tanzu/cartographer/blob/rfc-0009-supply-chain-switches-template-on-flag/rfc/rfc-0009-supply-chain-switches-template-on-flag.md) to support input matching in options. This provides a mechanism for an option to be chosen as part of 
 a path through a complex supply chain.
 
 # Motivation
