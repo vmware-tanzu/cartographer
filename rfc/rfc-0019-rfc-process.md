@@ -106,8 +106,3 @@ The basic format of RFCs was [invented in the 1960s by Steve Crocker](https://en
     - FCP lasts 3 days
 - [IETF](https://www.rfc-editor.org/rfc/rfc2026.txt)
 
-# Unresolved Questions
-[unresolved-questions]: #unresolved-questions
-
-- What clearly defines a "substantial" change?
-- How long should the Final Comment Period be?
