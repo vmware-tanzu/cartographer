@@ -117,7 +117,7 @@ on the status) matches another field (e.g. on the spec).
   defined by a path and value. When the object's observedGeneration == generation, and the value at the
   specified path matches the stated value, then this condition is met. 
 - An observed matches: a list of matches. Each match is a definition of two paths. When the values at the two paths are
-  the same, then this condition is met. This can be used for resources that do not report observedCondition, but whose
+  the same, then this condition is met. This can be used for resources that do not report observedGeneration, but whose
   status does include relevant fields in the spec.
 
 ### Example
