@@ -84,6 +84,7 @@ RFCs that are rejected will no longer be pulled into the `rfc/` directory.
 [drawbacks]: #drawbacks
 
 Though RFCs are intended to be lightweight, this introduces extra process than what we're doing today. The additional work may make consistency hard.
+In not archiving rejected/unapproved RFCs, Cartographer may lose context of past discussions and decisions.
 
 # Alternatives
 [alternatives]: #alternatives
