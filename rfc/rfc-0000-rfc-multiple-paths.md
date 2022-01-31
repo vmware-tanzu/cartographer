@@ -159,8 +159,6 @@ AND
 
 > It's inputs are fulfilled using these same rules.
 
-<TBD>: Empirical tests for priority lists.
-
 Options are a priority list to disambiguate inputs that match in more than one case. It should still be possible
 to warn supply chain authors of unreachable components. Each of source-tester's options are reachable because each input
 has a different 'selection set' 
@@ -178,6 +176,8 @@ has a different 'selection set'
           - resource: source-provider
             name: source
 ```
+
+TBD: Empirical tests for priority lists.
 
 # Migration
 [migration]: #migration
