@@ -84,9 +84,10 @@ updates the `latestGoodOutput`. But the status is still Ready:unknown, so Cartog
 The second fails and results in `Ready:false`. Cartographer will not propagate any output because `Ready:false`.
 How can this be addressed?
 
-Insufficient Strategy:
+#### Insufficient Strategy
+
 Cartographer could wait to submit a new spec until the previous spec has finished reconciling. This would still need
-to be paired with only ready when Ready:true (as demonstrated above). But even more than that we can see that this will
+to be paired with only reading when Ready:true (as demonstrated above). But even more than that we can see that this will
 either leave Carto vulnerable to an equivalent problem or introduce potential bottlenecks in the supply chain. The
 difference is in the method of submitting waiting updates.
 a. Assume a strategy of not submitting while work is occurring, when work is done, submit the most recent update
@@ -97,7 +98,8 @@ b. Again assume a strategy of not submitting while work is occurring. This time,
 update (first in the queue). This will result in every update being submitted. But it will be slow. If resource A takes
 a long time to reconcile, users may not want to wait on outdated updates.
 
-Happy Middle Ground Strategy:
+#### Happy Middle Ground Strategy
+
 As mentioned, strategy A pops the most recent update from a stack. This suggests an optimal strategy. Pop updates from
 the stack until an update produces a good output. At that point the stack can be cleared. This assures that the most
 recent good update results in an output, but does not waste time needlessly calculating the output of updates that have
@@ -167,6 +169,14 @@ time to reconcile, longer than the time between 2 commits. In this scenario, res
 state. Therefore, Cartographer will not be able to read the output of the resource. As a result, the resources in the
 supply chain after resource A will never receive updates. Sad hypothetical, [the devs owning the workload will have to
 take a chocolate break at some point](https://xkcd.com/303/).
+
+#### Alternative
+
+By constraining Cartographer to only read when reconciliation is complete and successful, Carto achieves its goal of
+tracing. By _further_ constraining Cartographer to only update when reconciliation is complete and successful (or only
+updating X times while reconciliation is ongoing), Cartographer can avoid completely starving the supply chain on
+frequent updates. If Carto is to withhold some updates, it should then apply them using the stack approach outlined
+[above](#how-to-ensure-the-most-recent-successful)
 
 ### Deadlock
 
