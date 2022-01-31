@@ -1,11 +1,12 @@
-# Draft RFC 20 Update Resources Only After Success/Failure
+# Draft RFC 20 Read Resources Only When In Success State
 
 ## Summary
 
-Cartographer is currently unable to determine when an input to a resource has reached success, failed, or is still
-processing. Making Carto aware of status indications is not sufficient, as frequent updates to a resource could keep it
-in a constant state of 'processing', even as it succeeds and fails on multiple successive inputs. Carto should wait
-until an input has resulted in success or failure before updating the resource with new input. 
+Cartographer is currently unable to connect an output of a resource to the inputs of said resource. Cartographer is
+also unable to determine when an input to a resource has reached success, failed, or is still processing.
+Templates should enable authors to specify the indications of successful reconciliation. Given that, Carto should
+only read the status of an object when said object has completed reconciling and is in a good state. (Updates to the
+object may happen continuously)
 
 ## Motivation
 
