@@ -10,11 +10,12 @@ object may happen continuously)
 
 ## Motivation
 
-Connecting an output of a resource to an input is necessary for establishing provenance. That is to state, "The app 
-currently running on the cluster is a result of commit X," it is necessary to tie a resource output to the input that
-produced it. Waiting for success/failure before update achieves this.
+Connecting an output of a resource to an input is necessary for establishing tracing. That is to state, "The app
+currently running on the cluster is a result of resource X producing Y which was fed into resource Z which produced..."
+it is necessary to tie a resource output to the input that produced it. Waiting for success/failure before update
+achieves this.
 
-Tieing inputs to outputs also allows Carto to harden supply chains to tampering. Currently, an enemy could update a
+Tying inputs to outputs also allows Carto to harden supply chains to tampering. Currently, an enemy could update a
 resource. Carto will not read said resource without first updating it with the proper spec. But the resource may still
 produce the enemy output (followed by the correct output). Carto must be able to associate inputs to outputs if it is
 not to propagate the enemy output.
@@ -159,7 +160,7 @@ There are a few limitations to the current setup of observedCompletion and Obser
 
 ## Tradeoffs
 
-### The performance cost of correct attestation
+### The performance cost of tracing
 
 Consider workload X, which is updated quickly and continuously with new commits. Assume that resource A takes a long
 time to reconcile, longer than the time between 2 commits. In this scenario, resource A will remain in Ready:Unknown
