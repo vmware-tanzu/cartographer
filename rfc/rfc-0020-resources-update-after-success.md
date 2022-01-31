@@ -26,8 +26,8 @@ Cartographer can only read the status of an object when said object has complete
 
 Other proposed solutions are inadequate as illustrated in scenarios below.
 
-_For the purposes of this discussion, we will assert only observer the status of an object when it represents the
-current spec of the object. Strategies for assuring this (e.g. checking that .metadata.generation ==
+_For the purposes of this discussion, we will assert that Carto only observes the status of an object when it
+represents the current spec of the object. Strategies for assuring this (e.g. checking that .metadata.generation ==
 .status.observedGeneration) are discussed in the implementation section._
 
 Assumptions for the scenario:
