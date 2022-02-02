@@ -61,7 +61,7 @@ status:
         uri: <:string>
         revision: <:string>
         # the object which produced this artifact
-        passed:
+        resource:
           # name of the resource in the supply chain
           resource-name: <:string>
           # GVK of the resource
@@ -98,7 +98,7 @@ status:
         id: 146c7d74eb956191487236b579e8e4e68462fc7d97c4f1a4677b0ded39e2a3ca
         uri: https://www.some-site.com/my-project/my-repo
         revision: b31d09004503e52e84ff633e547f4d5b40503ab3
-        passed:
+        resource:
           resource-name: source-provider
           kind: GitRepository
           apiVersion: source.toolkit.fluxcd.io/v1beta1
@@ -109,7 +109,7 @@ status:
         id: 23156c7ac2170fe95f85a1ad42522c408e67038f8393eea6cd8551e07457c5d7 # <--- the sha256sum of the passed, revision and uri fields
         uri: https://www.some-site.com/my-project/my-repo
         revision: b974272e27c47a01e7a7da07cf8e4415bdb83dae
-        passed:
+        resource:
           resource-name: source-provider
           kind: GitRepository
           apiVersion: source.toolkit.fluxcd.io/v1beta1
@@ -120,7 +120,7 @@ status:
         id: 74cb6607d64da1e0324196517340ac7a668042f0e9dfbdd58f8a00a5d0ee9580
         uri: https://www.some-site.com/my-project/my-repo
         revision: b974272e27c47a01e7a7da07cf8e4415bdb83dae
-        passed:
+        resource:
           resource-name: source-tester
           kind: Runnable
           apiVersion: carto.run/v1alpha1
@@ -132,7 +132,7 @@ status:
     - image:
         id: bde9bc48c3d7a9dd20e94e138422264efca9770c9beb32ac18227eb204315a4a
         image: 10.138.0.2:5000/example-testing-sc-testing-sc@sha256:9aca70a5408b7d5615724bcb8e5eea3bf0765f95eac177433993cf6002311d9b
-        passed:
+        resource:
           resource-name: image-builder
           kind: Image
           apiVersion: kpack.io/v1alpha2
@@ -165,7 +165,7 @@ status:
                         runAsUser: 1000
                   imagePullSecrets:
                     - name: registry-credentials
-        passed:
+        resource:
           resource-name: config-provider
           kind: ConfigMap
           apiVersion: v1
@@ -176,7 +176,7 @@ status:
           - id: bde9bc48c3d7a9dd20e94e138422264efca9770c9beb32ac18227eb204315a4a
     - object:
         id: a03aed19284140c8093fe65a43cb1df5d16ecc12874d76aee63e4da4d7855436
-        passed:
+        resource:
           resource-name: app-deploy
           kind: App
           apiVersion: kappctrl.k14s.io/v1alpha1
