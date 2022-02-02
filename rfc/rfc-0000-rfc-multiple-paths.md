@@ -19,7 +19,6 @@ a path through a complex supply chain.
 The use cases supported by this RFC are any scenario where changing content in the workload/delivery means that more or less
 resources in the supply chain should be stamped out.
 
-
 A concrete example is when a workload indicates it `has-tests`, and we want to stamp a tekton pipeline runner for those tests, or
 not stamp the resoruce if there are no tests.
 
@@ -41,8 +40,6 @@ workload
     --> source-tester
        --> configure
 ```
-
-
 
 # What it is
 [what-it-is]: #what-it-is
@@ -187,17 +184,33 @@ This does not break the existing API.
 # Drawbacks
 [drawbacks]: #drawbacks
 
-<TBD>
+There might be a tendancy to build only one supply chain, and that implies singular ownership. That is
+if different sections of a business want control over specific domains within a supply chain (eg the build team
+v.s the security team), their `opinions` would need to merge at the supply chain. This may not offer fine-grained
+enough role permissions.
 
-Why should we *not* do this?
+A definite mitigation is to use [snippets](#the-snippets-solution) for 'sectionable' resources within an organization.
+I would expect Snippets to support the options syntax laid out in this RFC anyway, to continue to support the 
+same easy-to-reason-about design.
+
+My concern is this adds complexity without knowing how valuable it is to users.
 
 # Alternatives
 [alternatives]: #alternatives
 
-<TBD>
-- What other designs have been considered?
-- Why is this proposal the best?
-- What is the impact of not doing this?
+### Multiple Supply chains alternative
+It's my opinion that we should also support the full selector syntax (incl `matchFields`) at `spec.selector`, thus
+supporting using separate (although often very similar) SupplyChains for different inputs. This is not an exclusive
+solution, and would work well alongside this proposal. The downside of this is how many supply chains that
+would require maintaining and updating at the same time, especially without support for multi-pathing within
+a supply chain.
+
+### The snippet's solution
+The [Snippets RFC](https://github.com/vmware-tanzu/cartographer/blob/rfc-0005-support-composing-supply-chains/rfc/rfc-0005-support-composing-supply-chains.md)
+is another solution for composing multiple paths through a supply chain. For the use-case of selecting or skipping
+resources, it differs from this one:
+1. In the style of composition, using nested sub-supply chains vs. a single depth DAG.
+2. Requiring another CRD that user's would need to query to see the shape of a single supply chain.
 
 # Prior Art
 [prior-art]: #prior-art
