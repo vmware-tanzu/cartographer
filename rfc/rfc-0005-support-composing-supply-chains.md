@@ -117,6 +117,122 @@ spec:
 
 ```
 
+## Use Case
+
+RFC 9 introduced the ability for a resource in a supply chain to swap 1-1 between
+different templates, based on fields present on the workload. There is still
+need to allow a supply chain to swap 1-N templates, that is to allow an optional
+path through a supply chain to be of arbitrary length, unbound by the length of
+other paths. Snippets can allow this. A resource could choose between a regular
+template and a snippet. That snippet can be of arbitrary length.
+
+### Example
+
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: supply-chain
+spec:
+  selector:
+    matchLabels:
+      workload-type: web
+
+  resources:
+    - name: provide-image
+      templateRef:
+        kind: ClusterImageTemplate
+        options:
+          - name: building-image
+            selector:
+              matchFields:
+                or:
+                  - key: "spec.source.url"
+                    operation: exists
+                  - key: "spec.source.image"
+                    operation: exists
+          - name: image-provider
+            selector:
+              matchFields:
+                { key: "spec.image", operation: exists }
+
+    - name: configure
+      templateRef:
+        kind: ClusterConfigTemplate
+        name: configure
+      images:
+        - resource: provide-image
+          name: image
+
+    - name: gitops
+      templateRef:
+        kind: ClusterTemplate
+        options:
+          - name: git-pusher
+            selector:
+              matchFields:
+                key: "metadata.labels.target"
+                operation: In
+                value: ["gitops"]
+          - name: registry-pusher
+            selector:
+              matchFields:
+                key: "metadata.labels.target"
+                operation: In
+                value: ["repository"]
+      configs:
+        - resource: configure
+          name: config
+
+---
+apiVersion: kontinue.io/v1alpha1
+kind: ClusterSupplyChainSnippet
+metadata:
+  name: building-image
+spec:
+  resources:
+    - name: provide-source
+      templateRef:
+        kind: ClusterSourceTemplate
+        options:
+          - name: providing-and-testing-source
+            selector:
+              matchFields:
+                key: "metadata.labels.has-tests"
+                operation: In
+                value: ["true"]
+          - name: source-provider
+            selector:
+              matchFields:
+                key: "metadata.labels.has-tests"
+                operation: NotIn
+                value: ["true"]
+
+---
+apiVersion: kontinue.io/v1alpha1
+kind: ClusterSupplyChainSnippet
+metadata:
+  name: providing-and-testing-source
+spec:
+  resources:
+    - name: provide-source
+      templateRef:
+        kind: ClusterSourceTemplate
+        options:
+          - name: source-from-git-repo
+            selector:
+              matchFields:
+                { key: "spec.source.url", operation: exists }
+          - name: source-from-image-registry
+            selector:
+              matchFields:
+                { key: "spec.source.image", operation: exists }
+    - name: test-source
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: source-tester
+```
+
 ## Cross References and Prior Art
 
 - If RFC 0004 is adopted, this should become a _Blueprint_ Snippet (or more
