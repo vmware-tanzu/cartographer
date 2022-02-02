@@ -61,24 +61,21 @@ resources adds cognitive and code overhead in exchange for dubious value.
 ### Example
 ```yaml
 apiVersion: kontinue.io/v1alpha1
-kind: SupplyChainSnippet
+kind: ClusterSupplyChainSnippet
 metadata:
   name: responsible-ops-middle
 spec:
-  components:
+  resources:
     - name: built-image-provider
       templateRef:
-        kind: BuildTemplate
+        kind: ClusterImageTemplate
         name: kpack-battery
       sources:
         - component: source-provider
           name: solo-source-provider
-      params:
-        - name: java-version
-          path: $(workload.metadata.nebhale-io/java-version)$
     - name: opinion-service-workload-template-provider
       templateRef:
-        kind: OpinionTemplate
+        kind: ClusterConfigTemplate
         name: opinion-service-battery
       images:
         - component: built-image-provider
@@ -89,22 +86,22 @@ spec:
 ---
 
 apiVersion: kontinue.io/v1alpha1
-kind: SupplyChain
+kind: ClusterSupplyChain
 metadata:
   name: responsible-ops-composed
 spec:
   selector:
     integration-test: "my-workload"
 
-  components:
+  resources:
     - name: source-provider
       templateRef:
-        kind: SourceTemplate
+        kind: ClusterSourceTemplate
         name: git-repository-battery
 
     - name: composed-supply-chain-snippet
       templateRef:
-        kind: SupplyChainSnippet
+        kind: ClusterSupplyChainSnippet
         name: responsible-ops-middle
       sources:
         - component: source-provider
@@ -112,9 +109,9 @@ spec:
 
     - name: cluster-sink
       templateRef:
-        kind: ConfigTemplate
+        kind: ClusterTemplate
         name: cluster-sink-battery
-      opinions:
+      config:
         - component: composed-supply-chain-snippet
           name: singular-workload-template-provider
 
