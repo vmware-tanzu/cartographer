@@ -1,8 +1,9 @@
-# Draft RFC 0005 Support composing supply chains
+# Draft RFC 0005 Snippets: Support composing supply chains
 
 ## Summary
 
-{{Short description of the RFC}}
+Allow users to define a new resource type: a snippet. A snippet itself defines
+templates to be stamped out (similar to a supply chain).
 
 ## Motivation
 
