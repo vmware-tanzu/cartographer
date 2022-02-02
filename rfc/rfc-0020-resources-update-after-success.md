@@ -178,11 +178,17 @@ updating X times while reconciliation is ongoing), Cartographer can avoid comple
 frequent updates. If Carto is to withhold some updates, it should then apply them using the stack approach outlined
 [above](#how-to-ensure-the-most-recent-successful)
 
+Note that if Cartographer is going to wait on updating while a resource reconciles, there is a danger that the resource
+will get into a bad state; some infinite loop where it never exits ready:unknown. Because of that, Cartographer should
+have some timeout after which it would update a resource even if it is not yet ready:true/ready:false. Note that this
+does not affect the ability to match inputs with outputs, as Cartographer would still only read when Ready:true.
+
 ### Deadlock
 
 Currently, Cartographer basks in the _eternal sunshine of the spotless mind_; each reconcile loop for resource N it can
 only pass on the values it _just_ read for resource N-1, N-2, N-3... So if any of those resources are in a bad state,
-a supply chain is locked. Resources like our example resource A are good actors in this system, as they constantly
+a supply chain is locked. E.g. until resource N-2 outputs a value, resource N-3 that relies on that value can never be
+created. Resources like our example resource A are good actors in this system, as they constantly
 report the most recent good output. After a single good input in the life of object A, it would always pass a value
 and never be a concern for stopping the supply chain.
 
@@ -197,12 +203,13 @@ When Cartographer sees a good value, it must keep a _memento_. **Each time a new
 (Ready:false or Ready:unknown) Cartographer should propagate the most recent cached values to the downstream objects.**
 
 The implementation for such a cache is thankfully proposed in
-[RFC 18](https://github.com/vmware-tanzu/cartographer/pull/519). One additional `artifact` field will be necessary to
-those proposed in RFC 18, a timestamp. RFC 18 currently assumes that multiple artifacts from a single object could be
+[RFC 18](https://github.com/vmware-tanzu/cartographer/pull/519). RFC 18 currently assumes that multiple artifacts from a single object could be
 cached at once (in the case where a downstream object is still a child of the earlier state; that the new state has
 not propagated through entire supply chain). Cartographer will need to determine which cached value to pass to
 downstream objects. There is no currently proposed field that can be leveraged for this determination (resourceVersions
-are not guaranteed to increase monotonically).
+are not guaranteed to increase monotonically). One additional `artifact` field will be necessary to
+those proposed in RFC 18, a timestamp. (Alternatively Carto could flag the most recent artifact from each resource with
+a `latest` flag.)
 
 ## Possible Extensions
 
