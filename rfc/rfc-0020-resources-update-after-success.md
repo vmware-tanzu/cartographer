@@ -1,6 +1,6 @@
 # Draft RFC 20 Read Resources Only When In Success State
 
-## Summary
+# Summary
 
 Cartographer is currently unable to connect an output of a resource to the inputs of said resource. Cartographer is
 also unable to determine when an input to a resource has reached success, failed, or is still processing.
@@ -8,7 +8,7 @@ Templates should enable authors to specify the indications of successful reconci
 only read the status of an object when said object has completed reconciling and is in a good state. (Updates to the
 object may happen continuously)
 
-## Motivation
+# Motivation
 
 Connecting an output of a resource to an input is necessary for establishing tracing. That is to state, "The app
 currently running on the cluster is a result of resource X producing Y which was fed into resource Z which produced..."
@@ -20,7 +20,7 @@ resource. Carto will not read said resource without first updating it with the p
 produce the enemy output (followed by the correct output). Carto must be able to associate inputs to outputs if it is
 not to propagate the enemy output.
 
-## Proposed Solution
+# Proposed Solution
 
 Cartographer can only read the status of an object when said object has completed reconciling and is in a good state.
 
@@ -77,37 +77,9 @@ By definition, Ready:true indicates that the current output is the result of rec
 against the current state of the world and the output of the most reconcile was good." Other strategies are
 insufficient.
 
-### How to ensure the most recent successful?
+# Implementation details
 
-Let us again consider resource A. Two updates are made to resource A in quick succession. The first succeeds and
-updates the `latestGoodOutput`. But the status is still Ready:unknown, so Cartographer does not propagate this output.
-The second fails and results in `Ready:false`. Cartographer will not propagate any output because `Ready:false`.
-How can this be addressed?
-
-#### Insufficient Strategy
-
-Cartographer could wait to submit a new spec until the previous spec has finished reconciling. This would still need
-to be paired with only reading when Ready:true (as demonstrated above). But even more than that we can see that this will
-either leave Carto vulnerable to an equivalent problem or introduce potential bottlenecks in the supply chain. The
-difference is in the method of submitting waiting updates.
-a. Assume a strategy of not submitting while work is occurring, when work is done, submit the most recent update
-(pop from the stack). Here we find a problem analogous to the original. Consider update 1. While it works, update 2
-(good) and 3 (bad) come in. Once update 1 finishes processing, update 3 will be submitted. Update 3, being bad, does
-not result in a valid output. And the latest update that would produce an output (update 2) is never submitted. Bad Carto.
-b. Again assume a strategy of not submitting while work is occurring. This time, when work is done, submit the earliest
-update (first in the queue). This will result in every update being submitted. But it will be slow. If resource A takes
-a long time to reconcile, users may not want to wait on outdated updates.
-
-#### Happy Middle Ground Strategy
-
-As mentioned, strategy A pops the most recent update from a stack. This suggests an optimal strategy. Pop updates from
-the stack until an update produces a good output. At that point the stack can be cleared. This assures that the most
-recent good update results in an output, but does not waste time needlessly calculating the output of updates that have
-already been superseded.
-
-## Implementation details
-
-### Use ObservedCompletion and ObservedMatch (from DeploymentTemplate)
+## Use ObservedCompletion and ObservedMatch (from DeploymentTemplate)
 
 Templates that expose outputs (SourceTemplate, ImageTemplate...) can include success conditions. These can include
 expected values at a given path on the stamped object. These can alternately be an expectation that one field (e.g.
@@ -120,7 +92,7 @@ on the status) matches another field (e.g. on the spec).
   the same, then this condition is met. This can be used for resources that do not report observedGeneration, but whose
   status does include relevant fields in the spec.
 
-### Example
+## Example
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -142,7 +114,7 @@ spec:
         value: True
 ```
 
-### Handling non-reconciling objects
+## Handling non-reconciling objects
 
 Some objects are not reconciled and are immediately valid (for example, configmaps). How should these be handled?
 
@@ -153,79 +125,101 @@ Some objects are not reconciled and are immediately valid (for example, configma
 3. An additional exclusive field (one that could be specified instead of ObservedMatches and ObservedCompletion) could
    be defined. This field could be `AlwaysSuccessful: True`
 
-### Limitations
+## Limitations
 
 There are a few limitations to the current setup of observedCompletion and ObservedMatches:
 1. ObservedCompletion is limited to matching a single path and value. If more than one path must be interrogated,
    this spec is not sufficient.
 2. ObservedMatches cannot define a failure state.
 
-## Tradeoffs
+# Possible Extensions / Open Questions
 
-### The performance cost of tracing
+## Limit Cartographer updating when reconciliation is not complete
+We must limit Cartographer from reading unless the object is in a successful state. We can additionally limit
+Cartographer's updating of a resource when it is reconciling/in an unknown state. There are two use cases for
+this additional limit, both revolving around inputs to an object that come in faster than the object can
+produce outputs.
 
-Consider workload X, which is updated quickly and continuously with new commits. Assume that resource A takes a long
-time to reconcile, longer than the time between 2 commits. In this scenario, resource A will remain in Ready:Unknown
-state. Therefore, Cartographer will not be able to read the output of the resource. As a result, the resources in the
-supply chain after resource A will never receive updates. Sad hypothetical, [the devs owning the workload will have to
-take a chocolate break at some point](https://xkcd.com/303/).
+### Avoid hidden successes
 
-#### Alternative
+Consider object A. Two updates are made to object A in quick succession. The first succeeds and
+updates the `latestGoodOutput`. But the status is still Ready:unknown, so Cartographer does not propagate this output.
+The second fails and results in `Ready:false`. Cartographer will not propagate any output because `Ready:false`. This
+hides the success of the first update.
 
-By constraining Cartographer to only read when reconciliation is complete and successful, Carto achieves its goal of
-tracing. By _further_ constraining Cartographer to only update when reconciliation is complete and successful (or only
-updating X times while reconciliation is ongoing), Cartographer can avoid completely starving the supply chain on
-frequent updates. If Carto is to withhold some updates, it should then apply them using the stack approach outlined
-[above](#how-to-ensure-the-most-recent-successful)
+### Avoid starvation during fast commits
+
+Consider object B. A stream of updates are made to object B, each update made before the last update completes.
+In this scenario, object B will remain in Ready:Unknown state. Therefore, Cartographer will not be able to read
+the output of the resource. As a result, the resources in the supply chain after resource B will never receive
+updates. Sad hypothetical, [will the devs owning the workload simply have to take a chocolate break](https://xkcd.com/303/)?
+
+### Strategy
+
+By waiting until reconciliation is complete, Cartographer can prevent the situations above (hidden success
+and starvation). If every update is applied sequentially and is allowed to run to completion, there will be a steady
+stream of work for downstream resources and no success will be missed.
+
+But such a sequential strategy would be very inefficient. Users will care far more about the most recent successful
+change than about every change. Instead of submitting updates from a queue, Cartographer should pop updates from a
+stack. Updates should be popped from the stack until an update produces a good output. At that point the stack can
+be cleared. This assures that the most recent good update results in an output, but does not waste time needlessly
+calculating the output of updates that have already been superseded.
+
+### Example
+
+Object A recieves update 1. While processing, it receives update 2 (good), 3 (good), 4 (bad). When update 1 completes,
+update 4 is applied. Because update 4 is bad, when it completes object A is in a failure state. So update 3 is popped
+from the stack. This is a good update and eventually object A is in a successful state. As a result the stack of older
+updates (update 2) can be cleared without ever being processed.
 
 Note that if Cartographer is going to wait on updating while a resource reconciles, there is a danger that the resource
 will get into a bad state; some infinite loop where it never exits ready:unknown. Because of that, Cartographer should
 have some timeout after which it would update a resource even if it is not yet ready:true/ready:false. Note that this
 does not affect the ability to match inputs with outputs, as Cartographer would still only read when Ready:true.
 
-### Deadlock
+## Prevent Supply Chain Deadlock When Object is not Ready:True
 
 Currently, Cartographer basks in the _eternal sunshine of the spotless mind_; each reconcile loop for resource N it can
 only pass on the values it _just_ read for resource N-1, N-2, N-3... So if any of those resources are in a bad state,
 a supply chain is locked. E.g. until resource N-2 outputs a value, resource N-3 that relies on that value can never be
-created. Resources like our example resource A are good actors in this system, as they constantly
-report the most recent good output. After a single good input in the life of object A, it would always pass a value
+created. Resources like our example resource A (kpack, runnable) are good actors in this system, as they constantly
+report the most recent good output. After a single good input in the life of object A, they always pass a value
 and never be a concern for stopping the supply chain.
 
-With this proposal, even good teammate resource A can lock downstream resources simply by updating. If no other changes
-are undertaken, Cartographer would be unable to pass a value from resource A to a downstream resource when resource A
-had the status Ready:false or even Ready:unknown. Thus Cartographer could not stamp out the desired spec of the
-downstream resource. Without knowledge of the desired spec of the downstream resource, Cartographer would not read
-the status of the downstream resource. The supply chain would grind to a halt.
+If we only read status when Ready:true, even a resource reporting `latestGoodOutput` will lock downstream resources
+when it is updating. If no other changes are undertaken, Cartographer would be unable to pass a value from resource A
+to a downstream resource when resource A had the status Ready:false or even Ready:unknown. Thus Cartographer could
+not stamp out the desired spec of the downstream resource. Without knowledge of the desired spec of the downstream
+resource, Cartographer would not read the status of the downstream resource. The supply chain would grind to a halt.
 
+### Cache outputs
 When Cartographer sees a good value, it must keep a _memento_. **Each time a new output is readable on an object
 (Ready:true), Cartographer must cache that value. Whenever Cartographer cannot read the value from an object
 (Ready:false or Ready:unknown) Cartographer should propagate the most recent cached values to the downstream objects.**
 
 The implementation for such a cache is thankfully proposed in
-[RFC 18](https://github.com/vmware-tanzu/cartographer/pull/519). RFC 18 currently assumes that multiple artifacts from a single object could be
-cached at once (in the case where a downstream object is still a child of the earlier state; that the new state has
-not propagated through entire supply chain). Cartographer will need to determine which cached value to pass to
-downstream objects. There is no currently proposed field that can be leveraged for this determination (resourceVersions
-are not guaranteed to increase monotonically). One additional `artifact` field will be necessary to
+[RFC 18](https://github.com/vmware-tanzu/cartographer/pull/519). RFC 18 currently assumes that multiple artifacts from
+a single object could be cached at once (in the case where a downstream object is still a child of the earlier state;
+that the new state has not propagated through entire supply chain). Cartographer will need to determine which cached
+value to pass to downstream objects. There is no currently proposed field that can be leveraged for this determination
+(resourceVersions are not guaranteed to increase monotonically). One additional `artifact` field will be necessary to
 those proposed in RFC 18, a timestamp. (Alternatively Carto could flag the most recent artifact from each resource with
 a `latest` flag.)
 
-## Possible Extensions
-
-### Allow boolean operations
+## Allow boolean operations
 
 - An OR condition: An OR contains a list of conditions. When any is met, the OR condition is met.
 - An AND condition: A list of conditions. When all conditions are met, this condition is met. Meant primarily for
   nesting in OR conditions (as AND is the default relation of a list of conditions).
 - A NOT condition: holds a condition. The NOT condition is true only when its condition is false.
 
-### Read other objects on the cluster
+## Read other objects on the cluster
 
 It may be useful to compare the stamped object to another object on the cluster. Or to simply read a value from
 another object on the cluster.
 
-## Cross References and Prior Art
+# Cross References and Prior Art
 
 - The Deployment Template currently requires either an `ObservedMatches` or `ObservedCompletion` field.
 - kpack includes a [waitRules](https://carvel.dev/kapp/docs/v0.45.0/config/#waitrules) field. (hat tip
