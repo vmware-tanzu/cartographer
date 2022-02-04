@@ -38,7 +38,7 @@ jobs:
       - name: setup base dependencies
         run: |
           sudo apt update && sudo apt install -y curl tar
-          ./hack/ci/install-binaries.sh ko gh
+          ./hack/ci/install-binaries.sh ko gh grype
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
@@ -52,6 +52,16 @@ jobs:
         run: |
           ./hack/docker-login.sh
           ./hack/release.sh
+
+      - name: scan source
+        run: |-
+          grype .
+
+      - name: scan image
+        env:
+          DOCKER_CONFIG: "~/.docker"
+        run: |-
+          grype $(cat ./release/cartographer.yaml | grep ' image: ' | awk '{print $NF}')
 
       - name: submit github release
         env:
