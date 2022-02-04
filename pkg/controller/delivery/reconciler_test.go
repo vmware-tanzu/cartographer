@@ -31,22 +31,27 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/delivery"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 )
 
 var _ = Describe("delivery reconciler", func() {
 	var (
-		repo       *repositoryfakes.FakeRepository
-		reconciler delivery.Reconciler
-		ctx        context.Context
-		req        reconcile.Request
-		out        *Buffer
+		repo              *repositoryfakes.FakeRepository
+		dependencyTracker *dependencyfakes.FakeDependencyTracker
+		reconciler        delivery.Reconciler
+		ctx               context.Context
+		req               reconcile.Request
+		out               *Buffer
 	)
 
 	BeforeEach(func() {
 		repo = &repositoryfakes.FakeRepository{}
 
+		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
+
 		reconciler = delivery.Reconciler{
-			Repo: repo,
+			Repo:              repo,
+			DependencyTracker: dependencyTracker,
 		}
 
 		out = NewBuffer()
@@ -71,31 +76,55 @@ var _ = Describe("delivery reconciler", func() {
 					Name:       "my-new-delivery",
 					Generation: 99,
 				},
-				Spec: v1alpha1.DeliverySpec{
-					Resources: []v1alpha1.DeliveryResource{
-						{
-							Name: "first-resource",
-							TemplateRef: v1alpha1.DeliveryTemplateReference{
-								Kind: "ClusterSourceTemplate",
-								Name: "my-source-template",
-							},
-						},
-						{
-							Name: "second-resource",
-							TemplateRef: v1alpha1.DeliveryTemplateReference{
-								Kind: "ClusterTemplate",
-								Name: "my-final-template",
-							},
-						},
-					},
-				},
+				Spec: v1alpha1.DeliverySpec{},
 			}
 			repo.GetDeliveryReturns(apiDelivery, nil)
 		})
 
 		Context("all referenced templates exist", func() {
+			var (
+				firstTemplate  *v1alpha1.ClusterSourceTemplate
+				secondTemplate *v1alpha1.ClusterTemplate
+			)
 			BeforeEach(func() {
-				repo.GetDeliveryTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
+				firstTemplate = &v1alpha1.ClusterSourceTemplate{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterSourceTemplate",
+						APIVersion: "carto.run/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-source-template",
+					},
+				}
+
+				secondTemplate = &v1alpha1.ClusterTemplate{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterTemplate",
+						APIVersion: "carto.run/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-final-template",
+					},
+				}
+
+				apiDelivery.Spec.Resources = []v1alpha1.DeliveryResource{
+					{
+						Name: "first-resource",
+						TemplateRef: v1alpha1.DeliveryTemplateReference{
+							Kind: "ClusterSourceTemplate",
+							Name: "my-source-template",
+						},
+					},
+					{
+						Name: "second-resource",
+						TemplateRef: v1alpha1.DeliveryTemplateReference{
+							Kind: "ClusterTemplate",
+							Name: "my-final-template",
+						},
+					},
+				}
+				repo.GetDeliveryTemplateReturnsOnCall(0, firstTemplate, nil)
+				repo.GetDeliveryTemplateReturnsOnCall(1, secondTemplate, nil)
 			})
 
 			It("Attaches a ready/true status", func() {
@@ -147,6 +176,17 @@ var _ = Describe("delivery reconciler", func() {
 				}))
 			})
 
+			It("watches the templates", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+
+				Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+				firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
+				Expect(firstTemplateKey.String()).To(Equal("ClusterSourceTemplate.carto.run//my-source-template"))
+
+				secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
+				Expect(secondTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template"))
+			})
+
 			It("does not return an error", func() {
 				_, err := reconciler.Reconcile(ctx, req)
 				Expect(err).NotTo(HaveOccurred())
@@ -155,6 +195,16 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("get cluster template fails", func() {
 			BeforeEach(func() {
+				apiDelivery.Spec.Resources = []v1alpha1.DeliveryResource{
+					{
+						Name: "first-resource",
+						TemplateRef: v1alpha1.DeliveryTemplateReference{
+							Kind: "ClusterSourceTemplate",
+							Name: "my-source-template",
+						},
+					},
+				}
+
 				repo.GetDeliveryTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
@@ -166,6 +216,16 @@ var _ = Describe("delivery reconciler", func() {
 
 		Context("cannot find cluster template", func() {
 			BeforeEach(func() {
+				apiDelivery.Spec.Resources = []v1alpha1.DeliveryResource{
+					{
+						Name: "first-resource",
+						TemplateRef: v1alpha1.DeliveryTemplateReference{
+							Kind: "ClusterSourceTemplate",
+							Name: "my-source-template",
+						},
+					},
+				}
+
 				repo.GetDeliveryTemplateReturnsOnCall(0, nil, nil)
 			})
 

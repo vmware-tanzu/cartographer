@@ -44,7 +44,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -58,10 +59,12 @@ var _ = Describe("Reconciler", func() {
 		rlzr                         *workloadfakes.FakeRealizer
 		wl                           *v1alpha1.Workload
 		workloadLabels               map[string]string
-		dynamicTracker               *trackerfakes.FakeDynamicTracker
+		stampedTracker               *stampedfakes.FakeStampedTracker
+		dependencyTracker            *dependencyfakes.FakeDependencyTracker
 		builtResourceRealizer        *workloadfakes.FakeResourceRealizer
 		resourceRealizerSecret       *corev1.Secret
 		serviceAccountSecret         *corev1.Secret
+		serviceAccount               *corev1.ServiceAccount
 		serviceAccountName           string
 		resourceRealizerBuilderError error
 	)
@@ -80,7 +83,8 @@ var _ = Describe("Reconciler", func() {
 		rlzr = &workloadfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
-		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
+		stampedTracker = &stampedfakes.FakeStampedTracker{}
+		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
 
 		repo = &repositoryfakes.FakeRepository{}
 		scheme := runtime.NewScheme()
@@ -106,7 +110,8 @@ var _ = Describe("Reconciler", func() {
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,
 			Realizer:                rlzr,
-			DynamicTracker:          dynamicTracker,
+			StampedTracker:          stampedTracker,
+			DependencyTracker:       dependencyTracker,
 		}
 
 		req = ctrl.Request{
@@ -116,6 +121,17 @@ var _ = Describe("Reconciler", func() {
 		workloadLabels = map[string]string{"some-key": "some-val"}
 
 		serviceAccountName = "workload-service-account-name"
+		serviceAccount = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ServiceAccount",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceAccountName,
+				Namespace: "my-namespace",
+			},
+		}
+		repo.GetServiceAccountReturns(serviceAccount, nil)
 
 		wl = &v1alpha1.Workload{
 			ObjectMeta: metav1.ObjectMeta{
@@ -253,10 +269,15 @@ var _ = Describe("Reconciler", func() {
 		It("uses the service account specified by the workload for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, sa := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(sa).To(Equal(serviceAccount))
+
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
 		})
 
@@ -278,10 +299,15 @@ var _ = Describe("Reconciler", func() {
 				It("uses the supply chain service account in the workload's namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 					Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
+
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, sa := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(sa).To(Equal(serviceAccount))
+
 					Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
 				})
 
@@ -293,10 +319,15 @@ var _ = Describe("Reconciler", func() {
 					It("uses the supply chain service account in the specified namespace", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
 
-						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+						Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 						Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
 						Expect(serviceAccountNS).To(Equal("some-supply-chain-namespace"))
+
+						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+						_, sa := repo.GetServiceAccountSecretArgsForCall(0)
+						Expect(sa).To(Equal(serviceAccount))
+
 						Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
 					})
 				})
@@ -313,10 +344,15 @@ var _ = Describe("Reconciler", func() {
 				It("defaults to the default service account in the workloads namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 					Expect(serviceAccountNameArg).To(Equal("default"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
+
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, sa := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(sa).To(Equal(serviceAccount))
+
 					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
 				})
 			})
@@ -341,16 +377,48 @@ var _ = Describe("Reconciler", func() {
 
 		It("watches the stampedObjects kinds", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(dynamicTracker.WatchCallCount()).To(Equal(2))
-			_, obj, hndl, _ := dynamicTracker.WatchArgsForCall(0)
+			Expect(stampedTracker.WatchCallCount()).To(Equal(2))
+			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 
 			Expect(obj).To(Equal(stampedObject1))
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
 
-			_, obj, hndl, _ = dynamicTracker.WatchArgsForCall(1)
+			_, obj, hndl, _ = stampedTracker.WatchArgsForCall(1)
 
 			Expect(obj).To(Equal(stampedObject2))
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
+		})
+
+		Context("when the delivery has multiple templates", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
+					{
+						TemplateRef: v1alpha1.SupplyChainTemplateReference{
+							Kind: "first-template-kind",
+							Name: "first-template-name",
+						},
+					},
+					{
+						TemplateRef: v1alpha1.SupplyChainTemplateReference{
+							Kind: "second-template-kind",
+							Name: "second-template-name",
+						},
+					},
+				}
+			})
+			It("watches the templates and service account", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+
+				Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
+				firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
+				Expect(firstTemplateKey.String()).To(Equal("first-template-kind.carto.run//first-template-name"))
+
+				secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
+				Expect(secondTemplateKey.String()).To(Equal("second-template-kind.carto.run//second-template-name"))
+
+				serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(2)
+				Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
+			})
 		})
 
 		Context("but getting the object GVK fails", func() {
@@ -442,7 +510,7 @@ var _ = Describe("Reconciler", func() {
 					_, err := reconciler.Reconcile(ctx, req)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(dynamicTracker.WatchCallCount()).To(Equal(0))
+					Expect(stampedTracker.WatchCallCount()).To(Equal(0))
 				})
 
 				It("calls the condition manager to report", func() {
@@ -587,7 +655,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("but the watcher returns an error", func() {
 			BeforeEach(func() {
-				dynamicTracker.WatchReturns(errors.New("could not watch"))
+				stampedTracker.WatchReturns(errors.New("could not watch"))
 			})
 
 			It("logs the error message", func() {
@@ -621,7 +689,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"handled error":"failed to get service account secret \[workload-service-account-name\]: some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get service account secret \[my-namespace/workload-service-account-name\]: some error"`))
 			})
 		})
 

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tracker
+package stamped
 
-//go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
 	"github.com/go-logr/logr"
@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-//counterfeiter:generate . DynamicTracker
-type DynamicTracker interface {
-	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler, p ...predicate.Predicate) error
+//counterfeiter:generate . StampedTracker
+type StampedTracker interface {
+	Watch(log logr.Logger, stampedObj runtime.Object, handler handler.EventHandler, p ...predicate.Predicate) error
 }

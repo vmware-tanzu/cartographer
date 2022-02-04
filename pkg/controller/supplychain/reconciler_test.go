@@ -35,6 +35,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -45,6 +46,7 @@ var _ = Describe("Reconciler", func() {
 		req                reconcile.Request
 		conditionManager   *conditionsfakes.FakeConditionManager
 		repo               *repositoryfakes.FakeRepository
+		dependencyTracker  *dependencyfakes.FakeDependencyTracker
 		sc                 *v1alpha1.ClusterSupplyChain
 		expectedConditions []metav1.Condition
 	)
@@ -74,27 +76,13 @@ var _ = Describe("Reconciler", func() {
 
 		repo = &repositoryfakes.FakeRepository{}
 
+		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
+
 		sc = &v1alpha1.ClusterSupplyChain{
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 1,
 			},
 			Spec: v1alpha1.SupplyChainSpec{
-				Resources: []v1alpha1.SupplyChainResource{
-					{
-						Name: "first name",
-						TemplateRef: v1alpha1.SupplyChainTemplateReference{
-							Kind: "some-kind",
-							Name: "some-name",
-						},
-					},
-					{
-						Name: "second name",
-						TemplateRef: v1alpha1.SupplyChainTemplateReference{
-							Kind: "another-kind",
-							Name: "another-name",
-						},
-					},
-				},
 				Selector: map[string]string{},
 			},
 		}
@@ -109,6 +97,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = supplychain.Reconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
+			DependencyTracker:       dependencyTracker,
 		}
 
 		req = reconcile.Request{
@@ -171,9 +160,75 @@ var _ = Describe("Reconciler", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 	})
+	Context("all referenced templates exist", func() {
+		var (
+			firstTemplate  *v1alpha1.ClusterSourceTemplate
+			secondTemplate *v1alpha1.ClusterTemplate
+		)
+		BeforeEach(func() {
+			firstTemplate = &v1alpha1.ClusterSourceTemplate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterSourceTemplate",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-source-template",
+				},
+			}
+
+			secondTemplate = &v1alpha1.ClusterTemplate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterTemplate",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-final-template",
+				},
+			}
+
+			sc.Spec.Resources = []v1alpha1.SupplyChainResource{
+				{
+					Name: "first-resource",
+					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						Kind: "ClusterSourceTemplate",
+						Name: "my-source-template",
+					},
+				},
+				{
+					Name: "second-resource",
+					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						Kind: "ClusterTemplate",
+						Name: "my-final-template",
+					},
+				},
+			}
+			repo.GetSupplyChainTemplateReturnsOnCall(0, firstTemplate, nil)
+			repo.GetSupplyChainTemplateReturnsOnCall(1, secondTemplate, nil)
+		})
+
+		It("watches the templates", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+			firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
+			Expect(firstTemplateKey.String()).To(Equal("ClusterSourceTemplate.carto.run//my-source-template"))
+
+			secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
+			Expect(secondTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template"))
+		})
+	})
 
 	Context("get cluster template fails", func() {
 		BeforeEach(func() {
+			sc.Spec.Resources = []v1alpha1.SupplyChainResource{
+				{
+					Name: "first name",
+					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						Kind: "some-kind",
+						Name: "some-name",
+					},
+				},
+			}
 			repo.GetSupplyChainTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 		})
 
@@ -185,13 +240,22 @@ var _ = Describe("Reconciler", func() {
 
 	Context("cannot find cluster template", func() {
 		BeforeEach(func() {
-			repo.GetSupplyChainTemplateReturnsOnCall(0, &v1alpha1.ClusterTemplate{}, nil)
-			repo.GetSupplyChainTemplateReturnsOnCall(1, nil, nil)
+			sc.Spec.Resources = []v1alpha1.SupplyChainResource{
+				{
+					Name: "first name",
+					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						Kind: "some-kind",
+						Name: "some-name",
+					},
+				},
+			}
+
+			repo.GetSupplyChainTemplateReturnsOnCall(0, nil, nil)
 		})
 
 		It("adds a positive templates NOT found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"second name"})))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"first name"})))
 		})
 
 		It("does not return an error", func() {

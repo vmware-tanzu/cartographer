@@ -19,7 +19,6 @@ package registrar
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 )
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
@@ -41,82 +40,22 @@ type Logger interface {
 type Mapper struct {
 	Client client.Client
 	// fixme We should accept the context, not the logger - then we get the right logger and so does the client
-	Logger Logger
+	Logger  Logger
+	Tracker dependency.DependencyTracker
 }
 
-func (mapper *Mapper) TemplateToDeliverableRequests(template client.Object) []reconcile.Request {
-	deliveries := mapper.templateToDeliveries(template)
+// Workload
 
-	var requests []reconcile.Request
-	for _, delivery := range deliveries {
-		reqs := mapper.ClusterDeliveryToDeliverableRequests(&delivery)
-		requests = append(requests, reqs...)
-	}
-
-	return requests
-}
-
-func (mapper *Mapper) TemplateToWorkloadRequests(template client.Object) []reconcile.Request {
-	supplyChains := mapper.templateToSupplyChains(template)
-
-	var requests []reconcile.Request
-	for _, supplyChain := range supplyChains {
-		reqs := mapper.ClusterSupplyChainToWorkloadRequests(&supplyChain)
-		requests = append(requests, reqs...)
-	}
-
-	return requests
-}
-
-func (mapper *Mapper) templateToSupplyChains(template client.Object) []v1alpha1.ClusterSupplyChain {
-	templateName := template.GetName()
-
-	err := mapper.addGVK(template)
+func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(_ client.Object) []reconcile.Request {
+	workloadList := &v1alpha1.WorkloadList{}
+	err := mapper.Client.List(context.TODO(), workloadList)
 	if err != nil {
-		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
-		return nil
-	}
-
-	list := &v1alpha1.ClusterSupplyChainList{}
-
-	err = mapper.Client.List(
-		context.TODO(),
-		list,
-	)
-
-	if err != nil {
-		mapper.Logger.Error(err, "list ClusterSupplyChains")
-		return nil
-	}
-
-	templateKind := template.GetObjectKind().GroupVersionKind().Kind
-
-	var supplyChains []v1alpha1.ClusterSupplyChain
-	for _, sc := range list.Items {
-		for _, res := range sc.Spec.Resources {
-			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				supplyChains = append(supplyChains, sc)
-			}
-		}
-	}
-	return supplyChains
-}
-
-func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object) []reconcile.Request {
-	supplyChain, ok := object.(*v1alpha1.ClusterSupplyChain)
-	if !ok {
-		mapper.Logger.Error(nil, "cluster supply chain to workload requests: cast to ClusterSupplyChain failed")
-		return nil
-	}
-
-	workloads, err := mapper.clusterSupplyChainToWorkloads(*supplyChain)
-	if err != nil {
-		mapper.Logger.Error(err, "cluster supply chain to workload requests")
+		mapper.Logger.Error(err, "cluster supply chain to workload requests: client list workloads")
 		return nil
 	}
 
 	var requests []reconcile.Request
-	for _, workload := range workloads {
+	for _, workload := range workloadList.Items {
 		requests = append(requests, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      workload.Name,
@@ -128,317 +67,27 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(object client.Object)
 	return requests
 }
 
-func (mapper *Mapper) clusterSupplyChainToWorkloads(sc v1alpha1.ClusterSupplyChain) ([]v1alpha1.Workload, error) {
-	err := mapper.addGVK(&sc)
-	if err != nil {
-		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for supply chain: %s", sc.Name))
-		return nil, err
-	}
-
-	scList := &v1alpha1.ClusterSupplyChainList{}
-	err = mapper.Client.List(context.TODO(), scList)
-	if err != nil {
-		mapper.Logger.Error(err, "cluster supply chain to workloads: client list supply chains")
-		return nil, err
-	}
-
-	var selectorGetters []repository.SelectorGetter
-	for _, item := range scList.Items {
-		item := item
-		selectorGetters = append(selectorGetters, &item)
-	}
-
-	workloadList := &v1alpha1.WorkloadList{}
-	err = mapper.Client.List(context.TODO(), workloadList,
-		client.InNamespace(sc.Namespace),
-		client.MatchingLabels(sc.Spec.Selector))
-	if err != nil {
-		mapper.Logger.Error(err, "cluster supply chain to workloads: client list workloads")
-		return nil, err
-	}
-
-	var matchingWorkloads []v1alpha1.Workload
-	for _, wl := range workloadList.Items {
-		for _, matchingObject := range repository.BestLabelMatches(&wl, selectorGetters) {
-			matchingSC := matchingObject.(*v1alpha1.ClusterSupplyChain)
-			if reflect.DeepEqual(matchingSC, &sc) {
-				matchingWorkloads = append(matchingWorkloads, wl)
-			}
-		}
-	}
-
-	return matchingWorkloads, nil
-}
-
-func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(object client.Object) []reconcile.Request {
-	var err error
-
-	delivery, ok := object.(*v1alpha1.ClusterDelivery)
-	if !ok {
-		mapper.Logger.Error(nil, "cluster delivery to deliverable requests: cast to ClusterDelivery failed")
-		return nil
-	}
-
-	deliverables, err := mapper.clusterDeliveryToDeliverables(*delivery)
-	if err != nil {
-		mapper.Logger.Error(err, "cluster delivery to deliverable requests")
-		return nil
-	}
-
-	var requests []reconcile.Request
-	for _, deliverable := range deliverables {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      deliverable.Name,
-				Namespace: deliverable.Namespace,
-			},
-		})
-	}
-
-	return requests
-}
-
-func (mapper *Mapper) clusterDeliveryToDeliverables(d v1alpha1.ClusterDelivery) ([]v1alpha1.Deliverable, error) {
-	err := mapper.addGVK(&d)
-	if err != nil {
-		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for delivery: %s", d.Name))
-		return nil, err
-	}
-
-	deliveryList := &v1alpha1.ClusterDeliveryList{}
-	err = mapper.Client.List(context.TODO(), deliveryList)
-	if err != nil {
-		mapper.Logger.Error(err, "cluster delivery to deliverables: client list deliveries")
-		return nil, err
-	}
-
-	var selectorGetters []repository.SelectorGetter
-	for _, item := range deliveryList.Items {
-		item := item
-		selectorGetters = append(selectorGetters, &item)
-	}
-
-	deliverableList := &v1alpha1.DeliverableList{}
-	err = mapper.Client.List(context.TODO(), deliverableList,
-		client.InNamespace(d.Namespace),
-		client.MatchingLabels(d.Spec.Selector))
-	if err != nil {
-		mapper.Logger.Error(err, "cluster delivery to deliverables: client list deliverables")
-		return nil, err
-	}
-
-	var matchingDeliverables []v1alpha1.Deliverable
-	for _, deliverable := range deliverableList.Items {
-		for _, matchingObject := range repository.BestLabelMatches(&deliverable, selectorGetters) {
-			matchingDelivery := matchingObject.(*v1alpha1.ClusterDelivery)
-			if reflect.DeepEqual(matchingDelivery, &d) {
-				matchingDeliverables = append(matchingDeliverables, deliverable)
-			}
-		}
-	}
-
-	return matchingDeliverables, nil
-}
-
-func (mapper *Mapper) RunTemplateToRunnableRequests(object client.Object) []reconcile.Request {
-	var err error
-
-	runTemplate, ok := object.(*v1alpha1.ClusterRunTemplate)
-	if !ok {
-		mapper.Logger.Error(nil, "run template to runnable requests: cast to run template failed")
-		return nil
-	}
-
-	list := &v1alpha1.RunnableList{}
-
-	err = mapper.Client.List(context.TODO(), list)
-	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "run template to runnable requests: client list")
-		return nil
-	}
-
-	var requests []reconcile.Request
-	for _, runnable := range list.Items {
-
-		if runTemplateRefMatch(runnable.Spec.RunTemplateRef, runTemplate) {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      runnable.Name,
-					Namespace: runnable.Namespace,
-				},
-			})
-		}
-	}
-
-	return requests
-}
-
-// addGVK fulfills the 'GVK of an object returned from the APIServer
-// https://github.com/kubernetes-sigs/controller-runtime/issues/1517#issuecomment-844703142
-func (mapper *Mapper) addGVK(obj client.Object) error {
-	gvks, unversioned, err := mapper.Client.Scheme().ObjectKinds(obj)
-	if err != nil {
-		return fmt.Errorf("missing apiVersion or kind: %s err: %w", obj.GetName(), err)
-	}
-
-	if unversioned {
-		return fmt.Errorf("unversioned object: %s", obj.GetName())
-	}
-
-	if len(gvks) != 1 {
-		return fmt.Errorf("unexpected GVK count: %s", obj.GetName())
-	}
-
-	obj.GetObjectKind().SetGroupVersionKind(gvks[0])
-	return nil
-}
-
-func (mapper *Mapper) TemplateToSupplyChainRequests(template client.Object) []reconcile.Request {
-	supplyChains := mapper.templateToSupplyChains(template)
-
-	var requests []reconcile.Request
-	for _, supplyChain := range supplyChains {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: supplyChain.Name,
-			},
-		})
-	}
-
-	return requests
-}
-
-func (mapper *Mapper) TemplateToDeliveryRequests(template client.Object) []reconcile.Request {
-	deliveries := mapper.templateToDeliveries(template)
-
-	var requests []reconcile.Request
-	for _, delivery := range deliveries {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: delivery.Name,
-			},
-		})
-	}
-
-	return requests
-}
-
-func (mapper *Mapper) templateToDeliveries(template client.Object) []v1alpha1.ClusterDelivery {
-	templateName := template.GetName()
-
-	err := mapper.addGVK(template)
-	if err != nil {
-		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for template: %s", templateName))
-		return nil
-	}
-
-	list := &v1alpha1.ClusterDeliveryList{}
-
-	err = mapper.Client.List(
-		context.TODO(),
-		list,
-	)
-
-	if err != nil {
-		mapper.Logger.Error(err, "list ClusterDeliveries")
-		return nil
-	}
-
-	templateKind := template.GetObjectKind().GroupVersionKind().Kind
-
-	var deliveries []v1alpha1.ClusterDelivery
-	for _, delivery := range list.Items {
-		for _, res := range delivery.Spec.Resources {
-			if res.TemplateRef.Kind == templateKind && res.TemplateRef.Name == templateName {
-				deliveries = append(deliveries, delivery)
-			}
-		}
-	}
-	return deliveries
-}
-
-func runTemplateRefMatch(ref v1alpha1.TemplateReference, runTemplate *v1alpha1.ClusterRunTemplate) bool {
-	if ref.Name != runTemplate.Name {
-		return false
-	}
-
-	return ref.Kind == "ClusterRunTemplate" || ref.Kind == ""
-}
-
 func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject client.Object) []reconcile.Request {
-	list := &v1alpha1.WorkloadList{}
-
-	err := mapper.Client.List(context.TODO(), list)
+	err := mapper.addGVK(serviceAccountObject)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to workload requests: list workloads")
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for service account: %s", serviceAccountObject.GetName()))
 		return nil
 	}
 
-	requestMap := make(map[reconcile.Request]bool)
-	for _, workload := range list.Items {
-		if workload.Namespace == serviceAccountObject.GetNamespace() && workload.Spec.ServiceAccountName == serviceAccountObject.GetName() {
-			request := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      workload.Name,
-					Namespace: workload.Namespace,
-				},
-			}
-			requestMap[request] = true
-		}
-	}
-
-	supplyChains := mapper.serviceAccountToSupplyChains(serviceAccountObject)
-	for _, sc := range supplyChains {
-		scWorkloads, err := mapper.clusterSupplyChainToWorkloads(sc)
-		if err != nil {
-			mapper.Logger.Error(err, "service account to workload requests: cluster supply chain to workloads", "supply chain", sc.Name)
-			return nil
-		}
-		for _, workload := range scWorkloads {
-			if workload.Spec.ServiceAccountName != "" ||
-				sc.Spec.ServiceAccountRef.Namespace == "" && workload.Namespace != serviceAccountObject.GetNamespace() {
-				continue
-			}
-
-			request := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      workload.Name,
-					Namespace: workload.Namespace,
-				},
-			}
-			requestMap[request] = true
-		}
-	}
+	wks := mapper.Tracker.Lookup(dependency.Key{
+		GroupKind: serviceAccountObject.GetObjectKind().GroupVersionKind().GroupKind(),
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountObject.GetNamespace(),
+			Name:      serviceAccountObject.GetName(),
+		},
+	})
 
 	var requests []reconcile.Request
-	for r := range requestMap {
-		requests = append(requests, r)
+	for _, wk := range wks {
+		requests = append(requests, reconcile.Request{NamespacedName: wk})
 	}
 
 	return requests
-}
-
-func (mapper *Mapper) serviceAccountToSupplyChains(serviceAccountObject client.Object) []v1alpha1.ClusterSupplyChain {
-	list := &v1alpha1.ClusterSupplyChainList{}
-
-	err := mapper.Client.List(context.TODO(), list)
-	if err != nil {
-		mapper.Logger.Error(err, "service account to supply chains: list supply chains")
-		return nil
-	}
-
-	var supplyChains []v1alpha1.ClusterSupplyChain
-	for _, sc := range list.Items {
-		if sc.Spec.ServiceAccountRef.Namespace != "" && sc.Spec.ServiceAccountRef.Namespace != serviceAccountObject.GetNamespace() {
-			continue
-		}
-		if sc.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() ||
-			sc.Spec.ServiceAccountRef.Name == "" && serviceAccountObject.GetName() == "default" {
-			supplyChains = append(supplyChains, sc)
-		}
-	}
-
-	return supplyChains
 }
 
 func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Object) []reconcile.Request {
@@ -448,22 +97,14 @@ func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Obj
 		return nil
 	}
 
-	for _, subject := range roleBinding.Subjects {
-		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			serviceAccountObject := &corev1.ServiceAccount{}
-			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Namespace,
-				Name:      subject.Name,
-			}
-			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to workload requests: get service account")
-			}
-			return mapper.ServiceAccountToWorkloadRequests(serviceAccountObject)
-		}
+	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects)
+
+	var requests []reconcile.Request
+	for _, serviceAccount := range serviceAccounts {
+		requests = append(requests, mapper.ServiceAccountToWorkloadRequests(serviceAccount)...)
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
@@ -473,23 +114,14 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 		return nil
 	}
 
-	for _, subject := range clusterRoleBinding.Subjects {
-		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			serviceAccountObject := &corev1.ServiceAccount{}
-			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Namespace,
-				Name:      subject.Name,
-			}
-			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to workload requests: get service account")
-				return []reconcile.Request{}
-			}
-			return mapper.ServiceAccountToWorkloadRequests(serviceAccountObject)
-		}
+	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects)
+
+	var requests []reconcile.Request
+	for _, serviceAccount := range serviceAccounts {
+		requests = append(requests, mapper.ServiceAccountToWorkloadRequests(serviceAccount)...)
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconcile.Request {
@@ -501,7 +133,7 @@ func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconci
 
 	list := &rbacv1.RoleBindingList{}
 
-	err := mapper.Client.List(context.TODO(), list)
+	err := mapper.Client.List(context.TODO(), list, client.InNamespace(role.Namespace))
 	if err != nil {
 		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "role to workload requests: list role bindings")
 		return nil
@@ -509,7 +141,7 @@ func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconci
 
 	var requests []reconcile.Request
 	for _, roleBinding := range list.Items {
-		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name && roleBinding.Namespace == role.Namespace {
+		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name {
 			requests = append(requests, mapper.RoleBindingToWorkloadRequests(&roleBinding)...)
 		}
 	}
@@ -557,80 +189,50 @@ func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Obj
 	return requests
 }
 
-func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject client.Object) []reconcile.Request {
-	list := &v1alpha1.DeliverableList{}
+// Deliverable
 
-	err := mapper.Client.List(context.TODO(), list)
+func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(_ client.Object) []reconcile.Request {
+	deliverableList := &v1alpha1.DeliverableList{}
+	err := mapper.Client.List(context.TODO(), deliverableList)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to deliverable requests: list deliverables")
+		mapper.Logger.Error(err, "cluster delivery to deliverable requests: client list deliverables")
 		return nil
 	}
 
-	requestMap := make(map[reconcile.Request]bool)
-	for _, deliverable := range list.Items {
-		if deliverable.Namespace == serviceAccountObject.GetNamespace() && deliverable.Spec.ServiceAccountName == serviceAccountObject.GetName() {
-			request := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      deliverable.Name,
-					Namespace: deliverable.Namespace,
-				},
-			}
-			requestMap[request] = true
-		}
-	}
-
-	deliveries := mapper.serviceAccountToDeliveries(serviceAccountObject)
-	for _, d := range deliveries {
-		deliveryDeliverables, err := mapper.clusterDeliveryToDeliverables(d)
-		if err != nil {
-			mapper.Logger.Error(err, "service account to deliverable requests: cluster delivery to deliverables", "delivery", d.Name)
-			return nil
-		}
-		for _, deliverable := range deliveryDeliverables {
-			if deliverable.Spec.ServiceAccountName != "" ||
-				d.Spec.ServiceAccountRef.Namespace == "" && deliverable.Namespace != serviceAccountObject.GetNamespace() {
-				continue
-			}
-
-			request := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      deliverable.Name,
-					Namespace: deliverable.Namespace,
-				},
-			}
-			requestMap[request] = true
-		}
-	}
-
 	var requests []reconcile.Request
-	for r := range requestMap {
-		requests = append(requests, r)
+	for _, deliverable := range deliverableList.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      deliverable.Name,
+				Namespace: deliverable.Namespace,
+			},
+		})
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) serviceAccountToDeliveries(serviceAccountObject client.Object) []v1alpha1.ClusterDelivery {
-	list := &v1alpha1.ClusterDeliveryList{}
-
-	err := mapper.Client.List(context.TODO(), list)
+func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject client.Object) []reconcile.Request {
+	err := mapper.addGVK(serviceAccountObject)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to deliveries: list deliveries")
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for service account: %s", serviceAccountObject.GetName()))
 		return nil
 	}
 
-	var deliveries []v1alpha1.ClusterDelivery
-	for _, d := range list.Items {
-		if d.Spec.ServiceAccountRef.Namespace != "" && d.Spec.ServiceAccountRef.Namespace != serviceAccountObject.GetNamespace() {
-			continue
-		}
-		if d.Spec.ServiceAccountRef.Name == serviceAccountObject.GetName() ||
-			d.Spec.ServiceAccountRef.Name == "" && serviceAccountObject.GetName() == "default" {
-			deliveries = append(deliveries, d)
-		}
+	deliverables := mapper.Tracker.Lookup(dependency.Key{
+		GroupKind: serviceAccountObject.GetObjectKind().GroupVersionKind().GroupKind(),
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountObject.GetNamespace(),
+			Name:      serviceAccountObject.GetName(),
+		},
+	})
+
+	var requests []reconcile.Request
+	for _, deliverable := range deliverables {
+		requests = append(requests, reconcile.Request{NamespacedName: deliverable})
 	}
 
-	return deliveries
+	return requests
 }
 
 func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.Object) []reconcile.Request {
@@ -640,22 +242,14 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 		return nil
 	}
 
-	for _, subject := range roleBinding.Subjects {
-		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			serviceAccountObject := &corev1.ServiceAccount{}
-			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Namespace,
-				Name:      subject.Name,
-			}
-			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to deliverable requests: get service account")
-			}
-			return mapper.ServiceAccountToDeliverableRequests(serviceAccountObject)
-		}
+	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects)
+
+	var requests []reconcile.Request
+	for _, serviceAccount := range serviceAccounts {
+		requests = append(requests, mapper.ServiceAccountToDeliverableRequests(serviceAccount)...)
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
@@ -665,23 +259,14 @@ func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBinding
 		return nil
 	}
 
-	for _, subject := range clusterRoleBinding.Subjects {
-		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			serviceAccountObject := &corev1.ServiceAccount{}
-			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Namespace,
-				Name:      subject.Name,
-			}
-			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to deliverable requests: get service account")
-				return []reconcile.Request{}
-			}
-			return mapper.ServiceAccountToDeliverableRequests(serviceAccountObject)
-		}
+	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects)
+
+	var requests []reconcile.Request
+	for _, serviceAccount := range serviceAccounts {
+		requests = append(requests, mapper.ServiceAccountToDeliverableRequests(serviceAccount)...)
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) RoleToDeliverableRequests(roleObject client.Object) []reconcile.Request {
@@ -693,7 +278,7 @@ func (mapper *Mapper) RoleToDeliverableRequests(roleObject client.Object) []reco
 
 	list := &rbacv1.RoleBindingList{}
 
-	err := mapper.Client.List(context.TODO(), list)
+	err := mapper.Client.List(context.TODO(), list, client.InNamespace(role.Namespace))
 	if err != nil {
 		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "role to deliverable requests: list role bindings")
 		return nil
@@ -701,7 +286,7 @@ func (mapper *Mapper) RoleToDeliverableRequests(roleObject client.Object) []reco
 
 	var requests []reconcile.Request
 	for _, roleBinding := range list.Items {
-		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name && roleBinding.Namespace == role.Namespace {
+		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name {
 			requests = append(requests, mapper.RoleBindingToDeliverableRequests(&roleBinding)...)
 		}
 	}
@@ -749,25 +334,26 @@ func (mapper *Mapper) ClusterRoleToDeliverableRequests(clusterRoleObject client.
 	return requests
 }
 
-func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject client.Object) []reconcile.Request {
-	list := &v1alpha1.RunnableList{}
+// Runnable
 
-	err := mapper.Client.List(context.TODO(), list)
+func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject client.Object) []reconcile.Request {
+	err := mapper.addGVK(serviceAccountObject)
 	if err != nil {
-		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "service account to runnable requests: list runnables")
+		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for service account: %s", serviceAccountObject.GetName()))
 		return nil
 	}
 
+	runnables := mapper.Tracker.Lookup(dependency.Key{
+		GroupKind: serviceAccountObject.GetObjectKind().GroupVersionKind().GroupKind(),
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountObject.GetNamespace(),
+			Name:      serviceAccountObject.GetName(),
+		},
+	})
+
 	var requests []reconcile.Request
-	for _, runnable := range list.Items {
-		if runnable.Namespace == serviceAccountObject.GetNamespace() && runnable.Spec.ServiceAccountName == serviceAccountObject.GetName() {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      runnable.Name,
-					Namespace: runnable.Namespace,
-				},
-			})
-		}
+	for _, runnable := range runnables {
+		requests = append(requests, reconcile.Request{NamespacedName: runnable})
 	}
 
 	return requests
@@ -780,23 +366,14 @@ func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Obj
 		return nil
 	}
 
-	for _, subject := range roleBinding.Subjects {
-		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			serviceAccountObject := &corev1.ServiceAccount{}
+	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects)
 
-			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Namespace,
-				Name:      subject.Name,
-			}
-			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to runnable requests: get service account")
-			}
-			return mapper.ServiceAccountToRunnableRequests(serviceAccountObject)
-		}
+	var requests []reconcile.Request
+	for _, serviceAccount := range serviceAccounts {
+		requests = append(requests, mapper.ServiceAccountToRunnableRequests(serviceAccount)...)
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
@@ -806,23 +383,14 @@ func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObj
 		return nil
 	}
 
-	for _, subject := range clusterRoleBinding.Subjects {
-		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
-			serviceAccountObject := &corev1.ServiceAccount{}
-			serviceAccountKey := client.ObjectKey{
-				Namespace: subject.Namespace,
-				Name:      subject.Name,
-			}
-			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
-			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "cluster role binding to runnable requests: get service account")
-				return []reconcile.Request{}
-			}
-			return mapper.ServiceAccountToRunnableRequests(serviceAccountObject)
-		}
+	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects)
+
+	var requests []reconcile.Request
+	for _, serviceAccount := range serviceAccounts {
+		requests = append(requests, mapper.ServiceAccountToRunnableRequests(serviceAccount)...)
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 func (mapper *Mapper) RoleToRunnableRequests(roleObject client.Object) []reconcile.Request {
@@ -834,7 +402,7 @@ func (mapper *Mapper) RoleToRunnableRequests(roleObject client.Object) []reconci
 
 	list := &rbacv1.RoleBindingList{}
 
-	err := mapper.Client.List(context.TODO(), list)
+	err := mapper.Client.List(context.TODO(), list, client.InNamespace(role.Namespace))
 	if err != nil {
 		mapper.Logger.Error(fmt.Errorf("client list: %w", err), "role to runnable requests: list role bindings")
 		return nil
@@ -842,7 +410,7 @@ func (mapper *Mapper) RoleToRunnableRequests(roleObject client.Object) []reconci
 
 	var requests []reconcile.Request
 	for _, roleBinding := range list.Items {
-		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name && roleBinding.Namespace == role.Namespace {
+		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name {
 			requests = append(requests, mapper.RoleBindingToRunnableRequests(&roleBinding)...)
 		}
 	}
@@ -888,4 +456,50 @@ func (mapper *Mapper) ClusterRoleToRunnableRequests(clusterRoleObject client.Obj
 	}
 
 	return requests
+}
+
+// Shared
+
+// addGVK fulfills the 'GVK of an object returned from the APIServer
+// https://github.com/kubernetes-sigs/controller-runtime/issues/1517#issuecomment-844703142
+func (mapper *Mapper) addGVK(obj client.Object) error {
+	gvks, unversioned, err := mapper.Client.Scheme().ObjectKinds(obj)
+	if err != nil {
+		return fmt.Errorf("missing apiVersion or kind: %s err: %w", obj.GetName(), err)
+	}
+
+	if unversioned {
+		return fmt.Errorf("unversioned object: %s", obj.GetName())
+	}
+
+	if len(gvks) != 1 {
+		return fmt.Errorf("unexpected GVK count: %s", obj.GetName())
+	}
+
+	obj.GetObjectKind().SetGroupVersionKind(gvks[0])
+	return nil
+}
+
+func (mapper *Mapper) getServiceAccounts(subjects []rbacv1.Subject) []*corev1.ServiceAccount {
+	var serviceAccounts []*corev1.ServiceAccount
+	for _, subject := range subjects {
+		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
+			namespace := "default"
+			if subject.Namespace != "" {
+				namespace = subject.Namespace
+			}
+			serviceAccountKey := client.ObjectKey{
+				Namespace: namespace,
+				Name:      subject.Name,
+			}
+
+			serviceAccountObject := &corev1.ServiceAccount{}
+			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
+			if err != nil {
+				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to workload requests: get service account")
+			}
+			serviceAccounts = append(serviceAccounts, serviceAccountObject)
+		}
+	}
+	return serviceAccounts
 }

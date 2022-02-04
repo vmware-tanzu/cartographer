@@ -24,6 +24,8 @@ import (
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -34,18 +36,20 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 )
 
 type Reconciler struct {
 	Repo                    repository.Repository
 	Realizer                realizer.Realizer
-	DynamicTracker          tracker.DynamicTracker
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
 	RepositoryBuilder       repository.RepositoryBuilder
 	ClientBuilder           realizerclient.ClientBuilder
 	RunnableCache           repository.RepoCache
+	StampedTracker          stamped.StampedTracker
+	DependencyTracker       dependency.DependencyTracker
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -67,6 +71,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: v1alpha1.SchemeGroupVersion.Group,
+			Kind:  "ClusterRunTemplate",
+		},
+		NamespacedName: types.NamespacedName{
+			Name: runnable.Spec.RunTemplateRef.Name,
+		},
+	}, types.NamespacedName{
+		Namespace: runnable.Namespace,
+		Name:      runnable.Name,
+	})
+
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
 	serviceAccountName := "default"
@@ -74,10 +91,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		serviceAccountName = runnable.Spec.ServiceAccountName
 	}
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, req.Namespace)
+	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, req.Namespace)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+	}
+
+	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
+		Namespace: runnable.Namespace,
+		Name:      serviceAccountName,
+	}), types.NamespacedName{
+		Namespace: runnable.Namespace,
+		Name:      runnable.Name,
+	})
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", serviceAccountName, err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	runnableClient, err := r.ClientBuilder(secret)
@@ -118,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	var trackingError error
 	if stampedObject != nil {
-		trackingError = r.DynamicTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
+		trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object", "object", stampedObject)
 			err = controller.NewUnhandledError(trackingError)

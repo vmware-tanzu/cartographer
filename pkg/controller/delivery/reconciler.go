@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -26,11 +28,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/controller"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 )
 
 type Reconciler struct {
-	Repo             repository.Repository
-	conditionManager conditions.ConditionManager
+	Repo              repository.Repository
+	DependencyTracker dependency.DependencyTracker
+	conditionManager  conditions.ConditionManager
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
@@ -73,6 +77,18 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 			log.Info("delivery cluster template does not exist", "template", resource.TemplateRef)
 			resourcesNotFound = append(resourcesNotFound, resource.Name)
 		}
+		r.DependencyTracker.Track(dependency.Key{
+			GroupKind: schema.GroupKind{
+				Group: v1alpha1.SchemeGroupVersion.Group,
+				Kind:  resource.TemplateRef.Kind,
+			},
+			NamespacedName: types.NamespacedName{
+				Name: resource.TemplateRef.Name,
+			},
+		}, types.NamespacedName{
+			Namespace: delivery.Namespace,
+			Name:      delivery.Name,
+		})
 	}
 
 	if len(resourcesNotFound) > 0 {
