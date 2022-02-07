@@ -219,8 +219,107 @@ a `latest` flag.)
 It may be useful to compare the stamped object to another object on the cluster. Or to simply read a value from
 another object on the cluster.
 
+# Alternatives
+
+The goal of this RFC is to associate an object's outputs with the inputs that led to them. The strategy above assumes
+that reconciled objects report a very limited set of information:
+- This status was written after the reconciler was aware of this spec.
+- The reconciler has finished working.
+- The most recent work was successful.
+
+While it's not clear that there is any strategy forward relying on less information from the choreographed resources,
+Cartographer could certainly ask for _more_ information. In particular, Cartographer can simply expect choreographed
+resources to report on every output, "What were the relevant inputs"?
+
+As an example, if a kpack image reported the git commit that led to the `latestImage` field in its status, Cartographer
+could connect the source input that led to an image output.
+
+## Possible implementation
+
+An additional field would be defined on every template producing output, let us call it, `inputs-on-status`. This field
+would a list of tuples. Each tuple would define 1. a path in the templating context, 2. a path on the status of the
+object being templated. When the values at the object path equals the values at the templating context path, then
+Cartographer will know that the outputs are the result of these inputs.
+
+## Example
+
+Let's assume that kpack did expose the git commit that led to the `latestImage`. Let's assume the structure were
+something like
+
+```yaml
+apiVersion: kpack.io/v1alpha2
+kind: Image
+spec:
+  ...
+status:
+  latestImage:
+    image: index.docker.io/projectcartographer/hello-world@sha256:27452d42b
+    source:
+      url: https://github.com/kontinue/hello-world
+      revision: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4
+```
+
+Then we could template the object as before and add the new `inputs-on-status` field.
+
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: image
+spec:
+  params:
+    - name: image_prefix
+      default: some-default-prefix-
+
+  imagePath: .status.latestImage
+
+  template:
+    apiVersion: kpack.io/v1alpha2
+    kind: Image
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      tag: $(params.image_prefix)$$(workload.metadata.name)$
+      serviceAccountName: cartographer-example-registry-creds-sa
+      builder:
+        kind: ClusterBuilder
+        name: go-builder
+      source:
+        blob:
+          url: $(sources.source.url)$
+          revision: $(sources.source.revision)$
+      build:
+        env: $(workload.spec.build.env)$
+
+  inputs-on-status:                                  # <--- new field
+    - templating-context-path: sources.source.url
+      object-path: status.latestImage.source.url
+    - templating-context-path: sources.source.revision
+      object-path: status.latestImage.source.revision
+```
+
+Whenever a new latest image is created, Cartographer can simply read off the fields which it cares about.
+
+## Advantages
+
+- Cartographer need not change its read or write cadence. It can read all outputs from an object at all times.
+- Easy to extend to tracking new outputs as the result of workload changes. Since the workload is part of the templating
+  context, it can be part of the tracked input set.
+
+## Disadvantages
+
+- Relying on resources that report inputs limits the sorts of resources Cartographer can choreograph. E.g. none of the
+  resources in the example templates expose this information.
+- ytt templates that switch the kind of object stamped could not use this. This is not a terrible disadvantage, as there
+  is a desire to get away from using ytt to switch templates (see RFCs on [switching templates], [snippets] and
+  [multipath])
+
 # Cross References and Prior Art
 
 - The Deployment Template currently requires either an `ObservedMatches` or `ObservedCompletion` field.
 - kpack includes a [waitRules](https://carvel.dev/kapp/docs/v0.45.0/config/#waitrules) field. (hat tip
 [Scott Andrews](https://github.com/scothis))
+
+[switching templates]: https://github.com/vmware-tanzu/cartographer/pull/75
+[snippets]: https://github.com/vmware-tanzu/cartographer/pull/72
+[multipath]: https://github.com/vmware-tanzu/cartographer/pull/570
