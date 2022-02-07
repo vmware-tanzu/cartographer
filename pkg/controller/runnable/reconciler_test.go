@@ -212,7 +212,7 @@ var _ = Describe("Reconcile", func() {
 
 				_, _ = reconciler.Reconcile(ctx, request)
 				Expect(dynamicTracker.WatchCallCount()).To(Equal(1))
-				_, obj, hndl := dynamicTracker.WatchArgsForCall(0)
+				_, obj, hndl, _ := dynamicTracker.WatchArgsForCall(0)
 
 				Expect(obj).To(Equal(stampedObject))
 				Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}}))

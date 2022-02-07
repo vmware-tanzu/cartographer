@@ -20,9 +20,10 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 //counterfeiter:generate . DynamicTracker
 type DynamicTracker interface {
-	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler) error
+	Watch(log logr.Logger, obj runtime.Object, handler handler.EventHandler, p ...predicate.Predicate) error
 }
