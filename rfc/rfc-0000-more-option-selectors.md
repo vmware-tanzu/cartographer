@@ -24,10 +24,10 @@ Users may find the MatchLabels syntax simpler than the MatchFields syntax.
 # What it is
 [what-it-is]: #what-it-is
 
-When definining an option for a blueprint resource, users may use either
-a MatchLabel, MatchExpression, MatchField. Both MatchLabel and MatchExpression
-examine only the labels on a workload. These fields are mutually exclusive for
-any given option. The selectors used on one option do not determine the selectors
+When defining an option for a blueprint resource, users may use a MatchLabels,
+MatchExpressions, and/or a MatchFields (both MatchLabels and MatchExpressions
+examine only the labels on a workload). These fields will be logically ANDed
+together. The selectors used on one option do not determine the selectors
 that may be used on another option.
 
 ```yaml
