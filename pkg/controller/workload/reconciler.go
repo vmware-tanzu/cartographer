@@ -23,6 +23,8 @@ import (
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -32,7 +34,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
@@ -41,8 +44,9 @@ type Reconciler struct {
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                realizer.Realizer
-	DynamicTracker          tracker.DynamicTracker
 	conditionManager        conditions.ConditionManager
+	StampedTracker          stamped.StampedTracker
+	DependencyTracker       dependency.DependencyTracker
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -57,7 +61,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		log.Error(err, "failed to get workload")
 		return ctrl.Result{}, fmt.Errorf("failed to get workload [%s]: %w", req.NamespacedName, err)
-
 	}
 
 	if workload == nil {
@@ -74,6 +77,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log = log.WithValues("supply chain", supplyChain.Name)
 	ctx = logr.NewContext(ctx, log)
+
+	r.trackTemplates(workload, supplyChain)
 
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
@@ -94,11 +99,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
+		log.Info("failed to get service account", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
+		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+	}
+
+	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
+		Namespace: serviceAccountNS,
+		Name:      serviceAccountName,
+	}), types.NamespacedName{
+		Namespace: workload.Namespace,
+		Name:      workload.Name,
+	})
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		log.Info("failed to get service account secret", "service account", workload.Spec.ServiceAccountName)
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account secret [%s]: %w", workload.Spec.ServiceAccountName, err))
+		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
+		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
@@ -142,7 +162,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	var trackingError error
 	if len(stampedObjects) > 0 {
 		for _, stampedObject := range stampedObjects {
-			trackingError = r.DynamicTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
+			trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
 			if trackingError != nil {
 				log.Error(err, "failed to add informer for object",
 					"object", stampedObject)
@@ -231,6 +251,24 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 
 	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].Name)
 	return supplyChains[0], nil
+}
+
+func (r *Reconciler) trackTemplates(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) {
+	for _, resource := range supplyChain.Spec.Resources {
+		r.DependencyTracker.Track(dependency.Key{
+			GroupKind: schema.GroupKind{
+				Group: v1alpha1.SchemeGroupVersion.Group,
+				Kind:  resource.TemplateRef.Kind,
+			},
+			NamespacedName: types.NamespacedName{
+				Namespace: "",
+				Name:      resource.TemplateRef.Name,
+			},
+		}, types.NamespacedName{
+			Namespace: workload.Namespace,
+			Name:      workload.Name,
+		})
+	}
 }
 
 func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {

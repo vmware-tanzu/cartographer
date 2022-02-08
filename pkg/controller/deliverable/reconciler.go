@@ -23,6 +23,8 @@ import (
 	"github.com/go-logr/logr"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -33,7 +35,8 @@ import (
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
@@ -42,7 +45,8 @@ type Reconciler struct {
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                realizer.Realizer
-	DynamicTracker          tracker.DynamicTracker
+	StampedTracker          stamped.StampedTracker
+	DependencyTracker       dependency.DependencyTracker
 	conditionManager        conditions.ConditionManager
 }
 
@@ -75,6 +79,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log = log.WithValues("delivery", delivery.Name)
 	ctx = logr.NewContext(ctx, log)
 
+	r.trackTemplates(deliverable, delivery)
+
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for delivery")
@@ -94,10 +100,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(deliverable, delivery)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
+	if err != nil {
+		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+	}
+
+	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
+		Namespace: serviceAccountNS,
+		Name:      serviceAccountName,
+	}), types.NamespacedName{
+		Namespace: deliverable.Namespace,
+		Name:      deliverable.Name,
+	})
+
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get secret for service account [%s]: %w", deliverable.Spec.ServiceAccountName, err))
+		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
@@ -150,7 +170,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	var trackingError error
 	if len(stampedObjects) > 0 {
 		for _, stampedObject := range stampedObjects {
-			trackingError = r.DynamicTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
+			trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
 			if trackingError != nil {
 				log.Error(err, "failed to add informer for object",
 					"object", stampedObject)
@@ -194,6 +214,24 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1
 func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	return readyCondition.Status == "True"
+}
+
+func (r *Reconciler) trackTemplates(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) {
+	for _, resource := range delivery.Spec.Resources {
+		r.DependencyTracker.Track(dependency.Key{
+			GroupKind: schema.GroupKind{
+				Group: v1alpha1.SchemeGroupVersion.Group,
+				Kind:  resource.TemplateRef.Kind,
+			},
+			NamespacedName: types.NamespacedName{
+				Namespace: "",
+				Name:      resource.TemplateRef.Name,
+			},
+		}, types.NamespacedName{
+			Namespace: deliverable.Namespace,
+			Name:      deliverable.Name,
+		})
+	}
 }
 
 func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condition {

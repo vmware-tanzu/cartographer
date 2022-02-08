@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestWorkload(t *testing.T) {
+func TestDeliverable(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Deliverable Suite")
 }

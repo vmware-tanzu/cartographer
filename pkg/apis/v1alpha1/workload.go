@@ -34,6 +34,7 @@ const (
 	WorkloadLabelsMissingSupplyChainReason               = "WorkloadLabelsMissing"
 	NotFoundSupplyChainReadyReason                       = "SupplyChainNotFound"
 	MultipleMatchesSupplyChainReadyReason                = "MultipleSupplyChainMatches"
+	ServiceAccountErrorResourcesSubmittedReason          = "ServiceAccountError"
 	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )

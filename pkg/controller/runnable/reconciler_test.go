@@ -44,7 +44,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker/trackerfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 )
 
 var _ = Describe("Reconcile", func() {
@@ -55,7 +56,8 @@ var _ = Describe("Reconcile", func() {
 		request                  controllerruntime.Request
 		repo                     *repositoryfakes.FakeRepository
 		rlzr                     *runnablefakes.FakeRealizer
-		dynamicTracker           *trackerfakes.FakeDynamicTracker
+		stampedTracker           *stampedfakes.FakeStampedTracker
+		dependencyTracker        *dependencyfakes.FakeDependencyTracker
 		conditionManager         *conditionsfakes.FakeConditionManager
 		builtClient              *repositoryfakes.FakeClient
 		clientForBuiltRepository *client.Client
@@ -64,6 +66,7 @@ var _ = Describe("Reconcile", func() {
 		fakeRunnabeRepo          *repositoryfakes.FakeRepository
 		serviceAccountSecret     *corev1.Secret
 		secretForBuiltClient     *corev1.Secret
+		serviceAccount           *corev1.ServiceAccount
 		serviceAccountName       string
 	)
 
@@ -73,12 +76,24 @@ var _ = Describe("Reconcile", func() {
 		ctx = logr.NewContext(context.Background(), logger)
 		repo = &repositoryfakes.FakeRepository{}
 		rlzr = &runnablefakes.FakeRealizer{}
-		dynamicTracker = &trackerfakes.FakeDynamicTracker{}
+		stampedTracker = &stampedfakes.FakeStampedTracker{}
+		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
 		conditionManager = &conditionsfakes.FakeConditionManager{}
 		fakeCache = &repositoryfakes.FakeRepoCache{}
 
 		serviceAccountName = "alternate-service-account-name"
 
+		serviceAccount = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ServiceAccount",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceAccountName,
+				Namespace: "my-namespace",
+			},
+		}
+		repo.GetServiceAccountReturns(serviceAccount, nil)
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
@@ -100,11 +115,12 @@ var _ = Describe("Reconcile", func() {
 		reconciler = runnable.Reconciler{
 			Repo:                    repo,
 			Realizer:                rlzr,
-			DynamicTracker:          dynamicTracker,
+			StampedTracker:          stampedTracker,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			RunnableCache:           fakeCache,
 			ClientBuilder:           clientBuilder,
 			RepositoryBuilder:       repositoryBuilder,
+			DependencyTracker:       dependencyTracker,
 		}
 
 		request = controllerruntime.Request{
@@ -170,13 +186,17 @@ var _ = Describe("Reconcile", func() {
 			}))
 		})
 
-		It("uses the service account specified by the workload for realizing resources", func() {
+		It("uses the service account specified by the runnable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, request)
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 			Expect(serviceAccountName).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
+
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, sa := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(sa).To(Equal(serviceAccount))
 
 			Expect(*clientForBuiltRepository).To(Equal(builtClient))
 			Expect(secretForBuiltClient).To(Equal(serviceAccountSecret))
@@ -200,6 +220,17 @@ var _ = Describe("Reconcile", func() {
 			}))
 		})
 
+		It("watches the cluster run template and service account", func() {
+			_, _ = reconciler.Reconcile(ctx, request)
+
+			Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+			runTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
+			Expect(runTemplateKey.String()).To(Equal("ClusterRunTemplate.carto.run//my-run-template"))
+
+			serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(1)
+			Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-namespace/alternate-service-account-name"))
+		})
+
 		Context("watching does not cause an error", func() {
 			It("watches the stampedObject's kind", func() {
 				stampedObject := &unstructured.Unstructured{}
@@ -211,8 +242,8 @@ var _ = Describe("Reconcile", func() {
 				rlzr.RealizeReturns(stampedObject, nil, nil)
 
 				_, _ = reconciler.Reconcile(ctx, request)
-				Expect(dynamicTracker.WatchCallCount()).To(Equal(1))
-				_, obj, hndl, _ := dynamicTracker.WatchArgsForCall(0)
+				Expect(stampedTracker.WatchCallCount()).To(Equal(1))
+				_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 
 				Expect(obj).To(Equal(stampedObject))
 				Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}}))
@@ -224,7 +255,7 @@ var _ = Describe("Reconcile", func() {
 				stampedObject := &unstructured.Unstructured{}
 				rlzr.RealizeReturns(stampedObject, nil, nil)
 
-				dynamicTracker.WatchReturns(errors.New("could not watch"))
+				stampedTracker.WatchReturns(errors.New("could not watch"))
 			})
 
 			It("logs the error message", func() {
@@ -357,7 +388,7 @@ var _ = Describe("Reconcile", func() {
 				_, err := reconciler.Reconcile(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(dynamicTracker.WatchCallCount()).To(Equal(0))
+				Expect(stampedTracker.WatchCallCount()).To(Equal(0))
 			})
 
 			Context("of type GetRunTemplateError", func() {
@@ -431,7 +462,7 @@ var _ = Describe("Reconcile", func() {
 					_, err := reconciler.Reconcile(ctx, request)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(dynamicTracker.WatchCallCount()).To(Equal(0))
+					Expect(stampedTracker.WatchCallCount()).To(Equal(0))
 				})
 
 				It("calls the condition manager to report", func() {
@@ -609,7 +640,7 @@ var _ = Describe("Reconcile", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 				Expect(serviceAccountName).To(Equal("default"))
 				Expect(serviceAccountNS).To(Equal("my-namespace"))
 			})

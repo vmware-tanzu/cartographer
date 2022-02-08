@@ -19,6 +19,7 @@ package registrar
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -38,14 +39,18 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizerdeliverable "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	realizerrunnable "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	realizerworkload "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 )
 
 type Timer struct{}
+
+const defaultResyncTime = 10 * time.Hour
 
 func (t Timer) Now() metav1.Time {
 	return metav1.Now()
@@ -102,6 +107,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 		ConditionManagerBuilder: conditions.NewConditionManager,
 		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
 		Realizer:                realizerworkload.NewRealizer(),
+		DependencyTracker:       dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-workload")),
 	}
 
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{
@@ -111,7 +117,7 @@ func registerWorkloadController(mgr manager.Manager) error {
 		return fmt.Errorf("controller new: %w", err)
 	}
 
-	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
+	reconciler.StampedTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Workload{}},
@@ -121,8 +127,9 @@ func registerWorkloadController(mgr manager.Manager) error {
 	}
 
 	mapper := Mapper{
-		Client: mgr.GetClient(),
-		Logger: mgr.GetLogger().WithName("workload"),
+		Client:  mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("workload"),
+		Tracker: reconciler.DependencyTracker,
 	}
 
 	watches := map[client.Object]handler.MapFunc{
@@ -133,15 +140,22 @@ func registerWorkloadController(mgr manager.Manager) error {
 		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToWorkloadRequests,
 		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToWorkloadRequests,
 	}
-	for _, template := range v1alpha1.ValidSupplyChainTemplates {
-		watches[template] = mapper.TemplateToWorkloadRequests
-	}
+
 	for kindType, mapFunc := range watches {
 		if err := ctrl.Watch(
 			&source.Kind{Type: kindType},
 			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		); err != nil {
 			return fmt.Errorf("watch %T: %w", kindType, err)
+		}
+	}
+
+	for _, template := range v1alpha1.ValidSupplyChainTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, reconciler.DependencyTracker, mgr.GetScheme()),
+		); err != nil {
+			return fmt.Errorf("watch %T: %w", template, err)
 		}
 	}
 
@@ -157,6 +171,7 @@ func registerSupplyChainController(mgr manager.Manager) error {
 	reconciler := &supplychain.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
+		DependencyTracker:       dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-supply-chain")),
 	}
 	ctrl, err := pkgcontroller.New("supply-chain", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
@@ -172,15 +187,10 @@ func registerSupplyChainController(mgr manager.Manager) error {
 		return fmt.Errorf("watch: %w", err)
 	}
 
-	mapper := Mapper{
-		Client: mgr.GetClient(),
-		Logger: mgr.GetLogger().WithName("supply-chain"),
-	}
-
 	for _, template := range v1alpha1.ValidSupplyChainTemplates {
 		if err := ctrl.Watch(
 			&source.Kind{Type: template},
-			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToSupplyChainRequests),
+			enqueuer.EnqueueTracked(template, reconciler.DependencyTracker, mgr.GetScheme()),
 		); err != nil {
 			return fmt.Errorf("watch template: %w", err)
 		}
@@ -196,7 +206,8 @@ func registerDeliveryController(mgr manager.Manager) error {
 	)
 
 	reconciler := &delivery.Reconciler{
-		Repo: repo,
+		Repo:              repo,
+		DependencyTracker: dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-delivery")),
 	}
 	ctrl, err := pkgcontroller.New("delivery", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
@@ -212,15 +223,10 @@ func registerDeliveryController(mgr manager.Manager) error {
 		return fmt.Errorf("watch: %w", err)
 	}
 
-	mapper := Mapper{
-		Client: mgr.GetClient(),
-		Logger: mgr.GetLogger().WithName("delivery"),
-	}
-
 	for _, template := range v1alpha1.ValidDeliveryTemplates {
 		if err := ctrl.Watch(
 			&source.Kind{Type: template},
-			handler.EnqueueRequestsFromMapFunc(mapper.TemplateToDeliveryRequests),
+			enqueuer.EnqueueTracked(template, reconciler.DependencyTracker, mgr.GetScheme()),
 		); err != nil {
 			return fmt.Errorf("watch template: %w", err)
 		}
@@ -243,7 +249,8 @@ func registerDeliverableController(mgr manager.Manager) error {
 			realizerclient.NewClientBuilder(mgr.GetConfig()),
 			repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")),
 		),
-		Realizer: realizerdeliverable.NewRealizer(),
+		Realizer:          realizerdeliverable.NewRealizer(),
+		DependencyTracker: dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-deliverable")),
 	}
 
 	ctrl, err := pkgcontroller.New("deliverable", mgr, pkgcontroller.Options{
@@ -253,7 +260,7 @@ func registerDeliverableController(mgr manager.Manager) error {
 		return fmt.Errorf("controller new: %w", err)
 	}
 
-	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
+	reconciler.StampedTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Deliverable{}},
@@ -263,8 +270,9 @@ func registerDeliverableController(mgr manager.Manager) error {
 	}
 
 	mapper := Mapper{
-		Client: mgr.GetClient(),
-		Logger: mgr.GetLogger().WithName("deliverable"),
+		Client:  mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("deliverable"),
+		Tracker: reconciler.DependencyTracker,
 	}
 
 	watches := map[client.Object]handler.MapFunc{
@@ -275,15 +283,22 @@ func registerDeliverableController(mgr manager.Manager) error {
 		&rbacv1.ClusterRole{}:        mapper.ClusterRoleToDeliverableRequests,
 		&rbacv1.ClusterRoleBinding{}: mapper.ClusterRoleBindingToDeliverableRequests,
 	}
-	for _, template := range v1alpha1.ValidDeliveryTemplates {
-		watches[template] = mapper.TemplateToDeliverableRequests
-	}
+
 	for kindType, mapFunc := range watches {
 		if err := ctrl.Watch(
 			&source.Kind{Type: kindType},
 			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		); err != nil {
 			return fmt.Errorf("watch %T: %w", kindType, err)
+		}
+	}
+
+	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, reconciler.DependencyTracker, mgr.GetScheme()),
+		); err != nil {
+			return fmt.Errorf("watch %T: %w", template, err)
 		}
 	}
 
@@ -303,6 +318,7 @@ func registerRunnableController(mgr manager.Manager) error {
 		RepositoryBuilder:       repository.NewRepository,
 		ClientBuilder:           realizerclient.NewClientBuilder(mgr.GetConfig()),
 		ConditionManagerBuilder: conditions.NewConditionManager,
+		DependencyTracker:       dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-runnable")),
 	}
 	ctrl, err := pkgcontroller.New("runnable-service", mgr, pkgcontroller.Options{
 		Reconciler: reconciler,
@@ -311,7 +327,7 @@ func registerRunnableController(mgr manager.Manager) error {
 		return fmt.Errorf("controller new runnable-service: %w", err)
 	}
 
-	reconciler.DynamicTracker = &external.ObjectTracker{Controller: ctrl}
+	reconciler.StampedTracker = &external.ObjectTracker{Controller: ctrl}
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.Runnable{}},
@@ -321,17 +337,17 @@ func registerRunnableController(mgr manager.Manager) error {
 	}
 
 	mapper := Mapper{
-		Client: mgr.GetClient(),
-		Logger: mgr.GetLogger().WithName("runnable"),
+		Client:  mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("runnable"),
+		Tracker: reconciler.DependencyTracker,
 	}
 
 	watches := map[client.Object]handler.MapFunc{
-		&v1alpha1.ClusterRunTemplate{}: mapper.RunTemplateToRunnableRequests,
-		&corev1.ServiceAccount{}:       mapper.ServiceAccountToRunnableRequests,
-		&rbacv1.Role{}:                 mapper.RoleToRunnableRequests,
-		&rbacv1.RoleBinding{}:          mapper.RoleBindingToRunnableRequests,
-		&rbacv1.ClusterRole{}:          mapper.ClusterRoleToRunnableRequests,
-		&rbacv1.ClusterRoleBinding{}:   mapper.ClusterRoleBindingToRunnableRequests,
+		&corev1.ServiceAccount{}:     mapper.ServiceAccountToRunnableRequests,
+		&rbacv1.Role{}:               mapper.RoleToRunnableRequests,
+		&rbacv1.RoleBinding{}:        mapper.RoleBindingToRunnableRequests,
+		&rbacv1.ClusterRole{}:        mapper.ClusterRoleToRunnableRequests,
+		&rbacv1.ClusterRoleBinding{}: mapper.ClusterRoleBindingToRunnableRequests,
 	}
 
 	for kindType, mapFunc := range watches {
@@ -341,6 +357,13 @@ func registerRunnableController(mgr manager.Manager) error {
 		); err != nil {
 			return fmt.Errorf("watch %T: %w", kindType, err)
 		}
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
+		enqueuer.EnqueueTracked(&v1alpha1.ClusterRunTemplate{}, reconciler.DependencyTracker, mgr.GetScheme()),
+	); err != nil {
+		return fmt.Errorf("watch %T: %w", &v1alpha1.ClusterRunTemplate{}, err)
 	}
 
 	return nil
