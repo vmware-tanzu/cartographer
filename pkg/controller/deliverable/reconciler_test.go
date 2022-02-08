@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +45,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 )
 
 var _ = Describe("Reconciler", func() {

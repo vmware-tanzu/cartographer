@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Knative Authors
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2019-2020 VMware, Inc.
+SPDX-License-Identifier: Apache-2.0
+*/
 // Copyright 2021 VMware
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +40,8 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
 //counterfeiter:generate . DependencyTracker
@@ -110,15 +128,13 @@ func isExpired(expiry time.Time) bool {
 
 // Lookup implements Tracker.
 func (i *impl) Lookup(ref Key) []types.NamespacedName {
-	items := []types.NamespacedName{}
+	var items []types.NamespacedName
 
-	// TODO(mattmoor): Consider locking the mapping (global) for a
-	// smaller scope and leveraging a per-set lock to guard its access.
 	i.m.Lock()
 	defer i.m.Unlock()
 	s, ok := i.mapping[ref.String()]
 	if !ok {
-		i.log.V(2).Info("no tracked items found", "ref", ref.String())
+		i.log.V(logger.DEBUG).Info("no tracked items found", "ref", ref.String())
 		return items
 	}
 
@@ -135,7 +151,7 @@ func (i *impl) Lookup(ref Key) []types.NamespacedName {
 		delete(i.mapping, ref.String())
 	}
 
-	i.log.V(1).Info("found tracked items", "ref", ref.String(), "items", items)
+	i.log.V(logger.DEBUG).Info("found tracked items", "ref", ref.String(), "items", items)
 
 	return items
 }

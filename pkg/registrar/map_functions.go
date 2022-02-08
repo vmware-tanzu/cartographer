@@ -97,7 +97,7 @@ func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Obj
 		return nil
 	}
 
-	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects)
+	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects, "role binding to workload requests")
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
@@ -114,7 +114,7 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 		return nil
 	}
 
-	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects)
+	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects, "cluster role binding to workload requests")
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
@@ -242,7 +242,7 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 		return nil
 	}
 
-	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects)
+	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects, "role binding to deliverable requests")
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
@@ -259,7 +259,7 @@ func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBinding
 		return nil
 	}
 
-	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects)
+	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects, "cluster role binding to deliverable requests")
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
@@ -366,7 +366,7 @@ func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Obj
 		return nil
 	}
 
-	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects)
+	serviceAccounts := mapper.getServiceAccounts(roleBinding.Subjects, "role binding to runnable requests")
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
@@ -383,7 +383,7 @@ func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObj
 		return nil
 	}
 
-	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects)
+	serviceAccounts := mapper.getServiceAccounts(clusterRoleBinding.Subjects, "cluster role binding to runnable requests")
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
@@ -480,7 +480,7 @@ func (mapper *Mapper) addGVK(obj client.Object) error {
 	return nil
 }
 
-func (mapper *Mapper) getServiceAccounts(subjects []rbacv1.Subject) []*corev1.ServiceAccount {
+func (mapper *Mapper) getServiceAccounts(subjects []rbacv1.Subject, logPrefix string) []*corev1.ServiceAccount {
 	var serviceAccounts []*corev1.ServiceAccount
 	for _, subject := range subjects {
 		if subject.APIGroup == "" && subject.Kind == "ServiceAccount" {
@@ -496,7 +496,7 @@ func (mapper *Mapper) getServiceAccounts(subjects []rbacv1.Subject) []*corev1.Se
 			serviceAccountObject := &corev1.ServiceAccount{}
 			err := mapper.Client.Get(context.TODO(), serviceAccountKey, serviceAccountObject)
 			if err != nil {
-				mapper.Logger.Error(fmt.Errorf("client get: %w", err), "role binding to workload requests: get service account")
+				mapper.Logger.Error(fmt.Errorf("client get: %w", err), fmt.Sprintf("%s: get service account", logPrefix))
 			}
 			serviceAccounts = append(serviceAccounts, serviceAccountObject)
 		}
