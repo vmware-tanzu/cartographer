@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -65,6 +67,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if workload == nil {
 		log.Info("workload no longer exists")
+		r.DependencyTracker.ClearTracked(types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		})
+
 		return ctrl.Result{}, nil
 	}
 
@@ -78,13 +85,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log = log.WithValues("supply chain", supplyChain.Name)
 	ctx = logr.NewContext(ctx, log)
 
-	r.trackTemplates(workload, supplyChain)
-
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
 		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
-			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)))
+			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
+		)
 	}
 
 	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
@@ -99,22 +105,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
 
-	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
-	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
-		log.Info("failed to get service account", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
-	}
+	r.trackDependencies(workload, supplyChain, serviceAccountName, serviceAccountNS)
 
-	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
-		Namespace: serviceAccountNS,
-		Name:      serviceAccountName,
-	}), types.NamespacedName{
-		Namespace: workload.Namespace,
-		Name:      workload.Name,
-	})
-
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
@@ -145,6 +138,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
+		case realizer.ResolveTemplateOptionError:
+			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+		case realizer.TemplateOptionsMatchError:
+			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -251,6 +248,29 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 
 	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].Name)
 	return supplyChains[0], nil
+}
+
+func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain, serviceAccountName, serviceAccountNS string) {
+	r.DependencyTracker.ClearTracked(types.NamespacedName{
+		Namespace: workload.Namespace,
+		Name:      workload.Name,
+	})
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: corev1.SchemeGroupVersion.Group,
+			Kind:  rbacv1.ServiceAccountKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountNS,
+			Name:      serviceAccountName,
+		},
+	}, types.NamespacedName{
+		Namespace: workload.Namespace,
+		Name:      workload.Name,
+	})
+
+	r.trackTemplates(workload, supplyChain)
 }
 
 func (r *Reconciler) trackTemplates(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) {

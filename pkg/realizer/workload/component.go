@@ -23,8 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -67,7 +70,20 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	apiTemplate, err := r.systemRepo.GetSupplyChainTemplate(ctx, resource.TemplateRef)
+	var templateName string
+	var err error
+	if len(resource.TemplateRef.Options) > 0 {
+		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		templateName = resource.TemplateRef.Name
+	}
+
+	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
+
+	apiTemplate, err := r.systemRepo.GetSupplyChainTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
 		return nil, nil, GetSupplyChainTemplateError{
@@ -149,4 +165,49 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	}
 
 	return stampedObject, output, nil
+}
+
+func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
+	var templateName string
+	var matchingOptions []string
+
+	for _, option := range resource.TemplateRef.Options {
+		matchedAllFields := true
+		for _, field := range option.Selector.MatchFields {
+			wkContext := map[string]interface{}{
+				"workload": r.workload,
+			}
+			matched, err := selector.Matches(field, wkContext)
+			if err != nil {
+				if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
+					return "", ResolveTemplateOptionError{
+						Err:             err,
+						SupplyChainName: supplyChainName,
+						Resource:        resource,
+						OptionName:      option.Name,
+						Key:             field.Key,
+					}
+				}
+			}
+			if !matched {
+				matchedAllFields = false
+				break
+			}
+		}
+		if matchedAllFields {
+			matchingOptions = append(matchingOptions, option.Name)
+		}
+	}
+
+	if len(matchingOptions) != 1 {
+		return "", TemplateOptionsMatchError{
+			SupplyChainName: supplyChainName,
+			Resource:        resource,
+			OptionNames:     matchingOptions,
+		}
+	} else {
+		templateName = matchingOptions[0]
+	}
+
+	return templateName, nil
 }

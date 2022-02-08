@@ -100,14 +100,32 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 	var resourcesNotFound []string
 
 	for _, resource := range chain.Spec.Resources {
-		template, err := r.Repo.GetSupplyChainTemplate(ctx, resource.TemplateRef)
-		if err != nil {
-			log.Error(err, "failed to get cluster template", "template", resource.TemplateRef)
-			return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
-		}
-		if template == nil {
-			log.Info("cluster template does not exist", "template", resource.TemplateRef)
-			resourcesNotFound = append(resourcesNotFound, resource.Name)
+		if resource.TemplateRef.Name != "" {
+			template, err := r.Repo.GetSupplyChainTemplate(ctx, resource.TemplateRef.Name, resource.TemplateRef.Kind)
+			if err != nil {
+				log.Error(err, "failed to get cluster template", "template", resource.TemplateRef)
+				return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
+			}
+
+			if template == nil {
+				log.Info("cluster template does not exist", "template", resource.TemplateRef)
+				resourcesNotFound = append(resourcesNotFound, resource.Name)
+			}
+		} else {
+			for _, option := range resource.TemplateRef.Options {
+				template, err := r.Repo.GetSupplyChainTemplate(ctx, option.Name, resource.TemplateRef.Kind)
+				if err != nil {
+					log.Error(err, "failed to get cluster template", "template",
+						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
+					return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
+				}
+
+				if template == nil {
+					log.Info("cluster template does not exist", "template",
+						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
+					resourcesNotFound = append(resourcesNotFound, resource.Name)
+				}
+			}
 		}
 
 		r.DependencyTracker.Track(dependency.Key{

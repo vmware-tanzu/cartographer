@@ -9,6 +9,11 @@ import (
 )
 
 type FakeDependencyTracker struct {
+	ClearTrackedStub        func(types.NamespacedName)
+	clearTrackedMutex       sync.RWMutex
+	clearTrackedArgsForCall []struct {
+		arg1 types.NamespacedName
+	}
 	LookupStub        func(dependency.Key) []types.NamespacedName
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
@@ -28,6 +33,38 @@ type FakeDependencyTracker struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeDependencyTracker) ClearTracked(arg1 types.NamespacedName) {
+	fake.clearTrackedMutex.Lock()
+	fake.clearTrackedArgsForCall = append(fake.clearTrackedArgsForCall, struct {
+		arg1 types.NamespacedName
+	}{arg1})
+	stub := fake.ClearTrackedStub
+	fake.recordInvocation("ClearTracked", []interface{}{arg1})
+	fake.clearTrackedMutex.Unlock()
+	if stub != nil {
+		fake.ClearTrackedStub(arg1)
+	}
+}
+
+func (fake *FakeDependencyTracker) ClearTrackedCallCount() int {
+	fake.clearTrackedMutex.RLock()
+	defer fake.clearTrackedMutex.RUnlock()
+	return len(fake.clearTrackedArgsForCall)
+}
+
+func (fake *FakeDependencyTracker) ClearTrackedCalls(stub func(types.NamespacedName)) {
+	fake.clearTrackedMutex.Lock()
+	defer fake.clearTrackedMutex.Unlock()
+	fake.ClearTrackedStub = stub
+}
+
+func (fake *FakeDependencyTracker) ClearTrackedArgsForCall(i int) types.NamespacedName {
+	fake.clearTrackedMutex.RLock()
+	defer fake.clearTrackedMutex.RUnlock()
+	argsForCall := fake.clearTrackedArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeDependencyTracker) Lookup(arg1 dependency.Key) []types.NamespacedName {
@@ -127,6 +164,8 @@ func (fake *FakeDependencyTracker) TrackArgsForCall(i int) (dependency.Key, type
 func (fake *FakeDependencyTracker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.clearTrackedMutex.RLock()
+	defer fake.clearTrackedMutex.RUnlock()
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
 	fake.trackMutex.RLock()

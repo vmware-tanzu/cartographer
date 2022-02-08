@@ -586,7 +586,7 @@ spec:
 						Kind: "some-unsupported-kind",
 						Name: "my-template",
 					}
-					_, err := repo.GetSupplyChainTemplate(ctx, reference)
+					_, err := repo.GetSupplyChainTemplate(ctx, reference.Name, reference.Kind)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("unable to get api template [some-unsupported-kind/my-template]: resource does not have valid kind: some-unsupported-kind"))
 				})
@@ -601,7 +601,7 @@ spec:
 						Kind: "ClusterImageTemplate",
 						Name: "image-template",
 					}
-					_, err := repo.GetSupplyChainTemplate(ctx, reference)
+					_, err := repo.GetSupplyChainTemplate(ctx, reference.Name, reference.Kind)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
@@ -704,58 +704,8 @@ spec:
 
 		})
 
-		Describe("GetServiceAccount", func() {
-			Context("when the service account exists", func() {
-				var (
-					serviceAccount     *v1.ServiceAccount
-					serviceAccountName string
-				)
-
-				BeforeEach(func() {
-					serviceAccountName = "my-service-account"
-
-					serviceAccount = &v1.ServiceAccount{
-						TypeMeta: metav1.TypeMeta{},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
-						},
-					}
-
-					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountName {
-							bytes, _ := json.Marshal(serviceAccount)
-							_ = json.Unmarshal(bytes, obj)
-						} else {
-							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
-						}
-						return nil
-					}
-				})
-
-				It("returns the specified service account", func() {
-					secret, err := repo.GetServiceAccount(context.TODO(), serviceAccountName, "")
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(secret).To(Equal(serviceAccount))
-				})
-			})
-
-			Context("when there is an error getting the service account", func() {
-				BeforeEach(func() {
-					cl.GetReturnsOnCall(0, fmt.Errorf("some error"))
-				})
-
-				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccount(context.TODO(), "some-service-account", "")
-					Expect(err).To(HaveOccurred())
-
-					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object [some-service-account] from api server: some error"))
-				})
-			})
-		})
-
 		Describe("GetServiceAccountSecret", func() {
-			Context("when the secret exists", func() {
+			Context("when the service account and secret exist", func() {
 				var (
 					serviceAccount       *v1.ServiceAccount
 					serviceAccountSecret *v1.Secret
@@ -793,7 +743,10 @@ spec:
 					}
 
 					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountSecretName {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else if key.Name == serviceAccountSecretName {
 							bytes, _ := json.Marshal(serviceAccountSecret)
 							_ = json.Unmarshal(bytes, obj)
 						} else {
@@ -804,10 +757,23 @@ spec:
 				})
 
 				It("returns the secret associated with the specified service account", func() {
-					secret, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccount)
+					secret, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(secret).To(Equal(serviceAccountSecret))
+				})
+			})
+
+			Context("when there is an error getting the service account", func() {
+				BeforeEach(func() {
+					cl.GetReturnsOnCall(0, fmt.Errorf("some error"))
+				})
+
+				It("returns a helpful error message", func() {
+					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
+					Expect(err).To(HaveOccurred())
+
+					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object [some-service-account] from api server: some error"))
 				})
 			})
 
@@ -834,7 +800,10 @@ spec:
 					}
 
 					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountSecretName {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else if key.Name == serviceAccountSecretName {
 							return fmt.Errorf("some error")
 						} else {
 							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
@@ -844,7 +813,7 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccount)
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring("failed to get secret object from api server: "))
@@ -872,13 +841,18 @@ spec:
 					}
 
 					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else {
+							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
+						}
 						return nil
 					}
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccount)
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any secrets", serviceAccountNs, serviceAccountName)))
@@ -920,7 +894,10 @@ spec:
 					}
 
 					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == secretName {
+						if key.Name == serviceAccountName {
+							bytes, _ := json.Marshal(serviceAccount)
+							_ = json.Unmarshal(bytes, obj)
+						} else if key.Name == secretName {
 							bytes, _ := json.Marshal(secret)
 							_ = json.Unmarshal(bytes, obj)
 						} else {
@@ -931,7 +908,7 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccount)
+					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
 					Expect(err).To(HaveOccurred())
 
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any token secrets", serviceAccountNs, serviceAccountName)))
@@ -977,7 +954,7 @@ spec:
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetSupplyChainTemplate(ctx, templateRef)
+				template, err := repo.GetSupplyChainTemplate(ctx, templateRef.Name, templateRef.Kind)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})

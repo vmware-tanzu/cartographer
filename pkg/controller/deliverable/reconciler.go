@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,6 +68,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if deliverable == nil {
 		log.Info("deliverable no longer exists")
+		r.DependencyTracker.ClearTracked(types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		})
+
 		return ctrl.Result{}, nil
 	}
 
@@ -78,8 +85,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log = log.WithValues("delivery", delivery.Name)
 	ctx = logr.NewContext(ctx, log)
-
-	r.trackTemplates(deliverable, delivery)
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
@@ -100,21 +105,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(deliverable, delivery)
 
-	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
-	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
-	}
+	r.trackDependencies(deliverable, delivery, serviceAccountName, serviceAccountNS)
 
-	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
-		Namespace: serviceAccountNS,
-		Name:      serviceAccountName,
-	}), types.NamespacedName{
-		Namespace: deliverable.Namespace,
-		Name:      deliverable.Name,
-	})
-
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
@@ -214,6 +207,29 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1
 func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	return readyCondition.Status == "True"
+}
+
+func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery, serviceAccountName, serviceAccountNS string) {
+	r.DependencyTracker.ClearTracked(types.NamespacedName{
+		Namespace: deliverable.Namespace,
+		Name:      deliverable.Name,
+	})
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: corev1.SchemeGroupVersion.Group,
+			Kind:  rbacv1.ServiceAccountKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountNS,
+			Name:      serviceAccountName,
+		},
+	}, types.NamespacedName{
+		Namespace: deliverable.Namespace,
+		Name:      deliverable.Name,
+	})
+
+	r.trackTemplates(deliverable, delivery)
 }
 
 func (r *Reconciler) trackTemplates(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) {

@@ -34,9 +34,10 @@ const (
 	WorkloadLabelsMissingSupplyChainReason               = "WorkloadLabelsMissing"
 	NotFoundSupplyChainReadyReason                       = "SupplyChainNotFound"
 	MultipleMatchesSupplyChainReadyReason                = "MultipleSupplyChainMatches"
-	ServiceAccountErrorResourcesSubmittedReason          = "ServiceAccountError"
 	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
+	ResolveTemplateOptionsErrorResourcesSubmittedReason  = "ResolveTemplateOptionsError"
+	TemplateOptionsMatchErrorResourcesSubmittedReason    = "TemplateOptionsMatchError"
 )
 
 // +kubebuilder:object:root=true

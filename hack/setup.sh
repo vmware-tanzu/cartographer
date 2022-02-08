@@ -477,7 +477,8 @@ clean_up_git_repo() {
             git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
             pushd "$GIT_WRITER_REPOSITORY"
                   git ls-remote --heads origin "$BRANCH"
-                  readonly BRANCH_EXISTS="$(git ls-remote --heads origin "$BRANCH")"
+                  local BRANCH_EXISTS
+                  BRANCH_EXISTS="$(git ls-remote --heads origin "$BRANCH")"
 
                   if [[ -n "$BRANCH_EXISTS" ]]; then
                         git push -d origin "$BRANCH"
