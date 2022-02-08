@@ -351,12 +351,12 @@ var _ = Describe("Reconciler", func() {
 		It("watches the stampedObjects kinds", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(dynamicTracker.WatchCallCount()).To(Equal(2))
-			_, obj, hndl := dynamicTracker.WatchArgsForCall(0)
+			_, obj, hndl, _ := dynamicTracker.WatchArgsForCall(0)
 
 			Expect(obj).To(Equal(stampedObject1))
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))
 
-			_, obj, hndl = dynamicTracker.WatchArgsForCall(1)
+			_, obj, hndl, _ = dynamicTracker.WatchArgsForCall(1)
 
 			Expect(obj).To(Equal(stampedObject2))
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))

@@ -8,15 +8,17 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/tracker"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 type FakeDynamicTracker struct {
-	WatchStub        func(logr.Logger, runtime.Object, handler.EventHandler) error
+	WatchStub        func(logr.Logger, runtime.Object, handler.EventHandler, ...predicate.Predicate) error
 	watchMutex       sync.RWMutex
 	watchArgsForCall []struct {
 		arg1 logr.Logger
 		arg2 runtime.Object
 		arg3 handler.EventHandler
+		arg4 []predicate.Predicate
 	}
 	watchReturns struct {
 		result1 error
@@ -28,20 +30,21 @@ type FakeDynamicTracker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDynamicTracker) Watch(arg1 logr.Logger, arg2 runtime.Object, arg3 handler.EventHandler) error {
+func (fake *FakeDynamicTracker) Watch(arg1 logr.Logger, arg2 runtime.Object, arg3 handler.EventHandler, arg4 ...predicate.Predicate) error {
 	fake.watchMutex.Lock()
 	ret, specificReturn := fake.watchReturnsOnCall[len(fake.watchArgsForCall)]
 	fake.watchArgsForCall = append(fake.watchArgsForCall, struct {
 		arg1 logr.Logger
 		arg2 runtime.Object
 		arg3 handler.EventHandler
-	}{arg1, arg2, arg3})
+		arg4 []predicate.Predicate
+	}{arg1, arg2, arg3, arg4})
 	stub := fake.WatchStub
 	fakeReturns := fake.watchReturns
-	fake.recordInvocation("Watch", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Watch", []interface{}{arg1, arg2, arg3, arg4})
 	fake.watchMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4...)
 	}
 	if specificReturn {
 		return ret.result1
@@ -55,17 +58,17 @@ func (fake *FakeDynamicTracker) WatchCallCount() int {
 	return len(fake.watchArgsForCall)
 }
 
-func (fake *FakeDynamicTracker) WatchCalls(stub func(logr.Logger, runtime.Object, handler.EventHandler) error) {
+func (fake *FakeDynamicTracker) WatchCalls(stub func(logr.Logger, runtime.Object, handler.EventHandler, ...predicate.Predicate) error) {
 	fake.watchMutex.Lock()
 	defer fake.watchMutex.Unlock()
 	fake.WatchStub = stub
 }
 
-func (fake *FakeDynamicTracker) WatchArgsForCall(i int) (logr.Logger, runtime.Object, handler.EventHandler) {
+func (fake *FakeDynamicTracker) WatchArgsForCall(i int) (logr.Logger, runtime.Object, handler.EventHandler, []predicate.Predicate) {
 	fake.watchMutex.RLock()
 	defer fake.watchMutex.RUnlock()
 	argsForCall := fake.watchArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeDynamicTracker) WatchReturns(result1 error) {
