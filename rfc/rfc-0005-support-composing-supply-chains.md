@@ -207,6 +207,13 @@ spec:
                 key: "metadata.labels.has-tests"
                 operation: NotIn
                 value: ["true"]
+    - name: image-builder
+      templateRef:
+        kind: ClusterImageTemplate
+        name: build-image
+      sources:
+        - resource: provide-source
+          name: source
 
 ---
 apiVersion: kontinue.io/v1alpha1
