@@ -201,7 +201,7 @@ spec:
                 key: "metadata.labels.has-tests"
                 operation: In
                 value: ["true"]
-          - name: source-provider
+          - name: providing-source
             selector:
               matchFields:
                 key: "metadata.labels.has-tests"
@@ -225,19 +225,31 @@ spec:
     - name: provide-source
       templateRef:
         kind: ClusterSourceTemplate
-        options:
-          - name: source-from-git-repo
-            selector:
-              matchFields:
-                { key: "spec.source.url", operation: exists }
-          - name: source-from-image-registry
-            selector:
-              matchFields:
-                { key: "spec.source.image", operation: exists }
+        name: providing-source
     - name: test-source
       templateRef:
         kind: ClusterSourceTemplate
         name: source-tester
+
+---
+apiVersion: kontinue.io/v1alpha1
+kind: ClusterSupplyChainSnippet
+metadata:
+  name: providing-source
+spec:
+  resources:
+    - name: provide-source
+      templateRef:
+        kind: ClusterSourceTemplate
+        options:
+          - name: source-from-git-repo
+            selector:
+              matchFields:
+                      { key: "spec.source.url", operation: exists }
+          - name: source-from-image-registry
+            selector:
+              matchFields:
+                      { key: "spec.source.image", operation: exists }
 ```
 
 ## Cross References and Prior Art
