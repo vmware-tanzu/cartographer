@@ -82,18 +82,18 @@ main() {
                         ;;
 
                 example)
-                        test_runnable_example
-                        teardown_runnable_example
+#                        test_runnable_example
+#                        teardown_runnable_example
 
                         setup_example_sc "basic-sc"
                         test_example_sc "basic-sc"
-                        teardown_example_sc "basic-sc"
-
-                        setup_example_sc "testing-sc"
-                        test_example_sc "testing-sc"
-                        teardown_example_sc "testing-sc"
-
-                        test_gitops
+#                        teardown_example_sc "basic-sc"
+#
+#                        setup_example_sc "testing-sc"
+#                        test_example_sc "testing-sc"
+#                        teardown_example_sc "testing-sc"
+#
+#                        test_gitops
 
                         log "all tests passed!!"
                         ;;

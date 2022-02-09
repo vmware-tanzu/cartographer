@@ -39,7 +39,7 @@ spec:
         name: image
       params:
         - name: image_prefix
-          value: #@ data.values.image_prefix
+          value: 10.138.0.2:5000/example-basic-sc-
       sources:
         - resource: source-provider
           name: source
