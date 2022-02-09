@@ -17,14 +17,18 @@ introduced `buildpacks`, the `git push heroku` idiom and most importantly, the [
 In this brave new world, developers write applications that adhere to straight-forward constraints (the 12 factors) to
 ensure their apps can be deployed almost anywhere.
 
-With a simple `git push` to a different origin, the app is transformed
-by the buildpacks, having their base dependencies injected into a disk image that can then be deployed and scaled out on
-virtual machines (and more recently containers). Furthermore, the app authors can easily define their service dependencies 
-(such as a database) and be dynamically connected to the correct service instance for the environment (e.g. dev,
-staging or production).
+With a simple `git push` to a different origin, the app is transformed by [buildpacks](https://buildpacks.io/), having
+their base dependencies injected into a disk image. This disk image can be deployed and scaled out on virtual machines (
+and more recently containers). Furthermore, the app authors can easily define their service dependencies
+(such as a database) and be dynamically connected to the correct service instance for the environment (e.g. dev, staging
+or production).
 
 This contrasts with developers spending significant time developing deployment scripts to ensure their app will run on
-some (often bespoke) infrastructure.
+some (often bespoke) infrastructure. 
+
+Another important practice that came out of the 12 factor app was to produce stateless apps. That is, any state your app
+maintained should be recorded in a service specific to the task, be it a database, distributed caching, WebDAV, PubSub
+Queues, etc...
 
 The full benefits of Heroku's 12 Factor model are too numerous to delve into here, so here is a [list of resources](tbd)
 you can dive into at your leisure.
@@ -39,6 +43,7 @@ There were significant limitations of Heroku for enterprise users. It was:
 2. lacking support for "air gap environments".
 3. backed by private IP.
 4. tied to Heroku's infrastructure.
+5. quite forceful about compliance with the 12 Factor App. 
 
 ## Cloud Foundry
 
@@ -58,10 +63,12 @@ A couple of concerns about Cloud foundry that Cartographer want's to address:
 
 1. BOSH as an infrastructure adaptor, although open source, has not seen significant adoption. Kubernete's on the other
    hand, has.
-2. Cloud Foundry's `cf push` is highly prescriptive and largely unchangeable. Companies need a mechanism to modify parts 
-   of the process to fulfill operational and migration needs. 
-3. It represents the last-mile effort of a software supply chain, and enterprises require more validation, compliance and 
-   process control between "source code" and "deployed to production" than offered by `cf push` or even `git push heroku ...`
+2. Cloud Foundry's `cf push` is highly prescriptive and largely unchangeable. Companies need a mechanism to modify parts
+   of the process to fulfill operational and migration needs. An 80/20 rule (such as the 12 factor app) still leaves the
+   20% to contend with.
+3. It represents the last-mile effort of a software supply chain, and enterprises require more validation, compliance
+   and process control between "source code" and "deployed to production" than offered by `cf push` or
+   even `git push heroku ...`
 
 ## Cartographer
 
