@@ -1,0 +1,15 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: basic-sc
+spec:
+  build:
+    env:
+      - name: CGO_ENABLED
+        value: "0"
+  serviceAccountName: cartographer-example-basic-sc-sa
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/kontinue/hello-world

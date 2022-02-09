@@ -1,0 +1,111 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: basic-sc
+spec:
+  gitImplementation: libgit2
+  ignore: ""
+  interval: 1m0s
+  ref:
+    branch: main
+  timeout: 20s
+  url: https://github.com/kontinue/hello-world
+
+---
+apiVersion: kpack.io/v1alpha2
+kind: Image
+metadata:
+  name: basic-sc
+spec:
+  build:
+    env:
+      - name: CGO_ENABLED
+        value: "0"
+    resources: {}
+  builder:
+    kind: ClusterBuilder
+    name: go-builder
+  cache:
+    volume:
+      size: 2G
+  failedBuildHistoryLimit: 10
+  imageTaggingStrategy: BuildNumber
+  serviceAccountName: cartographer-example-registry-creds-sa
+  source:
+    blob:
+      url: http://source-controller.gitops-toolkit.svc.cluster.local./gitrepository/default/basic-sc/3d42c19a618bb8fc13f72178b8b5e214a2f989c4.tar.gz
+  successBuildHistoryLimit: 10
+  tag: 10.138.0.2:5000/example-basic-sc-basic-sc
+
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: basic-sc
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+    spec:
+      serviceAccountName: cartographer-example-registry-creds-sa
+      containers:
+        - name: workload
+          image: 10.138.0.2:5000/example-basic-sc-basic-sc@sha256:43fa432c7bcb2a815e394b1fac383ac7344a885ebeb6897a65a1d32274b9150c
+          securityContext:
+            runAsUser: 1000
+---
+apiVersion: kappctrl.k14s.io/v1alpha1
+kind: App
+metadata:
+  name: basic-sc
+spec:
+  deploy:
+    - kapp: {}
+  fetch:
+    - inline:
+        paths:
+          manifest.yml: |
+            ---
+            apiVersion: kapp.k14s.io/v1alpha1
+            kind: Config
+            rebaseRules:
+              - path:
+                  - metadata
+                  - annotations
+                  - serving.knative.dev/creator
+                type: copy
+                sources: [new, existing]
+                resourceMatchers: &matchers
+                  - apiVersionKindMatcher:
+                      apiVersion: serving.knative.dev/v1
+                      kind: Service
+              - path:
+                  - metadata
+                  - annotations
+                  - serving.knative.dev/lastModifier
+                type: copy
+                sources: [new, existing]
+                resourceMatchers: *matchers
+
+            ---
+            apiVersion: serving.knative.dev/v1
+            kind: Service
+            metadata:
+              name: basic-sc
+            spec:
+              template:
+                metadata:
+                  annotations:
+                    autoscaling.knative.dev/minScale: "1"
+                spec:
+                  serviceAccountName: cartographer-example-registry-creds-sa
+                  containers:
+                    - name: workload
+                      image: 10.138.0.2:5000/example-basic-sc-basic-sc@sha256:c66dbc96a035d626654f1a612a8a3fc66a97620bdfcc852426dd3ce47e30c1bf
+                      securityContext:
+                        runAsUser: 1000
+  serviceAccountName: cartographer-example-registry-creds-sa
+  template:
+    - ytt: {}
