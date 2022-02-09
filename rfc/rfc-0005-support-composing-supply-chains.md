@@ -146,15 +146,17 @@ spec:
           - name: building-image
             selector:
               matchFields:
-                or:
-                  - key: "spec.source.url"
-                    operation: exists
-                  - key: "spec.source.image"
-                    operation: exists
+              - key: "spec.source.url"
+                operation: exists
+          - name: building-image
+            selector:
+              matchFields:
+              - key: "spec.source.image"
+                operation: exists
           - name: image-provider
             selector:
               matchFields:
-                { key: "spec.image", operation: exists }
+              - { key: "spec.image", operation: exists }
 
     - name: configure
       templateRef:
@@ -171,13 +173,13 @@ spec:
           - name: git-pusher
             selector:
               matchFields:
-                key: "metadata.labels.target"
+              - key: "metadata.labels.target"
                 operation: In
                 value: ["gitops"]
           - name: registry-pusher
             selector:
               matchFields:
-                key: "metadata.labels.target"
+              - key: "metadata.labels.target"
                 operation: In
                 value: ["repository"]
       configs:
@@ -198,15 +200,19 @@ spec:
           - name: providing-and-testing-source
             selector:
               matchFields:
-                key: "metadata.labels.has-tests"
+              - key: "metadata.labels.has-tests"
                 operation: In
                 value: ["true"]
-          - name: providing-source
+          - name: source-from-git-repo
             selector:
               matchFields:
-                key: "metadata.labels.has-tests"
-                operation: NotIn
-                value: ["true"]
+              - { key: "spec.source.url", operation: exists }
+              - { key: "metadata.labels.has-tests", operation: NotIn, value: ["true"] }
+          - name: source-from-image-registry
+            selector:
+              matchFields:
+              - { key: "spec.source.image", operation: exists }
+              - { key: "metadata.labels.has-tests", operation: NotIn, value: ["true"] }
     - name: image-builder
       templateRef:
         kind: ClusterImageTemplate
@@ -225,31 +231,19 @@ spec:
     - name: provide-source
       templateRef:
         kind: ClusterSourceTemplate
-        name: providing-source
-    - name: test-source
-      templateRef:
-        kind: ClusterSourceTemplate
-        name: source-tester
-
----
-apiVersion: kontinue.io/v1alpha1
-kind: ClusterSupplyChainSnippet
-metadata:
-  name: providing-source
-spec:
-  resources:
-    - name: provide-source
-      templateRef:
-        kind: ClusterSourceTemplate
         options:
           - name: source-from-git-repo
             selector:
               matchFields:
-                      { key: "spec.source.url", operation: exists }
+              - { key: "spec.source.url", operation: exists }
           - name: source-from-image-registry
             selector:
               matchFields:
-                      { key: "spec.source.image", operation: exists }
+              - { key: "spec.source.image", operation: exists }
+    - name: test-source
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: source-tester
 ```
 
 ## Cross References and Prior Art
