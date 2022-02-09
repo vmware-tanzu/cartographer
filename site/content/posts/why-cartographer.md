@@ -72,6 +72,19 @@ A couple of concerns about Cloud foundry that Cartographer want's to address:
 
 ## Cartographer
 
-Perhaps you've seen a Cloud Foundry manifest:
+
+Notes:
+* Collaborative
+* Divisible labor
+* Secure
+  * control apportioned (as per divisible labor)
+  * trustworthy artifacts
+* K8s Native. 
+  * Leverage growing k8s ecosystem
+* Level triggered
+  * 3rd party triggers
+
+Marry the infra (of k8s) to ops
+Marry the app experience of 'heroku model' to devs. 
 
 
