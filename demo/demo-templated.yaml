@@ -71,6 +71,7 @@ spec:
           labels:
             app: $(workload.metadata.name)$
         spec:
+          serviceAccountName: cartographer-example-registry-creds-sa
           containers:
             - name: $(workload.metadata.name)$
               image: $(images.image.image)$
