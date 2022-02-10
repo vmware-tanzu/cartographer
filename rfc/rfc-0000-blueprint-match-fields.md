@@ -1,6 +1,6 @@
 # Meta
 [meta]: #meta
-- Name: Blueprint selector matchFields
+- Name: Blueprint selector match fields
 - Start Date: 2022-02-10
 - Author(s): @jwntrs
 - Status: Draft
@@ -30,7 +30,7 @@ metadata:
 spec:
   selector:
     matchFields:                                                # <=========== add this
-      { key: "workload.labels.pipeline", operation: exists }    # <=========== 
+      { key: "workload.spec.image", operation: exists }         # <=========== 
 ```
 
 # How it Works
@@ -102,5 +102,5 @@ metadata:
 spec:
   selector:
     matchFields:                                                # <=========== add this
-      { key: "workload.labels.pipeline", operation: exists }    # <=========== 
+      { key: "workload.spec.image", operation: exists }         # <=========== 
 ```
