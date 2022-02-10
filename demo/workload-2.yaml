@@ -1,7 +1,7 @@
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
-  name: basic-sc
+  name: another-app
   labels:
     app.tanzu.vmware.com/workload-type: web
 spec:
