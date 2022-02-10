@@ -73,7 +73,7 @@ main() {
                         ;;
 
                 example-dependencies)
-                        start_repository
+#                        start_repository
                         install_source_controller
                         install_kpack
                         install_knative_serving
