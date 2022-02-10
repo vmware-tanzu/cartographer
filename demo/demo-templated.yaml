@@ -2,7 +2,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: my-source
+  name: source
 spec:
   urlPath: .status.artifact.url
   revisionPath: .status.artifact.revision
