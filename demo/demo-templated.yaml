@@ -55,56 +55,19 @@ metadata:
   name: app-deploy
 spec:
   template:
-    apiVersion: kappctrl.k14s.io/v1alpha1
-    kind: App
+    apiVersion: serving.knative.dev/v1
+    kind: Service
     metadata:
       name: $(workload.metadata.name)$
     spec:
-      serviceAccountName: cartographer-example-registry-creds-sa
-      fetch:
-        - inline:
-            paths:
-              manifest.yml: |
-                ---
-                apiVersion: kapp.k14s.io/v1alpha1
-                kind: Config
-                rebaseRules:
-                  - path:
-                      - metadata
-                      - annotations
-                      - serving.knative.dev/creator
-                    type: copy
-                    sources: [new, existing]
-                    resourceMatchers: &matchers
-                      - apiVersionKindMatcher:
-                          apiVersion: serving.knative.dev/v1
-                          kind: Service
-                  - path:
-                      - metadata
-                      - annotations
-                      - serving.knative.dev/lastModifier
-                    type: copy
-                    sources: [new, existing]
-                    resourceMatchers: *matchers
-
-                ---
-                apiVersion: serving.knative.dev/v1
-                kind: Service
-                metadata:
-                  name: $(workload.metadata.name)$
-                spec:
-                  template:
-                    metadata:
-                      annotations:
-                        autoscaling.knative.dev/minScale: "1"
-                    spec:
-                      serviceAccountName: cartographer-example-registry-creds-sa
-                      containers:
-                        - name: workload
-                          image: $(images.image.image)$
-                          securityContext:
-                            runAsUser: 1000
       template:
-        - ytt: {}
-      deploy:
-        - kapp: {}
+        metadata:
+          annotations:
+            autoscaling.knative.dev/minScale: "1"
+        spec:
+          serviceAccountName: cartographer-example-registry-creds-sa
+          containers:
+            - name: workload
+              image: $(images.image.image)$
+              securityContext:
+                runAsUser: 1000
