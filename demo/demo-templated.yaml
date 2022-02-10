@@ -75,5 +75,3 @@ spec:
           containers:
             - name: $(workload.metadata.name)$
               image: $(images.image.image)$
-#              ports:
-#                - containerPort: 80
