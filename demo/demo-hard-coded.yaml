@@ -11,6 +11,21 @@ spec:
     branch: main
   timeout: 20s
   url: https://github.com/kontinue/hello-world
+status:
+  artifact:
+    checksum: f8fe9fda3699fc45a2d4a54800a58fee7e380c67
+    lastUpdateTime: "2022-02-10T23:31:01Z"
+    path: gitrepository/default/hello/af9d9e843543fa20ac59019d20e685375c687093.tar.gz
+    revision: main/af9d9e843543fa20ac59019d20e685375c687093
+    url: http://source-controller.gitops-toolkit.svc.cluster.local./gitrepository/default/hello/af9d9e843543fa20ac59019d20e685375c687093.tar.gz
+  conditions:
+    - lastTransitionTime: "2022-02-10T23:31:01Z"
+      message: 'Fetched revision: main/af9d9e843543fa20ac59019d20e685375c687093'
+      reason: GitOperationSucceed
+      status: "True"
+      type: Ready
+  observedGeneration: 1
+  url: http://source-controller.gitops-toolkit.svc.cluster.local./gitrepository/default/hello/latest.tar.gz
 
 ---
 apiVersion: kpack.io/v1alpha2
@@ -34,61 +49,44 @@ spec:
   serviceAccountName: cartographer-example-registry-creds-sa
   source:
     blob:
-      url: http://source-controller.gitops-toolkit.svc.cluster.local./gitrepository/default/basic-sc/3d42c19a618bb8fc13f72178b8b5e214a2f989c4.tar.gz
+      url: http://source-controller.gitops-toolkit.svc.cluster.local./gitrepository/default/hello/af9d9e843543fa20ac59019d20e685375c687093.tar.gz
   successBuildHistoryLimit: 10
-  tag: 10.138.0.2:5000/example-basic-sc-basic-sc
+  tag: 10.138.0.2:5000/example-basic-sc-hello
+status:
+  buildCacheName: hello-cache
+  buildCounter: 1
+  conditions:
+    - lastTransitionTime: "2022-02-10T23:31:40Z"
+      status: "True"
+      type: Ready
+    - lastTransitionTime: "2022-02-10T23:31:40Z"
+      status: "True"
+      type: BuilderReady
+  latestBuildImageGeneration: 1
+  latestBuildReason: CONFIG
+  latestBuildRef: hello-build-1
+  latestImage: 10.138.0.2:5000/example-basic-sc-hello@sha256:92b8a4c87145a939c431fd79a9ecd542af0b191cde4cbfd2480aaac7756a9db9
+  latestStack: io.buildpacks.stacks.bionic
+  observedGeneration: 1
 
 ---
-apiVersion: kappctrl.k14s.io/v1alpha1
-kind: App
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: basic-sc
+  name: hello-deployment
+  labels:
+    app: hello
 spec:
-  deploy:
-    - kapp: {}
-  fetch:
-    - inline:
-        paths:
-          manifest.yml: |
-            ---
-            apiVersion: kapp.k14s.io/v1alpha1
-            kind: Config
-            rebaseRules:
-              - path:
-                  - metadata
-                  - annotations
-                  - serving.knative.dev/creator
-                type: copy
-                sources: [new, existing]
-                resourceMatchers: &matchers
-                  - apiVersionKindMatcher:
-                      apiVersion: serving.knative.dev/v1
-                      kind: Service
-              - path:
-                  - metadata
-                  - annotations
-                  - serving.knative.dev/lastModifier
-                type: copy
-                sources: [new, existing]
-                resourceMatchers: *matchers
-
-            ---
-            apiVersion: serving.knative.dev/v1
-            kind: Service
-            metadata:
-              name: basic-sc
-            spec:
-              template:
-                metadata:
-                  annotations:
-                    autoscaling.knative.dev/minScale: "1"
-                spec:
-                  serviceAccountName: cartographer-example-registry-creds-sa
-                  containers:
-                    - name: workload
-                      image: 10.138.0.2:5000/example-basic-sc-basic-sc@sha256:c66dbc96a035d626654f1a612a8a3fc66a97620bdfcc852426dd3ce47e30c1bf
-                      securityContext:
-                        runAsUser: 1000
-  serviceAccountName: cartographer-example-registry-creds-sa
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello
   template:
-    - ytt: {}
+    metadata:
+      labels:
+        app: hello
+    spec:
+      serviceAccountName: cartographer-example-registry-creds-sa
+      containers:
+        - name: hello
+          image: 10.138.0.2:5000/example-basic-sc-hello@sha256:92b8a4c87145a939c431fd79a9ecd542af0b191cde4cbfd2480aaac7756a9db9

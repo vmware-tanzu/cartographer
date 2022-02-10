@@ -54,56 +54,23 @@ spec:
           securityContext:
             runAsUser: 1000
 ---
-apiVersion: kappctrl.k14s.io/v1alpha1
-kind: App
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: basic-sc
+  name: hello-deployment
+  labels:
+    app: hello
 spec:
-  deploy:
-    - kapp: xxxxx
-  fetch:
-    - inline:
-        paths:
-          manifest.yml: |
-            ---
-            apiVersion: kapp.k14s.io/v1alpha1
-            kind: Config
-            rebaseRules:
-              - path:
-                  - xxxxx
-                  - xxxxx
-                  - xxxxx
-                type: xxxxx
-                sources: xxxxx
-                resourceMatchers: xxxxx
-                  - apiVersionKindMatcher:
-                      apiVersion: xxxxx
-                      kind: xxxxx
-              - path:
-                  - xxxxx
-                  - xxxxx
-                  - xxxxx
-                type: xxxxx
-                sources: xxxxx
-                resourceMatchers: xxxxx
-
-            ---
-            apiVersion: serving.knative.dev/v1
-            kind: Service
-            metadata:
-              name: basic-sc
-            spec:
-              template:
-                metadata:
-                  annotations:
-                    autoscaling.knative.dev/minScale: xxxxx
-                spec:
-                  serviceAccountName: xxxxx
-                  containers:
-                    - name: workload
-                      image: 10.138.0.2:5000/example-basic-sc-basic-sc@sha256:c66dbc96a035d626654f1a612a8a3fc66a97620bdfcc852426dd3ce47e30c1bf
-                      securityContext:
-                        runAsUser: xxxxx
-  serviceAccountName: xxxxx
+  replicas: xxxxx
+  selector:
+    matchLabels:
+      app: hello
   template:
-    - ytt: xxxxx
+    metadata:
+      labels:
+        app: hello
+    spec:
+      serviceAccountName: xxxxx
+      containers:
+        - name: hello
+          image: 10.138.0.2:5000/example-basic-sc-hello@sha256:92b8a4c87145a939c431fd79a9ecd542af0b191cde4cbfd2480aaac7756a9db9
