@@ -45,7 +45,7 @@ And you're done!
 Detailed documentation for Cartographer can be found in the `site` folder of this repository:
 
 * [About Cartographer](https://cartographer.sh/docs/latest/): details the design and philosophy of Cartographer
-* [Architecture](https://cartographer.sh/docs/latest/architecture/) covers the concepts and theory of operation
+* [Architecture](https://cartographer.sh/docs/latest/architecture/): covers the concepts and theory of operation
 * [Examples](https://github.com/vmware-tanzu/cartographer/tree/main/examples): contains a collection of examples that demonstrate how common patterns can be implemented in Cartographer 
 * Spec Reference: detailed descriptions of the CRD Specs for Cartographer
   * [GVK](https://cartographer.sh/docs/latest/reference/gvk/)
