@@ -55,19 +55,24 @@ metadata:
   name: app-deploy
 spec:
   template:
-    apiVersion: serving.knative.dev/v1
-    kind: Service
+    apiVersion: apps/v1
+    kind: Deployment
     metadata:
-      name: $(workload.metadata.name)$
+      name: $(workload.metadata.name)$-deployment
+      labels:
+        app: $(workload.metadata.name)$
     spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: $(workload.metadata.name)$
       template:
         metadata:
-          annotations:
-            autoscaling.knative.dev/minScale: "1"
+          labels:
+            app: $(workload.metadata.name)$
         spec:
-          serviceAccountName: cartographer-example-registry-creds-sa
           containers:
-            - name: workload
+            - name: $(workload.metadata.name)$
               image: $(images.image.image)$
-              securityContext:
-                runAsUser: 1000
+#              ports:
+#                - containerPort: 80
