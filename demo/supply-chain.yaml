@@ -22,9 +22,9 @@ spec:
       templateRef:
         kind: ClusterImageTemplate
         name: image
-#      params:
-#        - name: image_prefix
-#          value: 10.138.0.2:5000/example-basic-sc-
+      params:
+        - name: image_prefix
+          value: 10.138.0.2:5000/example-basic-sc-
       sources:
         - resource: source-provider
           name: source
