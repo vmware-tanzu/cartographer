@@ -41,7 +41,7 @@ spec:
       serviceAccountName: cartographer-example-registry-creds-sa
       builder:
         kind: ClusterBuilder
-        name: go-builder
+        name: my-builder
       source:
         blob:
           url: $(sources.source.url)$

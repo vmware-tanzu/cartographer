@@ -25,7 +25,7 @@ spec:
     resources: {}
   builder:
     kind: ClusterBuilder
-    name: go-builder
+      name: my-builder
   cache:
     volume:
       size: 2G

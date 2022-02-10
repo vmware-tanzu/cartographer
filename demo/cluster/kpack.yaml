@@ -1,17 +1,24 @@
 ---
-apiVersion: kpack.io/v1alpha2
+apiVersion: kpack.io/v1alpha1
 kind: ClusterStore
 metadata:
-  name: go-store
+  name: default
 spec:
   sources:
+    - image: gcr.io/paketo-buildpacks/java
+    - image: gcr.io/paketo-buildpacks/graalvm
+    - image: gcr.io/paketo-buildpacks/java-azure
+    - image: gcr.io/paketo-buildpacks/nodejs
+    - image: gcr.io/paketo-buildpacks/dotnet-core
     - image: gcr.io/paketo-buildpacks/go
+    - image: gcr.io/paketo-buildpacks/php
+    - image: gcr.io/paketo-buildpacks/nginx
 
 ---
-apiVersion: kpack.io/v1alpha2
+apiVersion: kpack.io/v1alpha1
 kind: ClusterStack
 metadata:
-  name: stack
+  name: base
 spec:
   id: "io.buildpacks.stacks.bionic"
   buildImage:
@@ -22,18 +29,32 @@ spec:
 apiVersion: kpack.io/v1alpha2
 kind: ClusterBuilder
 metadata:
-  name: go-builder
+  name: my-builder
 spec:
   serviceAccountRef:
     name: cartographer-example-registry-creds-sa
     namespace: default
   tag: 10.138.0.2:5000/example-basic-sc-go-builder
   stack:
-    name: stack
+    name: base
     kind: ClusterStack
   store:
-    name: go-store
+    name: default
     kind: ClusterStore
   order:
     - group:
+        - id: paketo-buildpacks/java
+    - group:
+        - id: paketo-buildpacks/java-azure
+    - group:
+        - id: paketo-buildpacks/graalvm
+    - group:
+        - id: paketo-buildpacks/nodejs
+    - group:
+        - id: paketo-buildpacks/dotnet-core
+    - group:
         - id: paketo-buildpacks/go
+    - group:
+        - id: paketo-buildpacks/php
+    - group:
+        - id: paketo-buildpacks/nginx
