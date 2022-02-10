@@ -1,17 +1,15 @@
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
-  name: another-app
+  name: pet-clinic
   labels:
     app.tanzu.vmware.com/workload-type: web
 spec:
   build:
-    env:
-      - name: CGO_ENABLED
-        value: "0"
+    env: []
   serviceAccountName: cartographer-example-basic-sc-sa
   source:
     git:
       ref:
         branch: main
-      url: https://github.com/waciumawanjohi/yet-another-hello
+      url: https://github.com/spring-projects/spring-petclinic
