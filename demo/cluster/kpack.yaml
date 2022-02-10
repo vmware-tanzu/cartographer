@@ -6,13 +6,7 @@ metadata:
 spec:
   sources:
     - image: gcr.io/paketo-buildpacks/java
-    - image: gcr.io/paketo-buildpacks/graalvm
-    - image: gcr.io/paketo-buildpacks/java-azure
-    - image: gcr.io/paketo-buildpacks/nodejs
-    - image: gcr.io/paketo-buildpacks/dotnet-core
     - image: gcr.io/paketo-buildpacks/go
-    - image: gcr.io/paketo-buildpacks/php
-    - image: gcr.io/paketo-buildpacks/nginx
 
 ---
 apiVersion: kpack.io/v1alpha1
@@ -45,16 +39,4 @@ spec:
     - group:
         - id: paketo-buildpacks/java
     - group:
-        - id: paketo-buildpacks/java-azure
-    - group:
-        - id: paketo-buildpacks/graalvm
-    - group:
-        - id: paketo-buildpacks/nodejs
-    - group:
-        - id: paketo-buildpacks/dotnet-core
-    - group:
         - id: paketo-buildpacks/go
-    - group:
-        - id: paketo-buildpacks/php
-    - group:
-        - id: paketo-buildpacks/nginx
