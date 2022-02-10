@@ -1,7 +1,7 @@
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
-  name: pet-clinic
+  name: pet
   labels:
     app.tanzu.vmware.com/workload-type: web
 spec:
