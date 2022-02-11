@@ -37,23 +37,6 @@ spec:
   tag: xxxxx
 
 ---
-apiVersion: serving.knative.dev/v1
-kind: Service
-metadata:
-  name: basic-sc
-spec:
-  template:
-    metadata:
-      annotations:
-        autoscaling.knative.dev/minScale: xxxxx
-    spec:
-      serviceAccountName: xxxxx
-      containers:
-        - name: workload
-          image: 10.138.0.2:5000/example-basic-sc-basic-sc@sha256:43fa432c7bcb2a815e394b1fac383ac7344a885ebeb6897a65a1d32274b9150c
-          securityContext:
-            runAsUser: 1000
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
