@@ -9,6 +9,7 @@
 - Stephen Levine, [sclevine](https://github.com/sclevine), VMware, Maintainer
 - Todd Ritchie, [pivotal-todd-ritchie](https://github.com/pivotal-todd-ritchie), VMware, Maintainer
 - Waciuma Wanjohi, [waciumawanjohi](https://github.com/waciumawanjohi), VMware, Maintainer
+- Zach Robinson, [zrob](https://github.com/zrob), VMware, Maintainer
 
 # Emeritus Maintainers
 
