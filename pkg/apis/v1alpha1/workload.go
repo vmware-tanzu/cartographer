@@ -19,6 +19,8 @@
 package v1alpha1
 
 import (
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,6 +41,31 @@ const (
 	ResolveTemplateOptionsErrorResourcesSubmittedReason  = "ResolveTemplateOptionsError"
 	TemplateOptionsMatchErrorResourcesSubmittedReason    = "TemplateOptionsMatchError"
 )
+
+// ValidWorkloadPaths Note: this needs to be updated anytime the spec changes
+var ValidWorkloadPaths = map[string]bool{
+	"workload.spec.source":                true,
+	"workload.spec.source.git":            true,
+	"workload.spec.source.git.url":        true,
+	"workload.spec.source.git.ref":        true,
+	"workload.spec.source.git.ref.branch": true,
+	"workload.spec.source.git.ref.tag":    true,
+	"workload.spec.source.git.ref.commit": true,
+	"workload.spec.source.image":          true,
+	"workload.spec.source.subPath":        true,
+	"workload.spec.build":                 true,
+	"workload.spec.image":                 true,
+	"workload.spec.serviceAccountName":    true,
+}
+
+// ValidWorkloadPrefixes Note: this needs to be updated anytime the spec changes
+var ValidWorkloadPrefixes = []string{
+	"workload.spec.params",
+	"workload.spec.build.env",
+	"workload.spec.env",
+	"workload.spec.resources",
+	"workload.spec.serviceClaims",
+}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories="all"
@@ -139,6 +166,20 @@ type WorkloadList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Workload `json:"items"`
+}
+
+func validWorkloadPath(path string) bool {
+	if ValidWorkloadPaths[path] {
+		return true
+	}
+
+	for _, prefix := range ValidWorkloadPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func init() {

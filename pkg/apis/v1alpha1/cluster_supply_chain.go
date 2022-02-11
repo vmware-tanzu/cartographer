@@ -20,8 +20,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"reflect"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +36,20 @@ const (
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
 )
 
+const (
+	FieldSelectorOpIn           FieldSelectorOperator = "In"
+	FieldSelectorOpNotIn        FieldSelectorOperator = "NotIn"
+	FieldSelectorOpExists       FieldSelectorOperator = "Exists"
+	FieldSelectorOpDoesNotExist FieldSelectorOperator = "DoesNotExist"
+)
+
+var ValidSupplyChainTemplates = []client.Object{
+	&ClusterSourceTemplate{},
+	&ClusterImageTemplate{},
+	&ClusterConfigTemplate{},
+	&ClusterTemplate{},
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
@@ -53,221 +65,6 @@ type ClusterSupplyChain struct {
 	// Status conforms to the Kubernetes conventions:
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 	Status SupplyChainStatus `json:"status,omitempty"`
-}
-
-func (c *ClusterSupplyChain) validateNewState() error {
-	names := make(map[string]bool)
-
-	if err := c.validateParams(); err != nil {
-		return err
-	}
-
-	for _, resource := range c.Spec.Resources {
-		if _, ok := names[resource.Name]; ok {
-			return fmt.Errorf("duplicate resource name [%s] found", resource.Name)
-		}
-		names[resource.Name] = true
-	}
-
-	for _, resource := range c.Spec.Resources {
-		optionNames := make(map[string]bool)
-		for _, option := range resource.TemplateRef.Options {
-			if _, ok := optionNames[option.Name]; ok {
-				return fmt.Errorf(
-					"duplicate template name [%s] found in options for resource [%s]",
-					option.Name,
-					resource.Name,
-				)
-			}
-			optionNames[option.Name] = true
-		}
-	}
-
-	for _, resource := range c.Spec.Resources {
-		if err := validateResourceTemplateRef(resource.TemplateRef); err != nil {
-			return fmt.Errorf("error validating resource [%s]: %w", resource.Name, err)
-		}
-	}
-
-	for _, resource := range c.Spec.Resources {
-		if err := c.validateResourceRefs(resource.Sources, "ClusterSourceTemplate"); err != nil {
-			return fmt.Errorf(
-				"invalid sources for resource [%s]: %w",
-				resource.Name,
-				err,
-			)
-		}
-
-		if err := c.validateResourceRefs(resource.Images, "ClusterImageTemplate"); err != nil {
-			return fmt.Errorf(
-				"invalid images for resource [%s]: %w",
-				resource.Name,
-				err,
-			)
-		}
-
-		if err := c.validateResourceRefs(resource.Configs, "ClusterConfigTemplate"); err != nil {
-			return fmt.Errorf(
-				"invalid configs for resource [%s]: %w",
-				resource.Name,
-				err,
-			)
-		}
-	}
-
-	return nil
-}
-
-func (c *ClusterSupplyChain) validateParams() error {
-	for _, param := range c.Spec.Params {
-		err := param.validate()
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, resource := range c.Spec.Resources {
-		for _, param := range resource.Params {
-			err := param.validate()
-			if err != nil {
-				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference, targetKind string) error {
-	for _, ref := range references {
-		referencedResource := c.getResourceByName(ref.Resource)
-		if referencedResource == nil {
-			return fmt.Errorf(
-				"[%s] is provided by unknown resource [%s]",
-				ref.Name,
-				ref.Resource,
-			)
-		}
-		if referencedResource.TemplateRef.Kind != targetKind {
-			return fmt.Errorf(
-				"resource [%s] providing [%s] must reference a %s",
-				referencedResource.Name,
-				ref.Name,
-				targetKind,
-			)
-		}
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) getResourceByName(name string) *SupplyChainResource {
-	for _, resource := range c.Spec.Resources {
-		if resource.Name == name {
-			return &resource
-		}
-	}
-
-	return nil
-}
-
-func validateResourceTemplateRef(ref SupplyChainTemplateReference) error {
-	if ref.Name != "" && len(ref.Options) > 0 {
-		return fmt.Errorf("exactly one of templateRef.Name or templateRef.Options must be specified, found both")
-	}
-
-	if ref.Name == "" && len(ref.Options) < 2 {
-		if len(ref.Options) == 1 {
-			return fmt.Errorf("templateRef.Options must have more than one option")
-		}
-		return fmt.Errorf("exactly one of templateRef.Name or templateRef.Options must be specified, found neither")
-	}
-
-	if err := validateResourceOptions(ref.Options); err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateResourceOptions(options []TemplateOption) error {
-	for _, option := range options {
-		if err := validateFieldSelectorRequirements(option.Selector.MatchFields); err != nil {
-			return fmt.Errorf("error validating option [%s]: %w", option.Name, err)
-		}
-	}
-
-	for _, option1 := range options {
-		for _, option2 := range options {
-			if option1.Name != option2.Name && reflect.DeepEqual(option1.Selector, option2.Selector) {
-				return fmt.Errorf(
-					"duplicate selector found in options [%s, %s]",
-					option1.Name,
-					option2.Name,
-				)
-			}
-		}
-	}
-
-	return nil
-}
-
-func validateFieldSelectorRequirements(reqs []FieldSelectorRequirement) error {
-	for _, req := range reqs {
-		switch req.Operator {
-		case FieldSelectorOpExists, FieldSelectorOpDoesNotExist:
-			if len(req.Values) != 0 {
-				return fmt.Errorf("cannot specify values with operator [%s]", req.Operator)
-			}
-		case FieldSelectorOpIn, FieldSelectorOpNotIn:
-			if len(req.Values) == 0 {
-				return fmt.Errorf("must specify values with operator [%s]", req.Operator)
-			}
-		default:
-			return fmt.Errorf("operator [%s] is invalid", req.Operator)
-		}
-
-		if !validRequirementKey(req.Key) {
-			return fmt.Errorf("requirement key [%s] is not a valid workload path", req.Key)
-		}
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) ValidateCreate() error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) ValidateDelete() error {
-	return nil
-}
-
-func (c *ClusterSupplyChain) GetSelector() map[string]string {
-	return c.Spec.Selector
-}
-
-func GetSelectorsFromObject(o client.Object) []string {
-	var res []string
-	res = []string{}
-
-	sc, ok := o.(*ClusterSupplyChain)
-	if ok {
-		for key, value := range sc.Spec.Selector {
-			res = append(res, fmt.Sprintf("%s: %s", key, value))
-		}
-	}
-
-	return res
 }
 
 type SupplyChainSpec struct {
@@ -293,6 +90,11 @@ type SupplyChainSpec struct {
 	// workload's namespace.
 	// +optional
 	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
+}
+
+type SupplyChainStatus struct {
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 }
 
 type SupplyChainResource struct {
@@ -340,13 +142,6 @@ type SupplyChainResource struct {
 	// If there is only one image, it can be consumed as:
 	//   $(config)$
 	Configs []ResourceReference `json:"configs,omitempty"`
-}
-
-var ValidSupplyChainTemplates = []client.Object{
-	&ClusterSourceTemplate{},
-	&ClusterImageTemplate{},
-	&ClusterConfigTemplate{},
-	&ClusterTemplate{},
 }
 
 type SupplyChainTemplateReference struct {
@@ -401,18 +196,6 @@ type FieldSelectorRequirement struct {
 
 type FieldSelectorOperator string
 
-const (
-	FieldSelectorOpIn           FieldSelectorOperator = "In"
-	FieldSelectorOpNotIn        FieldSelectorOperator = "NotIn"
-	FieldSelectorOpExists       FieldSelectorOperator = "Exists"
-	FieldSelectorOpDoesNotExist FieldSelectorOperator = "DoesNotExist"
-)
-
-type SupplyChainStatus struct {
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-}
-
 // +kubebuilder:object:root=true
 
 type ClusterSupplyChainList struct {
@@ -421,55 +204,47 @@ type ClusterSupplyChainList struct {
 	Items           []ClusterSupplyChain `json:"items"`
 }
 
+func (c *ClusterSupplyChain) ValidateCreate() error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterSupplyChain) ValidateDelete() error {
+	return nil
+}
+
+func (c *ClusterSupplyChain) GetSelector() map[string]string {
+	return c.Spec.Selector
+}
+
+func GetSelectorsFromObject(o client.Object) []string {
+	var res []string
+	res = []string{}
+
+	sc, ok := o.(*ClusterSupplyChain)
+	if ok {
+		for key, value := range sc.Spec.Selector {
+			res = append(res, fmt.Sprintf("%s: %s", key, value))
+		}
+	}
+
+	return res
+}
+
 func init() {
 	SchemeBuilder.Register(
 		&ClusterSupplyChain{},
 		&ClusterSupplyChainList{},
 	)
-}
-
-func validRequirementKey(key string) bool {
-	validWorkloadPaths := map[string]bool{
-		//source
-		"workload.spec.source":                true,
-		"workload.spec.source.git":            true,
-		"workload.spec.source.git.url":        true,
-		"workload.spec.source.git.ref":        true,
-		"workload.spec.source.git.ref.branch": true,
-		"workload.spec.source.git.ref.tag":    true,
-		"workload.spec.source.git.ref.commit": true,
-		"workload.spec.source.image":          true,
-		"workload.spec.source.subPath":        true,
-		//build
-		"workload.spec.build": true,
-		//image
-		"workload.spec.image": true,
-		//serviceAccountName
-		"workload.spec.serviceAccountName": true,
-	}
-
-	validWorkloadPrefixes := []string{
-		//params
-		"workload.spec.params",
-		//build
-		"workload.spec.build.env",
-		//env
-		"workload.spec.env",
-		//resources
-		"workload.spec.resources",
-		//serviceClaims
-		"workload.spec.serviceClaims",
-	}
-
-	if validWorkloadPaths[key] {
-		return true
-	}
-
-	for _, prefix := range validWorkloadPrefixes {
-		if strings.HasPrefix(key, prefix) {
-			return true
-		}
-	}
-
-	return false
 }
