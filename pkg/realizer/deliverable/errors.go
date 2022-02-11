@@ -16,6 +16,7 @@ package deliverable
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -37,6 +38,43 @@ func (e GetDeliveryTemplateError) Error() string {
 		e.Resource.Name,
 		e.DeliveryName,
 		e.Err,
+	).Error()
+}
+
+type ResolveTemplateOptionError struct {
+	Err          error
+	DeliveryName string
+	Resource     *v1alpha1.DeliveryResource
+	OptionName   string
+	Key          string
+}
+
+func (e ResolveTemplateOptionError) Error() string {
+	return fmt.Errorf("key [%s] is invalid in template option [%s] for resource [%s] in delivery [%s]: %w",
+		e.Key,
+		e.OptionName,
+		e.Resource.Name,
+		e.DeliveryName,
+		e.Err,
+	).Error()
+}
+
+type TemplateOptionsMatchError struct {
+	DeliveryName string
+	Resource     *v1alpha1.DeliveryResource
+	OptionNames  []string
+}
+
+func (e TemplateOptionsMatchError) Error() string {
+	var optionNamesList string
+	if len(e.OptionNames) != 0 {
+		optionNamesList = "[" + strings.Join(e.OptionNames, ", ") + "] "
+	}
+	return fmt.Errorf("expected exactly 1 option to match, found [%d] matching options %sfor resource [%s] in delivery [%s]",
+		len(e.OptionNames),
+		optionNamesList,
+		e.Resource.Name,
+		e.DeliveryName,
 	).Error()
 }
 

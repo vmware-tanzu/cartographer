@@ -17,6 +17,9 @@ package deliverable
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +67,20 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	apiTemplate, err := r.systemRepo.GetDeliveryTemplate(ctx, resource.TemplateRef)
+	var templateName string
+	var err error
+	if len(resource.TemplateRef.Options) > 0 {
+		templateName, err = r.findMatchingTemplateName(resource, deliveryName)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		templateName = resource.TemplateRef.Name
+	}
+
+	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
+
+	apiTemplate, err := r.systemRepo.GetDeliveryTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
 		return nil, nil, GetDeliveryTemplateError{
@@ -143,4 +159,49 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	}
 
 	return stampedObject, output, nil
+}
+
+func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryResource, deliveryName string) (string, error) {
+	var templateName string
+	var matchingOptions []string
+
+	for _, option := range resource.TemplateRef.Options {
+		matchedAllFields := true
+		for _, field := range option.Selector.MatchFields {
+			dlContext := map[string]interface{}{
+				"deliverable": r.deliverable,
+			}
+			matched, err := selector.Matches(field, dlContext)
+			if err != nil {
+				if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
+					return "", ResolveTemplateOptionError{
+						Err:          err,
+						DeliveryName: deliveryName,
+						Resource:     resource,
+						OptionName:   option.Name,
+						Key:          field.Key,
+					}
+				}
+			}
+			if !matched {
+				matchedAllFields = false
+				break
+			}
+		}
+		if matchedAllFields {
+			matchingOptions = append(matchingOptions, option.Name)
+		}
+	}
+
+	if len(matchingOptions) != 1 {
+		return "", TemplateOptionsMatchError{
+			DeliveryName: deliveryName,
+			Resource:     resource,
+			OptionNames:  matchingOptions,
+		}
+	} else {
+		templateName = matchingOptions[0]
+	}
+
+	return templateName, nil
 }

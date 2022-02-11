@@ -148,6 +148,13 @@ type DeliveryTemplateReference struct {
 	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
+
+	// Options is a list of template names and Selectors. The templates must all be of type Kind.
+	// A template will be selected if the workload matches the specified Selector.
+	// Only one template can be selected.
+	// Only one of Name and Options can be specified.
+	// +kubebuilder:validation:MinItems=2
+	Options []TemplateOption `json:"options,omitempty"`
 }
 
 // +kubebuilder:object:root=true
