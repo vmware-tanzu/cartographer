@@ -1,26 +1,13 @@
 # Cartographer
 
 <img src="site/themes/template/static/img/cartographer-logo.png">
+<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="site/themes/template/static/img/passing.svg">
 
-Cartographer is a Kubernetes-native [Choreographer].
+Cartographer is a Kubernetes-native [Choreographer] providing higher modularity and scalability for the software supply chain.
 
 [Learn more about Cartographer](https://cartographer.sh/docs/latest/)
 
 [Choreographer]: https://tanzu.vmware.com/developer/guides/supply-chain-choreography/
-
-## Documentation
-
-Detailed documentation for Cartographer can be found in the `site` folder of this repository:
-
-* [About Cartographer](https://cartographer.sh/docs/latest/): Details the design and philosophy of Cartographer
-* [Examples](examples/testing-sc/README.md): Contains an example of using Cartographer to create a
-  Supply Chain that takes a repository, creates an image, and deploys it to a cluster
-* Spec Reference: Detailed descriptions of the CRD Specs for Cartographer
-  * [GVK](https://cartographer.sh/docs/latest/reference/gvk/)
-  * [Workload and Supply Chains](https://cartographer.sh/docs/latest/reference/workload/)
-  * [Deliverable and Delivery](https://cartographer.sh/docs/latest/reference/deliverable/)
-  * [Templates](https://cartographer.sh/docs/latest/reference/template/)
-  * [Runnable](https://cartographer.sh/docs/latest/reference/runnable/)
 
 ## Getting Started
 
@@ -29,20 +16,51 @@ Examples of using Cartographer can be found in the
 The examples begin by demonstrating how to define a Supply Chain that pulls code from a repository,
 builds an image for the code, and deploys in the same cluster. Enhancements of that example
 (e.g. adding tests) are then demonstrated.
-
 ## Installation
 
-Installation details are provided in the documentation
-at [cartographer.sh/docs/install](http://cartographer.sh/docs/latest/install)
+### Pre requisites
+1. Administrative capabilities in a Kubernetes cluster (1.19+)
+2. [cert-manager](https://cartographer.sh/docs/v0.0.7/install/) 1.5.3 installed
 
-## Uninstall
+The quickest method to install Cartographer leverages the `cartographer.yaml` file provided with each release:
 
-Uninstallation details are provided in the documentation
-at [cartographer.sh/docs/uninstall](http://cartographer.sh/docs/latest/uninstall)
+1. Create the namespace where the controller will be installed:
 
-### Running Tests
+```bash
+kubectl create namespace cartographer-system
+```
+2. Submit the objects included in the release:
 
-Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on running tests.
+```bash
+kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+```
+And you're done!
+
+<img src="site/themes/template/static/img/Carto-install-yaml-v2.gif">
+
+
+
+## Documentation
+
+Detailed documentation for Cartographer can be found in the `site` folder of this repository:
+
+* [About Cartographer](https://cartographer.sh/docs/latest/): details the design and philosophy of Cartographer
+* [Architecture](https://cartographer.sh/docs/latest/architecture/): covers the concepts and theory of operation
+* [Examples](https://github.com/vmware-tanzu/cartographer/tree/main/examples): contains a collection of examples that demonstrate how common patterns can be implemented in Cartographer 
+* Spec Reference: detailed descriptions of the CRD Specs for Cartographer
+  * [GVK](https://cartographer.sh/docs/latest/reference/gvk/)
+  * [Workload and Supply Chains](https://cartographer.sh/docs/latest/reference/workload/)
+  * [Deliverable and Delivery](https://cartographer.sh/docs/latest/reference/deliverable/)
+  * [Templates](https://cartographer.sh/docs/latest/reference/template/)
+  * [Runnable](https://cartographer.sh/docs/latest/reference/runnable/)
+
+
+
+
+
+
+
+
 
 ## 🤗 Community, discussion, contribution, and support
 
@@ -62,7 +80,9 @@ If you have questions or want to get the latest project news, you can connect wi
     - Every Wednesday @ 8:00 AM PT on [Zoom](https://VMware.zoom.us/j/93284305373?pwd=UnJKL0ZaN0pqeXVMczk1WThOSUp6QT09)
     - Previous
       meetings: [[notes](https://docs.google.com/document/d/1HwsjzxpsNI0l1sVAUia4A65lhrkfSF-_XfKoZUHI120/edit?usp=sharing) | [recordings](https://www.youtube.com/playlist?list=PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8)]
-
+- Do you have ideas to improve the project? Explore the [RFC process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) we currently follow and join the weekly Office Hours meeting where the maintainers team discuss RFCs  with users and contributors:
+    - Every Monday @ 2:00PM ET on [Zoom](https://VMware.zoom.us/j/94592229106?pwd=eEtpekxsSERoOVNlemJWZGJTK3hvdz09)
+    - Previous meetings: [[notes](https://docs.google.com/document/d/1ImIh7qBrOLOvGMCzY6AURhE-a68IE9_EbCf0g5s18vc/edit?usp=sharing) | [recordings](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)]  
 ## Contributing
 
 Pull Requests and feedback on issues are very welcome! See
@@ -76,7 +96,7 @@ our [Code of Conduct](CODE-OF-CONDUCT.md).
 
 ## License
 
-Refer to [LICENSE](LICENSE) for details.
+Apache 2.0. Refer to [LICENSE](LICENSE) for details.
 
 [admission webhook]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
 [carvel Packaging]: https://carvel.dev/kapp-controller/docs/latest/packaging/
