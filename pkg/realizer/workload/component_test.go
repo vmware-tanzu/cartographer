@@ -163,9 +163,12 @@ var _ = Describe("Resource", func() {
 				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
-			It("creates a stamped object using the workload repository and returns the outputs and stampedObjects", func() {
-				returnedStampedObject, out, err := r.Do(ctx, &resource, supplyChainName, outputs)
+			It("creates a stamped object using the workload repository and returns the outputs and stampedObjects and template", func() {
+				template, returnedStampedObject, out, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).ToNot(HaveOccurred())
+
+				Expect(template.GetName()).To(Equal("image-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
 
 				_, stampedObject := fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 				Expect(returnedStampedObject).To(Equal(stampedObject))
@@ -205,8 +208,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns GetSupplyChainTemplateError", func() {
-				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
+
+				Expect(template).To(BeNil())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
@@ -226,11 +231,14 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeWorkloadRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns a helpful error", func() {
-				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+				Expect(template).To(BeNil())
+
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1 Options:[]}]: resource does not match a known template"))
 			})
@@ -258,7 +266,11 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+				Expect(template.GetName()).To(Equal("image-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
@@ -307,7 +319,11 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+				Expect(template.GetName()).To(Equal("image-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
@@ -367,9 +383,12 @@ var _ = Describe("Resource", func() {
 				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
-				Expect(err).To(HaveOccurred())
+				template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 
+				Expect(template.GetName()).To(Equal("image-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+
+				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("workload.ApplyStampedObjectError"))
 			})
@@ -468,8 +487,12 @@ var _ = Describe("Resource", func() {
 
 			When("one option matches", func() {
 				It("finds the correct template", func() {
-					_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 					Expect(err).NotTo(HaveOccurred())
+
+					Expect(template.GetName()).To(Equal("template-chosen"))
+					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+
 					_, name, kind := fakeSystemRepo.GetSupplyChainTemplateArgsForCall(0)
 					Expect(name).To(Equal("template-chosen"))
 					Expect(kind).To(Equal("ClusterImageTemplate"))
@@ -480,7 +503,9 @@ var _ = Describe("Resource", func() {
 				It("returns a TemplateOptionsMatchError", func() {
 					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = "workload.spec.source.git.ref.branch"
 
-					_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+					Expect(template).To(BeNil())
+
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("expected exactly 1 option to match, found [2] matching options [template-not-chosen, template-chosen] for resource [resource-1] in supply chain [supply-chain-name]"))
 				})
@@ -492,7 +517,10 @@ var _ = Describe("Resource", func() {
 					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = "workload.spec.source.image"
 					resource.TemplateRef.Options[1].Selector.MatchFields[0].Key = "workload.spec.source.subPath"
 
-					_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+					Expect(template).To(BeNil())
+
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("expected exactly 1 option to match, found [0] matching options for resource [resource-1] in supply chain [supply-chain-name]"))
 				})
@@ -502,7 +530,10 @@ var _ = Describe("Resource", func() {
 				It("returns a ResolveTemplateOptionError", func() {
 					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = `workload.spec.env[?(@.name=="some-name")].bad`
 
-					_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+					Expect(template).To(BeNil())
+
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring(`key [workload.spec.env[?(@.name=="some-name")].bad] is invalid in template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]: evaluate: failed to find results: bad is not found`))
 				})
@@ -515,7 +546,11 @@ var _ = Describe("Resource", func() {
 						Operator: "Exists",
 					})
 
-					_, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+					Expect(template.GetName()).To(Equal("template-chosen"))
+					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+
 					Expect(err).NotTo(HaveOccurred())
 					_, name, kind := fakeSystemRepo.GetSupplyChainTemplateArgsForCall(0)
 					Expect(name).To(Equal("template-chosen"))

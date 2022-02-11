@@ -35,7 +35,7 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -66,7 +66,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -75,7 +75,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if len(resource.TemplateRef.Options) > 0 {
 		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	} else {
 		templateName = resource.TemplateRef.Name
@@ -86,7 +86,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	apiTemplate, err := r.systemRepo.GetSupplyChainTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, GetSupplyChainTemplateError{
+		return nil, nil, nil, GetSupplyChainTemplateError{
 			Err:             err,
 			SupplyChainName: supplyChainName,
 			Resource:        resource,
@@ -96,8 +96,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	template, err := templates.NewModelFromAPI(apiTemplate)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
-
+		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 	}
 
 	labels := map[string]string{
@@ -133,7 +132,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
-		return nil, nil, StampError{
+		return template, nil, nil, StampError{
 			Err:             err,
 			Resource:        resource,
 			SupplyChainName: supplyChainName,
@@ -143,7 +142,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return nil, nil, ApplyStampedObjectError{
+		return template, nil, nil, ApplyStampedObjectError{
 			Err:             err,
 			StampedObject:   stampedObject,
 			SupplyChainName: supplyChainName,
@@ -156,7 +155,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		return stampedObject, nil, RetrieveOutputError{
+		return template, stampedObject, nil, RetrieveOutputError{
 			Err:             err,
 			Resource:        resource,
 			SupplyChainName: supplyChainName,
@@ -164,7 +163,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	return stampedObject, output, nil
+	return template, stampedObject, output, nil
 }
 
 func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {

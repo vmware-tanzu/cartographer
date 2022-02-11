@@ -36,6 +36,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -105,8 +106,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
 
-	r.trackDependencies(workload, supplyChain, serviceAccountName, serviceAccountNS)
-
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
@@ -122,7 +121,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
+	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -155,6 +154,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
+
+	r.trackDependencies(workload, selectedTemplates, serviceAccountName, serviceAccountNS)
 
 	var trackingError error
 	if len(stampedObjects) > 0 {
@@ -250,7 +251,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	return supplyChains[0], nil
 }
 
-func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain, serviceAccountName, serviceAccountNS string) {
+func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemplates []templates.Template, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: workload.Namespace,
 		Name:      workload.Name,
@@ -270,24 +271,22 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, supplyChain 
 		Name:      workload.Name,
 	})
 
-	r.trackTemplates(workload, supplyChain)
-}
-
-func (r *Reconciler) trackTemplates(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) {
-	for _, resource := range supplyChain.Spec.Resources {
-		r.DependencyTracker.Track(dependency.Key{
-			GroupKind: schema.GroupKind{
-				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
+	for _, selectedTemplate := range selectedTemplates {
+		r.DependencyTracker.Track(
+			dependency.Key{
+				GroupKind: schema.GroupKind{
+					Group: v1alpha1.SchemeGroupVersion.Group,
+					Kind:  selectedTemplate.GetKind(),
+				},
+				NamespacedName: types.NamespacedName{
+					Name: selectedTemplate.GetName(),
+				},
 			},
-			NamespacedName: types.NamespacedName{
-				Namespace: "",
-				Name:      resource.TemplateRef.Name,
+			types.NamespacedName{
+				Namespace: workload.Namespace,
+				Name:      workload.Name,
 			},
-		}, types.NamespacedName{
-			Namespace: workload.Namespace,
-			Name:      workload.Name,
-		})
+		)
 	}
 }
 
