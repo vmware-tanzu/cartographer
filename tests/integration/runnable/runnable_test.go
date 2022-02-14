@@ -119,7 +119,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					kind: ResourceQuota
 					metadata:
 					  generateName: my-stamped-resource-
-					  namespace: %s
 					  labels:
 					    focus: something-useful
 					spec:
@@ -133,7 +132,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  scopeName: PriorityClass
 						  values: [$(runnable.spec.inputs.key)$]
 				`,
-				testNS, testNS,
+				testNS,
 			)
 
 			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
@@ -318,7 +317,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					kind: ResourceQuota
 					metadata:
 					  generateName: my-stamped-resource-
-					  namespace: %s
 					  labels:
 					    focus: something-useful
 					spec:
@@ -331,7 +329,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						- operator : In
 						  scopeName: PriorityClass
 						  values: [$(selected.spec.value.answer)$]
-				`, testNS)
+				`)
 
 			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
 		})
@@ -566,7 +564,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				apiVersion: carto.run/v1alpha1
 				kind: ClusterRunTemplate
 				metadata:
-				  namespace: %s
 				  name: my-run-template
 				spec:
 				  outputs:
@@ -578,9 +575,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  name: test-crd
 					spec:
 					  foo: "bar"
-				`,
-				testNS,
-			)
+				`)
 
 			runTemplateDefinition = &unstructured.Unstructured{}
 			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
@@ -720,7 +715,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				apiVersion: carto.run/v1alpha1
 				kind: ClusterRunTemplate
 				metadata:
-				  namespace: %s
 				  name: my-run-template
 				spec:
 				  template:
@@ -728,7 +722,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					kind: ResourceQuota
 					metadata:
 					  generateName: my-stamped-resource-
-					  namespace: %s
 					  labels:
 					    focus: something-useful
 					spec:
@@ -742,7 +735,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  scopeName: PriorityClass
 						  values: [$(selected.spec.inputs.key)$]
 				`,
-				testNS, testNS,
+				testNS,
 			)
 
 			runTemplateDefinition = &unstructured.Unstructured{}
@@ -785,7 +778,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				apiVersion: carto.run/v1alpha1
 				kind: ClusterRunTemplate
 				metadata:
-				  namespace: %s
 				  name: my-run-template
 				spec:
 				  outputs:
@@ -799,9 +791,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					    gen: "1"
 					spec:
 					  foo: "bar"
-				`,
-				testNS,
-			)
+				`)
 
 			runTemplateDefinition = &unstructured.Unstructured{}
 			err = yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
