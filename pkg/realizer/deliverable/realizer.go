@@ -18,6 +18,7 @@ package deliverable
 
 import (
 	"context"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,7 +29,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]*unstructured.Unstructured, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]templates.Template, []*unstructured.Unstructured, error)
 }
 
 type realizer struct{}
@@ -37,24 +38,30 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]*unstructured.Unstructured, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery) ([]templates.Template, []*unstructured.Unstructured, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
+	var selectedTemplates []templates.Template
 	var firstError error
 
 	for i := range delivery.Spec.Resources {
 		resource := delivery.Spec.Resources[i]
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, delivery.Name, outs)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, delivery.Name, outs)
+		if template != nil {
+			selectedTemplates = append(selectedTemplates, template)
+		}
+
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
 				"object", stampedObject)
 			stampedObjects = append(stampedObjects, stampedObject)
 		}
+
 		if err != nil {
 			log.Error(err, "failed to realize resource")
 
@@ -66,5 +73,5 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return stampedObjects, firstError
+	return selectedTemplates, stampedObjects, firstError
 }

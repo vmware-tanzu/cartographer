@@ -95,11 +95,12 @@ type FakeRepository struct {
 		result1 *v1alpha1.ClusterDelivery
 		result2 error
 	}
-	GetDeliveryTemplateStub        func(context.Context, v1alpha1.DeliveryTemplateReference) (client.Object, error)
+	GetDeliveryTemplateStub        func(context.Context, string, string) (client.Object, error)
 	getDeliveryTemplateMutex       sync.RWMutex
 	getDeliveryTemplateArgsForCall []struct {
 		arg1 context.Context
-		arg2 v1alpha1.DeliveryTemplateReference
+		arg2 string
+		arg3 string
 	}
 	getDeliveryTemplateReturns struct {
 		result1 client.Object
@@ -650,19 +651,20 @@ func (fake *FakeRepository) GetDeliveryReturnsOnCall(i int, result1 *v1alpha1.Cl
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetDeliveryTemplate(arg1 context.Context, arg2 v1alpha1.DeliveryTemplateReference) (client.Object, error) {
+func (fake *FakeRepository) GetDeliveryTemplate(arg1 context.Context, arg2 string, arg3 string) (client.Object, error) {
 	fake.getDeliveryTemplateMutex.Lock()
 	ret, specificReturn := fake.getDeliveryTemplateReturnsOnCall[len(fake.getDeliveryTemplateArgsForCall)]
 	fake.getDeliveryTemplateArgsForCall = append(fake.getDeliveryTemplateArgsForCall, struct {
 		arg1 context.Context
-		arg2 v1alpha1.DeliveryTemplateReference
-	}{arg1, arg2})
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.GetDeliveryTemplateStub
 	fakeReturns := fake.getDeliveryTemplateReturns
-	fake.recordInvocation("GetDeliveryTemplate", []interface{}{arg1, arg2})
+	fake.recordInvocation("GetDeliveryTemplate", []interface{}{arg1, arg2, arg3})
 	fake.getDeliveryTemplateMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -676,17 +678,17 @@ func (fake *FakeRepository) GetDeliveryTemplateCallCount() int {
 	return len(fake.getDeliveryTemplateArgsForCall)
 }
 
-func (fake *FakeRepository) GetDeliveryTemplateCalls(stub func(context.Context, v1alpha1.DeliveryTemplateReference) (client.Object, error)) {
+func (fake *FakeRepository) GetDeliveryTemplateCalls(stub func(context.Context, string, string) (client.Object, error)) {
 	fake.getDeliveryTemplateMutex.Lock()
 	defer fake.getDeliveryTemplateMutex.Unlock()
 	fake.GetDeliveryTemplateStub = stub
 }
 
-func (fake *FakeRepository) GetDeliveryTemplateArgsForCall(i int) (context.Context, v1alpha1.DeliveryTemplateReference) {
+func (fake *FakeRepository) GetDeliveryTemplateArgsForCall(i int) (context.Context, string, string) {
 	fake.getDeliveryTemplateMutex.RLock()
 	defer fake.getDeliveryTemplateMutex.RUnlock()
 	argsForCall := fake.getDeliveryTemplateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeRepository) GetDeliveryTemplateReturns(result1 client.Object, result2 error) {
