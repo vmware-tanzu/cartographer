@@ -105,8 +105,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(deliverable, delivery)
 
-	r.trackDependencies(deliverable, delivery, serviceAccountName, serviceAccountNS)
-
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
@@ -119,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(ctx, deliverable, controller.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, delivery)
+	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, delivery)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -146,6 +144,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			default:
 				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			}
+		case realizer.ResolveTemplateOptionError:
+			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+		case realizer.TemplateOptionsMatchError:
+			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -159,6 +161,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
+
+	r.trackDependencies(deliverable, selectedTemplates, serviceAccountName, serviceAccountNS)
 
 	var trackingError error
 	if len(stampedObjects) > 0 {
@@ -209,7 +213,7 @@ func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	return readyCondition.Status == "True"
 }
 
-func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery, serviceAccountName, serviceAccountNS string) {
+func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, selectedTemplates []templates.Template, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: deliverable.Namespace,
 		Name:      deliverable.Name,
@@ -229,19 +233,15 @@ func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, delive
 		Name:      deliverable.Name,
 	})
 
-	r.trackTemplates(deliverable, delivery)
-}
-
-func (r *Reconciler) trackTemplates(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) {
-	for _, resource := range delivery.Spec.Resources {
+	for _, selectedTemplate := range selectedTemplates {
 		r.DependencyTracker.Track(dependency.Key{
 			GroupKind: schema.GroupKind{
 				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
+				Kind:  selectedTemplate.GetKind(),
 			},
 			NamespacedName: types.NamespacedName{
 				Namespace: "",
-				Name:      resource.TemplateRef.Name,
+				Name:      selectedTemplate.GetName(),
 			},
 		}, types.NamespacedName{
 			Namespace: deliverable.Namespace,

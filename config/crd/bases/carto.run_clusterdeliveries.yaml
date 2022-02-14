@@ -164,9 +164,68 @@ spec:
                           description: Name of the template to apply
                           minLength: 1
                           type: string
+                        options:
+                          description: Options is a list of template names and Selectors.
+                            The templates must all be of type Kind. A template will
+                            be selected if the workload matches the specified Selector.
+                            Only one template can be selected. Only one of Name and
+                            Options can be specified.
+                          items:
+                            properties:
+                              name:
+                                description: Name of the template to apply
+                                minLength: 1
+                                type: string
+                              selector:
+                                description: Selector is a field query over a workload
+                                  resource.
+                                properties:
+                                  matchFields:
+                                    description: MatchFields is a list of field selector
+                                      requirements. The requirements are ANDed.
+                                    items:
+                                      properties:
+                                        key:
+                                          description: Key is the JSON path in the
+                                            workload to match against. e.g. "workload.spec.source.git.url"
+                                          minLength: 1
+                                          type: string
+                                        operator:
+                                          description: Operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                          type: string
+                                        values:
+                                          description: Values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    minItems: 1
+                                    type: array
+                                required:
+                                - matchFields
+                                type: object
+                            required:
+                            - name
+                            - selector
+                            type: object
+                          minItems: 2
+                          type: array
                       required:
                       - kind
-                      - name
                       type: object
                   required:
                   - name

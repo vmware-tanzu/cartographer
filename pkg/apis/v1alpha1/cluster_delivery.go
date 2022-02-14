@@ -147,7 +147,7 @@ type DeliveryTemplateReference struct {
 	Kind string `json:"kind"`
 	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
 	// Options is a list of template names and Selectors. The templates must all be of type Kind.
 	// A template will be selected if the workload matches the specified Selector.

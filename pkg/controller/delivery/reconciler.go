@@ -17,10 +17,10 @@ package delivery
 import (
 	"context"
 	"fmt"
-
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -68,27 +68,59 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 	var resourcesNotFound []string
 
 	for _, resource := range delivery.Spec.Resources {
-		template, err := r.Repo.GetDeliveryTemplate(ctx, resource.TemplateRef.Name, resource.TemplateRef.Kind)
-		if err != nil {
-			log.Error(err, "failed to get delivery cluster template", "template", resource.TemplateRef)
-			return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+		if resource.TemplateRef.Name != "" {
+			template, err := r.Repo.GetDeliveryTemplate(ctx, resource.TemplateRef.Name, resource.TemplateRef.Kind)
+			if err != nil {
+				log.Error(err, "failed to get delivery cluster template", "template", resource.TemplateRef)
+				return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+			}
+			if template == nil {
+				log.Info("delivery cluster template does not exist", "template", resource.TemplateRef)
+				resourcesNotFound = append(resourcesNotFound, resource.Name)
+			}
+
+			r.DependencyTracker.Track(dependency.Key{
+				GroupKind: schema.GroupKind{
+					Group: v1alpha1.SchemeGroupVersion.Group,
+					Kind:  resource.TemplateRef.Kind,
+				},
+				NamespacedName: types.NamespacedName{
+					Name: resource.TemplateRef.Name,
+				},
+			}, types.NamespacedName{
+				Namespace: delivery.Namespace,
+				Name:      delivery.Name,
+			})
+		} else {
+			for _, option := range resource.TemplateRef.Options {
+				template, err := r.Repo.GetDeliveryTemplate(ctx, option.Name, resource.TemplateRef.Kind)
+				if err != nil {
+					log.Error(err, "failed to get delivery cluster template", "template",
+						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
+					return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
+				}
+
+				if template == nil {
+					log.Info("delivery cluster template does not exist", "template",
+						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
+					resourcesNotFound = append(resourcesNotFound, resource.Name)
+				}
+
+				r.DependencyTracker.Track(dependency.Key{
+					GroupKind: schema.GroupKind{
+						Group: v1alpha1.SchemeGroupVersion.Group,
+						Kind:  resource.TemplateRef.Kind,
+					},
+					NamespacedName: types.NamespacedName{
+						Name: option.Name,
+					},
+				}, types.NamespacedName{
+					Namespace: delivery.Namespace,
+					Name:      delivery.Name,
+				})
+			}
 		}
-		if template == nil {
-			log.Info("delivery cluster template does not exist", "template", resource.TemplateRef)
-			resourcesNotFound = append(resourcesNotFound, resource.Name)
-		}
-		r.DependencyTracker.Track(dependency.Key{
-			GroupKind: schema.GroupKind{
-				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
-			},
-			NamespacedName: types.NamespacedName{
-				Name: resource.TemplateRef.Name,
-			},
-		}, types.NamespacedName{
-			Namespace: delivery.Namespace,
-			Name:      delivery.Name,
-		})
+
 	}
 
 	if len(resourcesNotFound) > 0 {
