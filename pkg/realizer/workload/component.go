@@ -100,12 +100,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	}
 
 	labels := map[string]string{
-		"carto.run/workload-name":             r.workload.Name,
-		"carto.run/workload-namespace":        r.workload.Namespace,
-		"carto.run/cluster-supply-chain-name": supplyChainName,
-		"carto.run/resource-name":             resource.Name,
-		"carto.run/template-kind":             template.GetKind(),
-		"carto.run/cluster-template-name":     template.GetName(),
+		"carto.run/workload-name":         r.workload.Name,
+		"carto.run/workload-namespace":    r.workload.Namespace,
+		"carto.run/supply-chain-name":     supplyChainName,
+		"carto.run/resource-name":         resource.Name,
+		"carto.run/template-kind":         template.GetKind(),
+		"carto.run/cluster-template-name": template.GetName(),
 	}
 
 	inputs := outputs.GenerateInputs(resource)
