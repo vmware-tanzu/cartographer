@@ -42,6 +42,24 @@ const (
 	DeploymentFailedConditionMetResourcesSubmittedReason   = "FailedConditionMet"
 )
 
+var ValidDeliverablePaths = map[string]bool{
+	"deliverable.spec.source":                true,
+	"deliverable.spec.source.git":            true,
+	"deliverable.spec.source.git.url":        true,
+	"deliverable.spec.source.git.ref":        true,
+	"deliverable.spec.source.git.ref.branch": true,
+	"deliverable.spec.source.git.ref.tag":    true,
+	"deliverable.spec.source.git.ref.commit": true,
+	"deliverable.spec.source.image":          true,
+	"deliverable.spec.source.subPath":        true,
+	"deliverable.spec.serviceAccountName":    true,
+}
+
+var ValidDeliverablePrefixes = []string{
+	"deliverable.spec.params",
+	"deliverable.metadata",
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=all
 // +kubebuilder:subresource:status

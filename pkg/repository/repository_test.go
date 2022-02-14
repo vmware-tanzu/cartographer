@@ -615,7 +615,7 @@ spec:
 						Kind: "some-unsupported-kind",
 						Name: "my-template",
 					}
-					_, err := repo.GetDeliveryTemplate(ctx, reference)
+					_, err := repo.GetDeliveryTemplate(ctx, reference.Name, reference.Kind)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("unable to get api template [some-unsupported-kind/my-template]: resource does not have valid kind: some-unsupported-kind"))
 				})
@@ -630,7 +630,7 @@ spec:
 						Kind: "ClusterImageTemplate",
 						Name: "image-template",
 					}
-					_, err := repo.GetDeliveryTemplate(ctx, reference)
+					_, err := repo.GetDeliveryTemplate(ctx, reference.Name, reference.Kind)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
@@ -975,7 +975,7 @@ spec:
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetDeliveryTemplate(ctx, templateRef)
+				template, err := repo.GetDeliveryTemplate(ctx, templateRef.Name, templateRef.Kind)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})
