@@ -19,8 +19,13 @@
 package v1alpha1
 
 import (
+	"errors"
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -69,4 +74,31 @@ func init() {
 		&ClusterRunTemplate{},
 		&ClusterRunTemplateList{},
 	)
+}
+
+var _ webhook.Validator = &ClusterRunTemplate{}
+
+func (c *ClusterRunTemplate) ValidateCreate() error {
+	return c.Spec.validate()
+}
+
+func (c *ClusterRunTemplate) ValidateUpdate(_ runtime.Object) error {
+	return c.Spec.validate()
+}
+
+func (c *ClusterRunTemplate) ValidateDelete() error {
+	return nil
+}
+
+func (t *RunTemplateSpec) validate() error {
+	obj := metav1.PartialObjectMetadata{}
+	if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
+		return fmt.Errorf("invalid template: failed to parse object metadata: %w", err)
+	}
+
+	if obj.Namespace != metav1.NamespaceNone {
+		return errors.New("invalid template: template should not set metadata.namespace on the child object")
+	}
+
+	return nil
 }
