@@ -158,6 +158,7 @@ type SupplyChainTemplateReference struct {
 	// A template will be selected if the workload matches the specified Selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
+	// Minimum number of items in list is two.
 	// +kubebuilder:validation:MinItems=2
 	Options []TemplateOption `json:"options,omitempty"`
 }

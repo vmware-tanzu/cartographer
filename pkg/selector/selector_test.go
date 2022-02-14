@@ -156,6 +156,30 @@ var _ = Describe("Selector", func() {
 
 	})
 
+	Context("when the key is empty in the context", func() {
+		var context map[string]interface{}
+
+		BeforeEach(func() {
+			context = map[string]interface{}{
+				"hello": "",
+			}
+		})
+
+		Context("when the operator is Exists", func() {
+			Context("when the key is valid and returns a value", func() {
+				It("returns true and does not error", func() {
+					req := v1alpha1.FieldSelectorRequirement{
+						Key:      "hello",
+						Operator: v1alpha1.FieldSelectorOpExists,
+					}
+					ret, err := selector.Matches(req, context)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(ret).To(BeTrue())
+				})
+			})
+		})
+	})
+
 	Context("when the key does not exist in the context", func() {
 		var context map[string]interface{}
 

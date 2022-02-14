@@ -17,11 +17,11 @@ package supplychain
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -111,6 +111,19 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 				log.Info("cluster template does not exist", "template", resource.TemplateRef)
 				resourcesNotFound = append(resourcesNotFound, resource.Name)
 			}
+
+			r.DependencyTracker.Track(dependency.Key{
+				GroupKind: schema.GroupKind{
+					Group: v1alpha1.SchemeGroupVersion.Group,
+					Kind:  resource.TemplateRef.Kind,
+				},
+				NamespacedName: types.NamespacedName{
+					Name: resource.TemplateRef.Name,
+				},
+			}, types.NamespacedName{
+				Namespace: chain.Namespace,
+				Name:      chain.Name,
+			})
 		} else {
 			for _, option := range resource.TemplateRef.Options {
 				template, err := r.Repo.GetSupplyChainTemplate(ctx, option.Name, resource.TemplateRef.Kind)
@@ -125,21 +138,21 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
 					resourcesNotFound = append(resourcesNotFound, resource.Name)
 				}
+
+				r.DependencyTracker.Track(dependency.Key{
+					GroupKind: schema.GroupKind{
+						Group: v1alpha1.SchemeGroupVersion.Group,
+						Kind:  resource.TemplateRef.Kind,
+					},
+					NamespacedName: types.NamespacedName{
+						Name: option.Name,
+					},
+				}, types.NamespacedName{
+					Namespace: chain.Namespace,
+					Name:      chain.Name,
+				})
 			}
 		}
-
-		r.DependencyTracker.Track(dependency.Key{
-			GroupKind: schema.GroupKind{
-				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
-			},
-			NamespacedName: types.NamespacedName{
-				Name: resource.TemplateRef.Name,
-			},
-		}, types.NamespacedName{
-			Namespace: chain.Namespace,
-			Name:      chain.Name,
-		})
 	}
 
 	if len(resourcesNotFound) > 0 {

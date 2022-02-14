@@ -65,6 +65,7 @@ var ValidWorkloadPrefixes = []string{
 	"workload.spec.env",
 	"workload.spec.resources",
 	"workload.spec.serviceClaims",
+	"workload.metadata",
 }
 
 // +kubebuilder:object:root=true

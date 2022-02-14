@@ -30,7 +30,6 @@ spec:
               - key: workload.spec.source.git.url
                 operator: NotIn
                 values:
-#                  - "https://github.com/spring-projects/spring-petclinic.git"
                   - "https://example.com"
         - name: imgpkg-bundle-template---options-with-values
           selector:
