@@ -53,7 +53,11 @@ spec:
                   type: string
                 description: "Outputs are a named list of jsonPaths that are used
                   to gather results from the last successful object stamped by the
-                  template. E.g: \tmy-output: .status.results[?(@.name==\"IMAGE-DIGEST\")].value"
+                  template. E.g: \tmy-output: .status.results[?(@.name==\"IMAGE-DIGEST\")].value
+                  Note: outputs are only filled on the runnable when the templated
+                  object has a Succeeded condition with a Status of True E.g:     status.conditions[?(@.type==\"Succeeded\")].status
+                  == True a runnable creating an object without a Succeeded condition
+                  (like a Job or ConfigMap) will never display an output"
                 type: object
               template:
                 description: 'Template defines a resource template for a Kubernetes

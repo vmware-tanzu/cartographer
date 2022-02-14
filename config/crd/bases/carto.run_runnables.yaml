@@ -200,6 +200,11 @@ spec:
               outputs:
                 additionalProperties:
                   x-kubernetes-preserve-unknown-fields: true
+                description: 'Note: outputs are only filled on the runnable when the
+                  templated object has a Succeeded condition with a Status of True
+                  E.g:     status.conditions[?(@.type=="Succeeded")].status == True
+                  a runnable creating an object without a Succeeded condition (like
+                  a Job or ConfigMap) will never display an output'
                 type: object
             type: object
         required:
