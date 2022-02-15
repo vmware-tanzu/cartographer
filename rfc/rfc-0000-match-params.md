@@ -15,7 +15,7 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
 ```yaml
   selector:
     matchFields:
-      - key: workload.spec.params[name == promotion].value    #< ===== does this even work?
+      - key: workload.spec.params[?(@.name=="promotion")].value    #< ===== not so nice
         operator: In
         values: ["gitops"]
 ```
