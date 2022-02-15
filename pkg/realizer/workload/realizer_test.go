@@ -36,6 +36,8 @@ var _ = Describe("Realize", func() {
 		resource1        v1alpha1.SupplyChainResource
 		resource2        v1alpha1.SupplyChainResource
 		rlzr             realizer.Realizer
+		template1        *v1alpha1.ClusterImageTemplate
+		template2        *v1alpha1.ClusterConfigTemplate
 	)
 	BeforeEach(func() {
 		rlzr = realizer.NewRealizer()
@@ -46,6 +48,18 @@ var _ = Describe("Realize", func() {
 		}
 		resource2 = v1alpha1.SupplyChainResource{
 			Name: "resource2",
+		}
+		template1 = &v1alpha1.ClusterImageTemplate{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "my-image-template",
+			},
+		}
+		template2 = &v1alpha1.ClusterConfigTemplate{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "my-config-template",
+			},
 		}
 		supplyChain = &v1alpha1.ClusterSupplyChain{
 			ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
@@ -60,12 +74,14 @@ var _ = Describe("Realize", func() {
 
 		var executedResourceOrder []string
 
-		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (*unstructured.Unstructured, *templates.Output, error) {
+		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 			executedResourceOrder = append(executedResourceOrder, resource.Name)
 			Expect(supplyChainName).To(Equal("greatest-supply-chain"))
 			if resource.Name == "resource1" {
 				Expect(outputs).To(Equal(realizer.NewOutputs()))
-				return &unstructured.Unstructured{}, outputFromFirstResource, nil
+				template, err := templates.NewModelFromAPI(template1)
+				Expect(err).NotTo(HaveOccurred())
+				return template, &unstructured.Unstructured{}, outputFromFirstResource, nil
 			}
 
 			if resource.Name == "resource2" {
@@ -73,24 +89,34 @@ var _ = Describe("Realize", func() {
 				expectedSecondResourceOutputs.AddOutput("resource1", outputFromFirstResource)
 				Expect(outputs).To(Equal(expectedSecondResourceOutputs))
 			}
-
-			return &unstructured.Unstructured{}, &templates.Output{}, nil
+			template, err := templates.NewModelFromAPI(template2)
+			Expect(err).NotTo(HaveOccurred())
+			return template, &unstructured.Unstructured{}, &templates.Output{}, nil
 		})
 
-		stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
+		templates, stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
 
 		Expect(stampedObjects).To(HaveLen(2))
+
+		Expect(templates).To(HaveLen(2))
+		Expect(templates[0].GetName()).To(Equal(template1.Name))
+		Expect(templates[1].GetName()).To(Equal(template2.Name))
 	})
 
 	It("returns the first error encountered realizing a resource and continues to realize", func() {
-		resourceRealizer.DoReturnsOnCall(0, nil, nil, errors.New("realizing is hard"))
-		resourceRealizer.DoReturnsOnCall(1, &unstructured.Unstructured{}, nil, nil)
+		template, err := templates.NewModelFromAPI(template2)
+		Expect(err).NotTo(HaveOccurred())
+		resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
+		resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-		stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
+		templates, stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
 		Expect(err).To(MatchError("realizing is hard"))
 		Expect(stampedObjects).To(HaveLen(1))
+
+		Expect(templates).To(HaveLen(1))
+		Expect(templates[0].GetName()).To(Equal(template2.Name))
 	})
 })

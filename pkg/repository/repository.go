@@ -39,7 +39,7 @@ import (
 type Repository interface {
 	EnsureImmutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error
 	EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error
-	GetSupplyChainTemplate(ctx context.Context, ref v1alpha1.SupplyChainTemplateReference) (client.Object, error)
+	GetSupplyChainTemplate(ctx context.Context, name, kind string) (client.Object, error)
 	GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
@@ -53,8 +53,7 @@ type Repository interface {
 	ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
-	GetServiceAccount(ctx context.Context, serviceAccountName, ns string) (*corev1.ServiceAccount, error)
-	GetServiceAccountSecret(ctx context.Context, serviceAccount *corev1.ServiceAccount) (*corev1.Secret, error)
+	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
 	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
 }
 
@@ -87,10 +86,10 @@ func (r *repository) Delete(ctx context.Context, objToDelete *unstructured.Unstr
 	return nil
 }
 
-func (r *repository) GetServiceAccount(ctx context.Context, name, namespace string) (*corev1.ServiceAccount, error) {
+func (r *repository) GetServiceAccountSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("service account", fmt.Sprintf("%s/%s", namespace, name))
 	ctx = logr.NewContext(ctx, log)
-	log.V(logger.DEBUG).Info("GetServiceAccount")
+	log.V(logger.DEBUG).Info("GetServiceAccountSecret")
 
 	serviceAccount := corev1.ServiceAccount{}
 	err := r.getObject(ctx, name, namespace, &serviceAccount)
@@ -98,13 +97,6 @@ func (r *repository) GetServiceAccount(ctx context.Context, name, namespace stri
 		log.Error(err, "failed to get service account object from api server")
 		return nil, fmt.Errorf("failed to get service account object from api server [%s/%s]: %w", namespace, name, err)
 	}
-	return &serviceAccount, nil
-}
-
-func (r *repository) GetServiceAccountSecret(ctx context.Context, serviceAccount *corev1.ServiceAccount) (*corev1.Secret, error) {
-	log := logr.FromContextOrDiscard(ctx).WithValues("service account", fmt.Sprintf("%s/%s", serviceAccount.Namespace, serviceAccount.Name))
-	ctx = logr.NewContext(ctx, log)
-	log.V(logger.DEBUG).Info("GetServiceAccountSecret")
 
 	if len(serviceAccount.Secrets) == 0 {
 		log.V(logger.DEBUG).Info("service account does not have any secrets")
@@ -263,8 +255,8 @@ func (r *repository) ListUnstructured(ctx context.Context, gvk schema.GroupVersi
 	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetSupplyChainTemplate(ctx context.Context, ref v1alpha1.SupplyChainTemplateReference) (client.Object, error) {
-	return r.getTemplate(ctx, ref.Name, ref.Kind)
+func (r *repository) GetSupplyChainTemplate(ctx context.Context, name, kind string) (client.Object, error) {
+	return r.getTemplate(ctx, name, kind)
 }
 
 func (r *repository) GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error) {

@@ -65,7 +65,6 @@ var _ = Describe("Reconciler", func() {
 		builtResourceRealizer        *deliverablefakes.FakeResourceRealizer
 		resourceRealizerSecret       *corev1.Secret
 		serviceAccountSecret         *corev1.Secret
-		serviceAccount               *corev1.ServiceAccount
 		serviceAccountName           string
 		resourceRealizerBuilderError error
 	)
@@ -94,17 +93,6 @@ var _ = Describe("Reconciler", func() {
 		repo.GetSchemeReturns(scheme)
 
 		serviceAccountName = "service-account-name-for-deliverable"
-		serviceAccount = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ServiceAccount",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccountName,
-				Namespace: "my-namespace",
-			},
-		}
-		repo.GetServiceAccountReturns(serviceAccount, nil)
 
 		serviceAccountSecret = &corev1.Secret{
 			StringData: map[string]string{"foo": "bar"},
@@ -278,14 +266,10 @@ var _ = Describe("Reconciler", func() {
 		It("uses the service account specified by the deliverable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
-			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-ns"))
-
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(sa).To(Equal(serviceAccount))
 
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
 		})
@@ -308,14 +292,10 @@ var _ = Describe("Reconciler", func() {
 				It("uses the delivery service account in the deliverable's namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 					Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
 					Expect(serviceAccountNS).To(Equal("my-ns"))
-
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-					Expect(sa).To(Equal(serviceAccount))
 
 					Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
 				})
@@ -328,14 +308,10 @@ var _ = Describe("Reconciler", func() {
 					It("uses the delivery service account in the specified namespace", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
 
-						Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 						Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
 						Expect(serviceAccountNS).To(Equal("some-delivery-namespace"))
-
-						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-						_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-						Expect(sa).To(Equal(serviceAccount))
 
 						Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
 					})
@@ -353,14 +329,10 @@ var _ = Describe("Reconciler", func() {
 				It("defaults to the default service account in the deliverables namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 					Expect(serviceAccountNameArg).To(Equal("default"))
 					Expect(serviceAccountNS).To(Equal("my-ns"))
-
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-					Expect(sa).To(Equal(serviceAccount))
 
 					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
 				})
@@ -415,18 +387,28 @@ var _ = Describe("Reconciler", func() {
 					},
 				}
 			})
+
+			It("clears the previously tracked objects for the deliverable", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+
+				Expect(dependencyTracker.ClearTrackedCallCount()).To(Equal(1))
+				obj := dependencyTracker.ClearTrackedArgsForCall(0)
+				Expect(obj.Name).To(Equal("my-deliverable"))
+				Expect(obj.Namespace).To(Equal("my-ns"))
+			})
+
 			It("watches the templates and service account", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
 				Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
-				firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
+				serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(0)
+				Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-ns/service-account-name-for-deliverable"))
+
+				firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
 				Expect(firstTemplateKey.String()).To(Equal("first-template-kind.carto.run//first-template-name"))
 
-				secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
+				secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(2)
 				Expect(secondTemplateKey.String()).To(Equal("second-template-kind.carto.run//second-template-name"))
-
-				serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(2)
-				Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-ns/service-account-name-for-deliverable"))
 			})
 		})
 
@@ -968,6 +950,14 @@ var _ = Describe("Reconciler", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+		It("clears the previously tracked objects for the deliverable", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(dependencyTracker.ClearTrackedCallCount()).To(Equal(1))
+			obj := dependencyTracker.ClearTrackedArgsForCall(0)
+			Expect(obj.Name).To(Equal("my-deliverable-name"))
+			Expect(obj.Namespace).To(Equal("my-namespace"))
 		})
 	})
 })

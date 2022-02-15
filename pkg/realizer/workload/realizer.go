@@ -24,11 +24,12 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]templates.Template, []*unstructured.Unstructured, error)
 }
 
 type realizer struct{}
@@ -37,22 +38,29 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]*unstructured.Unstructured, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]templates.Template, []*unstructured.Unstructured, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
+	var selectedTemplates []templates.Template
 	var firstError error
 
 	for i := range supplyChain.Spec.Resources {
 		resource := supplyChain.Spec.Resources[i]
-		stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
+
+		if template != nil {
+			selectedTemplates = append(selectedTemplates, template)
+		}
+
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
 				"object", stampedObject)
 			stampedObjects = append(stampedObjects, stampedObject)
 		}
+
 		if err != nil {
 			log.Error(err, "failed to realize resource")
 
@@ -64,5 +72,5 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return stampedObjects, firstError
+	return selectedTemplates, stampedObjects, firstError
 }

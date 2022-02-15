@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,6 +36,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -65,6 +68,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if workload == nil {
 		log.Info("workload no longer exists")
+		r.DependencyTracker.ClearTracked(types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		})
+
 		return ctrl.Result{}, nil
 	}
 
@@ -78,13 +86,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log = log.WithValues("supply chain", supplyChain.Name)
 	ctx = logr.NewContext(ctx, log)
 
-	r.trackTemplates(workload, supplyChain)
-
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
 		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
-			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)))
+			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
+		)
 	}
 
 	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
@@ -99,22 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
 
-	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
-	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
-		log.Info("failed to get service account", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
-	}
-
-	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
-		Namespace: serviceAccountNS,
-		Name:      serviceAccountName,
-	}), types.NamespacedName{
-		Namespace: workload.Namespace,
-		Name:      workload.Name,
-	})
-
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
@@ -129,7 +121,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
+	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -145,6 +137,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
+		case realizer.ResolveTemplateOptionError:
+			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+		case realizer.TemplateOptionsMatchError:
+			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -158,6 +154,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
+
+	r.trackDependencies(workload, selectedTemplates, serviceAccountName, serviceAccountNS)
 
 	var trackingError error
 	if len(stampedObjects) > 0 {
@@ -253,21 +251,42 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	return supplyChains[0], nil
 }
 
-func (r *Reconciler) trackTemplates(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) {
-	for _, resource := range supplyChain.Spec.Resources {
-		r.DependencyTracker.Track(dependency.Key{
-			GroupKind: schema.GroupKind{
-				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
+func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemplates []templates.Template, serviceAccountName, serviceAccountNS string) {
+	r.DependencyTracker.ClearTracked(types.NamespacedName{
+		Namespace: workload.Namespace,
+		Name:      workload.Name,
+	})
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: corev1.SchemeGroupVersion.Group,
+			Kind:  rbacv1.ServiceAccountKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountNS,
+			Name:      serviceAccountName,
+		},
+	}, types.NamespacedName{
+		Namespace: workload.Namespace,
+		Name:      workload.Name,
+	})
+
+	for _, selectedTemplate := range selectedTemplates {
+		r.DependencyTracker.Track(
+			dependency.Key{
+				GroupKind: schema.GroupKind{
+					Group: v1alpha1.SchemeGroupVersion.Group,
+					Kind:  selectedTemplate.GetKind(),
+				},
+				NamespacedName: types.NamespacedName{
+					Name: selectedTemplate.GetName(),
+				},
 			},
-			NamespacedName: types.NamespacedName{
-				Namespace: "",
-				Name:      resource.TemplateRef.Name,
+			types.NamespacedName{
+				Namespace: workload.Namespace,
+				Name:      workload.Name,
 			},
-		}, types.NamespacedName{
-			Namespace: workload.Namespace,
-			Name:      workload.Name,
-		})
+		)
 	}
 }
 

@@ -66,7 +66,6 @@ var _ = Describe("Reconcile", func() {
 		fakeRunnabeRepo          *repositoryfakes.FakeRepository
 		serviceAccountSecret     *corev1.Secret
 		secretForBuiltClient     *corev1.Secret
-		serviceAccount           *corev1.ServiceAccount
 		serviceAccountName       string
 	)
 
@@ -83,17 +82,6 @@ var _ = Describe("Reconcile", func() {
 
 		serviceAccountName = "alternate-service-account-name"
 
-		serviceAccount = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ServiceAccount",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccountName,
-				Namespace: "my-namespace",
-			},
-		}
-		repo.GetServiceAccountReturns(serviceAccount, nil)
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
@@ -189,14 +177,10 @@ var _ = Describe("Reconcile", func() {
 		It("uses the service account specified by the runnable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, request)
 
-			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 			Expect(serviceAccountName).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
-
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(sa).To(Equal(serviceAccount))
 
 			Expect(*clientForBuiltRepository).To(Equal(builtClient))
 			Expect(secretForBuiltClient).To(Equal(serviceAccountSecret))
@@ -220,15 +204,24 @@ var _ = Describe("Reconcile", func() {
 			}))
 		})
 
+		It("clears the previously tracked objects for the runnable", func() {
+			_, _ = reconciler.Reconcile(ctx, request)
+
+			Expect(dependencyTracker.ClearTrackedCallCount()).To(Equal(1))
+			obj := dependencyTracker.ClearTrackedArgsForCall(0)
+			Expect(obj.Name).To(Equal("my-runnable"))
+			Expect(obj.Namespace).To(Equal("my-namespace"))
+		})
+
 		It("watches the cluster run template and service account", func() {
 			_, _ = reconciler.Reconcile(ctx, request)
 
 			Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
-			runTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
-			Expect(runTemplateKey.String()).To(Equal("ClusterRunTemplate.carto.run//my-run-template"))
-
-			serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(1)
+			serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(0)
 			Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-namespace/alternate-service-account-name"))
+
+			runTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
+			Expect(runTemplateKey.String()).To(Equal("ClusterRunTemplate.carto.run//my-run-template"))
 		})
 
 		Context("watching does not cause an error", func() {
@@ -640,7 +633,7 @@ var _ = Describe("Reconcile", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
 				Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 				Expect(serviceAccountName).To(Equal("default"))
 				Expect(serviceAccountNS).To(Equal("my-namespace"))
 			})
@@ -671,6 +664,15 @@ var _ = Describe("Reconcile", func() {
 
 			Eventually(out).Should(Say(`"msg":"started"`))
 			Eventually(out).Should(Say(`"msg":"finished"`))
+		})
+
+		It("clears the previously tracked objects for the runnable", func() {
+			_, _ = reconciler.Reconcile(ctx, request)
+
+			Expect(dependencyTracker.ClearTrackedCallCount()).To(Equal(1))
+			obj := dependencyTracker.ClearTrackedArgsForCall(0)
+			Expect(obj.Name).To(Equal("my-runnable"))
+			Expect(obj.Namespace).To(Equal("my-namespace"))
 		})
 	})
 
