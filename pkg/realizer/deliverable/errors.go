@@ -26,13 +26,13 @@ import (
 
 const NoJsonpathContext = "<no jsonpath context>"
 
-type GetDeliveryTemplateError struct {
+type GetTemplateError struct {
 	Err          error
 	DeliveryName string
 	Resource     *v1alpha1.DeliveryResource
 }
 
-func (e GetDeliveryTemplateError) Error() string {
+func (e GetTemplateError) Error() string {
 	return fmt.Errorf("unable to get template [%s] for resource [%s] in delivery [%s]: %w",
 		e.Resource.TemplateRef.Name,
 		e.Resource.Name,

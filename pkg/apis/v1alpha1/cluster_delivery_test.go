@@ -27,8 +27,12 @@ import (
 )
 
 var _ = Describe("Delivery Validation", func() {
-	Describe("#Create", func() {
-		var delivery *v1alpha1.ClusterDelivery
+
+	Context("delivery without options", func() {
+		var (
+			delivery    *v1alpha1.ClusterDelivery
+			oldDelivery *v1alpha1.ClusterDelivery
+		)
 
 		BeforeEach(func() {
 			delivery = &v1alpha1.ClusterDelivery{
@@ -57,10 +61,13 @@ var _ = Describe("Delivery Validation", func() {
 			}
 		})
 		Context("Well formed delivery", func() {
-			It("does not return an error", func() {
+			It("creates without error", func() {
 				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
 			})
 
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("Duplicate resource names", func() {
@@ -70,8 +77,12 @@ var _ = Describe("Delivery Validation", func() {
 				}
 			})
 
-			It("returns an error", func() {
+			It("on create, it rejects the Resource", func() {
 				Expect(delivery.ValidateCreate()).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
 			})
 		})
 
@@ -85,8 +96,14 @@ var _ = Describe("Delivery Validation", func() {
 							},
 						}
 					})
-					It("returns an error", func() {
+					It("on create, it rejects the Resource", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -103,8 +120,14 @@ var _ = Describe("Delivery Validation", func() {
 						}
 					})
 
-					It("returns an error", func() {
+					It("on create, it rejects the Resource", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -120,8 +143,14 @@ var _ = Describe("Delivery Validation", func() {
 							},
 						}
 					})
-					It("returns an error", func() {
+					It("on create, it rejects the Resource", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -137,80 +166,20 @@ var _ = Describe("Delivery Validation", func() {
 							},
 						}
 					})
-					It("returns an error", func() {
+					It("on create, it rejects the Resourcer", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resourcer", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
 			})
 		})
-	})
-
-	Describe("#Update", func() {
-		var (
-			previousDelivery *v1alpha1.ClusterDelivery
-			newDelivery      *v1alpha1.ClusterDelivery
-		)
-
-		BeforeEach(func() {
-			previousDelivery = &v1alpha1.ClusterDelivery{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "delivery-resource",
-					Namespace: "default",
-				},
-				Spec: v1alpha1.DeliverySpec{
-					Resources: []v1alpha1.DeliveryResource{
-						{
-							Name: "source-provider",
-							TemplateRef: v1alpha1.DeliveryTemplateReference{
-								Kind: "ClusterSourceTemplate",
-								Name: "source-template",
-							},
-						},
-						{
-							Name: "other-source-provider",
-							TemplateRef: v1alpha1.DeliveryTemplateReference{
-								Kind: "ClusterSourceTemplate",
-								Name: "source-template",
-							},
-						},
-					},
-				},
-			}
-		})
-
-		Context("with a valid change", func() {
-			BeforeEach(func() {
-				newDelivery = previousDelivery.DeepCopy()
-				newDelivery.Spec.Resources = newDelivery.Spec.Resources[:1]
-			})
-
-			It("does not return an error", func() {
-				Expect(newDelivery.ValidateUpdate(previousDelivery)).NotTo(HaveOccurred())
-			})
-		})
-
-		Context("Duplicate resource names", func() {
-			BeforeEach(func() {
-				newDelivery = previousDelivery.DeepCopy()
-				newDelivery.Spec.Resources = append(newDelivery.Spec.Resources, v1alpha1.DeliveryResource{
-					Name: "other-source-provider",
-					TemplateRef: v1alpha1.DeliveryTemplateReference{
-						Kind: "ClusterSourceTemplate",
-						Name: "source-template",
-					},
-				})
-			})
-
-			It("returns an error", func() {
-				err := newDelivery.ValidateUpdate(previousDelivery)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring(`spec.resources[2].name "other-source-provider" cannot appear twice`)))
-			})
-
-		})
-
 	})
 
 	Context("delivery with options", func() {

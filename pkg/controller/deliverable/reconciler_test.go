@@ -472,10 +472,10 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		Context("but the realizer returns an error", func() {
-			Context("of type GetDeliveryTemplateError", func() {
+			Context("of type GetTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = realizer.GetDeliveryTemplateError{
+					templateError = realizer.GetTemplateError{
 						Resource: &v1alpha1.DeliveryResource{Name: "some-name"},
 						Err:      errors.New("some error"),
 					}

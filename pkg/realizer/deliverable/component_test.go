@@ -158,7 +158,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
@@ -205,10 +205,10 @@ var _ = Describe("Resource", func() {
 
 		When("unable to get the template ref from systemRepo", func() {
 			BeforeEach(func() {
-				fakeSystemRepo.GetDeliveryTemplateReturns(nil, errors.New("bad template"))
+				fakeSystemRepo.GetTemplateReturns(nil, errors.New("bad template"))
 			})
 
-			It("returns GetDeliveryTemplateError", func() {
+			It("returns GetTemplateError", func() {
 				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
 
@@ -216,7 +216,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [source-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetDeliveryTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetTemplateError"))
 			})
 		})
 
@@ -232,7 +232,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns a helpful error", func() {
@@ -261,7 +261,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
@@ -313,7 +313,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
@@ -378,7 +378,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 

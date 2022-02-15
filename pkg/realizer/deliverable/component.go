@@ -18,17 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
-	"github.com/vmware-tanzu/cartographer/pkg/logger"
-	"github.com/vmware-tanzu/cartographer/pkg/selector"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -81,10 +80,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 
 	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
-	apiTemplate, err := r.systemRepo.GetDeliveryTemplate(ctx, templateName, resource.TemplateRef.Kind)
+	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
-		return nil, nil, nil, GetDeliveryTemplateError{
+		return nil, nil, nil, GetTemplateError{
 			Err:          err,
 			DeliveryName: deliveryName,
 			Resource:     resource,

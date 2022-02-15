@@ -83,10 +83,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 
 	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
-	apiTemplate, err := r.systemRepo.GetSupplyChainTemplate(ctx, templateName, resource.TemplateRef.Kind)
+	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, nil, GetSupplyChainTemplateError{
+		return nil, nil, nil, GetTemplateError{
 			Err:             err,
 			SupplyChainName: supplyChainName,
 			Resource:        resource,

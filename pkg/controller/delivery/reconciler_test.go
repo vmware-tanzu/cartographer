@@ -141,9 +141,9 @@ var _ = Describe("delivery reconciler", func() {
 						},
 					},
 				}
-				repo.GetDeliveryTemplateReturnsOnCall(0, firstTemplate, nil)
-				repo.GetDeliveryTemplateReturnsOnCall(1, secondTemplate, nil)
-				repo.GetDeliveryTemplateReturnsOnCall(2, thirdTemplate, nil)
+				repo.GetTemplateReturnsOnCall(0, firstTemplate, nil)
+				repo.GetTemplateReturnsOnCall(1, secondTemplate, nil)
+				repo.GetTemplateReturnsOnCall(2, thirdTemplate, nil)
 			})
 
 			It("Attaches a ready/true status", func() {
@@ -227,7 +227,7 @@ var _ = Describe("delivery reconciler", func() {
 					},
 				}
 
-				repo.GetDeliveryTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
+				repo.GetTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
 			It("returns an error and requeues", func() {
@@ -248,7 +248,7 @@ var _ = Describe("delivery reconciler", func() {
 					},
 				}
 
-				repo.GetDeliveryTemplateReturnsOnCall(0, nil, nil)
+				repo.GetTemplateReturnsOnCall(0, nil, nil)
 			})
 
 			It("adds a positive templates NOT found condition", func() {
