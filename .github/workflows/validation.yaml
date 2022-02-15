@@ -54,6 +54,7 @@ jobs:
       - name: run tests
         env:
           KUBEBUILDER_ASSETS: /usr/local/bin
+          LOG_LEVEL: "debug"
           CI: true
         run: make test
 

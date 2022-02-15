@@ -3,6 +3,11 @@ ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
 GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
 
+ifndef ($LOG_LEVEL)
+	# set a default LOG_LEVEL whenever we run the controller
+	# and for our kuttl tests which require something to be set.
+	export LOG_LEVEL = info
+endif
 
 .PHONY: build
 build: gen-objects gen-manifests
@@ -93,7 +98,6 @@ test-kuttl-supplychain: build test-gen-manifests
 test-kuttl-delivery: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/delivery --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/delivery; fi
 
-
 .PHONY: list-kuttl
 list-kuttl:
 	(cd tests/kuttl && find . -maxdepth 2 -type d)
@@ -149,7 +153,6 @@ pre-push:
 	$(MAKE) .pre-push-check
 	[ -z "$$(git status --porcelain)" ] || (echo "changes occurred during pre-push check" && git diff HEAD --exit-code)
 
-
 .PHONY: docs-serve
 docs-serve:
 	$(MAKE) -C site serve
@@ -157,7 +160,6 @@ docs-serve:
 .PHONY: docs-release
 docs-release:
 	$(MAKE) -C site release
-
 
 .PHONY: docs-gen-crds
 docs-gen-crds: gen-manifests

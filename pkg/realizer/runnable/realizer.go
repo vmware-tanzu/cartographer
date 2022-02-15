@@ -134,7 +134,10 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 			TemplateRef:   &runnable.Spec.RunTemplateRef,
 		}
 	}
-	log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)
+
+	if evaluatedStampedObject != nil {
+		log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)
+	}
 
 	if len(outputs) == 0 {
 		log.V(logger.DEBUG).Info("no outputs retrieved, getting outputs from runnable.Status.Outputs")
