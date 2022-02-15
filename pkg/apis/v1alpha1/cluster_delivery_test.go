@@ -537,7 +537,6 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 	})
-
 })
 
 var _ = Describe("DeliveryTemplateReference", func() {
