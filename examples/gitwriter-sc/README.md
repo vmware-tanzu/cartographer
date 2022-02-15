@@ -26,7 +26,7 @@ objects would be set by the different personas in the system:
 
 
 ```
-  '── shared | testing-sc
+  '── shared | gitwriter-sc
       ├── 00-cluster                         preconfigured cluster-wide objects
       │                                        to configured systems other than
       │                                              cartographer (like, kpack)
