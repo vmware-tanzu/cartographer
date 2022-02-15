@@ -38,6 +38,8 @@ spec:
 
 The same way as `matchFields` from [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/75)
 
+This will also impact how best match works at the supply chain level. Right now a best-match is indicated by the number of labels. We should broaden this definition to include the number of labels and number of fields matched.
+
 # Migration
 [migration]: #migration
 
@@ -90,6 +92,8 @@ becomes
 
 # Unresolved Questions
 [unresolved-questions]: #unresolved-questions
+
+
 
 # Spec. Changes (OPTIONAL)
 [spec-changes]: #spec-changes
