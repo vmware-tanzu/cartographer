@@ -44,6 +44,7 @@ workload
 # What it is
 [what-it-is]: #what-it-is
 
+This RFC extends the `options` paradigm accepted (and being implemented) in [RFC 0009 switch templates based on selectors](https://github.com/vmware-tanzu/cartographer/pull/75)
 This RFC introduces `input selection`: the ability to add `sources:`, `images:` and `configs:` to the `spec.resources[].options[]` field.
 It describes `selection sets` which is the sum total of `selectors` and `input selection` leading to an option or resource.
 
@@ -221,7 +222,8 @@ Discuss prior art, both the good and bad.
 [unresolved-questions]: #unresolved-questions
 
 - Empiricial tests for complex paths. I have a repository for working these through here: https://github.com/squeedee/vizit 
-- Can we shake the tree fast enough that this works well as a pre-realize step?
+- ~~Can we shake the tree fast enough that this works well as a pre-realize step?~~ We don't need to, we can mark outputs as selected 
+  in the realizer and not have to change much else of the code.
 
 # Spec. Changes
 [spec-changes]: #spec-changes
