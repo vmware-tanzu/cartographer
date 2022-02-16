@@ -10,7 +10,7 @@
 # Summary
 [summary]: #summary
 
-The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/75) introduced template `options` that included a `matchFields` selector. We should include this same selector at the `blueprint` level
+The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/75) introduced template `options` that included a `matchFields` selector. We should include this same selector at the `blueprint` level, and we should move the current labels to a `matchLabels` selector.
 
 # Motivation
 [motivation]: #motivation
@@ -29,8 +29,10 @@ metadata:
   name: supply-chain
 spec:
   selector:
+    matchLabels:                                                # <=========== move existing labels under this heading
+      app.tanzu.vmware.com/workload-type: web
     matchFields:                                                # <=========== add this
-      { key: "workload.spec.image", operation: exists }         # <=========== 
+      - { key: "workload.spec.image", operation: exists }       # <=========== 
 ```
 
 # How it Works
@@ -50,14 +52,12 @@ This is most likely a breaking change which would require a bump to the `Cluster
     app.tanzu.vmware.com/workload-type: web
 ```
 
-needs to become:
+needs to be transformed into this:
 
 ```yaml
   selector:
-    matchFields:
-      - key: workload.metadata.labels."app.tanzu.vmware.com/workload-type"
-        operator: In
-        values: ["web"]
+    matchLabels:
+      app.tanzu.vmware.com/workload-type: web
 ```
 
 
@@ -69,21 +69,6 @@ This is a breaking change.
 # Alternatives
 [alternatives]: #alternatives
 
-If we introduced `matchLabels` at the same time as `matchFields`, when migrating we would simply need to hoist everything under the current `selector` over to the new `matchLabels` field.
-
-```yaml
-  selector:
-    app.tanzu.vmware.com/workload-type: web
-```
-
-becomes
-
-```yaml
-  selector:
-    matchLabels:
-      app.tanzu.vmware.com/workload-type: web
-```
-
 
 # Prior Art
 [prior-art]: #prior-art
@@ -92,8 +77,6 @@ becomes
 
 # Unresolved Questions
 [unresolved-questions]: #unresolved-questions
-
-
 
 # Spec. Changes (OPTIONAL)
 [spec-changes]: #spec-changes
@@ -105,6 +88,8 @@ metadata:
   name: supply-chain
 spec:
   selector:
+    matchLabels:                                                # <=========== move existing labels under this heading
+      app.tanzu.vmware.com/workload-type: web
     matchFields:                                                # <=========== add this
-      { key: "workload.spec.image", operation: exists }         # <=========== 
+      - { key: "workload.spec.image", operation: exists }       # <=========== 
 ```
