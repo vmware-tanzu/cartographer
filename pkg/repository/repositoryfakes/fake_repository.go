@@ -95,20 +95,6 @@ type FakeRepository struct {
 		result1 *v1alpha1.ClusterDelivery
 		result2 error
 	}
-	GetDeliveryTemplateStub        func(context.Context, v1alpha1.DeliveryTemplateReference) (client.Object, error)
-	getDeliveryTemplateMutex       sync.RWMutex
-	getDeliveryTemplateArgsForCall []struct {
-		arg1 context.Context
-		arg2 v1alpha1.DeliveryTemplateReference
-	}
-	getDeliveryTemplateReturns struct {
-		result1 client.Object
-		result2 error
-	}
-	getDeliveryTemplateReturnsOnCall map[int]struct {
-		result1 client.Object
-		result2 error
-	}
 	GetRunTemplateStub        func(context.Context, v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	getRunTemplateMutex       sync.RWMutex
 	getRunTemplateArgsForCall []struct {
@@ -177,21 +163,6 @@ type FakeRepository struct {
 		result1 *v1alpha1.ClusterSupplyChain
 		result2 error
 	}
-	GetSupplyChainTemplateStub        func(context.Context, string, string) (client.Object, error)
-	getSupplyChainTemplateMutex       sync.RWMutex
-	getSupplyChainTemplateArgsForCall []struct {
-		arg1 context.Context
-		arg2 string
-		arg3 string
-	}
-	getSupplyChainTemplateReturns struct {
-		result1 client.Object
-		result2 error
-	}
-	getSupplyChainTemplateReturnsOnCall map[int]struct {
-		result1 client.Object
-		result2 error
-	}
 	GetSupplyChainsForWorkloadStub        func(context.Context, *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
 	getSupplyChainsForWorkloadMutex       sync.RWMutex
 	getSupplyChainsForWorkloadArgsForCall []struct {
@@ -204,6 +175,21 @@ type FakeRepository struct {
 	}
 	getSupplyChainsForWorkloadReturnsOnCall map[int]struct {
 		result1 []*v1alpha1.ClusterSupplyChain
+		result2 error
+	}
+	GetTemplateStub        func(context.Context, string, string) (client.Object, error)
+	getTemplateMutex       sync.RWMutex
+	getTemplateArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}
+	getTemplateReturns struct {
+		result1 client.Object
+		result2 error
+	}
+	getTemplateReturnsOnCall map[int]struct {
+		result1 client.Object
 		result2 error
 	}
 	GetUnstructuredStub        func(context.Context, *unstructured.Unstructured) (*unstructured.Unstructured, error)
@@ -650,71 +636,6 @@ func (fake *FakeRepository) GetDeliveryReturnsOnCall(i int, result1 *v1alpha1.Cl
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetDeliveryTemplate(arg1 context.Context, arg2 v1alpha1.DeliveryTemplateReference) (client.Object, error) {
-	fake.getDeliveryTemplateMutex.Lock()
-	ret, specificReturn := fake.getDeliveryTemplateReturnsOnCall[len(fake.getDeliveryTemplateArgsForCall)]
-	fake.getDeliveryTemplateArgsForCall = append(fake.getDeliveryTemplateArgsForCall, struct {
-		arg1 context.Context
-		arg2 v1alpha1.DeliveryTemplateReference
-	}{arg1, arg2})
-	stub := fake.GetDeliveryTemplateStub
-	fakeReturns := fake.getDeliveryTemplateReturns
-	fake.recordInvocation("GetDeliveryTemplate", []interface{}{arg1, arg2})
-	fake.getDeliveryTemplateMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeRepository) GetDeliveryTemplateCallCount() int {
-	fake.getDeliveryTemplateMutex.RLock()
-	defer fake.getDeliveryTemplateMutex.RUnlock()
-	return len(fake.getDeliveryTemplateArgsForCall)
-}
-
-func (fake *FakeRepository) GetDeliveryTemplateCalls(stub func(context.Context, v1alpha1.DeliveryTemplateReference) (client.Object, error)) {
-	fake.getDeliveryTemplateMutex.Lock()
-	defer fake.getDeliveryTemplateMutex.Unlock()
-	fake.GetDeliveryTemplateStub = stub
-}
-
-func (fake *FakeRepository) GetDeliveryTemplateArgsForCall(i int) (context.Context, v1alpha1.DeliveryTemplateReference) {
-	fake.getDeliveryTemplateMutex.RLock()
-	defer fake.getDeliveryTemplateMutex.RUnlock()
-	argsForCall := fake.getDeliveryTemplateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeRepository) GetDeliveryTemplateReturns(result1 client.Object, result2 error) {
-	fake.getDeliveryTemplateMutex.Lock()
-	defer fake.getDeliveryTemplateMutex.Unlock()
-	fake.GetDeliveryTemplateStub = nil
-	fake.getDeliveryTemplateReturns = struct {
-		result1 client.Object
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeRepository) GetDeliveryTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
-	fake.getDeliveryTemplateMutex.Lock()
-	defer fake.getDeliveryTemplateMutex.Unlock()
-	fake.GetDeliveryTemplateStub = nil
-	if fake.getDeliveryTemplateReturnsOnCall == nil {
-		fake.getDeliveryTemplateReturnsOnCall = make(map[int]struct {
-			result1 client.Object
-			result2 error
-		})
-	}
-	fake.getDeliveryTemplateReturnsOnCall[i] = struct {
-		result1 client.Object
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeRepository) GetRunTemplate(arg1 context.Context, arg2 v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
 	fake.getRunTemplateMutex.Lock()
 	ret, specificReturn := fake.getRunTemplateReturnsOnCall[len(fake.getRunTemplateArgsForCall)]
@@ -1030,72 +951,6 @@ func (fake *FakeRepository) GetSupplyChainReturnsOnCall(i int, result1 *v1alpha1
 	}{result1, result2}
 }
 
-func (fake *FakeRepository) GetSupplyChainTemplate(arg1 context.Context, arg2 string, arg3 string) (client.Object, error) {
-	fake.getSupplyChainTemplateMutex.Lock()
-	ret, specificReturn := fake.getSupplyChainTemplateReturnsOnCall[len(fake.getSupplyChainTemplateArgsForCall)]
-	fake.getSupplyChainTemplateArgsForCall = append(fake.getSupplyChainTemplateArgsForCall, struct {
-		arg1 context.Context
-		arg2 string
-		arg3 string
-	}{arg1, arg2, arg3})
-	stub := fake.GetSupplyChainTemplateStub
-	fakeReturns := fake.getSupplyChainTemplateReturns
-	fake.recordInvocation("GetSupplyChainTemplate", []interface{}{arg1, arg2, arg3})
-	fake.getSupplyChainTemplateMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeRepository) GetSupplyChainTemplateCallCount() int {
-	fake.getSupplyChainTemplateMutex.RLock()
-	defer fake.getSupplyChainTemplateMutex.RUnlock()
-	return len(fake.getSupplyChainTemplateArgsForCall)
-}
-
-func (fake *FakeRepository) GetSupplyChainTemplateCalls(stub func(context.Context, string, string) (client.Object, error)) {
-	fake.getSupplyChainTemplateMutex.Lock()
-	defer fake.getSupplyChainTemplateMutex.Unlock()
-	fake.GetSupplyChainTemplateStub = stub
-}
-
-func (fake *FakeRepository) GetSupplyChainTemplateArgsForCall(i int) (context.Context, string, string) {
-	fake.getSupplyChainTemplateMutex.RLock()
-	defer fake.getSupplyChainTemplateMutex.RUnlock()
-	argsForCall := fake.getSupplyChainTemplateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakeRepository) GetSupplyChainTemplateReturns(result1 client.Object, result2 error) {
-	fake.getSupplyChainTemplateMutex.Lock()
-	defer fake.getSupplyChainTemplateMutex.Unlock()
-	fake.GetSupplyChainTemplateStub = nil
-	fake.getSupplyChainTemplateReturns = struct {
-		result1 client.Object
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeRepository) GetSupplyChainTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
-	fake.getSupplyChainTemplateMutex.Lock()
-	defer fake.getSupplyChainTemplateMutex.Unlock()
-	fake.GetSupplyChainTemplateStub = nil
-	if fake.getSupplyChainTemplateReturnsOnCall == nil {
-		fake.getSupplyChainTemplateReturnsOnCall = make(map[int]struct {
-			result1 client.Object
-			result2 error
-		})
-	}
-	fake.getSupplyChainTemplateReturnsOnCall[i] = struct {
-		result1 client.Object
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeRepository) GetSupplyChainsForWorkload(arg1 context.Context, arg2 *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error) {
 	fake.getSupplyChainsForWorkloadMutex.Lock()
 	ret, specificReturn := fake.getSupplyChainsForWorkloadReturnsOnCall[len(fake.getSupplyChainsForWorkloadArgsForCall)]
@@ -1157,6 +1012,72 @@ func (fake *FakeRepository) GetSupplyChainsForWorkloadReturnsOnCall(i int, resul
 	}
 	fake.getSupplyChainsForWorkloadReturnsOnCall[i] = struct {
 		result1 []*v1alpha1.ClusterSupplyChain
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetTemplate(arg1 context.Context, arg2 string, arg3 string) (client.Object, error) {
+	fake.getTemplateMutex.Lock()
+	ret, specificReturn := fake.getTemplateReturnsOnCall[len(fake.getTemplateArgsForCall)]
+	fake.getTemplateArgsForCall = append(fake.getTemplateArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.GetTemplateStub
+	fakeReturns := fake.getTemplateReturns
+	fake.recordInvocation("GetTemplate", []interface{}{arg1, arg2, arg3})
+	fake.getTemplateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeRepository) GetTemplateCallCount() int {
+	fake.getTemplateMutex.RLock()
+	defer fake.getTemplateMutex.RUnlock()
+	return len(fake.getTemplateArgsForCall)
+}
+
+func (fake *FakeRepository) GetTemplateCalls(stub func(context.Context, string, string) (client.Object, error)) {
+	fake.getTemplateMutex.Lock()
+	defer fake.getTemplateMutex.Unlock()
+	fake.GetTemplateStub = stub
+}
+
+func (fake *FakeRepository) GetTemplateArgsForCall(i int) (context.Context, string, string) {
+	fake.getTemplateMutex.RLock()
+	defer fake.getTemplateMutex.RUnlock()
+	argsForCall := fake.getTemplateArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeRepository) GetTemplateReturns(result1 client.Object, result2 error) {
+	fake.getTemplateMutex.Lock()
+	defer fake.getTemplateMutex.Unlock()
+	fake.GetTemplateStub = nil
+	fake.getTemplateReturns = struct {
+		result1 client.Object
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetTemplateReturnsOnCall(i int, result1 client.Object, result2 error) {
+	fake.getTemplateMutex.Lock()
+	defer fake.getTemplateMutex.Unlock()
+	fake.GetTemplateStub = nil
+	if fake.getTemplateReturnsOnCall == nil {
+		fake.getTemplateReturnsOnCall = make(map[int]struct {
+			result1 client.Object
+			result2 error
+		})
+	}
+	fake.getTemplateReturnsOnCall[i] = struct {
+		result1 client.Object
 		result2 error
 	}{result1, result2}
 }
@@ -1436,8 +1357,6 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getDeliveriesForDeliverableMutex.RUnlock()
 	fake.getDeliveryMutex.RLock()
 	defer fake.getDeliveryMutex.RUnlock()
-	fake.getDeliveryTemplateMutex.RLock()
-	defer fake.getDeliveryTemplateMutex.RUnlock()
 	fake.getRunTemplateMutex.RLock()
 	defer fake.getRunTemplateMutex.RUnlock()
 	fake.getRunnableMutex.RLock()
@@ -1448,10 +1367,10 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getServiceAccountSecretMutex.RUnlock()
 	fake.getSupplyChainMutex.RLock()
 	defer fake.getSupplyChainMutex.RUnlock()
-	fake.getSupplyChainTemplateMutex.RLock()
-	defer fake.getSupplyChainTemplateMutex.RUnlock()
 	fake.getSupplyChainsForWorkloadMutex.RLock()
 	defer fake.getSupplyChainsForWorkloadMutex.RUnlock()
+	fake.getTemplateMutex.RLock()
+	defer fake.getTemplateMutex.RUnlock()
 	fake.getUnstructuredMutex.RLock()
 	defer fake.getUnstructuredMutex.RUnlock()
 	fake.getWorkloadMutex.RLock()

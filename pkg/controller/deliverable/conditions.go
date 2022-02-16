@@ -175,3 +175,21 @@ func ResourceRealizerBuilderErrorCondition(err error) metav1.Condition {
 		Message: err.Error(),
 	}
 }
+
+func ResolveTemplateOptionsErrorCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ResolveTemplateOptionsErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}
+
+func TemplateOptionsMatchErrorCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.TemplateOptionsMatchErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}

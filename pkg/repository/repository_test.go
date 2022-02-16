@@ -579,43 +579,14 @@ spec:
 			})
 		})
 
-		Context("GetSupplyChainTemplate", func() {
-			Context("when the template reference kind is not in our gvk", func() {
-				It("returns a helpful error", func() {
-					reference := v1alpha1.SupplyChainTemplateReference{
-						Kind: "some-unsupported-kind",
-						Name: "my-template",
-					}
-					_, err := repo.GetSupplyChainTemplate(ctx, reference.Name, reference.Kind)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("unable to get api template [some-unsupported-kind/my-template]: resource does not have valid kind: some-unsupported-kind"))
-				})
-			})
-
-			Context("when the client returns an error on the get", func() {
-				BeforeEach(func() {
-					cl.GetReturns(errors.New("some bad get error"))
-				})
-				It("returns a helpful error", func() {
-					reference := v1alpha1.SupplyChainTemplateReference{
-						Kind: "ClusterImageTemplate",
-						Name: "image-template",
-					}
-					_, err := repo.GetSupplyChainTemplate(ctx, reference.Name, reference.Kind)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
-				})
-			})
-		})
-
-		Context("GetDeliveryTemplate", func() {
+		Context("GetTemplate", func() {
 			Context("when the template reference kind is not in our gvk", func() {
 				It("returns a helpful error", func() {
 					reference := v1alpha1.DeliveryTemplateReference{
 						Kind: "some-unsupported-kind",
 						Name: "my-template",
 					}
-					_, err := repo.GetDeliveryTemplate(ctx, reference)
+					_, err := repo.GetTemplate(ctx, reference.Name, reference.Kind)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("unable to get api template [some-unsupported-kind/my-template]: resource does not have valid kind: some-unsupported-kind"))
 				})
@@ -630,7 +601,7 @@ spec:
 						Kind: "ClusterImageTemplate",
 						Name: "image-template",
 					}
-					_, err := repo.GetDeliveryTemplate(ctx, reference)
+					_, err := repo.GetTemplate(ctx, reference.Name, reference.Kind)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("failed to get template object from api server [ClusterImageTemplate/image-template]: failed to get object [image-template] from api server: some bad get error"))
 				})
@@ -939,7 +910,7 @@ spec:
 			repo = repository.NewRepository(cl, cache)
 		})
 
-		Context("GetSupplyChainTemplate", func() {
+		Context("GetTemplate", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -954,13 +925,13 @@ spec:
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetSupplyChainTemplate(ctx, templateRef.Name, templateRef.Kind)
+				template, err := repo.GetTemplate(ctx, templateRef.Name, templateRef.Kind)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})
 		})
 
-		Context("GetDeliveryTemplate", func() {
+		Context("GetTemplate", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -975,7 +946,7 @@ spec:
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}
-				template, err := repo.GetDeliveryTemplate(ctx, templateRef)
+				template, err := repo.GetTemplate(ctx, templateRef.Name, templateRef.Kind)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template.GetName()).To(Equal("some-name"))
 			})

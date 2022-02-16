@@ -36,13 +36,6 @@ const (
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
 )
 
-const (
-	FieldSelectorOpIn           FieldSelectorOperator = "In"
-	FieldSelectorOpNotIn        FieldSelectorOperator = "NotIn"
-	FieldSelectorOpExists       FieldSelectorOperator = "Exists"
-	FieldSelectorOpDoesNotExist FieldSelectorOperator = "DoesNotExist"
-)
-
 var ValidSupplyChainTemplates = []client.Object{
 	&ClusterSourceTemplate{},
 	&ClusterImageTemplate{},
@@ -161,38 +154,6 @@ type SupplyChainTemplateReference struct {
 	// Minimum number of items in list is two.
 	// +kubebuilder:validation:MinItems=2
 	Options []TemplateOption `json:"options,omitempty"`
-}
-
-type TemplateOption struct {
-	// Name of the template to apply
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-
-	// Selector is a field query over a workload resource.
-	Selector Selector `json:"selector"`
-}
-
-type Selector struct {
-	// MatchFields is a list of field selector requirements. The requirements are ANDed.
-	// +kubebuilder:validation:MinItems=1
-	MatchFields []FieldSelectorRequirement `json:"matchFields"`
-}
-
-type FieldSelectorRequirement struct {
-	// Key is the JSON path in the workload to match against.
-	// e.g. "workload.spec.source.git.url"
-	// +kubebuilder:validation:MinLength=1
-	Key string `json:"key"`
-
-	// Operator represents a key's relationship to a set of values.
-	// Valid operators are In, NotIn, Exists and DoesNotExist.
-	// +kubebuilder:validation:Enum=In;NotIn;Exists;DoesNotExist
-	Operator FieldSelectorOperator `json:"operator"`
-
-	// Values is an array of string values. If the operator is In or NotIn,
-	// the values array must be non-empty. If the operator is Exists or DoesNotExist,
-	// the values array must be empty.
-	Values []string `json:"values,omitempty"`
 }
 
 type FieldSelectorOperator string

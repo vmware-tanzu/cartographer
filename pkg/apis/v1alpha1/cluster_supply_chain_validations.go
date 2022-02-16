@@ -48,7 +48,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	}
 
 	for _, resource := range c.Spec.Resources {
-		if err := validateResourceTemplateRef(resource.TemplateRef); err != nil {
+		if err := validateSupplyChainTemplateRef(resource.TemplateRef); err != nil {
 			return fmt.Errorf("error validating resource [%s]: %w", resource.Name, err)
 		}
 	}
@@ -124,7 +124,7 @@ func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference
 	return nil
 }
 
-func validateResourceTemplateRef(ref SupplyChainTemplateReference) error {
+func validateSupplyChainTemplateRef(ref SupplyChainTemplateReference) error {
 	if ref.Name != "" && len(ref.Options) > 0 {
 		return fmt.Errorf("exactly one of templateRef.Name or templateRef.Options must be specified, found both")
 	}
@@ -142,6 +142,7 @@ func validateResourceTemplateRef(ref SupplyChainTemplateReference) error {
 	return nil
 }
 
+// TODO: move to common validation, shared with delivery
 func validateResourceOptions(options []TemplateOption) error {
 	for _, option := range options {
 		if err := validateFieldSelectorRequirements(option.Selector.MatchFields); err != nil {
@@ -164,6 +165,7 @@ func validateResourceOptions(options []TemplateOption) error {
 	return nil
 }
 
+// TODO: move to common validation, shared with delivery
 func validateFieldSelectorRequirements(reqs []FieldSelectorRequirement) error {
 	for _, req := range reqs {
 		switch req.Operator {

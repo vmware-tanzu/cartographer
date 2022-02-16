@@ -101,56 +101,28 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 
 	for _, resource := range chain.Spec.Resources {
 		if resource.TemplateRef.Name != "" {
-			template, err := r.Repo.GetSupplyChainTemplate(ctx, resource.TemplateRef.Name, resource.TemplateRef.Kind)
+			found, err := r.validateResource(ctx, chain, resource.TemplateRef.Name, resource.TemplateRef.Kind)
 			if err != nil {
-				log.Error(err, "failed to get cluster template", "template", resource.TemplateRef)
+				log.Error(err, "failed to get cluster template", "template",
+					fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
 				return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
 			}
 
-			if template == nil {
-				log.Info("cluster template does not exist", "template", resource.TemplateRef)
+			if !found {
 				resourcesNotFound = append(resourcesNotFound, resource.Name)
 			}
-
-			r.DependencyTracker.Track(dependency.Key{
-				GroupKind: schema.GroupKind{
-					Group: v1alpha1.SchemeGroupVersion.Group,
-					Kind:  resource.TemplateRef.Kind,
-				},
-				NamespacedName: types.NamespacedName{
-					Name: resource.TemplateRef.Name,
-				},
-			}, types.NamespacedName{
-				Namespace: chain.Namespace,
-				Name:      chain.Name,
-			})
 		} else {
 			for _, option := range resource.TemplateRef.Options {
-				template, err := r.Repo.GetSupplyChainTemplate(ctx, option.Name, resource.TemplateRef.Kind)
+				found, err := r.validateResource(ctx, chain, option.Name, resource.TemplateRef.Kind)
 				if err != nil {
 					log.Error(err, "failed to get cluster template", "template",
-						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
+						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
 					return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
 				}
 
-				if template == nil {
-					log.Info("cluster template does not exist", "template",
-						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, option.Name))
+				if !found {
 					resourcesNotFound = append(resourcesNotFound, resource.Name)
 				}
-
-				r.DependencyTracker.Track(dependency.Key{
-					GroupKind: schema.GroupKind{
-						Group: v1alpha1.SchemeGroupVersion.Group,
-						Kind:  resource.TemplateRef.Kind,
-					},
-					NamespacedName: types.NamespacedName{
-						Name: option.Name,
-					},
-				}, types.NamespacedName{
-					Namespace: chain.Namespace,
-					Name:      chain.Name,
-				})
 			}
 		}
 	}
@@ -162,4 +134,26 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 	}
 
 	return nil
+}
+
+func (r *Reconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, templateName, templateKind string) (bool, error) {
+	template, err := r.Repo.GetTemplate(ctx, templateName, templateKind)
+	if err != nil {
+		return false, err
+	}
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: v1alpha1.SchemeGroupVersion.Group,
+			Kind:  templateKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Name: templateName,
+		},
+	}, types.NamespacedName{
+		Namespace: supplyChain.Namespace,
+		Name:      supplyChain.Name,
+	})
+
+	return template != nil, nil
 }

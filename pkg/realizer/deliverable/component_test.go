@@ -158,13 +158,16 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("creates a stamped object and returns the outputs and stampedObjects", func() {
-				returnedStampedObject, out, err := r.Do(ctx, &resource, deliveryName, outputs)
+				template, returnedStampedObject, out, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).ToNot(HaveOccurred())
+
+				Expect(template.GetName()).To(Equal("source-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
 
 				_, stampedObject := fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 
@@ -202,16 +205,18 @@ var _ = Describe("Resource", func() {
 
 		When("unable to get the template ref from systemRepo", func() {
 			BeforeEach(func() {
-				fakeSystemRepo.GetDeliveryTemplateReturns(nil, errors.New("bad template"))
+				fakeSystemRepo.GetTemplateReturns(nil, errors.New("bad template"))
 			})
 
-			It("returns GetDeliveryTemplateError", func() {
-				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+			It("returns GetTemplateError", func() {
+				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
 				Expect(err).To(HaveOccurred())
+
+				Expect(template).To(BeNil())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [source-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetDeliveryTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetTemplateError"))
 			})
 		})
 
@@ -227,13 +232,14 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns a helpful error", func() {
-				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+				Expect(template).To(BeNil())
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to get delivery cluster template [{Kind:ClusterSourceTemplate Name:source-template-1}]: resource does not match a known template"))
+				Expect(err.Error()).To(ContainSubstring("failed to get delivery cluster template [{Kind:ClusterSourceTemplate Name:source-template-1 Options:[]}]: resource does not match a known template"))
 			})
 		})
 
@@ -255,11 +261,15 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
-				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+
+				Expect(template.GetName()).To(Equal("source-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
+
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.StampError"))
@@ -292,7 +302,7 @@ var _ = Describe("Resource", func() {
 						APIVersion: "carto.run/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "image-template-1",
+						Name:      "source-template-1",
 						Namespace: "some-namespace",
 					},
 					Spec: v1alpha1.SourceTemplateSpec{
@@ -303,12 +313,16 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
-				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+
+				Expect(template.GetName()).To(Equal("source-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
+
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.RetrieveOutputError"))
@@ -364,12 +378,16 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetDeliveryTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeDeliverableRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 
 			It("returns ApplyStampedObjectError", func() {
-				_, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+
+				Expect(template.GetName()).To(Equal("source-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
+
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))

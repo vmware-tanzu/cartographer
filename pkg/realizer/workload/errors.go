@@ -24,13 +24,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type GetSupplyChainTemplateError struct {
+type GetTemplateError struct {
 	Err             error
 	SupplyChainName string
 	Resource        *v1alpha1.SupplyChainResource
 }
 
-func (e GetSupplyChainTemplateError) Error() string {
+func (e GetTemplateError) Error() string {
 	return fmt.Errorf("unable to get template [%s] for resource [%s] in supply chain [%s]: %w",
 		e.Resource.TemplateRef.Name,
 		e.Resource.Name,

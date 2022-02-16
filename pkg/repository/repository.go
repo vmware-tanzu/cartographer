@@ -39,8 +39,7 @@ import (
 type Repository interface {
 	EnsureImmutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured, labels map[string]string) error
 	EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error
-	GetSupplyChainTemplate(ctx context.Context, name, kind string) (client.Object, error)
-	GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error)
+	GetTemplate(ctx context.Context, name, kind string) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
 	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
@@ -255,20 +254,9 @@ func (r *repository) ListUnstructured(ctx context.Context, gvk schema.GroupVersi
 	return pointersToUnstructureds, nil
 }
 
-func (r *repository) GetSupplyChainTemplate(ctx context.Context, name, kind string) (client.Object, error) {
-	return r.getTemplate(ctx, name, kind)
-}
-
-func (r *repository) GetDeliveryTemplate(ctx context.Context, ref v1alpha1.DeliveryTemplateReference) (client.Object, error) {
+func (r *repository) GetTemplate(ctx context.Context, name string, kind string) (client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("GetDeliveryTemplate")
-
-	return r.getTemplate(ctx, ref.Name, ref.Kind)
-}
-
-func (r *repository) getTemplate(ctx context.Context, name string, kind string) (client.Object, error) {
-	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("getTemplate")
+	log.V(logger.DEBUG).Info("GetTemplate")
 
 	apiTemplate, err := v1alpha1.GetAPITemplate(kind)
 	if err != nil {

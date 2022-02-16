@@ -185,7 +185,7 @@ spec:
                                 type: string
                               selector:
                                 description: Selector is a field query over a workload
-                                  resource.
+                                  or deliverable resource.
                                 properties:
                                   matchFields:
                                     description: MatchFields is a list of field selector
@@ -193,8 +193,10 @@ spec:
                                     items:
                                       properties:
                                         key:
-                                          description: Key is the JSON path in the
-                                            workload to match against. e.g. "workload.spec.source.git.url"
+                                          description: 'Key is the JSON path in the
+                                            workload to match against. e.g. for workload:
+                                            "workload.spec.source.git.url", e.g. for
+                                            deliverable: "deliverable.spec.source.git.url"'
                                           minLength: 1
                                           type: string
                                         operator:

@@ -159,7 +159,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
@@ -204,10 +204,10 @@ var _ = Describe("Resource", func() {
 
 		When("unable to get the template ref from repo", func() {
 			BeforeEach(func() {
-				fakeSystemRepo.GetSupplyChainTemplateReturns(nil, errors.New("bad template"))
+				fakeSystemRepo.GetTemplateReturns(nil, errors.New("bad template"))
 			})
 
-			It("returns GetSupplyChainTemplateError", func() {
+			It("returns GetTemplateError", func() {
 				template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 				Expect(err).To(HaveOccurred())
 
@@ -215,7 +215,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetSupplyChainTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetTemplateError"))
 			})
 		})
 
@@ -231,7 +231,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns a helpful error", func() {
@@ -262,7 +262,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 			})
 
 			It("returns StampError", func() {
@@ -314,7 +314,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
@@ -379,7 +379,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
@@ -481,7 +481,7 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetSupplyChainTemplateReturns(templateAPI, nil)
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeWorkloadRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
@@ -493,7 +493,7 @@ var _ = Describe("Resource", func() {
 					Expect(template.GetName()).To(Equal("template-chosen"))
 					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
 
-					_, name, kind := fakeSystemRepo.GetSupplyChainTemplateArgsForCall(0)
+					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 					Expect(name).To(Equal("template-chosen"))
 					Expect(kind).To(Equal("ClusterImageTemplate"))
 				})
@@ -552,7 +552,7 @@ var _ = Describe("Resource", func() {
 					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
 
 					Expect(err).NotTo(HaveOccurred())
-					_, name, kind := fakeSystemRepo.GetSupplyChainTemplateArgsForCall(0)
+					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 					Expect(name).To(Equal("template-chosen"))
 					Expect(kind).To(Equal("ClusterImageTemplate"))
 				})
