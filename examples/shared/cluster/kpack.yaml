@@ -20,7 +20,7 @@ metadata:
   name: go-store
 spec:
   sources:
-    - image: gcr.io/paketo-buildpacks/go:0.14.0
+    - image: gcr.io/paketo-buildpacks/go
 
 ---
 apiVersion: kpack.io/v1alpha2
