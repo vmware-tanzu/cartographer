@@ -65,7 +65,6 @@ var _ = Describe("Reconciler", func() {
 		builtResourceRealizer        *deliverablefakes.FakeResourceRealizer
 		resourceRealizerSecret       *corev1.Secret
 		serviceAccountSecret         *corev1.Secret
-		serviceAccount               *corev1.ServiceAccount
 		serviceAccountName           string
 		resourceRealizerBuilderError error
 	)
@@ -82,7 +81,7 @@ var _ = Describe("Reconciler", func() {
 		}
 
 		rlzr = &deliverablefakes.FakeRealizer{}
-		rlzr.RealizeReturns(nil, nil)
+		rlzr.RealizeReturns(nil, nil, nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
@@ -94,17 +93,6 @@ var _ = Describe("Reconciler", func() {
 		repo.GetSchemeReturns(scheme)
 
 		serviceAccountName = "service-account-name-for-deliverable"
-		serviceAccount = &corev1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ServiceAccount",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccountName,
-				Namespace: "my-namespace",
-			},
-		}
-		repo.GetServiceAccountReturns(serviceAccount, nil)
 
 		serviceAccountSecret = &corev1.Secret{
 			StringData: map[string]string{"foo": "bar"},
@@ -139,7 +127,7 @@ var _ = Describe("Reconciler", func() {
 		dl = &v1alpha1.Deliverable{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "my-deliverable",
-				Namespace:  "my-ns",
+				Namespace:  "my-namespace",
 				Generation: 1,
 				Labels:     deliverableLabels,
 			},
@@ -228,6 +216,8 @@ var _ = Describe("Reconciler", func() {
 			delivery       v1alpha1.ClusterDelivery
 			stampedObject1 *unstructured.Unstructured
 			stampedObject2 *unstructured.Unstructured
+			template1      templates.Template
+			template2      templates.Template
 		)
 		BeforeEach(func() {
 			deliveryName = "some-delivery"
@@ -254,7 +244,7 @@ var _ = Describe("Reconciler", func() {
 				Version: "alphabeta1",
 				Kind:    "MyThing",
 			})
-			stampedObject1.SetNamespace("my-ns")
+			stampedObject1.SetNamespace("my-namespace")
 			stampedObject1.SetName("my-name")
 			stampedObject2 = &unstructured.Unstructured{}
 			stampedObject2.SetGroupVersionKind(schema.GroupVersionKind{
@@ -262,9 +252,32 @@ var _ = Describe("Reconciler", func() {
 				Version: "goodbye",
 				Kind:    "NiceToSeeYou",
 			})
-			stampedObject2.SetNamespace("my-ns-two")
+			stampedObject2.SetNamespace("my-namespace-two")
 			stampedObject2.SetName("my-name-two")
-			rlzr.RealizeReturns([]*unstructured.Unstructured{stampedObject1, stampedObject2}, nil)
+
+			var err error
+			template1, err = templates.NewModelFromAPI(&v1alpha1.ClusterImageTemplate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "my-image-kind",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-image-template",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			template2, err = templates.NewModelFromAPI(&v1alpha1.ClusterConfigTemplate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "my-config-kind",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-config-template",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			rlzr.RealizeReturns([]templates.Template{template1, template2}, []*unstructured.Unstructured{stampedObject1, stampedObject2}, nil)
 		})
 
 		It("dynamically creates a resource realizer", func() {
@@ -278,14 +291,10 @@ var _ = Describe("Reconciler", func() {
 		It("uses the service account specified by the deliverable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
-			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
-			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
-			Expect(serviceAccountNS).To(Equal("my-ns"))
-
 			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(sa).To(Equal(serviceAccount))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
+			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
 			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
 		})
@@ -308,14 +317,10 @@ var _ = Describe("Reconciler", func() {
 				It("uses the delivery service account in the deliverable's namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
-					Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
-					Expect(serviceAccountNS).To(Equal("my-ns"))
-
 					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-					Expect(sa).To(Equal(serviceAccount))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
+					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
 					Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
 				})
@@ -328,14 +333,10 @@ var _ = Describe("Reconciler", func() {
 					It("uses the delivery service account in the specified namespace", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
 
-						Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
 						Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
 						Expect(serviceAccountNS).To(Equal("some-delivery-namespace"))
-
-						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-						_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-						Expect(sa).To(Equal(serviceAccount))
 
 						Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
 					})
@@ -353,14 +354,10 @@ var _ = Describe("Reconciler", func() {
 				It("defaults to the default service account in the deliverables namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
-					Expect(serviceAccountNameArg).To(Equal("default"))
-					Expect(serviceAccountNS).To(Equal("my-ns"))
-
 					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, sa := repo.GetServiceAccountSecretArgsForCall(0)
-					Expect(sa).To(Equal(serviceAccount))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal("default"))
+					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
 					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
 				})
@@ -398,36 +395,27 @@ var _ = Describe("Reconciler", func() {
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))
 		})
 
-		Context("when the delivery has multiple templates", func() {
-			BeforeEach(func() {
-				delivery.Spec.Resources = []v1alpha1.DeliveryResource{
-					{
-						TemplateRef: v1alpha1.DeliveryTemplateReference{
-							Kind: "first-template-kind",
-							Name: "first-template-name",
-						},
-					},
-					{
-						TemplateRef: v1alpha1.DeliveryTemplateReference{
-							Kind: "second-template-kind",
-							Name: "second-template-name",
-						},
-					},
-				}
-			})
-			It("watches the templates and service account", func() {
-				_, _ = reconciler.Reconcile(ctx, req)
+		It("clears the previously tracked objects for the deliverable", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
 
-				Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
-				firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
-				Expect(firstTemplateKey.String()).To(Equal("first-template-kind.carto.run//first-template-name"))
+			Expect(dependencyTracker.ClearTrackedCallCount()).To(Equal(1))
+			obj := dependencyTracker.ClearTrackedArgsForCall(0)
+			Expect(obj.Name).To(Equal("my-deliverable"))
+			Expect(obj.Namespace).To(Equal("my-namespace"))
+		})
 
-				secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
-				Expect(secondTemplateKey.String()).To(Equal("second-template-kind.carto.run//second-template-name"))
+		It("watches the templates and service account", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
 
-				serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(2)
-				Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-ns/service-account-name-for-deliverable"))
-			})
+			Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
+			serviceAccountKey, _ := dependencyTracker.TrackArgsForCall(0)
+			Expect(serviceAccountKey.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+
+			firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
+			Expect(firstTemplateKey.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+
+			secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(2)
+			Expect(secondTemplateKey.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
 		})
 
 		Context("but getting the object GVK fails", func() {
@@ -484,14 +472,14 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		Context("but the realizer returns an error", func() {
-			Context("of type GetDeliveryTemplateError", func() {
+			Context("of type GetTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = realizer.GetDeliveryTemplateError{
+					templateError = realizer.GetTemplateError{
 						Resource: &v1alpha1.DeliveryResource{Name: "some-name"},
 						Err:      errors.New("some error"),
 					}
-					rlzr.RealizeReturns(nil, templateError)
+					rlzr.RealizeReturns(nil, nil, templateError)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -504,6 +492,14 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(err.Error()).To(ContainSubstring("unable to get template"))
 				})
+
+				It("does not track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(1))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+				})
 			})
 
 			Context("of type StampError", func() {
@@ -514,7 +510,7 @@ var _ = Describe("Reconciler", func() {
 						Resource:     &v1alpha1.DeliveryResource{Name: "some-name"},
 						DeliveryName: "some-delivery",
 					}
-					rlzr.RealizeReturns(nil, stampError)
+					rlzr.RealizeReturns([]templates.Template{template1}, nil, stampError)
 				})
 
 				It("does not try to watch the stampedObjects", func() {
@@ -543,6 +539,17 @@ var _ = Describe("Reconciler", func() {
 					Expect(out).To(Say(`"delivery":"some-delivery"`))
 					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] in delivery \[some-delivery\]: some error"`))
 				})
+
+				It("does track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					key, obj = dependencyTracker.TrackArgsForCall(1)
+					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+				})
 			})
 
 			Context("of type ApplyStampedObjectError", func() {
@@ -553,7 +560,7 @@ var _ = Describe("Reconciler", func() {
 						StampedObject: &unstructured.Unstructured{},
 						Resource:      &v1alpha1.DeliveryResource{Name: "some-name"},
 					}
-					rlzr.RealizeReturns(nil, stampedObjectError)
+					rlzr.RealizeReturns([]templates.Template{template1}, nil, stampedObjectError)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -565,6 +572,17 @@ var _ = Describe("Reconciler", func() {
 					_, err := reconciler.Reconcile(ctx, req)
 
 					Expect(err.Error()).To(ContainSubstring("unable to apply object"))
+				})
+
+				It("does track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					key, obj = dependencyTracker.TrackArgsForCall(1)
+					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
 				})
 			})
 
@@ -587,7 +605,7 @@ var _ = Describe("Reconciler", func() {
 						DeliveryName:  deliveryName,
 					}
 
-					rlzr.RealizeReturns(nil, stampedObjectError)
+					rlzr.RealizeReturns([]templates.Template{template1}, nil, stampedObjectError)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -601,6 +619,17 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"handled error":"unable to apply object \[a-namespace/a-name\] for resource \[some-name\] in delivery \[some-delivery\]: fantastic error"`))
+				})
+
+				It("does track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					key, obj = dependencyTracker.TrackArgsForCall(1)
+					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
 				})
 			})
 
@@ -626,7 +655,7 @@ var _ = Describe("Reconciler", func() {
 						StampedObject: stampedObject,
 					}
 
-					rlzr.RealizeReturns(nil, retrieveError)
+					rlzr.RealizeReturns([]templates.Template{template1}, nil, retrieveError)
 				})
 
 				Context("which wraps an ObservedGenerationError", func() {
@@ -652,6 +681,17 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
+					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
 					})
 				})
 
@@ -679,6 +719,17 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					})
 				})
 
 				Context("which wraps an DeploymentFailedConditionMetError", func() {
@@ -704,6 +755,17 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
+					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
 					})
 				})
 
@@ -731,6 +793,17 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					})
 				})
 
 				Context("which wraps any other error", func() {
@@ -757,6 +830,119 @@ var _ = Describe("Reconciler", func() {
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					})
+				})
+			})
+
+			Context("of type ResolveTemplateOptionError", func() {
+				var resolveOptionErr realizer.ResolveTemplateOptionError
+				BeforeEach(func() {
+					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					resolveOptionErr = realizer.ResolveTemplateOptionError{
+						Err:          jsonPathError,
+						DeliveryName: deliveryName,
+						Resource:     &v1alpha1.DeliveryResource{Name: "some-resource"},
+						OptionName:   "some-option",
+						Key:          "some-key",
+					}
+					rlzr.RealizeReturns(nil, nil, resolveOptionErr)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
+						Equal(deliverable.ResolveTemplateOptionsErrorCondition(resolveOptionErr)))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
+					Expect(out).To(Say(`"handled error":"key \[some-key\] is invalid in template option \[some-option\] for resource \[some-resource\] in delivery \[some-delivery\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
+				})
+
+				It("does not track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(1))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+				})
+			})
+
+			Context("of type TemplateOptionsMatchError", func() {
+				var templateOptionsMatchErr realizer.TemplateOptionsMatchError
+				BeforeEach(func() {
+					templateOptionsMatchErr = realizer.TemplateOptionsMatchError{
+						DeliveryName: deliveryName,
+						Resource:     &v1alpha1.DeliveryResource{Name: "some-resource"},
+						OptionNames:  []string{"option1", "option2"},
+					}
+					rlzr.RealizeReturns(nil, nil, templateOptionsMatchErr)
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
+						Equal(deliverable.TemplateOptionsMatchErrorCondition(templateOptionsMatchErr)))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
+					Expect(out).To(Say(`"handled error":"expected exactly 1 option to match, found \[2\] matching options \[option1, option2\] for resource \[some-resource\] in delivery \[some-delivery\]"`))
+				})
+
+				It("does not track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(1))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+				})
+
+				Context("there are no matching options", func() {
+					It("logs the handled error message", func() {
+						templateOptionsMatchErr.OptionNames = []string{}
+						rlzr.RealizeReturns(nil, nil, templateOptionsMatchErr)
+
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
+						Expect(out).To(Say(`"handled error":"expected exactly 1 option to match, found \[0\] matching options for resource \[some-resource\] in delivery \[some-delivery\]"`))
+					})
+
+					It("does not track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(1))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					})
 				})
 			})
 
@@ -764,7 +950,7 @@ var _ = Describe("Reconciler", func() {
 				var realizerError error
 				BeforeEach(func() {
 					realizerError = errors.New("some error")
-					rlzr.RealizeReturns(nil, realizerError)
+					rlzr.RealizeReturns([]templates.Template{template1}, nil, realizerError)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -776,6 +962,17 @@ var _ = Describe("Reconciler", func() {
 					_, err := reconciler.Reconcile(ctx, req)
 
 					Expect(err.Error()).To(ContainSubstring("some error"))
+				})
+
+				It("does track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					key, obj = dependencyTracker.TrackArgsForCall(1)
+					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+					Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
 				})
 			})
 		})
@@ -792,7 +989,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(out).To(Say(`"msg":"failed to add informer for object"`))
 				Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 				Expect(out).To(Say(`"delivery":"some-delivery"`))
-				Expect(out).To(Say(`"object":{"apiVersion":"hello.io/goodbye","kind":"NiceToSeeYou","namespace":"my-ns-two","name":"my-name-two"}`))
+				Expect(out).To(Say(`"object":{"apiVersion":"hello.io/goodbye","kind":"NiceToSeeYou","namespace":"my-namespace-two","name":"my-name-two"}`))
 			})
 
 			It("returns an unhandled error and requeues", func() {
@@ -819,7 +1016,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"handled error":"failed to get secret for service account \[my-ns/service-account-name-for-deliverable\]: some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get secret for service account \[my-namespace/service-account-name-for-deliverable\]: some error"`))
 			})
 		})
 
@@ -858,7 +1055,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 			Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
-			Expect(out).To(Say(`"handled error":"deliverable \[my-ns/my-deliverable\] is missing required labels"`))
+			Expect(out).To(Say(`"handled error":"deliverable \[my-namespace/my-deliverable\] is missing required labels"`))
 		})
 
 		It("calls the condition manager to report the bad state", func() {
@@ -884,7 +1081,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 			Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
-			Expect(out).To(Say(`"handled error":"no delivery \[my-ns/my-deliverable\] found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
+			Expect(out).To(Say(`"handled error":"no delivery \[my-namespace/my-deliverable\] found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
 		})
 	})
 
@@ -895,7 +1092,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("returns an unhandled error and requeues", func() {
 			_, err := reconciler.Reconcile(ctx, req)
-			Expect(err.Error()).To(ContainSubstring("failed to get deliveries for deliverable [my-ns/my-deliverable]: some error"))
+			Expect(err.Error()).To(ContainSubstring("failed to get deliveries for deliverable [my-namespace/my-deliverable]: some error"))
 		})
 	})
 
@@ -904,7 +1101,7 @@ var _ = Describe("Reconciler", func() {
 			delivery := v1alpha1.ClusterDelivery{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-name",
-					Namespace: "my-ns",
+					Namespace: "my-namespace",
 				},
 			}
 			delivery.SetGroupVersionKind(schema.GroupVersionKind{
@@ -931,7 +1128,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 			Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
-			Expect(out).To(Say(`"handled error":"more than one delivery selected for deliverable \[my-ns/my-deliverable\]: \[my-name my-name\]"`))
+			Expect(out).To(Say(`"handled error":"more than one delivery selected for deliverable \[my-namespace/my-deliverable\]: \[my-name my-name\]"`))
 		})
 	})
 
@@ -968,6 +1165,14 @@ var _ = Describe("Reconciler", func() {
 			_, err := reconciler.Reconcile(ctx, req)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+		It("clears the previously tracked objects for the deliverable", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(dependencyTracker.ClearTrackedCallCount()).To(Equal(1))
+			obj := dependencyTracker.ClearTrackedArgsForCall(0)
+			Expect(obj.Name).To(Equal("my-deliverable-name"))
+			Expect(obj.Namespace).To(Equal("my-namespace"))
 		})
 	})
 })

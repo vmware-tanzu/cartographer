@@ -104,7 +104,7 @@ var _ = Describe("Reconciler", func() {
 			NamespacedName: types.NamespacedName{Name: "my-supply-chain", Namespace: "my-namespace"},
 		}
 
-		repo.GetSupplyChainTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
+		repo.GetTemplateReturns(&v1alpha1.ClusterTemplate{}, nil)
 	})
 
 	It("logs that it's begun", func() {
@@ -160,10 +160,12 @@ var _ = Describe("Reconciler", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 	})
+
 	Context("all referenced templates exist", func() {
 		var (
 			firstTemplate  *v1alpha1.ClusterSourceTemplate
 			secondTemplate *v1alpha1.ClusterTemplate
+			thirdTemplate  *v1alpha1.ClusterTemplate
 		)
 		BeforeEach(func() {
 			firstTemplate = &v1alpha1.ClusterSourceTemplate{
@@ -182,7 +184,17 @@ var _ = Describe("Reconciler", func() {
 					APIVersion: "carto.run/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-final-template",
+					Name: "my-final-template-option1",
+				},
+			}
+
+			thirdTemplate = &v1alpha1.ClusterTemplate{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterTemplate",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-final-template-option2",
 				},
 			}
 
@@ -198,23 +210,34 @@ var _ = Describe("Reconciler", func() {
 					Name: "second-resource",
 					TemplateRef: v1alpha1.SupplyChainTemplateReference{
 						Kind: "ClusterTemplate",
-						Name: "my-final-template",
+						Options: []v1alpha1.TemplateOption{
+							{
+								Name: "my-final-template-option1",
+							},
+							{
+								Name: "my-final-template-option2",
+							},
+						},
 					},
 				},
 			}
-			repo.GetSupplyChainTemplateReturnsOnCall(0, firstTemplate, nil)
-			repo.GetSupplyChainTemplateReturnsOnCall(1, secondTemplate, nil)
+			repo.GetTemplateReturnsOnCall(0, firstTemplate, nil)
+			repo.GetTemplateReturnsOnCall(1, secondTemplate, nil)
+			repo.GetTemplateReturnsOnCall(2, thirdTemplate, nil)
 		})
 
 		It("watches the templates", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
-			Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+			Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
 			firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
 			Expect(firstTemplateKey.String()).To(Equal("ClusterSourceTemplate.carto.run//my-source-template"))
 
 			secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
-			Expect(secondTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template"))
+			Expect(secondTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template-option1"))
+
+			thirdTemplateKey, _ := dependencyTracker.TrackArgsForCall(2)
+			Expect(thirdTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template-option2"))
 		})
 	})
 
@@ -229,7 +252,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 			}
-			repo.GetSupplyChainTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
+			repo.GetTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 		})
 
 		It("returns an unhandled error and requeues", func() {
@@ -250,7 +273,7 @@ var _ = Describe("Reconciler", func() {
 				},
 			}
 
-			repo.GetSupplyChainTemplateReturnsOnCall(0, nil, nil)
+			repo.GetTemplateReturnsOnCall(0, nil, nil)
 		})
 
 		It("adds a positive templates NOT found condition", func() {

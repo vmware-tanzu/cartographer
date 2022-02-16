@@ -68,27 +68,31 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 	var resourcesNotFound []string
 
 	for _, resource := range delivery.Spec.Resources {
-		template, err := r.Repo.GetDeliveryTemplate(ctx, resource.TemplateRef)
-		if err != nil {
-			log.Error(err, "failed to get delivery cluster template", "template", resource.TemplateRef)
-			return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+		if resource.TemplateRef.Name != "" {
+			found, err := r.validateResource(ctx, delivery, resource.TemplateRef.Name, resource.TemplateRef.Kind)
+			if err != nil {
+				log.Error(err, "failed to get delivery cluster template", "template",
+					fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
+				return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+			}
+
+			if !found {
+				resourcesNotFound = append(resourcesNotFound, resource.Name)
+			}
+		} else {
+			for _, option := range resource.TemplateRef.Options {
+				found, err := r.validateResource(ctx, delivery, option.Name, resource.TemplateRef.Kind)
+				if err != nil {
+					log.Error(err, "failed to get delivery cluster template", "template",
+						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
+					return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+				}
+
+				if !found {
+					resourcesNotFound = append(resourcesNotFound, resource.Name)
+				}
+			}
 		}
-		if template == nil {
-			log.Info("delivery cluster template does not exist", "template", resource.TemplateRef)
-			resourcesNotFound = append(resourcesNotFound, resource.Name)
-		}
-		r.DependencyTracker.Track(dependency.Key{
-			GroupKind: schema.GroupKind{
-				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
-			},
-			NamespacedName: types.NamespacedName{
-				Name: resource.TemplateRef.Name,
-			},
-		}, types.NamespacedName{
-			Namespace: delivery.Namespace,
-			Name:      delivery.Name,
-		})
 	}
 
 	if len(resourcesNotFound) > 0 {
@@ -98,6 +102,27 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 	}
 
 	return nil
+}
+
+func (r *Reconciler) validateResource(ctx context.Context, delivery *v1alpha1.ClusterDelivery, templateName, templateKind string) (bool, error) {
+	template, err := r.Repo.GetTemplate(ctx, templateName, templateKind)
+	if err != nil {
+		return false, err
+	}
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: v1alpha1.SchemeGroupVersion.Group,
+			Kind:  templateKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Name: templateName,
+		},
+	}, types.NamespacedName{
+		Namespace: delivery.Namespace,
+		Name:      delivery.Name,
+	})
+	return template != nil, nil
 }
 
 func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {

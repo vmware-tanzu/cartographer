@@ -36,6 +36,12 @@ const (
 	NotFoundDeliveryTemplatesReadyReason = "TemplatesNotFound"
 )
 
+var ValidDeliveryTemplates = []client.Object{
+	&ClusterSourceTemplate{},
+	&ClusterDeploymentTemplate{},
+	&ClusterTemplate{},
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
@@ -51,10 +57,6 @@ type ClusterDelivery struct {
 	// Status conforms to the Kubernetes conventions:
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 	Status DeliveryStatus `json:"status,omitempty"`
-}
-
-func (c *ClusterDelivery) GetSelector() map[string]string {
-	return c.Spec.Selector
 }
 
 type DeliverySpec struct {
@@ -131,23 +133,24 @@ type DeliveryResource struct {
 	Configs []ResourceReference `json:"configs,omitempty"`
 }
 
-type DeploymentReference struct {
-	Resource string `json:"resource"`
-}
-
-var ValidDeliveryTemplates = []client.Object{
-	&ClusterSourceTemplate{},
-	&ClusterDeploymentTemplate{},
-	&ClusterTemplate{},
-}
-
 type DeliveryTemplateReference struct {
 	// Kind of the template to apply
 	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
 	Kind string `json:"kind"`
 	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
+
+	// Options is a list of template names and Selectors. The templates must all be of type Kind.
+	// A template will be selected if the deliverable matches the specified Selector.
+	// Only one template can be selected.
+	// Only one of Name and Options can be specified.
+	// +kubebuilder:validation:MinItems=2
+	Options []TemplateOption `json:"options,omitempty"`
+}
+
+type DeploymentReference struct {
+	Resource string `json:"resource"`
 }
 
 // +kubebuilder:object:root=true
@@ -159,85 +162,27 @@ type ClusterDeliveryList struct {
 }
 
 func (c *ClusterDelivery) ValidateCreate() error {
-	return c.validateNewState()
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
+	}
+	return nil
 }
 
 func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
-	return c.validateNewState()
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
+	}
+	return nil
 }
 
 func (c *ClusterDelivery) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterDelivery) validateNewState() error {
-	if err := c.validateParams(); err != nil {
-		return err
-	}
-
-	if err := c.validateResourceNamesUnique(); err != nil {
-		return err
-	}
-
-	if err := c.validateDeploymentPassedToProperReceivers(); err != nil {
-		return err
-	}
-
-	return c.validateDeploymentTemplateDidNotReceiveConfig()
-}
-
-func (c *ClusterDelivery) validateDeploymentPassedToProperReceivers() error {
-	for _, resource := range c.Spec.Resources {
-		if resource.TemplateRef.Kind == "ClusterDeploymentTemplate" && resource.Deployment == nil {
-			return fmt.Errorf("spec.resources[%s] is a ClusterDeploymentTemplate and must receive a deployment", resource.Name)
-		}
-
-		if resource.Deployment != nil && resource.TemplateRef.Kind != "ClusterDeploymentTemplate" {
-			return fmt.Errorf("spec.resources[%s] receives a deployment but is not a ClusterDeploymentTemplate", resource.Name)
-		}
-	}
-	return nil
-}
-
-func (c *ClusterDelivery) validateResourceNamesUnique() error {
-	names := map[string]bool{}
-
-	for idx, resource := range c.Spec.Resources {
-		if names[resource.Name] {
-			return fmt.Errorf("spec.resources[%d].name \"%s\" cannot appear twice", idx, resource.Name)
-		}
-		names[resource.Name] = true
-	}
-	return nil
-}
-
-func (c *ClusterDelivery) validateDeploymentTemplateDidNotReceiveConfig() error {
-	for _, resource := range c.Spec.Resources {
-		if resource.TemplateRef.Kind == "ClusterDeploymentTemplate" && resource.Configs != nil {
-			return fmt.Errorf("spec.resources[%s] is a ClusterDeploymentTemplate and must not receive config", resource.Name)
-		}
-	}
-	return nil
-}
-
-func (c *ClusterDelivery) validateParams() error {
-	for _, param := range c.Spec.Params {
-		err := param.validate()
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, resource := range c.Spec.Resources {
-		for _, param := range resource.Params {
-			err := param.validate()
-			if err != nil {
-				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
-			}
-		}
-	}
-
-	return nil
+func (c *ClusterDelivery) GetSelector() map[string]string {
+	return c.Spec.Selector
 }
 
 func init() {

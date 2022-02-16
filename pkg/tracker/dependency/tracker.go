@@ -54,6 +54,10 @@ type DependencyTracker interface {
 
 	// Lookup returns actively tracked objects for the reference.
 	Lookup(ref Key) []types.NamespacedName
+
+	// ClearTracked stops tracking all resources for the
+	// referenced object
+	ClearTracked(obj types.NamespacedName)
 }
 
 func NewKey(gvk schema.GroupVersionKind, namespacedName types.NamespacedName) Key {
@@ -154,4 +158,17 @@ func (i *impl) Lookup(ref Key) []types.NamespacedName {
 	i.log.V(logger.DEBUG).Info("found tracked items", "ref", ref.String(), "items", items)
 
 	return items
+}
+
+func (i *impl) ClearTracked(obj types.NamespacedName) {
+	i.m.Lock()
+	defer i.m.Unlock()
+
+	for key, trackingObjs := range i.mapping {
+		delete(trackingObjs, obj)
+
+		if len(trackingObjs) == 0 {
+			delete(i.mapping, key)
+		}
+	}
 }

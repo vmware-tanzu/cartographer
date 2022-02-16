@@ -16,6 +16,7 @@ package workload
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -23,18 +24,55 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type GetSupplyChainTemplateError struct {
+type GetTemplateError struct {
 	Err             error
 	SupplyChainName string
 	Resource        *v1alpha1.SupplyChainResource
 }
 
-func (e GetSupplyChainTemplateError) Error() string {
+func (e GetTemplateError) Error() string {
 	return fmt.Errorf("unable to get template [%s] for resource [%s] in supply chain [%s]: %w",
 		e.Resource.TemplateRef.Name,
 		e.Resource.Name,
 		e.SupplyChainName,
 		e.Err,
+	).Error()
+}
+
+type ResolveTemplateOptionError struct {
+	Err             error
+	SupplyChainName string
+	Resource        *v1alpha1.SupplyChainResource
+	OptionName      string
+	Key             string
+}
+
+func (e ResolveTemplateOptionError) Error() string {
+	return fmt.Errorf("key [%s] is invalid in template option [%s] for resource [%s] in supply chain [%s]: %w",
+		e.Key,
+		e.OptionName,
+		e.Resource.Name,
+		e.SupplyChainName,
+		e.Err,
+	).Error()
+}
+
+type TemplateOptionsMatchError struct {
+	SupplyChainName string
+	Resource        *v1alpha1.SupplyChainResource
+	OptionNames     []string
+}
+
+func (e TemplateOptionsMatchError) Error() string {
+	var optionNamesList string
+	if len(e.OptionNames) != 0 {
+		optionNamesList = "[" + strings.Join(e.OptionNames, ", ") + "] "
+	}
+	return fmt.Errorf("expected exactly 1 option to match, found [%d] matching options %sfor resource [%s] in supply chain [%s]",
+		len(e.OptionNames),
+		optionNamesList,
+		e.Resource.Name,
+		e.SupplyChainName,
 	).Error()
 }
 

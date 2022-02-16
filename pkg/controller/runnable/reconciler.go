@@ -22,6 +22,8 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -68,21 +70,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if runnable == nil {
 		log.Info("runnable no longer exists")
+		r.DependencyTracker.ClearTracked(types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		})
+
 		return ctrl.Result{}, nil
 	}
-
-	r.DependencyTracker.Track(dependency.Key{
-		GroupKind: schema.GroupKind{
-			Group: v1alpha1.SchemeGroupVersion.Group,
-			Kind:  "ClusterRunTemplate",
-		},
-		NamespacedName: types.NamespacedName{
-			Name: runnable.Spec.RunTemplateRef.Name,
-		},
-	}, types.NamespacedName{
-		Namespace: runnable.Namespace,
-		Name:      runnable.Name,
-	})
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
@@ -91,21 +85,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		serviceAccountName = runnable.Spec.ServiceAccountName
 	}
 
-	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, req.Namespace)
-	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
-	}
+	r.trackDependencies(runnable, serviceAccountName)
 
-	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
-		Namespace: runnable.Namespace,
-		Name:      serviceAccountName,
-	}), types.NamespacedName{
-		Namespace: runnable.Namespace,
-		Name:      runnable.Name,
-	})
-
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
@@ -184,4 +166,38 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alp
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *Reconciler) trackDependencies(runnable *v1alpha1.Runnable, serviceAccountName string) {
+	r.DependencyTracker.ClearTracked(types.NamespacedName{
+		Namespace: runnable.Namespace,
+		Name:      runnable.Name,
+	})
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: corev1.SchemeGroupVersion.Group,
+			Kind:  rbacv1.ServiceAccountKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Namespace: runnable.Namespace,
+			Name:      serviceAccountName,
+		},
+	}, types.NamespacedName{
+		Namespace: runnable.Namespace,
+		Name:      runnable.Name,
+	})
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: v1alpha1.SchemeGroupVersion.Group,
+			Kind:  "ClusterRunTemplate",
+		},
+		NamespacedName: types.NamespacedName{
+			Name: runnable.Spec.RunTemplateRef.Name,
+		},
+	}, types.NamespacedName{
+		Namespace: runnable.Namespace,
+		Name:      runnable.Name,
+	})
 }

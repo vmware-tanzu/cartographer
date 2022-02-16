@@ -33,7 +33,7 @@ readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 readonly CERT_MANAGER_VERSION=1.5.3
 readonly KAPP_CONTROLLER_VERSION=0.32.0
 readonly KNATIVE_SERVING_VERSION=0.26.0
-readonly KPACK_VERSION=0.5.0
+readonly KPACK_VERSION=0.5.1
 readonly SECRETGEN_CONTROLLER_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.30.0
@@ -477,7 +477,8 @@ clean_up_git_repo() {
             git clone "$GIT_WRITER_SSH_USER@$GIT_WRITER_SERVER:$GIT_WRITER_SERVER_PORT/$GIT_WRITER_PROJECT/$GIT_WRITER_REPOSITORY.git"
             pushd "$GIT_WRITER_REPOSITORY"
                   git ls-remote --heads origin "$BRANCH"
-                  readonly BRANCH_EXISTS="$(git ls-remote --heads origin "$BRANCH")"
+                  local BRANCH_EXISTS
+                  BRANCH_EXISTS="$(git ls-remote --heads origin "$BRANCH")"
 
                   if [[ -n "$BRANCH_EXISTS" ]]; then
                         git push -d origin "$BRANCH"

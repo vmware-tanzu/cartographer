@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,6 +68,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if deliverable == nil {
 		log.Info("deliverable no longer exists")
+		r.DependencyTracker.ClearTracked(types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		})
+
 		return ctrl.Result{}, nil
 	}
 
@@ -78,8 +85,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log = log.WithValues("delivery", delivery.Name)
 	ctx = logr.NewContext(ctx, log)
-
-	r.trackTemplates(deliverable, delivery)
 
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
@@ -100,21 +105,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(deliverable, delivery)
 
-	sa, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
-	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
-	}
-
-	r.DependencyTracker.Track(dependency.NewKey(sa.GroupVersionKind(), types.NamespacedName{
-		Namespace: serviceAccountNS,
-		Name:      serviceAccountName,
-	}), types.NamespacedName{
-		Namespace: deliverable.Namespace,
-		Name:      deliverable.Name,
-	})
-
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, sa)
+	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, deliverable, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
@@ -126,11 +117,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(ctx, deliverable, controller.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, delivery)
+	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, delivery)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
-		case realizer.GetDeliveryTemplateError:
+		case realizer.GetTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
 			err = controller.NewUnhandledError(err)
 		case realizer.StampError:
@@ -153,6 +144,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			default:
 				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			}
+		case realizer.ResolveTemplateOptionError:
+			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+		case realizer.TemplateOptionsMatchError:
+			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = controller.NewUnhandledError(err)
@@ -166,6 +161,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
+
+	r.trackDependencies(deliverable, selectedTemplates, serviceAccountName, serviceAccountNS)
 
 	var trackingError error
 	if len(stampedObjects) > 0 {
@@ -216,16 +213,35 @@ func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	return readyCondition.Status == "True"
 }
 
-func (r *Reconciler) trackTemplates(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) {
-	for _, resource := range delivery.Spec.Resources {
+func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, selectedTemplates []templates.Template, serviceAccountName, serviceAccountNS string) {
+	r.DependencyTracker.ClearTracked(types.NamespacedName{
+		Namespace: deliverable.Namespace,
+		Name:      deliverable.Name,
+	})
+
+	r.DependencyTracker.Track(dependency.Key{
+		GroupKind: schema.GroupKind{
+			Group: corev1.SchemeGroupVersion.Group,
+			Kind:  rbacv1.ServiceAccountKind,
+		},
+		NamespacedName: types.NamespacedName{
+			Namespace: serviceAccountNS,
+			Name:      serviceAccountName,
+		},
+	}, types.NamespacedName{
+		Namespace: deliverable.Namespace,
+		Name:      deliverable.Name,
+	})
+
+	for _, selectedTemplate := range selectedTemplates {
 		r.DependencyTracker.Track(dependency.Key{
 			GroupKind: schema.GroupKind{
 				Group: v1alpha1.SchemeGroupVersion.Group,
-				Kind:  resource.TemplateRef.Kind,
+				Kind:  selectedTemplate.GetKind(),
 			},
 			NamespacedName: types.NamespacedName{
 				Namespace: "",
-				Name:      resource.TemplateRef.Name,
+				Name:      selectedTemplate.GetName(),
 			},
 		}, types.NamespacedName{
 			Namespace: deliverable.Namespace,

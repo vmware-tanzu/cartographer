@@ -85,6 +85,7 @@ var _ = Describe("delivery reconciler", func() {
 			var (
 				firstTemplate  *v1alpha1.ClusterSourceTemplate
 				secondTemplate *v1alpha1.ClusterTemplate
+				thirdTemplate  *v1alpha1.ClusterTemplate
 			)
 			BeforeEach(func() {
 				firstTemplate = &v1alpha1.ClusterSourceTemplate{
@@ -107,6 +108,16 @@ var _ = Describe("delivery reconciler", func() {
 					},
 				}
 
+				thirdTemplate = &v1alpha1.ClusterTemplate{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterTemplate",
+						APIVersion: "carto.run/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-final-template-option2",
+					},
+				}
+
 				apiDelivery.Spec.Resources = []v1alpha1.DeliveryResource{
 					{
 						Name: "first-resource",
@@ -119,12 +130,20 @@ var _ = Describe("delivery reconciler", func() {
 						Name: "second-resource",
 						TemplateRef: v1alpha1.DeliveryTemplateReference{
 							Kind: "ClusterTemplate",
-							Name: "my-final-template",
+							Options: []v1alpha1.TemplateOption{
+								{
+									Name: "my-final-template-option1",
+								},
+								{
+									Name: "my-final-template-option2",
+								},
+							},
 						},
 					},
 				}
-				repo.GetDeliveryTemplateReturnsOnCall(0, firstTemplate, nil)
-				repo.GetDeliveryTemplateReturnsOnCall(1, secondTemplate, nil)
+				repo.GetTemplateReturnsOnCall(0, firstTemplate, nil)
+				repo.GetTemplateReturnsOnCall(1, secondTemplate, nil)
+				repo.GetTemplateReturnsOnCall(2, thirdTemplate, nil)
 			})
 
 			It("Attaches a ready/true status", func() {
@@ -179,12 +198,15 @@ var _ = Describe("delivery reconciler", func() {
 			It("watches the templates", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
-				Expect(dependencyTracker.TrackCallCount()).To(Equal(2))
+				Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
 				firstTemplateKey, _ := dependencyTracker.TrackArgsForCall(0)
 				Expect(firstTemplateKey.String()).To(Equal("ClusterSourceTemplate.carto.run//my-source-template"))
 
 				secondTemplateKey, _ := dependencyTracker.TrackArgsForCall(1)
-				Expect(secondTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template"))
+				Expect(secondTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template-option1"))
+
+				thirdTemplateKey, _ := dependencyTracker.TrackArgsForCall(2)
+				Expect(thirdTemplateKey.String()).To(Equal("ClusterTemplate.carto.run//my-final-template-option2"))
 			})
 
 			It("does not return an error", func() {
@@ -205,7 +227,7 @@ var _ = Describe("delivery reconciler", func() {
 					},
 				}
 
-				repo.GetDeliveryTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
+				repo.GetTemplateReturnsOnCall(0, nil, errors.New("getting templates is hard"))
 			})
 
 			It("returns an error and requeues", func() {
@@ -226,7 +248,7 @@ var _ = Describe("delivery reconciler", func() {
 					},
 				}
 
-				repo.GetDeliveryTemplateReturnsOnCall(0, nil, nil)
+				repo.GetTemplateReturnsOnCall(0, nil, nil)
 			})
 
 			It("adds a positive templates NOT found condition", func() {

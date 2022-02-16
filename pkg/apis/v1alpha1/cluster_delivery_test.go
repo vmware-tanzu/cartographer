@@ -27,8 +27,12 @@ import (
 )
 
 var _ = Describe("Delivery Validation", func() {
-	Describe("#Create", func() {
-		var delivery *v1alpha1.ClusterDelivery
+
+	Context("delivery without options", func() {
+		var (
+			delivery    *v1alpha1.ClusterDelivery
+			oldDelivery *v1alpha1.ClusterDelivery
+		)
 
 		BeforeEach(func() {
 			delivery = &v1alpha1.ClusterDelivery{
@@ -57,10 +61,13 @@ var _ = Describe("Delivery Validation", func() {
 			}
 		})
 		Context("Well formed delivery", func() {
-			It("does not return an error", func() {
+			It("creates without error", func() {
 				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
 			})
 
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("Duplicate resource names", func() {
@@ -70,8 +77,12 @@ var _ = Describe("Delivery Validation", func() {
 				}
 			})
 
-			It("returns an error", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(`spec.resources[1].name "source-provider" cannot appear twice`))
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
 			})
 		})
 
@@ -85,9 +96,15 @@ var _ = Describe("Delivery Validation", func() {
 							},
 						}
 					})
-					It("returns an error", func() {
+					It("on create, it rejects the Resource", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"param [some-param] is invalid: must set exactly one of value and default",
+							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -103,9 +120,15 @@ var _ = Describe("Delivery Validation", func() {
 						}
 					})
 
-					It("returns an error", func() {
+					It("on create, it rejects the Resource", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"param [some-param] is invalid: must set exactly one of value and default",
+							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -120,9 +143,15 @@ var _ = Describe("Delivery Validation", func() {
 							},
 						}
 					})
-					It("returns an error", func() {
+					It("on create, it rejects the Resource", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
+							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -137,9 +166,15 @@ var _ = Describe("Delivery Validation", func() {
 							},
 						}
 					})
-					It("returns an error", func() {
+					It("on create, it rejects the Resourcer", func() {
 						Expect(delivery.ValidateCreate()).To(MatchError(
-							"resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
+							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
+						))
+					})
+
+					It("on update, it rejects the Resourcer", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 				})
@@ -147,16 +182,16 @@ var _ = Describe("Delivery Validation", func() {
 		})
 	})
 
-	Describe("#Update", func() {
+	Context("delivery with options", func() {
 		var (
-			previousDelivery *v1alpha1.ClusterDelivery
-			newDelivery      *v1alpha1.ClusterDelivery
+			delivery    *v1alpha1.ClusterDelivery
+			oldDelivery *v1alpha1.ClusterDelivery
 		)
 
 		BeforeEach(func() {
-			previousDelivery = &v1alpha1.ClusterDelivery{
+			delivery = &v1alpha1.ClusterDelivery{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "delivery-resource",
+					Name:      "responsible-ops---default-params",
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
@@ -165,14 +200,30 @@ var _ = Describe("Delivery Validation", func() {
 							Name: "source-provider",
 							TemplateRef: v1alpha1.DeliveryTemplateReference{
 								Kind: "ClusterSourceTemplate",
-								Name: "source-template",
-							},
-						},
-						{
-							Name: "other-source-provider",
-							TemplateRef: v1alpha1.DeliveryTemplateReference{
-								Kind: "ClusterSourceTemplate",
-								Name: "source-template",
+								Options: []v1alpha1.TemplateOption{
+									{
+										Name: "source-1",
+										Selector: v1alpha1.Selector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "workload.spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpExists,
+												},
+											},
+										},
+									},
+									{
+										Name: "source-2",
+										Selector: v1alpha1.Selector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "workload.spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpDoesNotExist,
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -180,41 +231,280 @@ var _ = Describe("Delivery Validation", func() {
 			}
 		})
 
-		Context("with a valid change", func() {
-			BeforeEach(func() {
-				newDelivery = previousDelivery.DeepCopy()
-				newDelivery.Spec.Resources = newDelivery.Spec.Resources[:1]
+		Context("Well formed delivery", func() {
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
 			})
 
-			It("does not return an error", func() {
-				Expect(newDelivery.ValidateUpdate(previousDelivery)).NotTo(HaveOccurred())
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
 			})
 		})
 
-		Context("Duplicate resource names", func() {
+		Context("Two options with the same name", func() {
 			BeforeEach(func() {
-				newDelivery = previousDelivery.DeepCopy()
-				newDelivery.Spec.Resources = append(newDelivery.Spec.Resources, v1alpha1.DeliveryResource{
-					Name: "other-source-provider",
-					TemplateRef: v1alpha1.DeliveryTemplateReference{
-						Kind: "ClusterSourceTemplate",
-						Name: "source-template",
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Name = delivery.Spec.Resources[0].TemplateRef.Options[1].Name
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("only one option is specified", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options = []v1alpha1.TemplateOption{
+					{
+						Name:     "only-option",
+						Selector: v1alpha1.Selector{},
 					},
+				}
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: templateRef.Options must have more than one option",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: templateRef.Options must have more than one option",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("operator values", func() {
+			Context("operator is Exists and has values", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0] = v1alpha1.FieldSelectorRequirement{
+						Key:      "something",
+						Operator: v1alpha1.FieldSelectorOpExists,
+						Values:   []string{"bad"},
+					}
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [Exists]",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [Exists]",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
 				})
 			})
 
-			It("returns an error", func() {
-				err := newDelivery.ValidateUpdate(previousDelivery)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring(`spec.resources[2].name "other-source-provider" cannot appear twice`)))
-			})
+			Context("operator is NotExists and has values", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0] = v1alpha1.FieldSelectorRequirement{
+						Key:      "something",
+						Operator: v1alpha1.FieldSelectorOpDoesNotExist,
+						Values:   []string{"bad"},
+					}
+				})
 
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [DoesNotExist]",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [DoesNotExist]",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+			Context("operator is In and does NOT have values", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0] = v1alpha1.FieldSelectorRequirement{
+						Key:      "something",
+						Operator: v1alpha1.FieldSelectorOpIn,
+					}
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [In]",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [In]",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+			Context("operator is NotIn and does NOT have values", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0] = v1alpha1.FieldSelectorRequirement{
+						Key:      "something",
+						Operator: v1alpha1.FieldSelectorOpNotIn,
+					}
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [NotIn]",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [NotIn]",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
 		})
 
-	})
+		Context("2 options with identical requirements", func() {
+			Context("selectors are identical", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Selector = delivery.Spec.Resources[0].TemplateRef.Options[1].Selector
+				})
 
-	Describe("#Delete", func() {
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, source-2]",
+					))
+				})
 
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, source-2]",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+		})
+
+		Context("option points to key that doesn't exist in spec", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = "workload.spec.does.not.exist"
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [workload.spec.does.not.exist] is not a valid workload path",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [workload.spec.does.not.exist] is not a valid workload path",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("option points to key that is a valid prefix into an array", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = `workload.spec.env[?(@.name=="some-name")].value`
+			})
+
+			It("on create, it does not reject the Resource", func() {
+				err := delivery.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("on update, it does not reject the Resource", func() {
+				err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("both name and options specified", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Name = "some-name"
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found both",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found both",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("neither name and options are specified", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options = nil
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found neither",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found neither",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
 

@@ -36,6 +36,13 @@ const (
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
 )
 
+var ValidSupplyChainTemplates = []client.Object{
+	&ClusterSourceTemplate{},
+	&ClusterImageTemplate{},
+	&ClusterConfigTemplate{},
+	&ClusterTemplate{},
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
@@ -51,135 +58,6 @@ type ClusterSupplyChain struct {
 	// Status conforms to the Kubernetes conventions:
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 	Status SupplyChainStatus `json:"status,omitempty"`
-}
-
-func (c *ClusterSupplyChain) validateNewState() error {
-	names := make(map[string]bool)
-
-	if err := c.validateParams(); err != nil {
-		return err
-	}
-
-	for _, resource := range c.Spec.Resources {
-		if _, ok := names[resource.Name]; ok {
-			return fmt.Errorf(
-				"duplicate resource name [%s] found in clustersupplychain [%s]",
-				resource.Name,
-				c.Name,
-			)
-		}
-		names[resource.Name] = true
-	}
-
-	for _, resource := range c.Spec.Resources {
-		if err := c.validateResourceRefs(resource.Sources, "ClusterSourceTemplate"); err != nil {
-			return fmt.Errorf(
-				"invalid sources for resource [%s]: %w",
-				resource.Name,
-				err,
-			)
-		}
-
-		if err := c.validateResourceRefs(resource.Images, "ClusterImageTemplate"); err != nil {
-			return fmt.Errorf(
-				"invalid images for resource [%s]: %w",
-				resource.Name,
-				err,
-			)
-		}
-
-		if err := c.validateResourceRefs(resource.Configs, "ClusterConfigTemplate"); err != nil {
-			return fmt.Errorf(
-				"invalid configs for resource [%s]: %w",
-				resource.Name,
-				err,
-			)
-		}
-	}
-
-	return nil
-}
-
-func (c *ClusterSupplyChain) validateParams() error {
-	for _, param := range c.Spec.Params {
-		err := param.validate()
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, resource := range c.Spec.Resources {
-		for _, param := range resource.Params {
-			err := param.validate()
-			if err != nil {
-				return fmt.Errorf("resource [%s] is invalid: %w", resource.Name, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference, targetKind string) error {
-	for _, ref := range references {
-		referencedResource := c.getResourceByName(ref.Resource)
-		if referencedResource == nil {
-			return fmt.Errorf(
-				"[%s] is provided by unknown resource [%s]",
-				ref.Name,
-				ref.Resource,
-			)
-		}
-		if referencedResource.TemplateRef.Kind != targetKind {
-			return fmt.Errorf(
-				"resource [%s] providing [%s] must reference a %s",
-				referencedResource.Name,
-				ref.Name,
-				targetKind,
-			)
-		}
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) getResourceByName(name string) *SupplyChainResource {
-	for _, resource := range c.Spec.Resources {
-		if resource.Name == name {
-			return &resource
-		}
-	}
-
-	return nil
-}
-
-func (c *ClusterSupplyChain) ValidateCreate() error {
-	return c.validateNewState()
-}
-
-func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
-	return c.validateNewState()
-}
-
-func (c *ClusterSupplyChain) ValidateDelete() error {
-	return nil
-}
-
-func (c *ClusterSupplyChain) GetSelector() map[string]string {
-	return c.Spec.Selector
-}
-
-func GetSelectorsFromObject(o client.Object) []string {
-	var res []string
-	res = []string{}
-
-	sc, ok := o.(*ClusterSupplyChain)
-	if ok {
-		for key, value := range sc.Spec.Selector {
-			res = append(res, fmt.Sprintf("%s: %s", key, value))
-		}
-	}
-
-	return res
 }
 
 type SupplyChainSpec struct {
@@ -205,6 +83,11 @@ type SupplyChainSpec struct {
 	// workload's namespace.
 	// +optional
 	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
+}
+
+type SupplyChainStatus struct {
+	Conditions         []metav1.Condition `json:"conditions,omitempty"`
+	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 }
 
 type SupplyChainResource struct {
@@ -254,26 +137,26 @@ type SupplyChainResource struct {
 	Configs []ResourceReference `json:"configs,omitempty"`
 }
 
-var ValidSupplyChainTemplates = []client.Object{
-	&ClusterSourceTemplate{},
-	&ClusterImageTemplate{},
-	&ClusterConfigTemplate{},
-	&ClusterTemplate{},
-}
-
 type SupplyChainTemplateReference struct {
 	// Kind of the template to apply
 	//+kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
+
 	// Name of the template to apply
+	// Only one of Name and Options can be specified.
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
+
+	// Options is a list of template names and Selectors. The templates must all be of type Kind.
+	// A template will be selected if the workload matches the specified Selector.
+	// Only one template can be selected.
+	// Only one of Name and Options can be specified.
+	// Minimum number of items in list is two.
+	// +kubebuilder:validation:MinItems=2
+	Options []TemplateOption `json:"options,omitempty"`
 }
 
-type SupplyChainStatus struct {
-	Conditions         []metav1.Condition `json:"conditions,omitempty"`
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
-}
+type FieldSelectorOperator string
 
 // +kubebuilder:object:root=true
 
@@ -281,6 +164,44 @@ type ClusterSupplyChainList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterSupplyChain `json:"items"`
+}
+
+func (c *ClusterSupplyChain) ValidateCreate() error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterSupplyChain) ValidateDelete() error {
+	return nil
+}
+
+func (c *ClusterSupplyChain) GetSelector() map[string]string {
+	return c.Spec.Selector
+}
+
+func GetSelectorsFromObject(o client.Object) []string {
+	var res []string
+	res = []string{}
+
+	sc, ok := o.(*ClusterSupplyChain)
+	if ok {
+		for key, value := range sc.Spec.Selector {
+			res = append(res, fmt.Sprintf("%s: %s", key, value))
+		}
+	}
+
+	return res
 }
 
 func init() {
