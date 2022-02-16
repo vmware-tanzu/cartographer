@@ -1,6 +1,6 @@
 # Meta
 [meta]: #meta
-- Name: Add MatchFields to top level of blueprints
+- Name: Add matchFields and matchLabels to top level of blueprints
 - Start Date: 2022-02-10
 - Author(s): @jwntrs
 - Status: Draft
