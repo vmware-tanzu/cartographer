@@ -168,7 +168,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				lastConditions = workload.Status.Conditions
 				return workload.Status.ObservedGeneration == workload.Generation
-			}, 5*time.Second).Should(BeTrue())
+			}).Should(BeTrue())
 
 			reconcileAgain()
 
@@ -221,7 +221,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					return obj.Status.Conditions
-				}, 5*time.Second).Should(ContainElements(
+				}).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("MissingValueAtPath"),
@@ -323,7 +323,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				return obj.Status.Conditions
-			}, 5*time.Second).Should(ContainElements(
+			}).Should(ContainElements(
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("SupplyChainReady"),
 					"Reason": Equal("Ready"),
@@ -375,7 +375,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					return obj.Status.Conditions
-				}, 5*time.Second).Should(ContainElements(
+				}).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("SupplyChainReady"),
 						"Reason": Equal("Ready"),

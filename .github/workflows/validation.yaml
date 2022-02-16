@@ -54,6 +54,7 @@ jobs:
       - name: run tests
         env:
           KUBEBUILDER_ASSETS: /usr/local/bin
+          CI: true
         run: make test
 
       - name: run e2e example

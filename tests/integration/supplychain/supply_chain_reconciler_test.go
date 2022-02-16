@@ -153,7 +153,7 @@ var _ = Describe("SupplyChainReconciler", func() {
 
 					return supplyChain.Status.Conditions
 
-				}, 3*time.Second).Should(
+				}).Should(
 					ContainElements(
 						MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal("Ready"),

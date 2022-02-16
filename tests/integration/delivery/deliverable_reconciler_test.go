@@ -238,7 +238,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				lastConditions = deliverable.Status.Conditions
 				return deliverable.Status.ObservedGeneration == deliverable.Generation
-			}, 5*time.Second).Should(BeTrue())
+			}).Should(BeTrue())
 
 			reconcileAgain()
 
@@ -291,7 +291,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					return obj.Status.Conditions
-				}, 5*time.Second).Should(ContainElements(
+				}).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("MissingValueAtPath"),
