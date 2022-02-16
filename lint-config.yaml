@@ -14,12 +14,9 @@
 
 linters:
   enable:
-    - goimports
     - govet
 
 linters-settings:
-  goimports:
-    local-prefixes: github.com/vmware-tanzu/cartographer
   govet:
     disable:
       - composites

@@ -2,7 +2,7 @@ CONTROLLER_GEN ?= go run -modfile hack/tools/go.mod sigs.k8s.io/controller-tools
 ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
 GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
-
+GOSIMPORTS ?= go run -modfile hack/tools/go.mod github.com/rinchsan/gosimports/cmd/gosimports
 
 .PHONY: build
 build: gen-objects gen-manifests
@@ -118,6 +118,7 @@ coverage:
 
 .PHONY: lint
 lint: copyright
+	$(GOSIMPORTS) -w --format-only -local github.com/vmware-tanzu/cartographer $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
 
@@ -144,7 +145,6 @@ pre-push:
 	[ -z "$$(git status --porcelain)" ] || (echo "not everything is committed, failing" && exit 1)
 	$(MAKE) .pre-push-check
 	[ -z "$$(git status --porcelain)" ] || (echo "changes occurred during pre-push check" && git diff HEAD --exit-code)
-
 
 .PHONY: docs-serve
 docs-serve:

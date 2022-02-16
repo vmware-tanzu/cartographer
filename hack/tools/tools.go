@@ -22,5 +22,6 @@ import (
 	_ "github.com/google/addlicense"
 	_ "github.com/maxbrunsfeld/counterfeiter/v6"
 	_ "github.com/onsi/ginkgo/ginkgo"
+	_ "github.com/rinchsan/gosimports/cmd/gosimports"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 )
