@@ -164,7 +164,7 @@ type TemplateOption struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Selector is a field query over a workload resource.
+	// Selector is a field query over a workload or deliverable resource.
 	Selector Selector `json:"selector"`
 }
 
@@ -176,7 +176,8 @@ type Selector struct {
 
 type FieldSelectorRequirement struct {
 	// Key is the JSON path in the workload to match against.
-	// e.g. "workload.spec.source.git.url"
+	// e.g. for workload: "workload.spec.source.git.url",
+	// e.g. for deliverable: "deliverable.spec.source.git.url"
 	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 

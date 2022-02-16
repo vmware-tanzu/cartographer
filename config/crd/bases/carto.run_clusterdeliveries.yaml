@@ -167,7 +167,7 @@ spec:
                         options:
                           description: Options is a list of template names and Selectors.
                             The templates must all be of type Kind. A template will
-                            be selected if the workload matches the specified Selector.
+                            be selected if the deliverable matches the specified Selector.
                             Only one template can be selected. Only one of Name and
                             Options can be specified.
                           items:
@@ -178,7 +178,7 @@ spec:
                                 type: string
                               selector:
                                 description: Selector is a field query over a workload
-                                  resource.
+                                  or deliverable resource.
                                 properties:
                                   matchFields:
                                     description: MatchFields is a list of field selector
@@ -186,8 +186,10 @@ spec:
                                     items:
                                       properties:
                                         key:
-                                          description: Key is the JSON path in the
-                                            workload to match against. e.g. "workload.spec.source.git.url"
+                                          description: 'Key is the JSON path in the
+                                            workload to match against. e.g. for workload:
+                                            "workload.spec.source.git.url", e.g. for
+                                            deliverable: "deliverable.spec.source.git.url"'
                                           minLength: 1
                                           type: string
                                         operator:
