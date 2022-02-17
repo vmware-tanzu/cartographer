@@ -67,7 +67,6 @@ status:
     - name:                  # string
       value:                 # json.RawExtension
       lastTransitionTime:    # metav1.Time
-    observedGeneration:    # int64
 ```
 
 Based on the [basic supply chain example](https://github.com/vmware-tanzu/cartographer/tree/53402edb8b8914b4cd36ace82da85f83f3daefc1/examples/basic-sc), the Workload status would have the form:
@@ -94,7 +93,6 @@ status:
     - name: revision
       value: main/3d42c19a618bb8fc13f72178b8b5e214a2f989c4
       lastTransitionTime: "2022-02-16T03:29:52Z"
-    observedGeneration: 1
   - name: image-builder
     stampedRef:
       apiVersion: kpack.io/v1alpha2
@@ -111,7 +109,6 @@ status:
     - name: image
       value: registry.example/supply-chain/my-workload@sha256:68f8e8fc6e8ede7a411db9182cd695eac7b3e7e19e4ff9dcb9ba21205c135697
       lastTransitionTime: "2022-02-16T03:23:37Z"
-      observedGeneration: 14
   - name: deployer
     stampedRef:
       apiVersion: kappctrl.k14s.io/v1alpha1
@@ -124,7 +121,6 @@ status:
       name: app-deploy
     inputs:
     - name: image-builder
-    observedGeneration: 19
 ```
 
 # How it Works
@@ -139,7 +135,6 @@ status:
 - `.status.resources[*].outputs[*].name` the name of the output. Output names are fixed and defined by the template type.
 - `.status.resources[*].outputs[*].value` raw value of the output. This may be large for config templates.
 - `.status.resources[*].outputs[*].lastTransitionTime` time of the most recent observed change of value. this is not the last time the value observed. This value is helpful to know if a supply chain is progressing. As this field is the result of observation of an edge triggered change, it should not be relied upon when accuracy matters. This is the same behavior as the lastTransitionTime field within a Condition.
-- `.status.resources[*].observedGeneration` the `.metadata.generation` of the stamped resource the outputs are read from. This value is not read from the `.status.observeredGeneration` field that may exist on the stamped resource. A future RFC may choose to take the stamped resource's observed generation under advisement, as that is a change to how Cartographer processes resources, it is inappropriate for this RFC.
 
 In the future, additional information about particular resources may be added. Like an indication of health with an error message when unhealthy. Support is not included in this RFC as it will require additional support within the template to know how to interpret the health of a resource and should be defined in a separate RFC.
 
@@ -172,7 +167,6 @@ Several RFC have attempted to make stronger pushes into this space, including:
 [unresolved-questions]: #unresolved-questions
 
 - Are the proposed field names well aligned with existing Cartographer-isms?
-- Are resource level observedGeneration and output level lastTransitionTime values helpful and meaningful?
 - Is all of the information collected and exposed appropriate to expose to all users who can view the workload resource?
 - Is there value in capturing the uuid for referenced resources?
 
