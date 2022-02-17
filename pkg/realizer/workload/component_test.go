@@ -190,12 +190,12 @@ var _ = Describe("Resource", func() {
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/cluster-supply-chain-name": "supply-chain-name",
-					"carto.run/resource-name":             "resource-1",
-					"carto.run/cluster-template-name":     "image-template-1",
-					"carto.run/workload-name":             "",
-					"carto.run/workload-namespace":        "",
-					"carto.run/template-kind":             "ClusterImageTemplate",
+					"carto.run/supply-chain-name":     "supply-chain-name",
+					"carto.run/resource-name":         "resource-1",
+					"carto.run/cluster-template-name": "image-template-1",
+					"carto.run/workload-name":         "",
+					"carto.run/workload-namespace":    "",
+					"carto.run/template-kind":         "ClusterImageTemplate",
 				}))
 
 				Expect(out.Image).To(Equal("some-revision"))
