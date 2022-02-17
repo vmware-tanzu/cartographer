@@ -30,7 +30,6 @@ type clusterImageTemplate struct {
 	template      *v1alpha1.ClusterImageTemplate
 	evaluator     evaluator
 	stampedObject *unstructured.Unstructured
-	output        *Output
 }
 
 func (t *clusterImageTemplate) GetKind() string {
@@ -61,24 +60,15 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 		}
 	}
 
-	t.output = &Output{
+	return &Output{
 		Image: image,
-	}
-	return t.output, nil
+	}, nil
 }
 
-func (t *clusterImageTemplate) GetResourceOutput() []v1alpha1.Output {
-	if t.output == nil {
-		out, err := t.GetOutput()
-		if err != nil {
-			panic("error")
-		}
-		t.output = out
-	}
-
-	image, err := json.Marshal(t.output.Image)
+func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
+	image, err := json.Marshal(output.Image)
 	if err != nil {
-		panic("image marshal")
+		return nil, err
 	}
 	return []v1alpha1.Output{
 		{
@@ -87,7 +77,7 @@ func (t *clusterImageTemplate) GetResourceOutput() []v1alpha1.Output {
 				Raw: image,
 			},
 		},
-	}
+	}, nil
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

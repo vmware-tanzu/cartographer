@@ -1,0 +1,131 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-image-configmap
+data:
+  player_current_lives: "5"
+  some_other_info: knitting
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-config-configmap
+data:
+  favorite_color: knitting
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-config
+data:
+  best_name: knitting
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  supplyChainRef:
+    name: responsible-ops---workload-status
+    kind: ClusterSupplyChain
+  resources:
+    - name: source-provider-first
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-first-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-first---workload-status
+      outputs:
+        - name: url
+          value: "three"
+        - name: revision
+          value: "gaming"
+      observedGeneration: 0
+    - name: source-provider-second
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-second-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-second---workload-status
+      outputs:
+        - name: url
+          value: "5"
+        - name: revision
+          value: "knitting"
+      observedGeneration: 0
+    - name: built-image-provider
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-image-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterImageTemplate
+        name: example-image---workload-status
+      inputs:
+        - name: source-provider-second
+      outputs:
+        - name: image
+          value: "knitting"
+      observedGeneration: 0
+    - name: config
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-config-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterConfigTemplate
+        name: example-config---workload-status-1
+      inputs:
+        - name: built-image-provider
+      outputs:
+        - name: config
+          value: "knitting"
+      observedGeneration: 0
+    - name: config-2
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-config
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterTemplate
+        name: example-config---workload-status-2
+      inputs:
+        - name: config
+      observedGeneration: 0

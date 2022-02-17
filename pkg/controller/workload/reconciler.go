@@ -159,6 +159,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	var trackingError error
 	for _, resource := range realizedResources {
+		if resource.StampedRef == nil {
+			continue
+		}
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(resource.StampedRef.GroupVersionKind())
 
@@ -275,6 +278,9 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, realizedReso
 	})
 
 	for _, resource := range realizedResources {
+		if resource.TemplateRef == nil {
+			continue
+		}
 		r.DependencyTracker.Track(
 			dependency.Key{
 				GroupKind: schema.GroupKind{

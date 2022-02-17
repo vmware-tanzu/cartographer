@@ -165,12 +165,12 @@ type WorkloadStatus struct {
 }
 
 type RealizedResource struct {
-	Name               string                 `json:"name"`
-	StampedRef         corev1.ObjectReference `json:"stampedRef"`
-	TemplateRef        corev1.ObjectReference `json:"templateRef"`
-	Inputs             []Input                `json:"inputs,omitempty"`
-	Outputs            []Output               `json:"outputs,omitempty"`
-	ObservedGeneration int64                  `json:"observedGeneration"`
+	Name               string                  `json:"name"`
+	StampedRef         *corev1.ObjectReference `json:"stampedRef,omitempty"`
+	TemplateRef        *corev1.ObjectReference `json:"templateRef,omitempty"`
+	Inputs             []Input                 `json:"inputs,omitempty"`
+	Outputs            []Output                `json:"outputs,omitempty"`
+	ObservedGeneration int64                   `json:"observedGeneration"`
 }
 
 type Input struct {

@@ -631,8 +631,6 @@ spec:
                   required:
                   - name
                   - observedGeneration
-                  - stampedRef
-                  - templateRef
                   type: object
                 type: array
               supplyChainRef:

@@ -28,7 +28,6 @@ type clusterConfigTemplate struct {
 	template      *v1alpha1.ClusterConfigTemplate
 	evaluator     evaluator
 	stampedObject *unstructured.Unstructured
-	output        *Output
 }
 
 func (t *clusterConfigTemplate) GetKind() string {
@@ -64,18 +63,10 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterConfigTemplate) GetResourceOutput() []v1alpha1.Output {
-	if t.output == nil {
-		out, err := t.GetOutput()
-		if err != nil {
-			panic("error")
-		}
-		t.output = out
-	}
-
-	config, err := json.Marshal(t.output.Config)
+func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
+	config, err := json.Marshal(output.Config)
 	if err != nil {
-		panic("config marshal")
+		return nil, err
 	}
 	return []v1alpha1.Output{
 		{
@@ -84,7 +75,7 @@ func (t *clusterConfigTemplate) GetResourceOutput() []v1alpha1.Output {
 				Raw: config,
 			},
 		},
-	}
+	}, nil
 }
 
 func (t *clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

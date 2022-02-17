@@ -13,26 +13,14 @@
 # limitations under the License.
 
 ---
-apiVersion: v1
-kind: ConfigMap
+apiVersion: carto.run/v1alpha1
+kind: Workload
 metadata:
-  name: example-image-configmap
-data:
-  player_current_lives: "5"
-  some_other_info: knitting
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: example-config-configmap
-data:
-  favorite_color: knitting
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: example-config
-data:
-  best_name: knitting
+  name: petclinic
+  labels:
+    integration-test: "workload-status"
+spec:
+  serviceAccountName: my-service-account
+  source:
+    git:
+      url: https://github.com/spring-projects/spring-petclinic.git

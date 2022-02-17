@@ -24,9 +24,11 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //counterfeiter:generate . Realizer
@@ -65,54 +67,79 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		var inputs []v1alpha1.Input
-		for _, source := range resource.Sources {
-			inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
+		realizedResource, err := generateRealizedResource(resource, template, stampedObject, out, previousResources)
+		if err != nil {
+			log.Error(err, "failed to generate realized resource data for stampedObject", "object", stampedObject)
 		}
-		for _, image := range resource.Images {
-			inputs = append(inputs, v1alpha1.Input{Name: image.Resource})
-		}
-		for _, config := range resource.Configs {
-			inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
-		}
-
-		outputs := template.GetResourceOutput()
-
-		currTime := metav1.NewTime(time.Now())
-		for j, output := range outputs {
-			outputs[j].LastTransitionTime = currTime
-			for _, previousResource := range previousResources {
-				if previousResource.Name == resource.Name {
-					for _, previousOutput := range previousResource.Outputs {
-						if previousOutput.Name == output.Name && reflect.DeepEqual(previousOutput.Value, output.Value) {
-							outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-						}
-					}
-				}
-			}
-		}
-
-		realizedResources = append(realizedResources, v1alpha1.RealizedResource{
-			Name: resource.Name,
-			StampedRef: corev1.ObjectReference{
-				Kind:       stampedObject.GetKind(),
-				Namespace:  stampedObject.GetNamespace(),
-				Name:       stampedObject.GetName(),
-				APIVersion: stampedObject.GetAPIVersion(),
-			},
-			TemplateRef: corev1.ObjectReference{
-				Kind:       template.GetKind(),
-				Namespace:  "",
-				Name:       template.GetName(),
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-			},
-			Inputs:             inputs,
-			Outputs:            outputs,
-			ObservedGeneration: stampedObject.GetGeneration(),
-		})
+		realizedResources = append(realizedResources, realizedResource)
 
 		outs.AddOutput(resource.Name, out)
 	}
 
 	return realizedResources, firstError
+}
+
+func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) (v1alpha1.RealizedResource, error) {
+	var inputs []v1alpha1.Input
+	for _, source := range resource.Sources {
+		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
+	}
+	for _, image := range resource.Images {
+		inputs = append(inputs, v1alpha1.Input{Name: image.Resource})
+	}
+	for _, config := range resource.Configs {
+		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
+	}
+
+	var templateRef *corev1.ObjectReference
+	var outputs []v1alpha1.Output
+	var err error
+	if template != nil {
+		if output != nil {
+			outputs, err = template.GenerateResourceOutput(output)
+			if err != nil {
+				return v1alpha1.RealizedResource{}, err
+			}
+		}
+		templateRef = &corev1.ObjectReference{
+			Kind:       template.GetKind(),
+			Name:       template.GetName(),
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+		}
+	}
+
+	currTime := metav1.NewTime(time.Now())
+	for j, out := range outputs {
+		outputs[j].LastTransitionTime = currTime
+		for _, previousResource := range previousResources {
+			if previousResource.Name == resource.Name {
+				for _, previousOutput := range previousResource.Outputs {
+					if previousOutput.Name == out.Name && reflect.DeepEqual(previousOutput.Value, out.Value) {
+						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+					}
+				}
+			}
+		}
+	}
+
+	var stampedRef *corev1.ObjectReference
+	var observedGeneration int64
+	if stampedObject != nil {
+		stampedRef = &corev1.ObjectReference{
+			Kind:       stampedObject.GetKind(),
+			Namespace:  stampedObject.GetNamespace(),
+			Name:       stampedObject.GetName(),
+			APIVersion: stampedObject.GetAPIVersion(),
+		}
+		observedGeneration = stampedObject.GetGeneration()
+	}
+
+	return v1alpha1.RealizedResource{
+		Name:               resource.Name,
+		StampedRef:         stampedRef,
+		TemplateRef:        templateRef,
+		Inputs:             inputs,
+		Outputs:            outputs,
+		ObservedGeneration: observedGeneration,
+	}, nil
 }

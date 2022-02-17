@@ -37,7 +37,7 @@ var _ = Describe("Realize", func() {
 		resource2        v1alpha1.SupplyChainResource
 		rlzr             realizer.Realizer
 		template1        *v1alpha1.ClusterImageTemplate
-		template2        *v1alpha1.ClusterConfigTemplate
+		template2        *v1alpha1.ClusterTemplate
 	)
 	BeforeEach(func() {
 		rlzr = realizer.NewRealizer()
@@ -55,10 +55,10 @@ var _ = Describe("Realize", func() {
 				Name: "my-image-template",
 			},
 		}
-		template2 = &v1alpha1.ClusterConfigTemplate{
+		template2 = &v1alpha1.ClusterTemplate{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-config-template",
+				Name: "my-cluster-template",
 			},
 		}
 		supplyChain = &v1alpha1.ClusterSupplyChain{
@@ -94,16 +94,15 @@ var _ = Describe("Realize", func() {
 			return template, &unstructured.Unstructured{}, &templates.Output{}, nil
 		})
 
-		templates, stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
+		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
 
-		Expect(stampedObjects).To(HaveLen(2))
+		Expect(realizedResources).To(HaveLen(2))
 
-		Expect(templates).To(HaveLen(2))
-		Expect(templates[0].GetName()).To(Equal(template1.Name))
-		Expect(templates[1].GetName()).To(Equal(template2.Name))
+		Expect(realizedResources[0].TemplateRef.Name).To(Equal(template1.Name))
+		Expect(realizedResources[1].TemplateRef.Name).To(Equal(template2.Name))
 	})
 
 	It("returns the first error encountered realizing a resource and continues to realize", func() {
@@ -112,11 +111,12 @@ var _ = Describe("Realize", func() {
 		resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 		resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-		templates, stampedObjects, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
+		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
 		Expect(err).To(MatchError("realizing is hard"))
-		Expect(stampedObjects).To(HaveLen(1))
+		Expect(realizedResources).To(HaveLen(2))
 
-		Expect(templates).To(HaveLen(1))
-		Expect(templates[0].GetName()).To(Equal(template2.Name))
+		Expect(realizedResources[0].TemplateRef).To(BeNil())
+		Expect(realizedResources[0].StampedRef).To(BeNil())
+		Expect(realizedResources[1].TemplateRef.Name).To(Equal(template2.Name))
 	})
 })

@@ -28,7 +28,6 @@ type clusterSourceTemplate struct {
 	template      *v1alpha1.ClusterSourceTemplate
 	evaluator     evaluator
 	stampedObject *unstructured.Unstructured
-	output        *Output
 }
 
 func (t *clusterSourceTemplate) GetKind() string {
@@ -67,32 +66,23 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 			expression: t.template.Spec.RevisionPath,
 		}
 	}
-	t.output = &Output{
+	return &Output{
 		Source: &Source{
 			URL:      url,
 			Revision: revision,
 		},
-	}
-	return t.output, nil
+	}, nil
 }
 
-func (t *clusterSourceTemplate) GetResourceOutput() []v1alpha1.Output {
-	if t.output == nil {
-		out, err := t.GetOutput()
-		if err != nil {
-			panic("error")
-		}
-		t.output = out
+func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
+	url, err := json.Marshal(output.Source.URL)
+	if err != nil {
+		return nil, err
 	}
 
-	url, err := json.Marshal(t.output.Source.URL)
+	revision, err := json.Marshal(output.Source.Revision)
 	if err != nil {
-		panic("url marshal")
-	}
-
-	revision, err := json.Marshal(t.output.Source.Revision)
-	if err != nil {
-		panic("revision marshal")
+		return nil, err
 	}
 
 	return []v1alpha1.Output{
@@ -108,7 +98,7 @@ func (t *clusterSourceTemplate) GetResourceOutput() []v1alpha1.Output {
 				Raw: revision,
 			},
 		},
-	}
+	}, nil
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
