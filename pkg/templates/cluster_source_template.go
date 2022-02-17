@@ -15,8 +15,10 @@
 package templates
 
 import (
+	"encoding/json"
 	"fmt"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -26,6 +28,7 @@ type clusterSourceTemplate struct {
 	template      *v1alpha1.ClusterSourceTemplate
 	evaluator     evaluator
 	stampedObject *unstructured.Unstructured
+	output        *Output
 }
 
 func (t *clusterSourceTemplate) GetKind() string {
@@ -64,12 +67,48 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 			expression: t.template.Spec.RevisionPath,
 		}
 	}
-	return &Output{
+	t.output = &Output{
 		Source: &Source{
 			URL:      url,
 			Revision: revision,
 		},
-	}, nil
+	}
+	return t.output, nil
+}
+
+func (t *clusterSourceTemplate) GetResourceOutput() []v1alpha1.Output {
+	if t.output == nil {
+		out, err := t.GetOutput()
+		if err != nil {
+			panic("error")
+		}
+		t.output = out
+	}
+
+	url, err := json.Marshal(t.output.Source.URL)
+	if err != nil {
+		panic("url marshal")
+	}
+
+	revision, err := json.Marshal(t.output.Source.Revision)
+	if err != nil {
+		panic("revision marshal")
+	}
+
+	return []v1alpha1.Output{
+		{
+			Name: "url",
+			Value: apiextensionsv1.JSON{
+				Raw: url,
+			},
+		},
+		{
+			Name: "revision",
+			Value: apiextensionsv1.JSON{
+				Raw: revision,
+			},
+		},
+	}
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

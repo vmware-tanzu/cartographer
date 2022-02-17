@@ -36,3 +36,96 @@ metadata:
   name: example-config
 data:
   best_name: knitting
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  supplyChainRef:
+    name: responsible-ops---consume-output-of-resources
+    kind: ClusterSupplyChain
+  resources:
+    - name: source-provider-first
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-first-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-first---consume-output-of-resources
+      outputs:
+        - name: url
+          value: "three"
+        - name: revision
+          value: "gaming"
+      observedGeneration: 0
+    - name: source-provider-second
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-second-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-second---consume-output-of-resources
+      outputs:
+        - name: url
+          value: "5"
+        - name: revision
+          value: "knitting"
+      observedGeneration: 0
+    - name: built-image-provider
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-image-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterImageTemplate
+        name: example-image---consume-output-of-resources
+      inputs:
+        - name: source-provider-second
+      outputs:
+        - name: image
+          value: "knitting"
+      observedGeneration: 0
+    - name: config
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-config-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterConfigTemplate
+        name: example-config---consume-output-of-resources-1
+      inputs:
+        - name: built-image-provider
+      outputs:
+        - name: config
+          value: "knitting"
+      observedGeneration: 0
+    - name: config-2
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-config
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterTemplate
+        name: example-config---consume-output-of-resources-2
+      inputs:
+        - name: config
+      observedGeneration: 0

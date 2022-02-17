@@ -15,8 +15,10 @@
 package templates
 
 import (
+	"encoding/json"
 	"fmt"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -26,6 +28,7 @@ type clusterConfigTemplate struct {
 	template      *v1alpha1.ClusterConfigTemplate
 	evaluator     evaluator
 	stampedObject *unstructured.Unstructured
+	output        *Output
 }
 
 func (t *clusterConfigTemplate) GetKind() string {
@@ -59,6 +62,29 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 	return &Output{
 		Config: config,
 	}, nil
+}
+
+func (t *clusterConfigTemplate) GetResourceOutput() []v1alpha1.Output {
+	if t.output == nil {
+		out, err := t.GetOutput()
+		if err != nil {
+			panic("error")
+		}
+		t.output = out
+	}
+
+	config, err := json.Marshal(t.output.Config)
+	if err != nil {
+		panic("config marshal")
+	}
+	return []v1alpha1.Output{
+		{
+			Name: "config",
+			Value: apiextensionsv1.JSON{
+				Raw: config,
+			},
+		},
+	}
 }
 
 func (t *clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

@@ -44,6 +44,10 @@ func (t *clusterTemplate) GetOutput() (*Output, error) {
 	return &Output{}, nil
 }
 
+func (t *clusterTemplate) GetResourceOutput() []v1alpha1.Output {
+	return nil
+}
+
 func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return v1alpha1.TemplateSpec{
 		Template: t.template.Spec.Template,

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -159,6 +160,27 @@ type WorkloadStatus struct {
 
 	// SupplyChainRef is the Supply Chain resource that was used when this status was set.
 	SupplyChainRef ObjectReference `json:"supplyChainRef,omitempty"`
+
+	Resources []RealizedResource `json:"resources,omitempty"`
+}
+
+type RealizedResource struct {
+	Name               string                 `json:"name"`
+	StampedRef         corev1.ObjectReference `json:"stampedRef"`
+	TemplateRef        corev1.ObjectReference `json:"templateRef"`
+	Inputs             []Input                `json:"inputs,omitempty"`
+	Outputs            []Output               `json:"outputs,omitempty"`
+	ObservedGeneration int64                  `json:"observedGeneration"`
+}
+
+type Input struct {
+	Name string `json:"name"`
+}
+
+type Output struct {
+	Name               string               `json:"name"`
+	Value              apiextensionsv1.JSON `json:"value"`
+	LastTransitionTime metav1.Time          `json:"lastTransitionTime"`
 }
 
 // +kubebuilder:object:root=true

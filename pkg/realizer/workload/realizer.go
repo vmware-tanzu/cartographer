@@ -18,18 +18,20 @@ package workload
 
 import (
 	"context"
+	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]templates.Template, []*unstructured.Unstructured, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
 }
 
 type realizer struct{}
@@ -38,27 +40,21 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]templates.Template, []*unstructured.Unstructured, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
-	var stampedObjects []*unstructured.Unstructured
-	var selectedTemplates []templates.Template
+	var realizedResources []v1alpha1.RealizedResource
 	var firstError error
 
 	for i := range supplyChain.Spec.Resources {
 		resource := supplyChain.Spec.Resources[i]
 		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
 
-		if template != nil {
-			selectedTemplates = append(selectedTemplates, template)
-		}
-
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
 				"object", stampedObject)
-			stampedObjects = append(stampedObjects, stampedObject)
 		}
 
 		if err != nil {
@@ -69,8 +65,54 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
+		var inputs []v1alpha1.Input
+		for _, source := range resource.Sources {
+			inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
+		}
+		for _, image := range resource.Images {
+			inputs = append(inputs, v1alpha1.Input{Name: image.Resource})
+		}
+		for _, config := range resource.Configs {
+			inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
+		}
+
+		outputs := template.GetResourceOutput()
+
+		currTime := metav1.NewTime(time.Now())
+		for j, output := range outputs {
+			outputs[j].LastTransitionTime = currTime
+			for _, previousResource := range previousResources {
+				if previousResource.Name == resource.Name {
+					for _, previousOutput := range previousResource.Outputs {
+						if previousOutput.Name == output.Name && reflect.DeepEqual(previousOutput.Value, output.Value) {
+							outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+						}
+					}
+				}
+			}
+		}
+
+		realizedResources = append(realizedResources, v1alpha1.RealizedResource{
+			Name: resource.Name,
+			StampedRef: corev1.ObjectReference{
+				Kind:       stampedObject.GetKind(),
+				Namespace:  stampedObject.GetNamespace(),
+				Name:       stampedObject.GetName(),
+				APIVersion: stampedObject.GetAPIVersion(),
+			},
+			TemplateRef: corev1.ObjectReference{
+				Kind:       template.GetKind(),
+				Namespace:  "",
+				Name:       template.GetName(),
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			},
+			Inputs:             inputs,
+			Outputs:            outputs,
+			ObservedGeneration: stampedObject.GetGeneration(),
+		})
+
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return selectedTemplates, stampedObjects, firstError
+	return realizedResources, firstError
 }

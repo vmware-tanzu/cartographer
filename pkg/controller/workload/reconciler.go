@@ -25,6 +25,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,7 +37,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -121,7 +121,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -147,30 +147,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	} else {
 		if log.V(logger.DEBUG).Enabled() {
-			for _, stampedObject := range stampedObjects {
+			for _, resource := range realizedResources {
 				log.V(logger.DEBUG).Info("realized object",
-					"object", stampedObject)
+					"object", resource.StampedRef)
 			}
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
-	r.trackDependencies(workload, selectedTemplates, serviceAccountName, serviceAccountNS)
+	r.trackDependencies(workload, realizedResources, serviceAccountName, serviceAccountNS)
 
 	var trackingError error
-	if len(stampedObjects) > 0 {
-		for _, stampedObject := range stampedObjects {
-			trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
-			if trackingError != nil {
-				log.Error(err, "failed to add informer for object",
-					"object", stampedObject)
-				err = controller.NewUnhandledError(trackingError)
-			} else {
-				log.V(logger.DEBUG).Info("added informer for object",
-					"object", stampedObject)
-			}
+	for _, resource := range realizedResources {
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(resource.StampedRef.GroupVersionKind())
+
+		trackingError = r.StampedTracker.Watch(log, obj, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
+		if trackingError != nil {
+			log.Error(err, "failed to add informer for object",
+				"object", resource.StampedRef)
+			err = controller.NewUnhandledError(trackingError)
+		} else {
+			log.V(logger.DEBUG).Info("added informer for object",
+				"object", resource.StampedRef)
 		}
 	}
+
+	workload.Status.Resources = realizedResources
 
 	return r.completeReconciliation(ctx, workload, err)
 }
@@ -251,7 +254,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	return supplyChains[0], nil
 }
 
-func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemplates []templates.Template, serviceAccountName, serviceAccountNS string) {
+func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: workload.Namespace,
 		Name:      workload.Name,
@@ -271,15 +274,15 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemp
 		Name:      workload.Name,
 	})
 
-	for _, selectedTemplate := range selectedTemplates {
+	for _, resource := range realizedResources {
 		r.DependencyTracker.Track(
 			dependency.Key{
 				GroupKind: schema.GroupKind{
 					Group: v1alpha1.SchemeGroupVersion.Group,
-					Kind:  selectedTemplate.GetKind(),
+					Kind:  resource.TemplateRef.Kind,
 				},
 				NamespacedName: types.NamespacedName{
-					Name: selectedTemplate.GetName(),
+					Name: resource.TemplateRef.Name,
 				},
 			},
 			types.NamespacedName{
