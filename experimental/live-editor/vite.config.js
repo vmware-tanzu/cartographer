@@ -7,5 +7,5 @@ export default defineConfig({
         svelte(),
     ],
     clearScreen: false,
-    base: 
+    base: "/live-editor/"
 })

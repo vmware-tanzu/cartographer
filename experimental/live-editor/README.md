@@ -43,3 +43,13 @@
    ```
 
 4. and paste final schema into [`./src/main.js`](./src/main.js)
+
+
+## Install/Update blog post
+
+```
+cd experimental/live-editor  # this dir
+yarn                         # installs dependencies
+yarn build
+yarn install
+```
