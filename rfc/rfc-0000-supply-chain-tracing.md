@@ -87,14 +87,14 @@ status:
       apiVersion: carto.run/v1
       kind: ClusterSourceTemplate
       name: source
-      outputs:
-      - name: url
-        value: http://source-controller.flux-system.svc.cluster.local./gitrepository/default/my-workload/3d42c19a618bb8fc13f72178b8b5e214a2f989c4.tar.gz
-        lastTransitionTime: "2022-02-16T03:29:52Z"
-      - name: revision
-        value: main/3d42c19a618bb8fc13f72178b8b5e214a2f989c4
-        lastTransitionTime: "2022-02-16T03:29:52Z"
-      observedGeneration: 1
+    outputs:
+    - name: url
+      value: http://source-controller.flux-system.svc.cluster.local./gitrepository/default/my-workload/3d42c19a618bb8fc13f72178b8b5e214a2f989c4.tar.gz
+      lastTransitionTime: "2022-02-16T03:29:52Z"
+    - name: revision
+      value: main/3d42c19a618bb8fc13f72178b8b5e214a2f989c4
+      lastTransitionTime: "2022-02-16T03:29:52Z"
+    observedGeneration: 1
   - name: image-builder
     stampedRef:
       apiVersion: kpack.io/v1alpha2
