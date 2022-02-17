@@ -19,6 +19,7 @@ package workload
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -80,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
-		return r.completeReconciliation(ctx, workload, err)
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, err)
 	}
 
 	log = log.WithValues("supply chain", supplyChain.Name)
@@ -89,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
-		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, controller.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
 		)
 	}
@@ -100,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !r.isSupplyChainReady(supplyChain) {
 		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
 		log.Info("supply chain is not in ready state")
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
@@ -110,14 +111,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
-		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, controller.NewUnhandledError(
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
@@ -176,18 +177,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	workload.Status.Resources = realizedResources
-
-	return r.completeReconciliation(ctx, workload, err)
+	return r.completeReconciliation(ctx, workload, realizedResources, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	workload.Status.Conditions, changed = r.conditionManager.Finalize()
-
 	var updateErr error
-	if changed || (workload.Status.ObservedGeneration != workload.Generation) {
+	if changed || (workload.Status.ObservedGeneration != workload.Generation) || !reflect.DeepEqual(workload.Status.Resources, realizedResources) {
+		workload.Status.Resources = realizedResources
 		workload.Status.ObservedGeneration = workload.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, workload)
 		if updateErr != nil {
