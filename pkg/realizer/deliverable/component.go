@@ -99,7 +99,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	labels := map[string]string{
 		"carto.run/deliverable-name":      r.deliverable.Name,
 		"carto.run/deliverable-namespace": r.deliverable.Namespace,
-		"carto.run/cluster-delivery-name": deliveryName,
+		"carto.run/delivery-name":         deliveryName,
 		"carto.run/resource-name":         resource.Name,
 		"carto.run/template-kind":         template.GetKind(),
 		"carto.run/cluster-template-name": template.GetName(),
