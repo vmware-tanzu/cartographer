@@ -7,8 +7,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "schema": "./hack/schema.js",
-    "install": "mkdir -p ../../site/themes/template/static/live-editor; cp -r dist/* ../../site/themes/template/static/live-editor/"
+    "schema": "./hack/schema.js"
   },
   "devDependencies": {
     "@openapi-contrib/openapi-schema-to-json-schema": "^3.1.1",

@@ -158,3 +158,7 @@ docs-release:
 .PHONY: docs-gen-crds
 docs-gen-crds: gen-manifests
 	$(MAKE) -C site gen-crd-reference
+
+.PHONY: docs-update-editor
+docs-update-editor:
+	$(MAKE) -C experimental/live-editor build install

@@ -48,8 +48,5 @@
 ## Install/Update blog post
 
 ```
-cd experimental/live-editor  # this dir
-yarn                         # installs dependencies
-yarn build
-yarn install
+make build install
 ```
