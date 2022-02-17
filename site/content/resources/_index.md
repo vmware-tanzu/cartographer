@@ -12,11 +12,13 @@ layout: common
 
 ## Presentations
 
-* [Cartographer featured on Thank Goodness its Kubernetes (TGIK)](https://www.youtube.com/watch?v=TJPGn0-hpPY&list=PL7bmigfV0EqQzxcNpmcdTJ9eFRPBe-iZa&index=1&t=762s) 
-* [Tanzu Code (live coding) episode on Cartographer](https://youtu.be/694soIproYE?t=5010)
+* Cartographer featured on Thank Goodness its Kubernetes (TGIK) {{< yt id="TJPGn0-hpPY" start="738" >}} 
+* Tanzu Code (live coding) episode on Cartographer {{< yt id="694soIproYE" start="5010" >}}
+ 
 
-## Community Meetings and Office Hours
+## Community Meetings Playlist
+{{< ytlist id="PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8" >}}
 
-* [Community meeting (YouTube playlist)](https://youtube.com/playlist?list=PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8)
+## Office Hours Playlist
 
-* [Office Hours (YouTube playlist)](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)
+{{< ytlist id="PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a" >}}
