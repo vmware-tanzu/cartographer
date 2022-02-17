@@ -7,4 +7,5 @@ export default defineConfig({
         svelte(),
     ],
     clearScreen: false,
+    base: 
 })
