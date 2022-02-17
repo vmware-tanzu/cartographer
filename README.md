@@ -38,8 +38,6 @@ And you're done!
 
 <img src="site/themes/template/static/img/Carto-install-yaml-v2.gif">
 
-
-
 ## Documentation
 
 Detailed documentation for Cartographer can be found in the `site` folder of this repository:
@@ -53,14 +51,6 @@ Detailed documentation for Cartographer can be found in the `site` folder of thi
   * [Deliverable and Delivery](https://cartographer.sh/docs/latest/reference/deliverable/)
   * [Templates](https://cartographer.sh/docs/latest/reference/template/)
   * [Runnable](https://cartographer.sh/docs/latest/reference/runnable/)
-
-
-
-
-
-
-
-
 
 ## 🤗 Community, discussion, contribution, and support
 

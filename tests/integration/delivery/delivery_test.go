@@ -115,7 +115,7 @@ var _ = Describe("Deliveries", func() {
 					err := c.Get(ctx, client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
 					Expect(err).NotTo(HaveOccurred())
 					return persistedDelivery.Status.Conditions
-				}, 5*time.Second).Should(
+				}).Should(
 					ContainElements(
 						MatchFields(
 							IgnoreExtras,
@@ -150,7 +150,7 @@ var _ = Describe("Deliveries", func() {
 					err := c.Get(ctx, client.ObjectKey{Name: "my-delivery"}, persistedDelivery)
 					Expect(err).NotTo(HaveOccurred())
 					return persistedDelivery.Status.Conditions
-				}, 5*time.Second).Should(
+				}).Should(
 					ContainElements(
 						MatchFields(
 							IgnoreExtras,
@@ -247,7 +247,7 @@ var _ = Describe("Deliveries", func() {
 				lastConditions = persistedDelivery.Status.Conditions
 
 				return persistedDelivery.Status.ObservedGeneration == persistedDelivery.Generation
-			}, 5*time.Second).Should(BeTrue())
+			}).Should(BeTrue())
 		})
 
 		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
@@ -307,7 +307,7 @@ var _ = Describe("Deliveries", func() {
 
 				return delivery.Status.Conditions
 
-			}, 5*time.Second).Should(
+			}).Should(
 				ContainElement(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("TemplatesReady"),
@@ -381,7 +381,7 @@ var _ = Describe("Deliveries", func() {
 
 					return delivery.Status.Conditions
 
-				}, 3*time.Second).Should(
+				}).Should(
 					ContainElements(
 						MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal("Ready"),
@@ -519,7 +519,7 @@ var _ = Describe("Deliveries", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				return obj.Status.Conditions
-			}, 5*time.Second).Should(ContainElements(
+			}).Should(ContainElements(
 				MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal("DeliveryReady"),
 					"Reason": Equal("Ready"),
@@ -571,7 +571,7 @@ var _ = Describe("Deliveries", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					return obj.Status.Conditions
-				}, 5*time.Second).Should(ContainElements(
+				}).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("DeliveryReady"),
 						"Reason": Equal("Ready"),

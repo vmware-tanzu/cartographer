@@ -177,6 +177,24 @@ curl -sSLo envtest-bins.tar.gz "https://storage.googleapis.com/kubebuilder-tools
 
 **Note:** `envTest` cannot run pods, so is limited, but is typically all that's needed to test controllers and webhooks.
 
+### Dealing with flaky integration tests
+
+Tests in `test/integration/` use envTest, which is a real APIServer and ETCD instance,
+so they are sometimes slower than Gomega's 1s `eventually` timeout. 
+
+When run locally, without the env var `CI` set to `true`, Gomega uses the 1s timeout.
+
+**Please do not** specify a timeout for `eventually`. If the server takes too long because of load
+on your machine, you can use:
+```shell
+$ export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=2s
+$ make test-integration 
+$ # or 
+$ gingko ./test/integration/<path to specific spec>
+```
+
+When run in CI, we run `make test CI=true` which ensures integrations run with a 10s timeout to avoid flaky tests. 
+
 
 ### Running integration tests with a complete cluster
 

@@ -70,6 +70,10 @@ test-unit: test-gen-objects
 	$(GINKGO) -r pkg
 
 .PHONY: test-integration
+ifeq ($(CI), true)
+test-integration: export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT = 10s
+test-integration: export GOMEGA_DEFAULT_CONSISTENTLY_DURATION = 2s
+endif
 test-integration: test-gen-manifests test-gen-objects
 	$(GINKGO) -r tests/integration
 
