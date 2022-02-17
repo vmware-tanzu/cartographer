@@ -84,7 +84,7 @@
 }
 
 .use-cases {
-    .grid { 
+    .grid {
         grid-template-columns: 220px 1fr;
         margin-bottom: 30px;
         grid-template-areas:
@@ -158,7 +158,7 @@
         margin: 40px 0px;
     }
     .bio {
-        display: grid;  
+        display: grid;
         grid-template-columns: 120px 1fr;
         column-gap: 20px;
         .image img {
@@ -654,4 +654,113 @@
 
 .community-logo{
     width: 75px;
+}
+
+.common {
+    background-color: #fff;
+    margin-top: -90px;
+    padding: 30px 30px 50px 30px;
+    display: flex;
+
+    .content {
+        width: 100%;
+        float: right;
+        padding-left: 20px;
+
+        a {
+            font-size: 16px;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            li {
+                list-style-type: unset;
+                display: list-item;
+                margin-bottom: 10px;
+                font-size: 16px;
+                color: $darkgrey;
+                line-height: 1.6em;
+                list-style-image: url(/img/arrow.svg);
+                &:first-child {
+                    margin-top: 10px;
+                }
+            }
+        }
+        ol {
+            li {
+                list-style-type: decimal;
+                display: list-item;
+                margin-bottom: 10px;
+                font-size: 16px;
+                color: $darkgrey;
+                &:first-child {
+                    margin-top: 10px;
+                }
+            }
+        }
+        img {
+            max-width: 100%;
+        }
+        @include breakpoint(large) {
+            width: 80%;
+            padding-right: 20px;
+            padding-left: 20px;
+        }
+    }
+    .right-nav {
+        width: 20%;
+        float: right;
+        margin: -30px -30px 0px 0px;
+        .right-nav-content {
+            background-color: #EFEFEF;
+            padding: 30px 30px 30px 20px;
+            position: sticky;
+            top: 0;
+        }
+        h4 {
+            font-size: 16px;
+        }
+        ul {
+            padding-left: 0px;
+            margin-bottom: 0px;
+            li {
+                display: block;
+                padding-right: 0px;
+                margin-bottom: 7px;
+                a {
+                    font-family: $metropolis-light;
+                    font-size: 14px;
+                }
+                ul {
+                    margin-top: 7px;
+                    padding-inline-start: 14px;
+                }
+            }
+        }
+        .sticky {
+            position: fixed;
+            top: 0;
+        }
+        @include breakpoint(small-medium) {
+            display: none;
+        }
+    }
+}
+
+
+.embed {
+    position: relative;
+    padding-bottom: 56.25%;
+    margin-bottom: 36px;
+    height: 0;
+    overflow: hidden;
+
+    iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
 }
