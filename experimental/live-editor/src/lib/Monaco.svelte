@@ -24,7 +24,7 @@
 
 </script>
 
-<div class="monaco-editor-container" bind:this={editorContainer} style="height: 400px"></div>
+<div class="monaco-editor-container {$$props.class}" bind:this={editorContainer} ></div>
 
 <style>
     .monaco-editor-container {

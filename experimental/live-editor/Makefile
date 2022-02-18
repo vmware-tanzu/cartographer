@@ -9,5 +9,6 @@ build: deps
 .PHONY: install
 install:
 	mkdir -p ../../site/themes/template/static/live-editor
+	rm -rf ../../site/themes/template/static/live-editor/*
 	cp -r dist/* ../../site/themes/template/static/live-editor/
 

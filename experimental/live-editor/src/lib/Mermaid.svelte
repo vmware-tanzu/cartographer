@@ -29,5 +29,5 @@
     })
 </script>
 
-<pre bind:this={graph}>
+<pre bind:this={graph} class="{$$props.class}">
 </pre>

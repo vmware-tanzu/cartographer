@@ -6,4 +6,4 @@
 <!--<pre>-->
 <!--    {$document}-->
 <!--</pre>-->
-<Mermaid doc={$mermaidDoc}/>
+<Mermaid doc={$mermaidDoc} class="{$$props.class}"/>
