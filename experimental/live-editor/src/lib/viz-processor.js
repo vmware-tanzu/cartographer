@@ -1,17 +1,34 @@
 export const toMermaid = obj => {
     let lines = [
-        "flowchart RL"
+        "flowchart RL",
+        "classDef not-found fill:#f66;"
     ]
+
+    let resourceNodesByName = {}
+
     if (obj.spec.resources) {
         obj.spec.resources.forEach(resource => {
             if (!resource.name) {
                 return
             }
-            lines.push(`res-${resource.name}["${resource.name}"]`);
-            ["sources", "images", "configs"].forEach(resourceType => {
+            let nodeName = `res-${resource.name}`
+            let nodeLabel = `${resource.name}`
+
+            resourceNodesByName[nodeName] = nodeLabel
+
+            lines.push(`${nodeName}["${nodeLabel}"]`);
+
+            ["sources", "images", "configs"].forEach((resourceType, rowIndex) => {
                 if (resource[resourceType]) {
                     resource[resourceType].forEach(input => {
-                        lines.push(`res-${resource.name} --> res-${input.resource}`)
+                        if (resourceNodesByName[`res-${input.resource}`]) {
+                            lines.push(`${nodeName} --> res-${input.resource}`)
+                        } else {
+                            let naTarget = `not-found-${input.resource}-${rowIndex}`
+                            lines.push(`${nodeName} --> ${naTarget}`)
+                            lines.push(`${naTarget}["not-found"]`)
+                            lines.push(`class ${naTarget} not-found`)
+                        }
                     })
                 }
             })
