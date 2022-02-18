@@ -10,10 +10,12 @@
     const modelUri = Uri.parse('https://cartographer.sh/file.yaml');
 
     onMount(() => {
+        let model = editor.getModel(modelUri) || editor.createModel(document, 'yaml', modelUri)
+
         instance = editor.create(editorContainer,
             {
                 automaticLayout: true,
-                model: editor.createModel(document, 'yaml', modelUri)
+                model: model
             },
         )
         instance.onDidChangeModelContent(e => {
