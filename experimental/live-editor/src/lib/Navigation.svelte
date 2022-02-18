@@ -1,12 +1,15 @@
 <script>
     import {getContext} from "svelte";
     import Help from "./Help.svelte";
+    import CopyToClipboard from "svelte-copy-to-clipboard";
+    import {document} from "../store.js";
+    import Shared from "./Shared.svelte";
 
     const { open } = getContext('simple-modal');
+    let url
 
-    const showHelp = () => {
-        open(Help)
-    }
+    const getUrl = () => window.location.href
+    $: url = getUrl($document)
 
 </script>
 
@@ -16,7 +19,14 @@
         <h1 class="text-lg uppercase">Cartographer Live Editor</h1>
     </div>
     <div>
-        <button class="text-lg no-underline text-grey-darkest hover:text-orange-300 ml-2" on:click={showHelp}>
+
+        <CopyToClipboard text={url} on:copy={() => open(Shared)} on:fail={() => alert("Something went wrong with the copy to clipboard, sorry!")} let:copy>
+            <button class="text-lg no-underline text-grey-darkest hover:text-orange-300 ml-2" on:click={copy}>
+                Share
+            </button>
+        </CopyToClipboard>
+
+        <button class="text-lg no-underline text-grey-darkest hover:text-orange-300 ml-2" on:click={() => open(Help)}>
             Help
         </button>
     </div>

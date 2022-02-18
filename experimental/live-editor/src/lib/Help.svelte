@@ -7,10 +7,14 @@
 </h1>
 
 <p class="text-sm pt-1">
-    This editor is a spike to gauge interest and investigate the possibilities, see the <a
-        href="https://github.com/vmware-tanzu/cartographer/issues/566" target="_blank"
-        class="underline text-blue-700 hover:text-orange-700">originating
-    issue</a> for details
+    This editor is a spike to gauge interest and investigate the possibilities.
+
+    Provide feedback by commenting on the
+    <a href="https://github.com/vmware-tanzu/cartographer/issues/566" target="_blank"
+       class="underline text-blue-700 hover:text-orange-700">original issue</a>, but please make sure you don't report
+    something already captured.
+
+
 </p>
 
 

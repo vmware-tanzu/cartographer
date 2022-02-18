@@ -8,5 +8,3 @@ let doc = [
 
 
 let out = parseDocument(doc, )
-
-console.log(out)

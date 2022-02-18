@@ -2,31 +2,31 @@
 
     import {onMount} from "svelte";
     import {editor, Uri} from 'monaco-editor'
+    import {document} from '../store.js'
 
     let instance
     let editorContainer
-    export let document
 
     const modelUri = Uri.parse('https://cartographer.sh/file.yaml');
+    const model = editor.createModel("", 'yaml', modelUri)
 
     onMount(() => {
-        let model = editor.getModel(modelUri) || editor.createModel(document, 'yaml', modelUri)
-
+        model.setValue($document)
         instance = editor.create(editorContainer,
             {
                 automaticLayout: true,
                 model: model
             },
         )
+
         instance.onDidChangeModelContent(e => {
-            console.log("edit")
-            document = instance.getValue()
+            $document = instance.getValue()
         })
     })
 
 </script>
 
-<div class="monaco-editor-container {$$props.class}" bind:this={editorContainer} ></div>
+<div class="monaco-editor-container {$$props.class}" bind:this={editorContainer}></div>
 
 <style>
     .monaco-editor-container {

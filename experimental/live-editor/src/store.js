@@ -1,6 +1,8 @@
 import {derived, writable} from 'svelte/store';
 import {parse} from "yaml";
 import {toMermaid} from "./lib/viz-processor.js";
+import {deflate, deflateRaw, inflate, inflateRaw} from "pako";
+import {fromUint8Array} from "js-base64";
 
 export const document = writable("---\n" +
     "apiVersion: carto.run/v1alpha1\n" +
@@ -56,6 +58,18 @@ export const documentObject = derived(
     }
 )
 
+export const compressedState = derived(
+    document,
+    $document => {
+        try {
+            let data = new TextEncoder().encode($document)
+            let compressed = deflate(data, {options: 9})
+            return fromUint8Array(compressed, true)
+        } catch (e) {
+            console.log(`could not compress document: ${e}`)
+        }
+    }
+)
 
 export const mermaidDoc = derived(
     documentObject,
