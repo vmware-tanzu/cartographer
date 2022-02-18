@@ -189,7 +189,7 @@ var _ = Describe("Resource", func() {
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/cluster-delivery-name": "delivery-name",
+					"carto.run/delivery-name":         "delivery-name",
 					"carto.run/resource-name":         "resource-1",
 					"carto.run/cluster-template-name": "source-template-1",
 					"carto.run/deliverable-name":      "",
