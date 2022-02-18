@@ -128,6 +128,7 @@ copyright:
 		-ignore site/static/\*\* \
 		-ignore site/content/docs/\*/crds/\*.yaml \
 		-ignore site/themes/\*\* \
+		-ignore experimental/live-editor/node_modules/\*\* \
 		.
 
 .PHONY: pre-push .pre-push-check
@@ -158,7 +159,3 @@ docs-release:
 .PHONY: docs-gen-crds
 docs-gen-crds: gen-manifests
 	$(MAKE) -C site gen-crd-reference
-
-.PHONY: docs-update-editor
-docs-update-editor:
-	$(MAKE) -C experimental/live-editor build install
