@@ -20,7 +20,7 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
         values: ["gitops"]
 ```
 
-Lets introduce a matchParams selector:
+Lets introduce a matchParams selector to the template, as well as the top level blueprint:
 
 ```yaml
   selector:
