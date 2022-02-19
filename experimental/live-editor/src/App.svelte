@@ -34,7 +34,7 @@
 
 <svelte:window on:load={onPageLoad}/>
 
-<main class="text-primary-content" style="height: 95vh">
+<main class="h-screen">
     <Modal
             unstyled={true}
             closeButton={false}
@@ -44,8 +44,8 @@
             classContent="relative p-2 overflow-auto"
     >
 
-        <Navigation/>
         <div class="h-full flex flex-col overflow-hidden">
+            <Navigation/>
             {#if loaded}
                 <FlexPane>
                     <Monaco slot="left" class="h-full m-2"/>

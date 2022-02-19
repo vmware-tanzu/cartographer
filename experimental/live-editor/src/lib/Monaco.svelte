@@ -8,7 +8,7 @@
     let editorContainer
 
     const modelUri = Uri.parse('https://cartographer.sh/file.yaml');
-    const model = editor.createModel("", 'yaml', modelUri)
+    const model = editor.getModel(modelUri) || editor.createModel("", 'yaml', modelUri)
 
     onMount(() => {
         model.setValue($document)

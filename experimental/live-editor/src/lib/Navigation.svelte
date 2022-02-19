@@ -15,8 +15,10 @@
 
 
 <nav class="font-sans flex flex-col text-center sm:flex-row sm:text-left sm:justify-between py-2 px-6 bg-sky-700 text-sky-50 shadow sm:items-baseline w-full">
-    <div class="mb-2 sm:mb-0">
+    <div class="mb-2 sm:mb-0 flex sm:items-baseline">
         <h1 class="text-lg uppercase">Cartographer Live Editor</h1>
+        &nbsp;&nbsp;
+        <p class="text-sm">v0.0.1</p>
     </div>
     <div>
 
