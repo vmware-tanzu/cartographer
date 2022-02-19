@@ -20,7 +20,7 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
         values: ["gitops"]
 ```
 
-Lets introduce a matchParams selector to the template, as well as the top level blueprint:
+Lets introduce a matchParams selector:
 
 ```yaml
   selector:
@@ -47,6 +47,7 @@ metadata:
 spec:
   selector:
     app: web
+    
   params:
   - name: promotion       #< ===== default params can be set here
     default: (gitops|regops)
