@@ -34,7 +34,7 @@ Lets introduce a top level params key:
 # Motivation
 [motivation]: #motivation
 
-We should be able to match against supply chain params in our field selectors.
+We should be able to match against default supply chain params in our field selectors.
 
 # What it is
 [what-it-is]: #what-it-is
