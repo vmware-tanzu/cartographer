@@ -129,8 +129,8 @@ Neither selector would have access to params from the templates.
 
 ```yaml
   selector:
-    matchParams:
-      - key: promotion           #< =================== introduce top level `params`
+    matchParams:         #< =================== introduce `matchParams` selector
+      - key: promotion           
         operator: In
         values: ["gitops"]
 ```
