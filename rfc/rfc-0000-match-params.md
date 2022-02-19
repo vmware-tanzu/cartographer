@@ -1,6 +1,6 @@
 # Meta
 [meta]: #meta
-- Name: Match params in field selector
+- Name: Add matchParams selector
 - Start Date: 2022-02-14
 - Author(s): @jwntrs
 - Status: Draft
@@ -20,12 +20,12 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
         values: ["gitops"]
 ```
 
-Lets introduce a top level params key:
+Lets introduce a matchParams selector:
 
 ```yaml
   selector:
-    matchFields:
-      - key: params.promotion    #< ===== use something like this instead
+    matchParams:           #< ===== use something like this instead
+      - key: promotion    
         operator: In
         values: ["gitops"]
 ```
@@ -58,14 +58,14 @@ spec:
         options:
         - name: git-promotion
           selector:
-            matchFields:
-              - key: params.promotion           #< ===== introduce top level `params` that relies on our param hierarchy
+            matchParams:      #< ===== introduce `matchParams` selector (uses param hierarchy)
+              - key: promotion           
                 operator: In
                 values: ["gitops"]
         - name: registry-promotion
           selector:
-            matchFields:
-              - key: params.promotion
+            matchParams:
+              - key: promotion
                 operator: In
                 values: ["regops"]
 
@@ -90,7 +90,7 @@ spec:
 # How it Works
 [how-it-works]: #how-it-works
 
-Compute the available params from the workload and supply chain based on the [param hierarchy](https://cartographer.sh/docs/v0.2.0/architecture/#parameter-hierarchy) and pass it to the field matcher as `params`.
+Compute the available params from the workload and supply chain based on the [param hierarchy](https://cartographer.sh/docs/v0.2.0/architecture/#parameter-hierarchy) and pass it to the params matcher.
 
 # Migration
 [migration]: #migration
@@ -100,11 +100,11 @@ N/A
 # Drawbacks
 [drawbacks]: #drawbacks
 
-Ultimately we want our template `selector` and top-level supply chain `selector` to work the same. However, if we introduce params into the matching context, then it would cause some divergence in these two cases. 
+Ultimately we want our template `selector` and top-level supply chain `selector` to work the same. However, if we introduce a matchParams selector, then it would cause some divergence in these two cases. 
 
-The top level selector we only have access to params defined in the workload.
+The top level selector only has access to params defined in the workload.
 
-The template selectors would have access to params from the workload as well as the supply chain.
+The template selectors would have access to params from the workload as well as default values from the supply chain.
 
 Neither selector would have access to params from the templates.
 
@@ -129,8 +129,8 @@ Neither selector would have access to params from the templates.
 
 ```yaml
   selector:
-    matchFields:
-      - key: params.promotion           #< =================== introduce top level `params`
+    matchParams:
+      - key: promotion           #< =================== introduce top level `params`
         operator: In
         values: ["gitops"]
 ```
