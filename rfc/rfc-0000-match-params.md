@@ -48,7 +48,7 @@ spec:
   selector:
     app: web
   params:
-  - name: promotion       #< ===== params can be set here
+  - name: promotion       #< ===== default params can be set here
     default: (gitops|regops)
   resources:
    ...
@@ -78,7 +78,7 @@ metadata:
     app: web
 spec:
   params:
-  - name: promotion           #< ===== params can also be set here
+  - name: promotion           #< ===== params can be overriden here
     value: (gitops|regops)
   source:
     git:
