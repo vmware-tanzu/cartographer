@@ -15,7 +15,7 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
 ```yaml
   selector:
     matchFields:
-      - key: workload.spec.params[?(@.name=="promotion")].value    #< ===== not so nice
+      - key: workload.spec.params[?(@.name=="promotion")].default    #< ===== not so nice
         operator: In
         values: ["gitops"]
 ```
@@ -49,7 +49,7 @@ spec:
     app: web
   params:
   - name: promotion       #< ===== params can be set here
-    value: (gitops|regops)
+    default: (gitops|regops)
   resources:
    ...
     - name: promote
