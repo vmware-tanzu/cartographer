@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {editor, languages, Position} from "monaco-editor";
+import {CancellationToken, editor, languages, Position} from "monaco-editor";
 import ITextModel = editor.ITextModel;
 
 import {parseDocument, YAMLMap, Scalar, YAMLSeq, Document, LineCounter} from 'yaml'
@@ -23,6 +23,9 @@ import {CompletionItemKind} from "vscode-languageserver-types";
 import ProviderResult = languages.ProviderResult;
 import CompletionList = languages.CompletionList;
 import CompletionItem = languages.CompletionItem;
+import Definition = languages.Definition;
+import LocationLink = languages.LocationLink;
+import Location = languages.Location;
 
 const resourceGroupRE = /(config|image|source)s:/
 
@@ -46,20 +49,13 @@ const inResourceKind = (model: ITextModel, lineNumber: number) => {
     return null
 }
 
-const itemByKey = (map: YAMLMap, key: string) => map.items.find(item => (<Scalar>item.key).value === key)
-const specNodeFromDocument = (docNode: Document) => itemByKey(<YAMLMap>docNode.contents, "spec")
-const resourcesNodeFromDocument = (docNode: Document) => itemByKey(<YAMLMap>specNodeFromDocument(docNode).value, "resources")
-
-const templateKindFromResourceNode = (resourceNode: YAMLMap) => (<Scalar>itemByKey(<YAMLMap>(itemByKey(resourceNode, "templateRef").value), "kind").value).value
-// const filterResourcesByKind = (resourcesNode: YAMLMap, kind: string) => resourcesNode.items.filter((item: YAMLMap) => templateKindFromResourceNode(item) === kind))
-
 const getSuggestions = (model: editor.ITextModel, kind: string, position: Position): CompletionItem[] => {
     let doc = model.getValue()
     let lineCounter = new LineCounter()
     try {
-        let objNode = parseDocument(doc, {keepSourceTokens: true, lineCounter: lineCounter})
+        let docNode = parseDocument(doc, {keepSourceTokens: true, lineCounter: lineCounter})
 
-        let resourcesByType = (<YAMLSeq>resourcesNodeFromDocument(objNode).value).items
+        let resourcesByType = docNode.getIn(["spec", "resources"]).items
             .filter((item: YAMLMap) => {
                 let endOfItem = lineCounter.linePos(item.range[2])
                 // normally you would use position.lineNumber+1 to make it 1-based
@@ -68,11 +64,11 @@ const getSuggestions = (model: editor.ITextModel, kind: string, position: Positi
                 // subtract 1. so: (endOfItem.line < position.lineNumber + 1 - 1)
                 // becomes: (endOfItem.line < position.lineNumber)
                 return (endOfItem.line < position.lineNumber) &&
-                    (templateKindFromResourceNode(item) === kind)
+                    item.getIn(["templateRef","kind"]) === kind
             })
 
         let mappedResources = resourcesByType.map((resource: YAMLMap): CompletionItem => {
-            let name: string = <string>(<Scalar>itemByKey(resource, "name").value).value
+            let name: string = <string>resource.get("name")
             return {
                 insertText: name,
                 kind: CompletionItemKind.Reference,
@@ -88,7 +84,36 @@ const getSuggestions = (model: editor.ITextModel, kind: string, position: Positi
     return []
 };
 
+function getReference(model: editor.ITextModel, position: Position) {
+    let doc = model.getValue()
+    let lineCounter = new LineCounter()
+    try {
+        let objNode = parseDocument(doc, {keepSourceTokens: true, lineCounter: lineCounter})
+        console.log(objNode)
+    } catch (e) {
+        // no-op, don't care
+    }
+
+}
+
 export const AddSupplyChainLang = () => {
+    languages.registerDefinitionProvider(
+        'yaml',
+        {
+            provideDefinition(model: ITextModel, position: Position, token: CancellationToken): ProviderResult<Definition | LocationLink[]>{
+                let usage = getReference(model, position)
+                return <Location>{
+                    uri: model.uri,
+                    range: {
+                        startLineNumber: 1,
+                        endLineNumber:2,
+                        startColumn:1,
+                        endColumn:4
+                    }
+                }
+            }
+        }
+    )
 
     languages.registerCompletionItemProvider(
         'yaml',
