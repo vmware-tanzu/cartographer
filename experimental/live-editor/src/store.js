@@ -15,7 +15,7 @@
  */
 
 import {derived, writable} from 'svelte/store';
-import {parse} from "yaml";
+import {parse, parseDocument} from "yaml";
 import {toMermaid} from "./lib/viz-processor.js";
 import {deflate, deflateRaw, inflate, inflateRaw} from "pako";
 import {fromUint8Array} from "js-base64";
