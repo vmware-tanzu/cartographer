@@ -67,6 +67,7 @@ var ValidDeliverablePrefixes = []string{
 // +kubebuilder:printcolumn:name="Delivery",type="string",JSONPath=".status.deliveryRef.name"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].reason`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
 type Deliverable struct {
 	metav1.TypeMeta   `json:",inline"`
