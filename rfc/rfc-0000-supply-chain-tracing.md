@@ -65,7 +65,8 @@ status:
     - name:                  # string
     outputs:
     - name:                  # string
-      value:                 # apiextensionsv1.JSON
+      digest:                # string
+      path:                  # string
       lastTransitionTime:    # metav1.Time
 ```
 
@@ -88,10 +89,12 @@ status:
       name: source
     outputs:
     - name: url
-      value: http://source-controller.flux-system.svc.cluster.local./gitrepository/default/my-workload/3d42c19a618bb8fc13f72178b8b5e214a2f989c4.tar.gz
+      digest: sha256:0c20a75353e12f51e4e7f42525d2a0f135b9dacea1648406fd90dac76f46e27c
+      path: .status.artifact.url
       lastTransitionTime: "2022-02-16T03:29:52Z"
     - name: revision
-      value: main/3d42c19a618bb8fc13f72178b8b5e214a2f989c4
+      digest: sha256:76004630fc3135b24df7d411182476d9324e091975f7ef15137fc4c25acd5056
+      path: .status.artifact.revision
       lastTransitionTime: "2022-02-16T03:29:52Z"
   - name: image-builder
     stampedRef:
@@ -107,7 +110,8 @@ status:
     - name: source-provider
     outputs:
     - name: image
-      value: registry.example/supply-chain/my-workload@sha256:68f8e8fc6e8ede7a411db9182cd695eac7b3e7e19e4ff9dcb9ba21205c135697
+      digest: sha256:eeedc5e676261368af5f5ebd6c66d3f853c7deff4cb2966a0621f8f546d77a42
+      path: .status.latestImage
       lastTransitionTime: "2022-02-16T03:23:37Z"
   - name: deployer
     stampedRef:
@@ -130,10 +134,11 @@ status:
 - `.status.resources[*].name` is the name of the resources as defined within the ClusterSupplyChain resource's array.
 - `.status.resources[*].templateRef` object reference to the template resource referenced by the ClusterSupplyChain.
 - `.status.resources[*].stampedRef` object reference to the Kubernetes resource created by Cartographer for this resource.
-- `.status.resources[*].inputs[*]` inputs model the relationships between resources within the SupplyChain graph. The value of an input can be read from the referenced resource's outputs.
+- `.status.resources[*].inputs[*]` inputs model the relationships between resources within the SupplyChain graph. The value of an input can be read from the stamped resource based on the outputs for the referenced resource.
 - `.status.resources[*].inputs[*].name` the name of the resource backing this input. 
 - `.status.resources[*].outputs[*].name` the name of the output. Output names are fixed and defined by the template type.
-- `.status.resources[*].outputs[*].value` raw value of the output. This may be large for config templates.
+- `.status.resources[*].outputs[*].digest` sha256sum of the raw output value.
+- `.status.resources[*].outputs[*].path` JSON Path to resolve the actual value from the stamped resource as defined by the template for the output.
 - `.status.resources[*].outputs[*].lastTransitionTime` time of the most recent observed change of value. this is not the last time the value observed. This value is helpful to know if a supply chain is progressing. As this field is the result of observation of an edge triggered change, it should not be relied upon when accuracy matters. This is the same behavior as the lastTransitionTime field within a Condition.
 
 In the future, additional information about particular resources may be added. Like an indication of health with an error message when unhealthy. Support is not included in this RFC as it will require additional support within the template to know how to interpret the health of a resource and should be defined in a separate RFC.
@@ -146,7 +151,7 @@ All of the data collected by this RFC exists within Cartographer today but is no
 # Drawbacks
 [drawbacks]: #drawbacks
 
-Some users may consider the runtime behavior of a `ClusterSupplyChain` to be an implementation detail that a user creating a `Workload` should not have visibility into. That a particular resource is created by Cartographer for a `Workload` may be viewed as an information disclosure. This change shines light on the internal behavior of a supply chain. The exact definition for each template is not exposed, unless the user also has access to view that resource. The outputs produced for a resource are the most sensitive values captured, but should never contain any confidential data.
+Some users may consider the runtime behavior of a `ClusterSupplyChain` to be an implementation detail that a user creating a `Workload` should not have visibility into. That a particular resource is created by Cartographer for a `Workload` may be viewed as an information disclosure. This change shines light on the internal behavior of a supply chain. The exact definition for each template is not exposed, unless the user also has access to view that resource.
 
 If there is significant user concern, a toggle could be developed to partially or fully disable tracing. Such a toggle is not in scope for this RFC.
 
