@@ -16,7 +16,7 @@ Amend the options matcher context as defined in the [template switching RFC](htt
 [motivation]: #motivation
 
 - Originally the workload prefix was included to leave room for other prefixes (such as params). However based on the direction from the [matchParams RFC](https://github.com/vmware-tanzu/cartographer/pull/618) this no longer makes sense.
-- Be as consistent as possible with our top level selectors
+- Be as consistent as possible with the direction of the [top level selector RFC](https://github.com/vmware-tanzu/cartographer/pull/602)
 
 
 # What it is
