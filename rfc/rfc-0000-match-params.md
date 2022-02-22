@@ -48,7 +48,7 @@ spec:
   selector:
     matchLabels:
       app: web
-    matchParams:      #< ===== convenience matcher for workload params
+    matchParams:      #< ===== introduce convenience matcher for workload params
       - key: language
         operator: In
         values: ["java"]    
@@ -101,7 +101,7 @@ Compute the available params from the workload and supply chain based on the [pa
 # Migration
 [migration]: #migration
 
-N/A
+For the top level `matchParams` selector, this assumes we've already migrated the top level selector to use `matchLabels`.
 
 # Drawbacks
 [drawbacks]: #drawbacks
@@ -135,7 +135,7 @@ Neither selector would have access to params from the templates.
 
 ```yaml
   selector:
-    matchParams:         #< =================== introduce `matchParams` selector
+    matchParams:         #< =================== introduce `matchParams` selector for templates and top level selector
       - key: promotion           
         operator: In
         values: ["gitops"]
