@@ -65,7 +65,7 @@ status:
     - name:                  # string
     outputs:
     - name:                  # string
-      value:                 # json.RawExtension
+      value:                 # apiextensionsv1.JSON
       lastTransitionTime:    # metav1.Time
 ```
 
