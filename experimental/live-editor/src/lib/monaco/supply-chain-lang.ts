@@ -15,11 +15,11 @@
  */
 
 import {CancellationToken, editor, languages, Position} from "monaco-editor";
-import ITextModel = editor.ITextModel;
 
-import {parseDocument, YAMLMap, Scalar, LineCounter, visit, isScalar, Pair} from 'yaml'
+import {isPair, isScalar, isSeq, LineCounter, Pair, parseDocument, Scalar, visit, YAMLMap, YAMLSeq} from 'yaml'
 import {upperCaseFirst} from "upper-case-first";
 import {CompletionItemKind} from "vscode-languageserver-types";
+import ITextModel = editor.ITextModel;
 import ProviderResult = languages.ProviderResult;
 import CompletionList = languages.CompletionList;
 import CompletionItem = languages.CompletionItem;
@@ -100,27 +100,45 @@ function getReference(model: editor.ITextModel, position: Position) {
             (endPos.col >= position.column && position.column >= startPos.col)
     }
 
+    let range
+
     try {
         let objNode = parseDocument(doc, {keepSourceTokens: true, lineCounter: lineCounter})
         visit(objNode, {
-            // Map(k) { console.log("map:" +k)},
             Pair(id, pair, path) {
                 if (isResourcePair(pair) && isUnderCaret((<Scalar>pair.value).range)) {
-                    console.log(`This is the reference: ${pair} ${(<Scalar>pair.value).range} [${position}]`)
+                    let collectionNode = path[path.length - 3]
+                    if (isPair(collectionNode) && isSeq(collectionNode.value) && isScalar(collectionNode.key)) {
+                        let collectionKind = {
+                            "configs": "ClusterConfigTemplate",
+                            "sources": "ClusterSourceTemplate",
+                            "images": "ClusterImageTemplate",
+                        }[<string>collectionNode.key.value];
+
+                        let definitionNode:YAMLMap = (<YAMLMap[]>(<YAMLSeq>objNode.getIn(["spec", "resources"])).items).find(
+                            (resourceNode: YAMLMap) => resourceNode.getIn(["templateRef", "kind"]) === collectionKind
+                        );
+
+                        if (definitionNode) {
+                            let nameNode = definitionNode.items[0].value // this is wrong
+                            let start = lineCounter.linePos(nameNode.range[0])
+                            let end = lineCounter.linePos(nameNode.range[1])
+                            range = {
+                                startLineNumber: start.line,
+                                endLineNumber: end.line,
+                                startColumn: start.col,
+                                endColumn: end.col
+                            }
+                            return visit.BREAK
+                        }
+                    }
                 }
             },
-            // Seq(k) { console.log("seq:" +k)},
-            // Alias(k) { console.log("alias:" +k)},
-            // Scalar(k) { console.log("scalar:" +k)},
-
         })
-
-
-        // let resourcesNode = objNode.getIn(["spec","resources"])
     } catch (e) {
         // no-op, don't care
     }
-
+    return range
 }
 
 export const AddSupplyChainLang = () => {
@@ -129,13 +147,11 @@ export const AddSupplyChainLang = () => {
         {
             provideDefinition(model: ITextModel, position: Position, token: CancellationToken): ProviderResult<Definition | LocationLink[]> {
                 let usage = getReference(model, position)
-                return <Location>{
-                    uri: model.uri,
-                    range: {
-                        startLineNumber: 1,
-                        endLineNumber: 2,
-                        startColumn: 1,
-                        endColumn: 4
+                if (usage) {
+                    console.log(usage)
+                    return <Location>{
+                        uri: model.uri,
+                        range: usage
                     }
                 }
             }
