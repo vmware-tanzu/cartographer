@@ -34,7 +34,7 @@ Lets introduce a matchParams selector:
 # Motivation
 [motivation]: #motivation
 
-We should be able to match against default supply chain params in our field selectors.
+We should be able to match against default supply chain params in our field selectors, and provide a simpler syntax for matching against workload params.
 
 # What it is
 [what-it-is]: #what-it-is
@@ -46,8 +46,13 @@ metadata:
   name: responsible-ops
 spec:
   selector:
-    app: web
-    
+    matchLabels:
+      app: web
+    matchParams:      #< ===== convenience matcher for workload params
+      - key: language
+        operator: In
+        values: ["java"]    
+        
   params:
   - name: promotion       #< ===== default params can be set here
     default: (gitops|regops)
