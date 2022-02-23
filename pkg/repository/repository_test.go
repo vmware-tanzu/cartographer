@@ -634,10 +634,12 @@ spec:
 					)
 					cl.GetReturns(apiError)
 				})
-				It("returns a nil result without error", func() {
+				It("returns a nil result without error and without logging an error", func() {
 					delivery, err := repo.GetDelivery(ctx, "my-delivery")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(delivery).To(BeNil())
+
+					Expect(out.Contents()).To(BeEmpty())
 				})
 			})
 
@@ -996,10 +998,12 @@ spec:
 			})
 
 			Context("workload doesnt exist", func() {
-				It("returns nil workload", func() {
+				It("returns nil workload without logging an error", func() {
 					workload, err := repo.GetWorkload(ctx, "workload-that-does-not-exist-name", "workload-namespace")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(workload).To(BeNil())
+
+					Expect(out.Contents()).To(BeEmpty())
 				})
 			})
 		})
@@ -1022,10 +1026,12 @@ spec:
 			})
 
 			Context("deliverable doesnt exist", func() {
-				It("returns nil deliverable", func() {
+				It("returns nil deliverable without logging an error", func() {
 					deliverable, err := repo.GetDeliverable(ctx, "deliverable-that-does-not-exist-name", "deliverable-namespace")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(deliverable).To(BeNil())
+
+					Expect(out.Contents()).To(BeEmpty())
 				})
 			})
 		})
@@ -1048,10 +1054,12 @@ spec:
 			})
 
 			Context("runnable doesnt exist", func() {
-				It("returns nil runnable", func() {
+				It("returns nil runnable without logging an error", func() {
 					runnable, err := repo.GetRunnable(ctx, "runnable-that-does-not-exist-name", "runnable-namespace")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(runnable).To(BeNil())
+
+					Expect(out.Contents()).To(BeEmpty())
 				})
 			})
 		})
@@ -1073,10 +1081,12 @@ spec:
 			})
 
 			Context("supply chain doesnt exist", func() {
-				It("returns no error", func() {
+				It("returns no error without logging an error", func() {
 					sc, err := repo.GetSupplyChain(ctx, "sc-that-does-not-exist-name")
 					Expect(err).ToNot(HaveOccurred())
 					Expect(sc).To(BeNil())
+
+					Expect(out.Contents()).To(BeEmpty())
 				})
 			})
 		})
