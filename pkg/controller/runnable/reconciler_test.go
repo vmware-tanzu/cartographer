@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -67,6 +68,7 @@ var _ = Describe("Reconcile", func() {
 		serviceAccountSecret     *corev1.Secret
 		secretForBuiltClient     *corev1.Secret
 		serviceAccountName       string
+		fakeDiscoveryClient      *runnablefakes.FakeDiscoveryInterface
 	)
 
 	BeforeEach(func() {
@@ -79,6 +81,7 @@ var _ = Describe("Reconcile", func() {
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
 		conditionManager = &conditionsfakes.FakeConditionManager{}
 		fakeCache = &repositoryfakes.FakeRepoCache{}
+		fakeDiscoveryClient = &runnablefakes.FakeDiscoveryInterface{}
 
 		serviceAccountName = "alternate-service-account-name"
 
@@ -95,9 +98,9 @@ var _ = Describe("Reconcile", func() {
 		}
 
 		builtClient = &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
+		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
 			secretForBuiltClient = secret
-			return builtClient, nil
+			return builtClient, fakeDiscoveryClient, nil
 		}
 
 		reconciler = runnable.Reconciler{
@@ -187,9 +190,10 @@ var _ = Describe("Reconcile", func() {
 			Expect(*cacheForBuiltRepository).To(Equal(reconciler.RunnableCache))
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, _, systemRepo, runnableRepo := rlzr.RealizeArgsForCall(0)
+			_, _, systemRepo, runnableRepo, discoveryClient := rlzr.RealizeArgsForCall(0)
 			Expect(systemRepo).To(Equal(repo))
 			Expect(runnableRepo).To(Equal(fakeRunnabeRepo))
+			Expect(discoveryClient).To(Equal(fakeDiscoveryClient))
 		})
 
 		It("updates the status.observedGeneration to equal metadata.generation", func() {
