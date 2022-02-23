@@ -23,7 +23,7 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
 [what-it-is]: #what-it-is
 
 ```yaml
-apiVersion: carto.run/v1alpha1
+apiVersion: carto.run/v1alpha2                                 # <======== bump this
 kind: ClusterSupplyChain
 metadata:
   name: supply-chain
@@ -82,7 +82,7 @@ This is a breaking change.
 [spec-changes]: #spec-changes
 
 ```yaml
-apiVersion: carto.run/v1alpha1
+apiVersion: carto.run/v1alpha2                                  # <==== bump this
 kind: ClusterSupplyChain
 metadata:
   name: supply-chain
