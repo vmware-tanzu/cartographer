@@ -15,10 +15,8 @@
 package templates
 
 import (
-	"encoding/json"
 	"fmt"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -74,31 +72,17 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
-	url, err := json.Marshal(output.Source.URL)
-	if err != nil {
-		return nil, err
-	}
-
-	revision, err := json.Marshal(output.Source.Revision)
-	if err != nil {
-		return nil, err
-	}
-
+func (t *clusterSourceTemplate) GenerateResourceOutput() []v1alpha1.Output {
 	return []v1alpha1.Output{
 		{
 			Name: "url",
-			Value: apiextensionsv1.JSON{
-				Raw: url,
-			},
+			Path: t.template.Spec.URLPath,
 		},
 		{
 			Name: "revision",
-			Value: apiextensionsv1.JSON{
-				Raw: revision,
-			},
+			Path: t.template.Spec.RevisionPath,
 		},
-	}, nil
+	}
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

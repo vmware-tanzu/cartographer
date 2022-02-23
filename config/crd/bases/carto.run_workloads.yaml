@@ -485,23 +485,16 @@ spec:
                       type: array
                     name:
                       type: string
-                    observedGeneration:
-                      format: int64
-                      type: integer
                     outputs:
                       items:
                         properties:
-                          lastTransitionTime:
-                            format: date-time
-                            type: string
                           name:
                             type: string
-                          value:
-                            x-kubernetes-preserve-unknown-fields: true
+                          path:
+                            type: string
                         required:
-                        - lastTransitionTime
                         - name
-                        - value
+                        - path
                         type: object
                       type: array
                     stampedRef:
@@ -630,7 +623,6 @@ spec:
                       type: object
                   required:
                   - name
-                  - observedGeneration
                   type: object
                 type: array
               supplyChainRef:

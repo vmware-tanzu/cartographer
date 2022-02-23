@@ -94,7 +94,7 @@ var _ = Describe("Realize", func() {
 			return template, &unstructured.Unstructured{}, &templates.Output{}, nil
 		})
 
-		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
+		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
@@ -111,7 +111,7 @@ var _ = Describe("Realize", func() {
 		resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 		resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
+		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain)
 		Expect(err).To(MatchError("realizing is hard"))
 		Expect(realizedResources).To(HaveLen(2))
 

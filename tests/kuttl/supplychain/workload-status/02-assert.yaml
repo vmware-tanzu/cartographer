@@ -68,10 +68,9 @@ status:
         name: example-first---workload-status
       outputs:
         - name: url
-          value: "three"
+          path: "data.player_initial_lives"
         - name: revision
-          value: "gaming"
-      observedGeneration: 0
+          path: "data.player_loves"
     - name: source-provider-second
       stampedRef:
         apiVersion: v1
@@ -83,10 +82,9 @@ status:
         name: example-second---workload-status
       outputs:
         - name: url
-          value: "5"
+          path: "data.player_initial_lives"
         - name: revision
-          value: "knitting"
-      observedGeneration: 0
+          path: "data.player_loves"
     - name: built-image-provider
       stampedRef:
         apiVersion: v1
@@ -100,8 +98,7 @@ status:
         - name: source-provider-second
       outputs:
         - name: image
-          value: "knitting"
-      observedGeneration: 0
+          path: "data.some_other_info"
     - name: config
       stampedRef:
         apiVersion: v1
@@ -115,8 +112,7 @@ status:
         - name: built-image-provider
       outputs:
         - name: config
-          value: "knitting"
-      observedGeneration: 0
+          path: "data.favorite_color"
     - name: config-2
       stampedRef:
         apiVersion: v1
@@ -128,4 +124,3 @@ status:
         name: example-config---workload-status-2
       inputs:
         - name: config
-      observedGeneration: 0

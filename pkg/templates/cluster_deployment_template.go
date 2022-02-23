@@ -67,8 +67,8 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 	return output, nil
 }
 
-func (t *clusterDeploymentTemplate) GenerateResourceOutput(_ *Output) ([]v1alpha1.Output, error) {
-	return nil, nil
+func (t *clusterDeploymentTemplate) GenerateResourceOutput() []v1alpha1.Output {
+	return nil
 }
 
 func (t *clusterDeploymentTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
