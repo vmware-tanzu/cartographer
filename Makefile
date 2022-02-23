@@ -136,6 +136,7 @@ copyright:
 		-ignore site/static/\*\* \
 		-ignore site/content/docs/\*/crds/\*.yaml \
 		-ignore site/themes/\*\* \
+		-ignore experimental/live-editor/node_modules/\*\* \
 		.
 
 .PHONY: pre-push .pre-push-check
