@@ -20,6 +20,18 @@ func (t *clusterSupplyChain) GetOutputResource() string {
 	return ""
 }
 
+func (t *clusterSupplyChain) GetParams() []v1alpha1.BlueprintParam {
+	return t.supplyChain.Spec.Params
+}
+
+func (t *clusterSupplyChain) GetStatus() v1alpha1.SupplyChainStatus {
+	return t.supplyChain.Status
+}
+
+func (t *clusterSupplyChain) GetServiceAccountRef() v1alpha1.ServiceAccountRef {
+	return t.supplyChain.Spec.ServiceAccountRef
+}
+
 func NewClusterSupplyChain(supplyChain *v1alpha1.ClusterSupplyChain) *clusterSupplyChain {
 	return &clusterSupplyChain{supplyChain: supplyChain}
 }

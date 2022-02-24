@@ -23,6 +23,18 @@ func (t *clusterSourceSupplyChain) GetOutputResource() string {
 	return strings.Split(t.supplyChain.Spec.URLPath, ".")[0]
 }
 
+func (t *clusterSourceSupplyChain) GetParams() []v1alpha1.BlueprintParam {
+	return t.supplyChain.Spec.Params
+}
+
+func (t *clusterSourceSupplyChain) GetStatus() v1alpha1.SupplyChainStatus {
+	return t.supplyChain.Status
+}
+
+func (t *clusterSourceSupplyChain) GetServiceAccountRef() v1alpha1.ServiceAccountRef {
+	return t.supplyChain.Spec.ServiceAccountRef
+}
+
 func NewClusterSourceSupplyChain(supplyChain *v1alpha1.ClusterSourceSupplyChain) *clusterSourceSupplyChain {
 	return &clusterSourceSupplyChain{supplyChain: supplyChain}
 }

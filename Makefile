@@ -98,6 +98,10 @@ test-kuttl-supplychain: build test-gen-manifests
 test-kuttl-delivery: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/delivery --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/delivery; fi
 
+.PHONY: test-kuttl-source
+test-kuttl-source: build test-gen-manifests
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/source-supply-chain --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/source-supply-chain; fi
+
 .PHONY: list-kuttl
 list-kuttl:
 	(cd tests/kuttl && find . -maxdepth 2 -type d)

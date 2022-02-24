@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -84,28 +85,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(ctx, workload, err)
 	}
 
-	log = log.WithValues("supply chain", supplyChain.Name)
+	log = log.WithValues("supply chain", supplyChain.GetName())
 	ctx = logr.NewContext(ctx, log)
 
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
 		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
-			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
+			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.GetName(), err)),
 		)
 	}
 
 	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
-	workload.Status.SupplyChainRef.Name = supplyChain.Name
+	workload.Status.SupplyChainRef.Name = supplyChain.GetName()
 
-	if !r.isSupplyChainReady(supplyChain) {
-		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
+	supplyChainModel, err := supplychains.NewModelFromAPI(supplyChain)
+	if err != nil {
+		panic(err)
+	}
+
+	if !r.isSupplyChainReady(supplyChainModel) {
+		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChainModel)))
 		log.Info("supply chain is not in ready state")
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
+		return r.completeReconciliation(ctx, workload, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.GetName()))
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
-	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
+	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChainModel)
 
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
@@ -114,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChainModel.GetParams())
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -122,7 +128,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplychains.NewClusterSupplyChain(supplyChain))
+	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChainModel)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -202,13 +208,13 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alp
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
+func (r *Reconciler) isSupplyChainReady(supplyChain supplychains.SupplyChain) bool {
 	supplyChainReadyCondition := getSupplyChainReadyCondition(supplyChain)
 	return supplyChainReadyCondition.Status == "True"
 }
 
-func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) metav1.Condition {
-	for _, condition := range supplyChain.Status.Conditions {
+func getSupplyChainReadyCondition(supplyChain supplychains.SupplyChain) metav1.Condition {
+	for _, condition := range supplyChain.GetStatus().Conditions {
 		if condition.Type == "Ready" {
 			return condition
 		}
@@ -216,7 +222,7 @@ func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) meta
 	return metav1.Condition{}
 }
 
-func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
+func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	if len(workload.Labels) == 0 {
 		r.conditionManager.AddPositive(WorkloadMissingLabelsCondition())
@@ -248,7 +254,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 			workload.Namespace, workload.Name, getSupplyChainNames(supplyChains))
 	}
 
-	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].Name)
+	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].GetName())
 	return supplyChains[0], nil
 }
 
@@ -291,7 +297,7 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemp
 	}
 }
 
-func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
+func getSupplyChainNames(objs []client.Object) []string {
 	var names []string
 	for _, obj := range objs {
 		names = append(names, obj.GetName())
@@ -300,16 +306,16 @@ func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
 	return names
 }
 
-func getServiceAccountNameAndNamespace(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) (string, string) {
+func getServiceAccountNameAndNamespace(workload *v1alpha1.Workload, supplyChain supplychains.SupplyChain) (string, string) {
 	serviceAccountName := "default"
 	serviceAccountNS := workload.Namespace
 
 	if workload.Spec.ServiceAccountName != "" {
 		serviceAccountName = workload.Spec.ServiceAccountName
-	} else if supplyChain.Spec.ServiceAccountRef.Name != "" {
-		serviceAccountName = supplyChain.Spec.ServiceAccountRef.Name
-		if supplyChain.Spec.ServiceAccountRef.Namespace != "" {
-			serviceAccountNS = supplyChain.Spec.ServiceAccountRef.Namespace
+	} else if supplyChain.GetServiceAccountRef().Name != "" {
+		serviceAccountName = supplyChain.GetServiceAccountRef().Name
+		if supplyChain.GetServiceAccountRef().Namespace != "" {
+			serviceAccountNS = supplyChain.GetServiceAccountRef().Namespace
 		}
 	}
 

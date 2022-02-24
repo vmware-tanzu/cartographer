@@ -17,11 +17,13 @@ package supplychain
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -134,9 +136,19 @@ func (r *SourceReconciler) reconcileSupplyChain(ctx context.Context, chain *v1al
 }
 
 func (r *SourceReconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSourceSupplyChain, templateName, templateKind string) (bool, error) {
-	template, err := r.Repo.GetTemplate(ctx, templateName, templateKind)
-	if err != nil {
-		return false, err
+	var template client.Object
+	var err error
+
+	if strings.Contains(templateKind, "SupplyChain") {
+		template, err = r.Repo.GetTypedSupplyChain(ctx, templateName, templateKind)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		template, err = r.Repo.GetTemplate(ctx, templateName, templateKind)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	r.DependencyTracker.Track(dependency.Key{

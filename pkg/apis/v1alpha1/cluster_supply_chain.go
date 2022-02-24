@@ -36,6 +36,7 @@ const (
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
 )
 
+//TODO need to add source supply chain
 var ValidSupplyChainTemplates = []client.Object{
 	&ClusterSourceTemplate{},
 	&ClusterImageTemplate{},

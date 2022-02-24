@@ -41,7 +41,7 @@ type Repository interface {
 	EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error
 	GetTemplate(ctx context.Context, name, kind string) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
-	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
+	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]client.Object, error)
 	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
 	GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error)
 	GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error)
@@ -318,7 +318,7 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 	return nil
 }
 
-func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error) {
+func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetSupplyChainsForWorkload")
 
@@ -328,17 +328,28 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
+	list2 := &v1alpha1.ClusterSourceSupplyChainList{}
+	if err := r.cl.List(ctx, list2); err != nil {
+		log.Error(err, "unable to list source supply chains from api server")
+		return nil, fmt.Errorf("unable to list source supply chains from api server: %w", err)
+	}
+
 	var selectorGetters []SelectorGetter
 	for _, item := range list.Items {
 		item := item
 		selectorGetters = append(selectorGetters, &item)
 	}
 
-	var supplyChains []*v1alpha1.ClusterSupplyChain
+	for _, item := range list2.Items {
+		item := item
+		selectorGetters = append(selectorGetters, &item)
+	}
+
+	var supplyChains []client.Object
 	for _, matchingObject := range BestLabelMatches(workload, selectorGetters) {
 		log.V(logger.DEBUG).Info("supply chain matched workload",
 			"supply chain", matchingObject)
-		supplyChains = append(supplyChains, matchingObject.(*v1alpha1.ClusterSupplyChain))
+		supplyChains = append(supplyChains, matchingObject.(client.Object))
 	}
 
 	return supplyChains, nil
