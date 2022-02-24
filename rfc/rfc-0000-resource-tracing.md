@@ -1,6 +1,6 @@
 # Meta
 [meta]: #meta
-- Name: Supply Chain Tracing
+- Name: Resource Tracing
 - Start Date: 2020-02-15
 - Author(s): @scothis
 - Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
