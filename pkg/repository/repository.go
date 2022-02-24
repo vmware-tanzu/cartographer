@@ -46,6 +46,7 @@ type Repository interface {
 	GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error)
 	GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error)
 	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
+	GetSourceSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSourceSupplyChain, error)
 	StatusUpdate(ctx context.Context, object client.Object) error
 	GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error)
 	GetUnstructured(ctx context.Context, obj *unstructured.Unstructured) (*unstructured.Unstructured, error)
@@ -465,6 +466,25 @@ func (r *repository) GetSupplyChain(ctx context.Context, name string) (*v1alpha1
 	log.V(logger.DEBUG).Info("GetSupplyChain")
 
 	supplyChain := v1alpha1.ClusterSupplyChain{}
+
+	err := r.getObject(ctx, name, "", &supplyChain)
+	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("supply chain is not found on api server")
+		return nil, nil
+	}
+	if err != nil {
+		log.Error(err, "failed to get supply chain object from api server")
+		return nil, fmt.Errorf("failed to get supply chain object from api server [%s]: %w", name, err)
+	}
+
+	return &supplyChain, nil
+}
+
+func (r *repository) GetSourceSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSourceSupplyChain, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetSourceSupplyChain")
+
+	supplyChain := v1alpha1.ClusterSourceSupplyChain{}
 
 	err := r.getObject(ctx, name, "", &supplyChain)
 	if kerrors.IsNotFound(err) {

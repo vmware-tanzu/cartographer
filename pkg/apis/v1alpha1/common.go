@@ -153,6 +153,8 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 		template = &ClusterTemplate{}
 	case "ClusterDeploymentTemplate":
 		template = &ClusterDeploymentTemplate{}
+	case "ClusterSourceSupplyChain":
+		template = &ClusterSourceSupplyChain{}
 	default:
 		return nil, fmt.Errorf("resource does not have valid kind: %s", templateKind)
 	}
