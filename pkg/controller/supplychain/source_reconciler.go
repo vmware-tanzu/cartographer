@@ -45,11 +45,13 @@ func (r *SourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	log = log.WithValues("supply chain", req.NamespacedName)
 	ctx = logr.NewContext(ctx, log)
 
-	supplyChain, err := r.Repo.GetSourceSupplyChain(ctx, req.Name)
+	supplyChainObject, err := r.Repo.GetTypedSupplyChain(ctx, req.Name, "ClusterSourceSupplyChain")
 	if err != nil {
 		log.Error(err, "failed to get supply chain")
 		return ctrl.Result{}, fmt.Errorf("failed to get supply chain [%s]: %w", req.NamespacedName, err)
 	}
+
+	supplyChain := supplyChainObject.(*v1alpha1.ClusterSourceSupplyChain)
 
 	if supplyChain == nil {
 		log.Info("supply chain no longer exists")

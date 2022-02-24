@@ -17,7 +17,6 @@ package workload
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +28,7 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
+	"github.com/vmware-tanzu/cartographer/pkg/supplychains"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -37,6 +37,7 @@ import (
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
 	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	FindMatchingSupplyChain(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string) (supplychains.SupplyChain, error)
 }
 
 type resourceRealizer struct {
@@ -71,146 +72,114 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	if resource.TemplateRef.Kind == "ClusterSourceSupplyChain" {
-		sc, err := r.systemRepo.GetSourceSupplyChain(ctx, resource.Name)
+	var templateName string
+	var err error
+	if len(resource.TemplateRef.Options) > 0 {
+		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
 		if err != nil {
-			panic(err)
+			return nil, nil, nil, err
 		}
-
-		outs := outputs
-		var stampedObjects []*unstructured.Unstructured
-		var selectedTemplates []templates.Template
-		var firstError error
-
-		outputResource := strings.Split(sc.Spec.URLPath, ".")[0]
-
-		for i := range sc.Spec.Resources {
-			innerResource := sc.Spec.Resources[i]
-			template, stampedObject, out, err := r.Do(ctx, &innerResource, sc.Name, outputs)
-
-			if template != nil {
-				selectedTemplates = append(selectedTemplates, template)
-			}
-
-			if stampedObject != nil {
-				log.V(logger.DEBUG).Info("realized resource as object",
-					"object", stampedObject)
-				stampedObjects = append(stampedObjects, stampedObject)
-			}
-
-			if err != nil {
-				log.Error(err, "failed to realize resource")
-
-				if firstError == nil {
-					firstError = err
-				}
-			}
-
-			outs.AddOutput(innerResource.Name, out)
-
-			if outs[outputResource] != nil {
-				outs.AddOutput(resource.Name, &templates.Output{Source: outs[outputResource].Source})
-			}
-		}
-		//TODO return multiple templates, objects, etc
-		// return ...
 	} else {
-
-		var templateName string
-		var err error
-		if len(resource.TemplateRef.Options) > 0 {
-			templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-		} else {
-			templateName = resource.TemplateRef.Name
-		}
-
-		log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
-
-		apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
-		if err != nil {
-			log.Error(err, "failed to get cluster template")
-			return nil, nil, nil, GetTemplateError{
-				Err:             err,
-				SupplyChainName: supplyChainName,
-				Resource:        resource,
-			}
-		}
-
-		template, err := templates.NewModelFromAPI(apiTemplate)
-		if err != nil {
-			log.Error(err, "failed to get cluster template")
-			return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
-		}
-
-		labels := map[string]string{
-			"carto.run/workload-name":         r.workload.Name,
-			"carto.run/workload-namespace":    r.workload.Namespace,
-			"carto.run/supply-chain-name":     supplyChainName,
-			"carto.run/resource-name":         resource.Name,
-			"carto.run/template-kind":         template.GetKind(),
-			"carto.run/cluster-template-name": template.GetName(),
-		}
-
-		inputs := outputs.GenerateInputs(resource)
-		workloadTemplatingContext := map[string]interface{}{
-			"workload": r.workload,
-			"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
-			"sources":  inputs.Sources,
-			"images":   inputs.Images,
-			"configs":  inputs.Configs,
-		}
-
-		// Todo: this belongs in Stamp.
-		if inputs.OnlyConfig() != nil {
-			workloadTemplatingContext["config"] = inputs.OnlyConfig()
-		}
-		if inputs.OnlyImage() != nil {
-			workloadTemplatingContext["image"] = inputs.OnlyImage()
-		}
-		if inputs.OnlySource() != nil {
-			workloadTemplatingContext["source"] = inputs.OnlySource()
-		}
-
-		stampContext := templates.StamperBuilder(r.workload, workloadTemplatingContext, labels)
-		stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
-		if err != nil {
-			log.Error(err, "failed to stamp resource")
-			return template, nil, nil, StampError{
-				Err:             err,
-				Resource:        resource,
-				SupplyChainName: supplyChainName,
-			}
-		}
-
-		err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
-		if err != nil {
-			log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-			return template, nil, nil, ApplyStampedObjectError{
-				Err:             err,
-				StampedObject:   stampedObject,
-				SupplyChainName: supplyChainName,
-				Resource:        resource,
-			}
-		}
-
-		template.SetStampedObject(stampedObject)
-
-		output, err := template.GetOutput()
-		if err != nil {
-			log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-			return template, stampedObject, nil, RetrieveOutputError{
-				Err:             err,
-				Resource:        resource,
-				SupplyChainName: supplyChainName,
-				StampedObject:   stampedObject,
-			}
-		}
-
-		return template, stampedObject, output, nil
+		templateName = resource.TemplateRef.Name
 	}
+
+	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
+
+	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
+	if err != nil {
+		log.Error(err, "failed to get cluster template")
+		return nil, nil, nil, GetTemplateError{
+			Err:             err,
+			SupplyChainName: supplyChainName,
+			Resource:        resource,
+		}
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		log.Error(err, "failed to get cluster template")
+		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
+	}
+
+	labels := map[string]string{
+		"carto.run/workload-name":         r.workload.Name,
+		"carto.run/workload-namespace":    r.workload.Namespace,
+		"carto.run/supply-chain-name":     supplyChainName,
+		"carto.run/resource-name":         resource.Name,
+		"carto.run/template-kind":         template.GetKind(),
+		"carto.run/cluster-template-name": template.GetName(),
+	}
+
+	inputs := outputs.GenerateInputs(resource)
+	workloadTemplatingContext := map[string]interface{}{
+		"workload": r.workload,
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
+		"sources":  inputs.Sources,
+		"images":   inputs.Images,
+		"configs":  inputs.Configs,
+	}
+
+	// Todo: this belongs in Stamp.
+	if inputs.OnlyConfig() != nil {
+		workloadTemplatingContext["config"] = inputs.OnlyConfig()
+	}
+	if inputs.OnlyImage() != nil {
+		workloadTemplatingContext["image"] = inputs.OnlyImage()
+	}
+	if inputs.OnlySource() != nil {
+		workloadTemplatingContext["source"] = inputs.OnlySource()
+	}
+
+	stampContext := templates.StamperBuilder(r.workload, workloadTemplatingContext, labels)
+	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
+	if err != nil {
+		log.Error(err, "failed to stamp resource")
+		return template, nil, nil, StampError{
+			Err:             err,
+			Resource:        resource,
+			SupplyChainName: supplyChainName,
+		}
+	}
+
+	err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+	if err != nil {
+		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+		return template, nil, nil, ApplyStampedObjectError{
+			Err:             err,
+			StampedObject:   stampedObject,
+			SupplyChainName: supplyChainName,
+			Resource:        resource,
+		}
+	}
+
+	template.SetStampedObject(stampedObject)
+
+	output, err := template.GetOutput()
+	if err != nil {
+		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+		return template, stampedObject, nil, RetrieveOutputError{
+			Err:             err,
+			Resource:        resource,
+			SupplyChainName: supplyChainName,
+			StampedObject:   stampedObject,
+		}
+	}
+
+	return template, stampedObject, output, nil
+}
+
+func (r *resourceRealizer) FindMatchingSupplyChain(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string) (supplychains.SupplyChain, error) {
+	scName, err := r.findMatchingTemplateName(resource, supplyChainName)
+	if err != nil {
+		panic(err)
+	}
+
+	apiSupplyChain, err := r.systemRepo.GetTypedSupplyChain(ctx, scName, resource.TemplateRef.Kind)
+	if err != nil {
+		panic(err)
+	}
+
+	return supplychains.NewModelFromAPI(apiSupplyChain)
 }
 
 func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {

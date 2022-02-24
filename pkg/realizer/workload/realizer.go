@@ -18,18 +18,19 @@ package workload
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/supplychains"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]templates.Template, []*unstructured.Unstructured, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain supplychains.SupplyChain) (map[string]templates.Template, []*unstructured.Unstructured, error)
 }
 
 type realizer struct{}
@@ -38,38 +39,67 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]templates.Template, []*unstructured.Unstructured, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain supplychains.SupplyChain) (map[string]templates.Template, []*unstructured.Unstructured, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
-	var selectedTemplates []templates.Template
+	var selectedTemplates map[string]templates.Template
 	var firstError error
 
-	for i := range supplyChain.Spec.Resources {
-		resource := supplyChain.Spec.Resources[i]
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
-
-		if template != nil {
-			selectedTemplates = append(selectedTemplates, template)
-		}
-
-		if stampedObject != nil {
-			log.V(logger.DEBUG).Info("realized resource as object",
-				"object", stampedObject)
-			stampedObjects = append(stampedObjects, stampedObject)
-		}
-
-		if err != nil {
-			log.Error(err, "failed to realize resource")
-
-			if firstError == nil {
-				firstError = err
+	supplyChainResources := supplyChain.GetResources()
+	for i := range supplyChainResources {
+		resource := supplyChainResources[i]
+		if strings.Contains(resource.TemplateRef.Kind, "SupplyChain") {
+			sc, err := resourceRealizer.FindMatchingSupplyChain(ctx, &resource, supplyChain.GetName())
+			if err != nil {
+				panic(err)
 			}
-		}
+			usedTemplates, stampedObjs, err := r.Realize(ctx, resourceRealizer, sc)
+			for resourceName, template := range usedTemplates {
+				if template != nil {
+					selectedTemplates[resourceName] = template
+				}
+			}
 
-		outs.AddOutput(resource.Name, out)
+			for _, stampedObj := range stampedObjs {
+				if stampedObj != nil {
+					log.V(logger.DEBUG).Info("realized resource as object",
+						"object", stampedObj)
+					stampedObjects = append(stampedObjects, stampedObj)
+				}
+			}
+
+			if template, ok := usedTemplates[sc.GetOutputResource()]; ok {
+				out, err := template.GetOutput()
+				if err != nil {
+					panic(err)
+				}
+				outs.AddOutput(resource.Name, out)
+			}
+		} else {
+			template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.GetName(), outs)
+
+			if template != nil {
+				selectedTemplates[resource.Name] = template
+			}
+
+			if stampedObject != nil {
+				log.V(logger.DEBUG).Info("realized resource as object",
+					"object", stampedObject)
+				stampedObjects = append(stampedObjects, stampedObject)
+			}
+
+			if err != nil {
+				log.Error(err, "failed to realize resource")
+
+				if firstError == nil {
+					firstError = err
+				}
+			}
+			outs.AddOutput(resource.Name, out)
+		}
 	}
 
 	return selectedTemplates, stampedObjects, firstError

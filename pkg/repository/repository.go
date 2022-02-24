@@ -46,7 +46,7 @@ type Repository interface {
 	GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error)
 	GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error)
 	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
-	GetSourceSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSourceSupplyChain, error)
+	GetTypedSupplyChain(ctx context.Context, name, kind string) (client.Object, error)
 	StatusUpdate(ctx context.Context, object client.Object) error
 	GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error)
 	GetUnstructured(ctx context.Context, obj *unstructured.Unstructured) (*unstructured.Unstructured, error)
@@ -480,23 +480,28 @@ func (r *repository) GetSupplyChain(ctx context.Context, name string) (*v1alpha1
 	return &supplyChain, nil
 }
 
-func (r *repository) GetSourceSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSourceSupplyChain, error) {
+func (r *repository) GetTypedSupplyChain(ctx context.Context, name, kind string) (client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
-	log.V(logger.DEBUG).Info("GetSourceSupplyChain")
+	log.V(logger.DEBUG).Info("GetTypedSupplyChain")
 
-	supplyChain := v1alpha1.ClusterSourceSupplyChain{}
+	apiSupplyChain, err := v1alpha1.GetAPISupplyChain(kind)
+	if err != nil {
+		log.Error(err, "unable to get api supply chain")
+		return nil, fmt.Errorf("unable to get api supply chain [%s/%s]: %w", kind, name, err)
+	}
 
-	err := r.getObject(ctx, name, "", &supplyChain)
+	err = r.getObject(ctx, name, "", apiSupplyChain)
+	//TODO: Remove IsNotFound check, this should just be an error, breaks kuttl test
 	if kerrors.IsNotFound(err) {
 		log.V(logger.DEBUG).Info("supply chain is not found on api server")
 		return nil, nil
 	}
 	if err != nil {
 		log.Error(err, "failed to get supply chain object from api server")
-		return nil, fmt.Errorf("failed to get supply chain object from api server [%s]: %w", name, err)
+		return nil, fmt.Errorf("failed to get supply chain object from api server [%s/%s]: %w", kind, name, err)
 	}
 
-	return &supplyChain, nil
+	return apiSupplyChain, nil
 }
 
 func (r *repository) StatusUpdate(ctx context.Context, object client.Object) error {
