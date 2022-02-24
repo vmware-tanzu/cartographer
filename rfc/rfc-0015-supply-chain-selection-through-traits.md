@@ -148,7 +148,7 @@ spec:
 and `workload/input: image` would have:
 ```yaml
 spec:
-  image: https://registry.com/my/image.tgz
+  image: example.com/my/image
 ```
 
 Selectors that allow us to match a Supply Chain against field presence (eg: `spec.source.git`) might be less redundant. 
