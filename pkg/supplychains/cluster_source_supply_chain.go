@@ -11,7 +11,7 @@ type clusterSourceSupplyChain struct {
 }
 
 func (t *clusterSourceSupplyChain) GetName() string {
-	return t.GetName()
+	return t.supplyChain.GetName()
 }
 
 func (t *clusterSourceSupplyChain) GetResources() []v1alpha1.SupplyChainResource {

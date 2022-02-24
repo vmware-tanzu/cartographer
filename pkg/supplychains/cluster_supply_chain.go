@@ -9,7 +9,7 @@ type clusterSupplyChain struct {
 }
 
 func (t *clusterSupplyChain) GetName() string {
-	return t.GetName()
+	return t.supplyChain.GetName()
 }
 
 func (t *clusterSupplyChain) GetResources() []v1alpha1.SupplyChainResource {

@@ -17,6 +17,8 @@ package supplychain
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,9 +139,19 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 }
 
 func (r *Reconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, templateName, templateKind string) (bool, error) {
-	template, err := r.Repo.GetTemplate(ctx, templateName, templateKind)
-	if err != nil {
-		return false, err
+	var template client.Object
+	var err error
+
+	if strings.Contains(templateKind, "SupplyChain") {
+		template, err = r.Repo.GetTypedSupplyChain(ctx, templateName, templateKind)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		template, err = r.Repo.GetTemplate(ctx, templateName, templateKind)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	r.DependencyTracker.Track(dependency.Key{

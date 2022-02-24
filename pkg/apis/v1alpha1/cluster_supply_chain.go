@@ -142,7 +142,7 @@ type SupplyChainResource struct {
 
 type SupplyChainTemplateReference struct {
 	// Kind of the template to apply
-	//+kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate
+	//+kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterImageTemplate;ClusterTemplate;ClusterConfigTemplate;ClusterSourceSupplyChain
 	Kind string `json:"kind"`
 
 	// Name of the template to apply

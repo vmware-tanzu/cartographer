@@ -45,14 +45,14 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 	outs := NewOutputs()
 	var stampedObjects []*unstructured.Unstructured
-	var selectedTemplates map[string]templates.Template
+	selectedTemplates := make(map[string]templates.Template)
 	var firstError error
 
 	supplyChainResources := supplyChain.GetResources()
 	for i := range supplyChainResources {
 		resource := supplyChainResources[i]
 		if strings.Contains(resource.TemplateRef.Kind, "SupplyChain") {
-			sc, err := resourceRealizer.FindMatchingSupplyChain(ctx, &resource, supplyChain.GetName())
+			sc, err := resourceRealizer.GetTypedSupplyChain(ctx, &resource, supplyChain.GetName())
 			if err != nil {
 				panic(err)
 			}

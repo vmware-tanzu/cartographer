@@ -37,7 +37,7 @@ import (
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
 	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
-	FindMatchingSupplyChain(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string) (supplychains.SupplyChain, error)
+	GetTypedSupplyChain(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string) (supplychains.SupplyChain, error)
 }
 
 type resourceRealizer struct {
@@ -72,15 +72,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	var templateName string
-	var err error
-	if len(resource.TemplateRef.Options) > 0 {
-		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-	} else {
-		templateName = resource.TemplateRef.Name
+	templateName, err := r.getTemplateName(resource, supplyChainName)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
@@ -168,8 +162,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	return template, stampedObject, output, nil
 }
 
-func (r *resourceRealizer) FindMatchingSupplyChain(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string) (supplychains.SupplyChain, error) {
-	scName, err := r.findMatchingTemplateName(resource, supplyChainName)
+func (r *resourceRealizer) GetTypedSupplyChain(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string) (supplychains.SupplyChain, error) {
+	scName, err := r.getTemplateName(resource, supplyChainName)
 	if err != nil {
 		panic(err)
 	}
@@ -182,10 +176,13 @@ func (r *resourceRealizer) FindMatchingSupplyChain(ctx context.Context, resource
 	return supplychains.NewModelFromAPI(apiSupplyChain)
 }
 
-func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
+func (r *resourceRealizer) getTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
+	if resource.TemplateRef.Name != "" {
+		return resource.TemplateRef.Name, nil
+	}
+
 	var templateName string
 	var matchingOptions []string
-
 	for _, option := range resource.TemplateRef.Options {
 		matchedAllFields := true
 		for _, field := range option.Selector.MatchFields {

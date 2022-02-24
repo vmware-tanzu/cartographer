@@ -134,7 +134,7 @@ func (c *ClusterSourceSupplyChain) GetSelector() map[string]string {
 
 func init() {
 	SchemeBuilder.Register(
-		&ClusterSupplyChain{},
-		&ClusterSupplyChainList{},
+		&ClusterSourceSupplyChain{},
+		&ClusterSourceSupplyChainList{},
 	)
 }
