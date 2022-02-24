@@ -166,6 +166,7 @@ func (r *runnableRealizer) resolveSelector(ctx context.Context, selector *v1alph
 	for _, apiResource := range apiResourceList.APIResources {
 		if apiResource.Kind == selector.Resource.Kind {
 			namespaced = apiResource.Namespaced
+			break
 		}
 	}
 

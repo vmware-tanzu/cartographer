@@ -19,6 +19,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/discovery"
+	memory "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,15 +38,16 @@ func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
 			return nil, nil, fmt.Errorf("creating client: %w", err)
 		}
 
-		var discoveryClient discovery.DiscoveryInterface
+		var cachedDiscoveryClient discovery.DiscoveryInterface
 		if needDiscovery {
-			discoveryClient, err = discovery.NewDiscoveryClientForConfig(restConfig)
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
 			if err != nil {
 				return cl, nil, fmt.Errorf("failed to create discovery client: %w", err)
 			}
+			cachedDiscoveryClient = memory.NewMemCacheClient(discoveryClient)
 		}
 
-		return cl, discoveryClient, nil
+		return cl, cachedDiscoveryClient, nil
 	}
 }
 
