@@ -32,7 +32,7 @@ spec:
     matchLabels:                                                # <=========== move existing labels under this heading
       app.tanzu.vmware.com/workload-type: web
     matchFields:                                                # <=========== add this
-      - { key: ".spec.image", operation: exists }               # <=========== 
+      - { key: "spec.image", operation: exists }               # <=========== 
 ```
 
 # How it Works
