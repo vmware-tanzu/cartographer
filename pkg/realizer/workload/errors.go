@@ -57,6 +57,23 @@ func (e ResolveTemplateOptionError) Error() string {
 	).Error()
 }
 
+type ResolveResourceOptionError struct {
+	Err             error
+	SupplyChainName string
+	Resource        *v1alpha1.SupplyChainResource
+	Key             string
+}
+
+func (e ResolveResourceOptionError) Error() string {
+	return fmt.Errorf("key [%s] is invalid resource [%s] in supply chain [%s]: %w",
+		e.Key,
+		e.Resource.Name,
+		e.SupplyChainName,
+		e.Err,
+	).Error()
+}
+
+
 type TemplateOptionsMatchError struct {
 	SupplyChainName string
 	Resource        *v1alpha1.SupplyChainResource
@@ -68,7 +85,11 @@ func (e TemplateOptionsMatchError) Error() string {
 	if len(e.OptionNames) != 0 {
 		optionNamesList = "[" + strings.Join(e.OptionNames, ", ") + "] "
 	}
-	return fmt.Errorf("expected exactly 1 option to match, found [%d] matching options %sfor resource [%s] in supply chain [%s]",
+	// Fixme: will error if not exactly one, just focused on supply chain for the spike
+	// Fixme: we dont really need to list the too-many options
+	// Fixme: but don't sweat it, by the time this spike supports optional steps (test, for example)
+	// 			there will be no such error.
+	return fmt.Errorf("expected at least one option to match, found [%d] matching options %sfor resource [%s] in supply chain [%s]",
 		len(e.OptionNames),
 		optionNamesList,
 		e.Resource.Name,

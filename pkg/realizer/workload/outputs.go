@@ -29,6 +29,10 @@ func (o Outputs) AddOutput(name string, output *templates.Output) {
 	o[name] = output
 }
 
+func (o Outputs) HasOutput(resourceName string) bool {
+	return o[resourceName] != nil
+}
+
 func (o Outputs) getResourceSource(resourceName string) *templates.Source {
 	output := o[resourceName]
 	if output == nil {
@@ -54,13 +58,23 @@ func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 	return output.Config
 }
 
-func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templates.Inputs {
+// GenerateInputs
+// Todo: need to support getting inputs form a selected option (as well as top level)
+func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource, matchedOption *v1alpha1.TemplateOption) *templates.Inputs {
 	inputs := &templates.Inputs{
 		Sources: map[string]templates.SourceInput{},
 		Images:  map[string]templates.ImageInput{},
 		Configs: map[string]templates.ConfigInput{},
 	}
 
+	o.getOutputsFromResourceInputs(resource.ResourceInputs, inputs)
+	if matchedOption != nil {
+		o.getOutputsFromResourceInputs(matchedOption.ResourceInputs, inputs)
+	}
+	return inputs
+}
+
+func (o Outputs) getOutputsFromResourceInputs(resource v1alpha1.ResourceInputs, inputs *templates.Inputs) {
 	for _, referenceSource := range resource.Sources {
 		source := o.getResourceSource(referenceSource.Resource)
 		if source != nil {
@@ -91,6 +105,4 @@ func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templat
 			}
 		}
 	}
-
-	return inputs
 }

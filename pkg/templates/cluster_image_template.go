@@ -59,6 +59,7 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 	}
 
 	return &Output{
+		//Selected: true,
 		Image: image,
 	}, nil
 }

@@ -57,6 +57,7 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 	}
 
 	return &Output{
+		//Selected: true,
 		Config: config,
 	}, nil
 }

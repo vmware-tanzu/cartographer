@@ -101,6 +101,10 @@ type SupplyChainResource struct {
 	// TemplateRef identifies the template used to produce this resource
 	TemplateRef SupplyChainTemplateReference `json:"templateRef"`
 
+	// Selector is a field query over a workload or deliverable resource.
+	// +optional
+	Selector Selector `json:"selector,omitempty"`
+
 	// Params are a list of parameters to provide to the template in TemplateRef
 	// Template params do not have to be specified here, unless you want to
 	// force a particular value, or add a default value.
@@ -109,35 +113,7 @@ type SupplyChainResource struct {
 	//   $(params.<name>)$
 	Params []BlueprintParam `json:"params,omitempty"`
 
-	// Sources is a list of references to other 'source' resources in this list.
-	// A source resource has the kind ClusterSourceTemplate
-	//
-	// In a template, sources can be consumed as:
-	//    $(sources.<name>.url)$ and $(sources.<name>.revision)$
-	//
-	// If there is only one source, it can be consumed as:
-	//    $(source.url)$ and $(source.revision)$
-	Sources []ResourceReference `json:"sources,omitempty"`
-
-	// Images is a list of references to other 'image' resources in this list.
-	// An image resource has the kind ClusterImageTemplate
-	//
-	// In a template, images can be consumed as:
-	//   $(images.<name>.image)$
-	//
-	// If there is only one image, it can be consumed as:
-	//   $(image)$
-	Images []ResourceReference `json:"images,omitempty"`
-
-	// Configs is a list of references to other 'config' resources in this list.
-	// A config resource has the kind ClusterConfigTemplate
-	//
-	// In a template, configs can be consumed as:
-	//   $(configs.<name>.config)$
-	//
-	// If there is only one image, it can be consumed as:
-	//   $(config)$
-	Configs []ResourceReference `json:"configs,omitempty"`
+	ResourceInputs `json:",inline"`
 }
 
 type SupplyChainTemplateReference struct {

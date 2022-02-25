@@ -146,6 +146,48 @@ spec:
                         - name
                         type: object
                       type: array
+                    selector:
+                      description: Selector is a field query over a workload or deliverable
+                        resource.
+                      properties:
+                        matchFields:
+                          description: MatchFields is a list of field selector requirements.
+                            The requirements are ANDed.
+                          items:
+                            properties:
+                              key:
+                                description: 'Key is the JSON path in the workload
+                                  to match against. e.g. for workload: "workload.spec.source.git.url",
+                                  e.g. for deliverable: "deliverable.spec.source.git.url"'
+                                minLength: 1
+                                type: string
+                              operator:
+                                description: Operator represents a key's relationship
+                                  to a set of values. Valid operators are In, NotIn,
+                                  Exists and DoesNotExist.
+                                enum:
+                                - In
+                                - NotIn
+                                - Exists
+                                - DoesNotExist
+                                type: string
+                              values:
+                                description: Values is an array of string values.
+                                  If the operator is In or NotIn, the values array
+                                  must be non-empty. If the operator is Exists or
+                                  DoesNotExist, the values array must be empty.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          minItems: 1
+                          type: array
+                      required:
+                      - matchFields
+                      type: object
                     sources:
                       description: "Sources is a list of references to other 'source'
                         resources in this list. A source resource has the kind ClusterSourceTemplate
@@ -189,6 +231,42 @@ spec:
                             is two.
                           items:
                             properties:
+                              configs:
+                                description: "Configs is a list of references to other
+                                  'config' resources in this list. A config resource
+                                  has the kind ClusterConfigTemplate \n In a template,
+                                  configs can be consumed as: $(configs.<name>.config)$
+                                  \n If there is only one image, it can be consumed
+                                  as: $(config)$"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    resource:
+                                      type: string
+                                  required:
+                                  - name
+                                  - resource
+                                  type: object
+                                type: array
+                              images:
+                                description: "Images is a list of references to other
+                                  'image' resources in this list. An image resource
+                                  has the kind ClusterImageTemplate \n In a template,
+                                  images can be consumed as: $(images.<name>.image)$
+                                  \n If there is only one image, it can be consumed
+                                  as: $(image)$"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    resource:
+                                      type: string
+                                  required:
+                                  - name
+                                  - resource
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the template to apply
                                 minLength: 1
@@ -237,9 +315,27 @@ spec:
                                 required:
                                 - matchFields
                                 type: object
+                              sources:
+                                description: "Sources is a list of references to other
+                                  'source' resources in this list. A source resource
+                                  has the kind ClusterSourceTemplate \n In a template,
+                                  sources can be consumed as: $(sources.<name>.url)$
+                                  and $(sources.<name>.revision)$ \n If there is only
+                                  one source, it can be consumed as: $(source.url)$
+                                  and $(source.revision)$"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    resource:
+                                      type: string
+                                  required:
+                                  - name
+                                  - resource
+                                  type: object
+                                type: array
                             required:
                             - name
-                            - selector
                             type: object
                           minItems: 2
                           type: array

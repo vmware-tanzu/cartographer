@@ -65,6 +65,7 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 		}
 	}
 	return &Output{
+		//Selected: true,
 		Source: &Source{
 			URL:      url,
 			Revision: revision,
