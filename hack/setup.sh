@@ -114,7 +114,6 @@ main() {
                         install_source_controller
                         kubectl apply -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
                         start_registry
-                        start_local_cluster
                         install_cert_manager
                         install_kapp_controller
                         install_secretgen_controller
