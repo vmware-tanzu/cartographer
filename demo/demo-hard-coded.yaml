@@ -40,7 +40,7 @@ spec:
     resources: {}
   builder:
     kind: ClusterBuilder
-      name: my-builder
+    name: my-builder
   cache:
     volume:
       size: 2G
