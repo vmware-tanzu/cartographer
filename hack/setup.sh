@@ -37,6 +37,7 @@ readonly KPACK_VERSION=0.5.1
 readonly SECRETGEN_CONTROLLER_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.30.0
+readonly CARTOGRAPHER_VERSION=$(curl -sL https://api.github.com/repos/vmware-tanzu/cartographer/releases/latest | jq -r ".tag_name")
 
 readonly GIT_WRITER_SSH_USER=${GIT_WRITER_SSH_USER:-"ssh://git"}
 readonly GIT_WRITER_SERVER=${GIT_WRITER_SERVER:-$HOST_ADDR}
@@ -115,9 +116,7 @@ main() {
                         kubectl apply -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
                         start_registry
                         install_cert_manager
-                        install_kapp_controller
-                        install_secretgen_controller
-                        install_cartographer_package
+                        kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/download/$CARTOGRAPHER_VERSION/cartographer.yaml
                         ;;
 
                 *)
