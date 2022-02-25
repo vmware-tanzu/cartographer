@@ -110,6 +110,19 @@ main() {
                         delete_repository
                         ;;
 
+                katacoda-scenario-1)
+                        echo "HI MOM"
+                        "$DIR"/ip.py
+#                        install_source_controller
+#                        install_kpack
+#                        start_registry
+#                        start_local_cluster
+#                        install_cert_manager
+#                        install_kapp_controller
+#                        install_secretgen_controller
+#                        install_cartographer_package
+                        ;;
+
                 *)
                         echo "error: unknown command '$command'."
                         show_usage_help
