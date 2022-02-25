@@ -183,51 +183,11 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 	var matchingOptions []v1alpha1.TemplateOption
 
 	for _, option := range resource.TemplateRef.Options {
-		matchedAllFields := true
-		// a lot of duplication from above
-		for _, field := range option.Selector.MatchFields {
-			wkContext := map[string]interface{}{
-				"workload": r.workload,
-			}
-			matched, err := selector.Matches(field, wkContext)
-			if err != nil {
-				if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
-					return nil, ResolveTemplateOptionError{
-						Err:             err,
-						SupplyChainName: supplyChainName,
-						Resource:        resource,
-						OptionName:      option.Name,
-						Key:             field.Key,
-					}
-				}
-			}
-			if !matched {
-				matchedAllFields = false
-				break
-			}
+		matched, err := r.matchSelectable(option.Selectable, outputs,supplyChainName)
+		if err != nil {
+			return nil, err
 		}
-
-		matchedAllInputs := true
-
-		for _, input := range option.Sources {
-			if !outputs.HasOutput(input.Resource) {
-				matchedAllInputs = false
-			}
-		}
-
-		for _, input := range option.Configs {
-			if !outputs.HasOutput(input.Resource) {
-				matchedAllInputs = false
-			}
-		}
-
-		for _, input := range option.Images {
-			if !outputs.HasOutput(input.Resource) {
-				matchedAllInputs = false
-			}
-		}
-
-		if matchedAllFields && matchedAllInputs {
+		if matched {
 			matchingOptions = append(matchingOptions, option)
 		}
 	}
@@ -244,29 +204,26 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 
 }
 
-func (r *resourceRealizer) matchSelectable(resource v1alpha1.Selectable, outputs Outputs, supplyChainName string) (bool, error) {
-	matchedAllInputs := true
-	for _, input := range resource.Sources {
+func (r *resourceRealizer) matchSelectable(selectable v1alpha1.Selectable, outputs Outputs, supplyChainName string) (bool, error) {
+	for _, input := range selectable.Sources {
 		if !outputs.HasOutput(input.Resource) {
-			matchedAllInputs = false
+			return false, nil
 		}
 	}
 
-	for _, input := range resource.Configs {
+	for _, input := range selectable.Configs {
 		if !outputs.HasOutput(input.Resource) {
-			matchedAllInputs = false
+			return false, nil
 		}
 	}
 
-	for _, input := range resource.Images {
+	for _, input := range selectable.Images {
 		if !outputs.HasOutput(input.Resource) {
-			matchedAllInputs = false
+			return false, nil
 		}
 	}
 
-
-	matchedAllTopLevelSelectors := true
-	for _, field := range resource.Selector.MatchFields {
+	for _, field := range selectable.Selector.MatchFields {
 		wkContext := map[string]interface{}{
 			"workload": r.workload,
 		}
@@ -281,11 +238,10 @@ func (r *resourceRealizer) matchSelectable(resource v1alpha1.Selectable, outputs
 			}
 		}
 		if !matched {
-			matchedAllTopLevelSelectors = false
-			break
+			return false, nil
 		}
 	}
 
-	return matchedAllTopLevelSelectors && matchedAllInputs, nil
+	return true, nil
 }
 
