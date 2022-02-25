@@ -57,17 +57,15 @@ func (e ResolveTemplateOptionError) Error() string {
 	).Error()
 }
 
-type ResolveResourceOptionError struct {
+type ResolveSelectorError struct {
 	Err             error
 	SupplyChainName string
-	Resource        *v1alpha1.SupplyChainResource
 	Key             string
 }
 
-func (e ResolveResourceOptionError) Error() string {
-	return fmt.Errorf("key [%s] is invalid resource [%s] in supply chain [%s]: %w",
+func (e ResolveSelectorError) Error() string {
+	return fmt.Errorf("key [%s] is invalid in supply chain [%s]: %w",
 		e.Key,
-		e.Resource.Name,
 		e.SupplyChainName,
 		e.Err,
 	).Error()

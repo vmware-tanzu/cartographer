@@ -93,6 +93,14 @@ type SupplyChainStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 }
 
+type Selectable struct {
+	ResourceInputs `json:",inline"`
+
+	// Selector is a field query over a workload or deliverable resource.
+	// +optional
+	Selector Selector `json:"selector,omitempty"`
+}
+
 type SupplyChainResource struct {
 	// Name of the resource. Used as a reference for inputs, as well as being
 	// the name presented in workload statuses to identify this resource.
@@ -100,10 +108,6 @@ type SupplyChainResource struct {
 
 	// TemplateRef identifies the template used to produce this resource
 	TemplateRef SupplyChainTemplateReference `json:"templateRef"`
-
-	// Selector is a field query over a workload or deliverable resource.
-	// +optional
-	Selector Selector `json:"selector,omitempty"`
 
 	// Params are a list of parameters to provide to the template in TemplateRef
 	// Template params do not have to be specified here, unless you want to
@@ -113,7 +117,7 @@ type SupplyChainResource struct {
 	//   $(params.<name>)$
 	Params []BlueprintParam `json:"params,omitempty"`
 
-	ResourceInputs `json:",inline"`
+	Selectable `json:",inline"`
 }
 
 type SupplyChainTemplateReference struct {

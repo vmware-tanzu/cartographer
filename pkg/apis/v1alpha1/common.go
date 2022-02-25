@@ -197,10 +197,7 @@ type TemplateOption struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Selector is a field query over a workload or deliverable resource.
-	Selector Selector `json:"selector,omitempty"`
-
-	ResourceInputs `json:",inline"`
+	Selectable `json:",inline"`
 }
 
 type Selector struct {

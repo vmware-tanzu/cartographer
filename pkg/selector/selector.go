@@ -22,7 +22,6 @@ import (
 )
 
 func Matches(req v1alpha1.FieldSelectorRequirement, context map[string]interface{}) (bool, error) {
-	fmt.Printf("\n\nLooking for %+v\n\nin %+v\n", req,context["workload"])
 	evaluator := eval.EvaluatorBuilder()
 	actualValue, err := evaluator.EvaluateJsonPath(req.Key, context)
 	if err != nil {

@@ -74,26 +74,24 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	var templateName string
 	var err error
 
-	matchingResourceLevel, err := r.matchAtResourceLevel(resource, outputs, supplyChainName)
-	if matchingResourceLevel {
-		// TODO not so great :D
+	matchingResourceLevel, err := r.matchSelectable(resource.Selectable, outputs, supplyChainName)
+	if !matchingResourceLevel {
+		log.V(logger.DEBUG).Info("unselected resource", "resource", resource)
+		return nil, nil, nil, nil
+	}
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if len(resource.TemplateRef.Options) > 0 {
+		matchedOption, err = r.findMatchingTemplateName(resource, supplyChainName, outputs)
+		templateName = matchedOption.Name
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if len(resource.TemplateRef.Options) > 0 {
-			matchedOption, err = r.findMatchingTemplateName(resource, supplyChainName, outputs)
-			templateName = matchedOption.Name
-			if err != nil {
-				return nil, nil, nil, err
-			}
-		} else {
-			templateName = resource.TemplateRef.Name
-		}
-	}
-
-	if templateName == "" {
-		log.V(logger.DEBUG).Info("unselected resource", "resource", resource)
-		return nil, nil, nil, nil
+	} else {
+		templateName = resource.TemplateRef.Name
 	}
 
 	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
@@ -246,7 +244,7 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 
 }
 
-func (r *resourceRealizer) matchAtResourceLevel(resource *v1alpha1.SupplyChainResource, outputs Outputs, supplyChainName string) (bool, error) {
+func (r *resourceRealizer) matchSelectable(resource v1alpha1.Selectable, outputs Outputs, supplyChainName string) (bool, error) {
 	matchedAllInputs := true
 	for _, input := range resource.Sources {
 		if !outputs.HasOutput(input.Resource) {
@@ -275,10 +273,9 @@ func (r *resourceRealizer) matchAtResourceLevel(resource *v1alpha1.SupplyChainRe
 		matched, err := selector.Matches(field, wkContext)
 		if err != nil {
 			if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
-				return false, ResolveResourceOptionError{
+				return false, ResolveSelectorError{
 					Err:             err,
 					SupplyChainName: supplyChainName,
-					Resource:        resource,
 					Key:             field.Key,
 				}
 			}
