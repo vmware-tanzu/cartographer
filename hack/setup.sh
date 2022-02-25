@@ -448,6 +448,7 @@ test_example_sc() {
         done
 
         log "testing '$test_name' FAILED :("
+        kubectl get configmaps -A -oyaml
         exit 1
 }
 
