@@ -48,7 +48,7 @@ To this:
         - name: git-template
           selector:
             matchFields:
-              - key: .spec.source.git       #< ========== just reference the spec
+              - key: spec.source.git       #< ========== just reference the spec
                 operator: Exists
 ```
 
