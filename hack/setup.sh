@@ -113,10 +113,10 @@ main() {
 
                 katacoda-scenario-1)
                         install_source_controller
-                        kubectl apply -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml
+                        install_kpack
                         start_registry
                         install_cert_manager
-                        kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/download/$CARTOGRAPHER_VERSION/cartographer.yaml
+                        install_cartographer_latest_release
                         ;;
 
                 *)
@@ -138,6 +138,10 @@ install_cartographer_package() {
                 kapp deploy -a cartographer --yes \
                         -f ./release/package \
                         -f-
+}
+
+install_cartographer_latest_release() {
+        kapp deploy -a cartographer --yes -f https://github.com/vmware-tanzu/cartographer/releases/download/$CARTOGRAPHER_VERSION/cartographer.yaml
 }
 
 show_usage_help() {
