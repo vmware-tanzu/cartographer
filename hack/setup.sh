@@ -113,7 +113,7 @@ main() {
 
                 katacoda-scenario-1)
                         install_source_controller
-                        install_kpack_on_katacoda
+                        install_kpack
                         start_registry
                         install_cert_manager
                         install_cartographer_latest_release
@@ -365,15 +365,6 @@ install_kpack() {
         ytt --ignore-unknown-comments \
                 -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION/release-$KPACK_VERSION.yaml |
-                kapp deploy --yes -a kpack -f-
-
-}
-
-install_kpack_on_katacoda() {
-        KPACK_VERSION_COMPATIBLE_WITH_KATACODA=0.5.0
-        ytt --ignore-unknown-comments \
-                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
-                -f https://github.com/pivotal/kpack/releases/download/v$KPACK_VERSION_COMPATIBLE_WITH_KATACODA/release-$KPACK_VERSION_COMPATIBLE_WITH_KATACODA.yaml |
                 kapp deploy --yes -a kpack -f-
 
 }
