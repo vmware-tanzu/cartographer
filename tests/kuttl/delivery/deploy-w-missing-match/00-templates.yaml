@@ -19,7 +19,7 @@ metadata:
   name: source---deploy-w-missing-match
 spec:
   urlPath: .spec.value.url
-  revisionPath: .spec.value.ref
+  revisionPath: .spec.value.ref.branch
 
   template:
     apiVersion: test.run/v1alpha1

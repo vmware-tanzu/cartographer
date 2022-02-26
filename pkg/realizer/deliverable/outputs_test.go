@@ -95,7 +95,7 @@ var _ = Describe("Outputs", func() {
 					inputs := outs.GenerateInputs(resource)
 					Expect(inputs.Configs).To(HaveLen(1))
 					Expect(inputs.Configs["config-ref"].Name).To(Equal("config-ref"))
-					Expect(inputs.Configs["config-ref"].Config).To(Equal("config12345"))
+					Expect(inputs.Configs["config-ref"].Config).To(BeEquivalentTo("config12345"))
 				})
 			})
 

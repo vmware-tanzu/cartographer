@@ -39,7 +39,7 @@ kind: ClusterSourceTemplate
 metadata:
   name: deliverable-list---templates-refer-to-workload
 spec:
-  urlPath: .spec.value
+  urlPath: .spec.value.env[0].value
   revisionPath: .metadata.name
   template:
     apiVersion: test.run/v1alpha1
@@ -56,7 +56,7 @@ kind: ClusterSourceTemplate
 metadata:
   name: deliverable-object---templates-refer-to-workload
 spec:
-  urlPath: .spec.value
+  urlPath: .spec.value.git.url
   revisionPath: .metadata.name
   template:
     apiVersion: test.run/v1alpha1

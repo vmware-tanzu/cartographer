@@ -60,14 +60,14 @@ var _ = Describe("Inputs", func() {
 	})
 
 	Describe("OnlyImage", func() {
-		It("is nil when there are no images", func() {
-			Expect(inputs.OnlyImage()).To(BeNil())
+		It("is an empty string when there are no images", func() {
+			Expect(inputs.OnlyImage()).To(BeEmpty())
 		})
 
 		Context("when there is only one image", func() {
-			var actualImage interface{}
+			var actualImage string
 			BeforeEach(func() {
-				actualImage = struct{ This string }{This: "actualImage could be *anything*, as this anonymous struct shows"}
+				actualImage = "actualImage must now be a string, as this test now demonstrates"
 				inputs.Images["one"] = templates.ImageInput{Name: "one", Image: actualImage}
 			})
 
@@ -82,21 +82,21 @@ var _ = Describe("Inputs", func() {
 				inputs.Images["deux"] = templates.ImageInput{Name: "deux", Image: "10"}
 			})
 
-			It("returns nil", func() {
-				Expect(inputs.OnlyImage()).To(BeNil())
+			It("returns an empty string", func() {
+				Expect(inputs.OnlyImage()).To(BeEmpty())
 			})
 		})
 	})
 
 	Describe("OnlyConfig", func() {
-		It("is nil when there are no configs", func() {
-			Expect(inputs.OnlyConfig()).To(BeNil())
+		It("is empty when there are no configs", func() {
+			Expect(inputs.OnlyConfig()).To(BeEmpty())
 		})
 
 		Context("when there is only one config", func() {
-			var actualConfig interface{}
+			var actualConfig string
 			BeforeEach(func() {
-				actualConfig = struct{ ArbitraryThingVeryMuch string }{ArbitraryThingVeryMuch: "much like images, it could be anything."}
+				actualConfig = "much like images, now must be a string"
 				inputs.Configs["one"] = templates.ConfigInput{Name: "one", Config: actualConfig}
 			})
 
@@ -111,8 +111,8 @@ var _ = Describe("Inputs", func() {
 				inputs.Configs["deux"] = templates.ConfigInput{Name: "deux", Config: "10"}
 			})
 
-			It("returns nil", func() {
-				Expect(inputs.OnlyConfig()).To(BeNil())
+			It("returns an empty string", func() {
+				Expect(inputs.OnlyConfig()).To(BeEmpty())
 			})
 		})
 	})
