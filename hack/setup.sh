@@ -112,6 +112,7 @@ main() {
                         ;;
 
                 katacoda-scenario-1)
+                        start_local_cluster
                         install_source_controller
                         install_kpack
                         start_registry
