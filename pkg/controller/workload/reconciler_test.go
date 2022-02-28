@@ -259,6 +259,14 @@ var _ = Describe("Reconciler", func() {
 			rlzr.RealizeReturns(realizedResources, nil)
 		})
 
+		It("updates the status of the workload with the realizedResources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+
+			Expect(repo.StatusUpdateCallCount()).To(Equal(1))
+			_, wk := repo.StatusUpdateArgsForCall(0)
+			Expect(wk.(*v1alpha1.Workload).Status.Resources).To(Equal(realizedResources))
+		})
+
 		It("dynamically creates a resource realizer", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
