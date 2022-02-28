@@ -17,9 +17,11 @@ package workload_test
 import (
 	"context"
 	"errors"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -31,13 +33,14 @@ import (
 
 var _ = Describe("Realize", func() {
 	var (
-		resourceRealizer *workloadfakes.FakeResourceRealizer
-		supplyChain      *v1alpha1.ClusterSupplyChain
-		resource1        v1alpha1.SupplyChainResource
-		resource2        v1alpha1.SupplyChainResource
-		rlzr             realizer.Realizer
-		template1        *v1alpha1.ClusterImageTemplate
-		template2        *v1alpha1.ClusterTemplate
+		resourceRealizer      *workloadfakes.FakeResourceRealizer
+		supplyChain           *v1alpha1.ClusterSupplyChain
+		resource1             v1alpha1.SupplyChainResource
+		resource2             v1alpha1.SupplyChainResource
+		rlzr                  realizer.Realizer
+		template1             *v1alpha1.ClusterImageTemplate
+		template2             *v1alpha1.ClusterTemplate
+		executedResourceOrder []string
 	)
 	BeforeEach(func() {
 		rlzr = realizer.NewRealizer()
@@ -48,6 +51,12 @@ var _ = Describe("Realize", func() {
 		}
 		resource2 = v1alpha1.SupplyChainResource{
 			Name: "resource2",
+			Images: []v1alpha1.ResourceReference{
+				{
+					Name:     "my-image",
+					Resource: "resource1",
+				},
+			},
 		}
 		template1 = &v1alpha1.ClusterImageTemplate{
 			TypeMeta: metav1.TypeMeta{},
@@ -67,12 +76,8 @@ var _ = Describe("Realize", func() {
 				Resources: []v1alpha1.SupplyChainResource{resource1, resource2},
 			},
 		}
-	})
 
-	It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
 		outputFromFirstResource := &templates.Output{Image: "whatever"}
-
-		var executedResourceOrder []string
 
 		resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 			executedResourceOrder = append(executedResourceOrder, resource.Name)
@@ -81,7 +86,9 @@ var _ = Describe("Realize", func() {
 				Expect(outputs).To(Equal(realizer.NewOutputs()))
 				template, err := templates.NewModelFromAPI(template1)
 				Expect(err).NotTo(HaveOccurred())
-				return template, &unstructured.Unstructured{}, outputFromFirstResource, nil
+				stampedObj := &unstructured.Unstructured{}
+				stampedObj.SetName("obj1")
+				return template, stampedObj, outputFromFirstResource, nil
 			}
 
 			if resource.Name == "resource2" {
@@ -91,9 +98,14 @@ var _ = Describe("Realize", func() {
 			}
 			template, err := templates.NewModelFromAPI(template2)
 			Expect(err).NotTo(HaveOccurred())
-			return template, &unstructured.Unstructured{}, &templates.Output{}, nil
+			stampedObj := &unstructured.Unstructured{}
+			stampedObj.SetName("obj2")
+			return template, stampedObj, &templates.Output{}, nil
 		})
 
+	})
+
+	It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
 		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -101,8 +113,26 @@ var _ = Describe("Realize", func() {
 
 		Expect(realizedResources).To(HaveLen(2))
 
+		Expect(realizedResources[0].Name).To(Equal(resource1.Name))
 		Expect(realizedResources[0].TemplateRef.Name).To(Equal(template1.Name))
+		Expect(realizedResources[0].StampedRef.Name).To(Equal("obj1"))
+		Expect(realizedResources[0].Inputs).To(BeNil())
+		Expect(len(realizedResources[0].Outputs)).To(Equal(1))
+		Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
+			Fields{
+				"Name":    Equal("image"),
+				"Preview": Equal("whatever"),
+				"Digest":  Equal("sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281"),
+			},
+		))
+		Expect(time.Since(realizedResources[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
+
+		Expect(realizedResources[1].Name).To(Equal(resource2.Name))
 		Expect(realizedResources[1].TemplateRef.Name).To(Equal(template2.Name))
+		Expect(realizedResources[1].StampedRef.Name).To(Equal("obj2"))
+		Expect(len(realizedResources[1].Inputs)).To(Equal(1))
+		Expect(realizedResources[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
+		Expect(realizedResources[1].Outputs).To(BeNil())
 	})
 
 	It("returns the first error encountered realizing a resource and continues to realize", func() {
@@ -119,4 +149,37 @@ var _ = Describe("Realize", func() {
 		Expect(realizedResources[0].StampedRef).To(BeNil())
 		Expect(realizedResources[1].TemplateRef.Name).To(Equal(template2.Name))
 	})
+
+	It("realizes each resource and does not update last transition time since the resource has not changed", func() {
+		previousTime := metav1.NewTime(time.Now())
+		previousResources := []v1alpha1.RealizedResource{
+			{
+				Name:        "resource1",
+				StampedRef:  nil,
+				TemplateRef: nil,
+				Inputs:      nil,
+				Outputs: []v1alpha1.Output{
+					{
+						Name:               "image",
+						Preview:            "whatever",
+						Digest:             "sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281",
+						LastTransitionTime: previousTime,
+					},
+				},
+			},
+		}
+		realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, previousResources)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(len(realizedResources[0].Outputs)).To(Equal(1))
+		Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
+			Fields{
+				"Name":    Equal("image"),
+				"Preview": Equal("whatever"),
+				"Digest":  Equal("sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281"),
+			},
+		))
+		Expect(realizedResources[0].Outputs[0].LastTransitionTime).To(Equal(previousTime))
+	})
+
 })

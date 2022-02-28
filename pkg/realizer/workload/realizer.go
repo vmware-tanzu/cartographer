@@ -18,7 +18,6 @@ package workload
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -92,12 +91,15 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 	}
 
 	var templateRef *corev1.ObjectReference
+	var outputs []v1alpha1.Output
 	if template != nil {
 		templateRef = &corev1.ObjectReference{
 			Kind:       template.GetKind(),
 			Name:       template.GetName(),
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
+
+		outputs = template.GenerateResourceOutput(output)
 	}
 
 	var stampedRef *corev1.ObjectReference
@@ -110,14 +112,13 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		}
 	}
 
-	outputs := template.GenerateResourceOutput(output)
 	currTime := metav1.NewTime(time.Now())
 	for j, out := range outputs {
 		outputs[j].LastTransitionTime = currTime
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resource.Name {
 				for _, previousOutput := range previousResource.Outputs {
-					if previousOutput.Name == out.Name && reflect.DeepEqual(previousOutput.Digest, out.Digest) {
+					if previousOutput.Name == out.Name && previousOutput.Digest == out.Digest {
 						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
 					}
 				}
