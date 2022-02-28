@@ -68,10 +68,11 @@ status:
         name: example-first---workload-status
       outputs:
         - name: url
-          value: "three"
+          preview: three
+          digest: sha256:8b5b9db0c13db24256c829aa364aa90c6d2eba318b9232a4ab9313b954d3555f
         - name: revision
-          value: "gaming"
-      observedGeneration: 0
+          preview: some over 200 character thing the player loves ...........................................................................................................................................youll see this
+          digest: sha256:05db35dba65a2679c5323c9f9731f13cd5fb85fc2a464e33831d1036398124b6
     - name: source-provider-second
       stampedRef:
         apiVersion: v1
@@ -83,10 +84,11 @@ status:
         name: example-second---workload-status
       outputs:
         - name: url
-          value: "5"
+          preview: "5"
+          digest: sha256:ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d
         - name: revision
-          value: "knitting"
-      observedGeneration: 0
+          preview: knitting
+          digest: sha256:dfc8d0dd82f3fba0293ceeefab71e174e4e2315cd2070adf27381003a3e534b9
     - name: built-image-provider
       stampedRef:
         apiVersion: v1
@@ -100,8 +102,8 @@ status:
         - name: source-provider-second
       outputs:
         - name: image
-          value: "knitting"
-      observedGeneration: 0
+          preview: knitting
+          digest: sha256:dfc8d0dd82f3fba0293ceeefab71e174e4e2315cd2070adf27381003a3e534b9
     - name: config
       stampedRef:
         apiVersion: v1
@@ -115,8 +117,8 @@ status:
         - name: built-image-provider
       outputs:
         - name: config
-          value: "knitting"
-      observedGeneration: 0
+          preview: knitting
+          digest: sha256:dfc8d0dd82f3fba0293ceeefab71e174e4e2315cd2070adf27381003a3e534b9
     - name: config-2
       stampedRef:
         apiVersion: v1
@@ -128,4 +130,3 @@ status:
         name: example-config---workload-status-2
       inputs:
         - name: config
-      observedGeneration: 0

@@ -92,15 +92,7 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 	}
 
 	var templateRef *corev1.ObjectReference
-	var outputs []v1alpha1.Output
-	var err error
 	if template != nil {
-		if output != nil {
-			outputs, err = template.GenerateResourceOutput(output)
-			if err != nil {
-				return v1alpha1.RealizedResource{}, err
-			}
-		}
 		templateRef = &corev1.ObjectReference{
 			Kind:       template.GetKind(),
 			Name:       template.GetName(),
@@ -108,22 +100,7 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		}
 	}
 
-	currTime := metav1.NewTime(time.Now())
-	for j, out := range outputs {
-		outputs[j].LastTransitionTime = currTime
-		for _, previousResource := range previousResources {
-			if previousResource.Name == resource.Name {
-				for _, previousOutput := range previousResource.Outputs {
-					if previousOutput.Name == out.Name && reflect.DeepEqual(previousOutput.Value, out.Value) {
-						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-					}
-				}
-			}
-		}
-	}
-
 	var stampedRef *corev1.ObjectReference
-	var observedGeneration int64
 	if stampedObject != nil {
 		stampedRef = &corev1.ObjectReference{
 			Kind:       stampedObject.GetKind(),
@@ -131,15 +108,28 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 			Name:       stampedObject.GetName(),
 			APIVersion: stampedObject.GetAPIVersion(),
 		}
-		observedGeneration = stampedObject.GetGeneration()
+	}
+
+	outputs := template.GenerateResourceOutput(output)
+	currTime := metav1.NewTime(time.Now())
+	for j, out := range outputs {
+		outputs[j].LastTransitionTime = currTime
+		for _, previousResource := range previousResources {
+			if previousResource.Name == resource.Name {
+				for _, previousOutput := range previousResource.Outputs {
+					if previousOutput.Name == out.Name && reflect.DeepEqual(previousOutput.Digest, out.Digest) {
+						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+					}
+				}
+			}
+		}
 	}
 
 	return v1alpha1.RealizedResource{
-		Name:               resource.Name,
-		StampedRef:         stampedRef,
-		TemplateRef:        templateRef,
-		Inputs:             inputs,
-		Outputs:            outputs,
-		ObservedGeneration: observedGeneration,
+		Name:        resource.Name,
+		StampedRef:  stampedRef,
+		TemplateRef: templateRef,
+		Inputs:      inputs,
+		Outputs:     outputs,
 	}, nil
 }

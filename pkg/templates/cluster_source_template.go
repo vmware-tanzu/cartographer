@@ -15,11 +15,11 @@
 package templates
 
 import (
-	"encoding/json"
+	"crypto/sha256"
 	"fmt"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -74,31 +74,29 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
-	url, err := json.Marshal(output.Source.URL)
-	if err != nil {
-		return nil, err
+func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
+	if output == nil {
+		return nil
 	}
 
-	revision, err := json.Marshal(output.Source.Revision)
-	if err != nil {
-		return nil, err
-	}
+	url := fmt.Sprintf("%v", output.Source.URL)
+	urlSHA := sha256.Sum256([]byte(url))
+
+	revision := fmt.Sprintf("%v", output.Source.Revision)
+	revisionSHA := sha256.Sum256([]byte(revision))
 
 	return []v1alpha1.Output{
 		{
-			Name: "url",
-			Value: apiextensionsv1.JSON{
-				Raw: url,
-			},
+			Name:    "url",
+			Preview: strings.ShortenString(url, 200),
+			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
 		},
 		{
-			Name: "revision",
-			Value: apiextensionsv1.JSON{
-				Raw: revision,
-			},
+			Name:    "revision",
+			Preview: strings.ShortenString(revision, 200),
+			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
 		},
-	}, nil
+	}
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

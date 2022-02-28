@@ -15,11 +15,11 @@
 package templates
 
 import (
-	"encoding/json"
+	"crypto/sha256"
 	"fmt"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -63,19 +63,21 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
-	config, err := json.Marshal(output.Config)
-	if err != nil {
-		return nil, err
+func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
+	if output == nil {
+		return nil
 	}
+
+	config := fmt.Sprintf("%v", output.Config)
+	configSHA := sha256.Sum256([]byte(config))
+
 	return []v1alpha1.Output{
 		{
-			Name: "config",
-			Value: apiextensionsv1.JSON{
-				Raw: config,
-			},
+			Name:    "config",
+			Preview: strings.ShortenString(config, 200),
+			Digest:  fmt.Sprintf("sha256:%x", configSHA),
 		},
-	}, nil
+	}
 }
 
 func (t *clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

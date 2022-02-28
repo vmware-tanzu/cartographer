@@ -25,7 +25,7 @@ spec:
       name: example-first-configmap
     data:
       player_initial_lives: "three"
-      player_loves: "gaming"
+      player_loves: "some over 200 character thing the player loves ...........................................................................................................................................youll see this you wont see me"
   urlPath: data.player_initial_lives
   revisionPath: data.player_loves
 
