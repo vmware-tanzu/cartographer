@@ -23,7 +23,7 @@ The [template switching RFC](https://github.com/vmware-tanzu/cartographer/pull/7
 [what-it-is]: #what-it-is
 
 ```yaml
-apiVersion: carto.run/v1alpha2                                 # <======== bump this
+apiVersion: carto.run/v1alpha2                                  # <======== v2 spec
 kind: ClusterSupplyChain
 metadata:
   name: supply-chain
@@ -31,9 +31,27 @@ spec:
   selector:
     matchLabels:                                                # <=========== move existing labels under this heading
       app.tanzu.vmware.com/workload-type: web
-    matchFields:                                                # <=========== add this
-      - { key: "spec.image", operation: exists }                # <=========== 
+    matchFields:                                                                             # <=========== add this
+      - { key: "spec.image", operation: exists }                                             # <=========== 
+    matchExpressions:                                                                        # <=========== add this
+    - { key: app.tanzu.vmware.com/workload-type, operator: In, values [web] }                # <===========
 ```
+
+
+```yaml
+apiVersion: carto.run/v1alpha1                                  # <======== v1 spec
+kind: ClusterSupplyChain
+metadata:
+  name: supply-chain
+spec:
+  selector:
+    app.tanzu.vmware.com/workload-type: web
+  selectorMatchFields:                                                                       # <=========== add this
+    - { key: "spec.image", operation: exists }                                               # <=========== 
+  selectorMatchExpressions:                                                                  # <=========== add this
+    - { key: app.tanzu.vmware.com/workload-type, operator: In, values [web] }                # <===========
+```
+
 
 # How it Works
 [how-it-works]: #how-it-works
@@ -82,14 +100,15 @@ This is a breaking change.
 [spec-changes]: #spec-changes
 
 ```yaml
-apiVersion: carto.run/v1alpha2                                  # <==== bump this
+apiVersion: carto.run/v1alpha1                                 # <======== v1 spec
 kind: ClusterSupplyChain
 metadata:
   name: supply-chain
 spec:
   selector:
-    matchLabels:                                                # <=========== move existing labels under this heading
-      app.tanzu.vmware.com/workload-type: web
-    matchFields:                                                # <=========== add this
-      - { key: "spec.image", operation: exists }                # <=========== 
+    app.tanzu.vmware.com/workload-type: web
+  selectorMatchFields:                                                                       # <=========== add this
+    - { key: "spec.image", operation: exists }                                               # <=========== 
+  selectorMatchExpressions:                                                                  # <=========== add this
+    - { key: app.tanzu.vmware.com/workload-type, operator: In, values [web] }                # <===========
 ```
