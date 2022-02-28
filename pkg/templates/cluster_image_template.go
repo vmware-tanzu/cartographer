@@ -17,8 +17,10 @@ package templates
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
+	"encoding/json"
 	"fmt"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -63,13 +65,19 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterImageTemplate) GenerateResourceOutput() []v1alpha1.Output {
+func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
+	image, err := json.Marshal(output.Image)
+	if err != nil {
+		return nil, err
+	}
 	return []v1alpha1.Output{
 		{
 			Name: "image",
-			Path: t.template.Spec.ImagePath,
+			Value: apiextensionsv1.JSON{
+				Raw: image,
+			},
 		},
-	}
+	}, nil
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

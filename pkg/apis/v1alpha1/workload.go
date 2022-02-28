@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -164,11 +165,12 @@ type WorkloadStatus struct {
 }
 
 type RealizedResource struct {
-	Name        string                  `json:"name"`
-	StampedRef  *corev1.ObjectReference `json:"stampedRef,omitempty"`
-	TemplateRef *corev1.ObjectReference `json:"templateRef,omitempty"`
-	Inputs      []Input                 `json:"inputs,omitempty"`
-	Outputs     []Output                `json:"outputs,omitempty"`
+	Name               string                  `json:"name"`
+	StampedRef         *corev1.ObjectReference `json:"stampedRef,omitempty"`
+	TemplateRef        *corev1.ObjectReference `json:"templateRef,omitempty"`
+	Inputs             []Input                 `json:"inputs,omitempty"`
+	Outputs            []Output                `json:"outputs,omitempty"`
+	ObservedGeneration int64                   `json:"observedGeneration"`
 }
 
 type Input struct {
@@ -176,8 +178,9 @@ type Input struct {
 }
 
 type Output struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+	Name               string               `json:"name"`
+	Value              apiextensionsv1.JSON `json:"value"`
+	LastTransitionTime metav1.Time          `json:"lastTransitionTime"`
 }
 
 // +kubebuilder:object:root=true

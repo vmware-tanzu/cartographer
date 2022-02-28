@@ -18,9 +18,12 @@ package workload
 
 import (
 	"context"
+	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -30,7 +33,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
 }
 
 type realizer struct{}
@@ -39,7 +42,7 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain) ([]v1alpha1.RealizedResource, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
@@ -64,7 +67,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResource, err := generateRealizedResource(resource, template, stampedObject, out)
+		realizedResource, err := generateRealizedResource(resource, template, stampedObject, out, previousResources)
 		if err != nil {
 			log.Error(err, "failed to generate realized resource data for stampedObject", "object", stampedObject)
 		}
@@ -76,7 +79,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return realizedResources, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output) (v1alpha1.RealizedResource, error) {
+func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) (v1alpha1.RealizedResource, error) {
 	var inputs []v1alpha1.Input
 	for _, source := range resource.Sources {
 		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
@@ -90,9 +93,13 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 
 	var templateRef *corev1.ObjectReference
 	var outputs []v1alpha1.Output
+	var err error
 	if template != nil {
 		if output != nil {
-			outputs = template.GenerateResourceOutput()
+			outputs, err = template.GenerateResourceOutput(output)
+			if err != nil {
+				return v1alpha1.RealizedResource{}, err
+			}
 		}
 		templateRef = &corev1.ObjectReference{
 			Kind:       template.GetKind(),
@@ -101,7 +108,22 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		}
 	}
 
+	currTime := metav1.NewTime(time.Now())
+	for j, out := range outputs {
+		outputs[j].LastTransitionTime = currTime
+		for _, previousResource := range previousResources {
+			if previousResource.Name == resource.Name {
+				for _, previousOutput := range previousResource.Outputs {
+					if previousOutput.Name == out.Name && reflect.DeepEqual(previousOutput.Value, out.Value) {
+						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+					}
+				}
+			}
+		}
+	}
+
 	var stampedRef *corev1.ObjectReference
+	var observedGeneration int64
 	if stampedObject != nil {
 		stampedRef = &corev1.ObjectReference{
 			Kind:       stampedObject.GetKind(),
@@ -109,13 +131,15 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 			Name:       stampedObject.GetName(),
 			APIVersion: stampedObject.GetAPIVersion(),
 		}
+		observedGeneration = stampedObject.GetGeneration()
 	}
 
 	return v1alpha1.RealizedResource{
-		Name:        resource.Name,
-		StampedRef:  stampedRef,
-		TemplateRef: templateRef,
-		Inputs:      inputs,
-		Outputs:     outputs,
+		Name:               resource.Name,
+		StampedRef:         stampedRef,
+		TemplateRef:        templateRef,
+		Inputs:             inputs,
+		Outputs:            outputs,
+		ObservedGeneration: observedGeneration,
 	}, nil
 }

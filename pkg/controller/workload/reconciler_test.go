@@ -263,7 +263,7 @@ var _ = Describe("Reconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _ := rlzr.RealizeArgsForCall(0)
+			_, resourceRealizer, _, _ := rlzr.RealizeArgsForCall(0)
 			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
