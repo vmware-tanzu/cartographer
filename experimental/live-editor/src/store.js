@@ -33,7 +33,17 @@ export const document = writable("---\n" +
     "    - name: source-provider\n" +
     "      templateRef:\n" +
     "        kind: ClusterSourceTemplate\n" +
-    "        name: source\n" +
+    "        options:\n" +
+    "          - name: from-git\n" +
+    "            selector:\n" +
+    "              matchFields:\n" +
+    "                - key: spec.source.git\n" +
+    "                  operator: Exists\n" +
+    "          - name: from-repo\n" +
+    "            selector:\n" +
+    "              matchFields:\n" +
+    "                - key: spec.source.image\n" +
+    "                  operator: Exists\n" +
     "\n" +
     "    - name: image-builder\n" +
     "      templateRef:\n" +
@@ -60,7 +70,8 @@ export const document = writable("---\n" +
     "        name: git-writer\n" +
     "      configs:\n" +
     "        - resource: config-provider\n" +
-    "          name: data\n"
+    "          name: data\n" +
+    "\n"
 );
 
 export const documentObject = derived(
