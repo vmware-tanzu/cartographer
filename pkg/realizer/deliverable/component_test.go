@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -80,9 +81,9 @@ var _ = Describe("Resource", func() {
 		}
 
 		builtClient = &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
+		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
 			secretForBuiltClient = secret
-			return builtClient, nil
+			return builtClient, nil, nil
 		}
 
 		repoCache = &repositoryfakes.FakeRepoCache{} //TODO: can we verify right cache used?

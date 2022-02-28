@@ -34,6 +34,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
@@ -47,12 +48,14 @@ var _ = Describe("Realizer", func() {
 		rlzr                realizer.Realizer
 		runnable            *v1alpha1.Runnable
 		createdUnstructured *unstructured.Unstructured
+		discoveryClient     *runnablefakes.FakeDiscoveryInterface
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		systemRepo = &repositoryfakes.FakeRepository{}
 		runnableRepo = &repositoryfakes.FakeRepository{}
+		discoveryClient = &runnablefakes.FakeDiscoveryInterface{}
 		rlzr = realizer.NewRealizer()
 
 		runnable = &v1alpha1.Runnable{
@@ -116,10 +119,19 @@ var _ = Describe("Realizer", func() {
 			}
 
 			runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{createdUnstructured}, nil)
+
+			discoveryClient.ServerResourcesForGroupVersionReturns(&metav1.APIResourceList{
+				APIResources: []metav1.APIResource{
+					{
+						Kind:       "kind-to-be-selected",
+						Namespaced: true,
+					},
+				},
+			}, nil)
 		})
 
 		It("stamps out the resource from the template", func() {
-			_, _, _ = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, _, _ = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 
 			Expect(systemRepo.GetRunTemplateCallCount()).To(Equal(1))
 			_, actualTemplate := systemRepo.GetRunTemplateArgsForCall(0)
@@ -150,17 +162,17 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("does not return an error", func() {
-			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("returns the outputs", func() {
-			_, outputs, _ := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, outputs, _ := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(outputs["myout"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
 		})
 
 		It("returns the stampedObject", func() {
-			stampedObject, _, _ := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			stampedObject, _, _ := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(stampedObject.Object["spec"]).To(Equal(map[string]interface{}{
 				"foo":   "is a string",
 				"value": nil,
@@ -241,7 +253,7 @@ var _ = Describe("Realizer", func() {
 				return nil
 			}
 
-			_, _, err = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, _, err = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(runnableRepo.DeleteCallCount()).To(Equal(2))
@@ -258,7 +270,7 @@ var _ = Describe("Realizer", func() {
 			})
 
 			It("returns ApplyStampedObjectError", func() {
-				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("some bad error"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ApplyStampedObjectError"))
@@ -271,7 +283,7 @@ var _ = Describe("Realizer", func() {
 			})
 
 			It("returns ListCreatedObjectsError", func() {
-				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("some list error"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ListCreatedObjectsError"))
@@ -290,36 +302,94 @@ var _ = Describe("Realizer", func() {
 				runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{{map[string]interface{}{"useful-value": "from-selected-object"}}}, nil)
 			})
 
-			It("makes the selected object available in the templating context", func() {
-				_, _, _ = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			Context("the selected object is namespaced", func() {
+				BeforeEach(func() {
+					discoveryClient.ServerResourcesForGroupVersionReturns(&metav1.APIResourceList{
+						APIResources: []metav1.APIResource{
+							{
+								Kind:       "kind-to-be-selected",
+								Namespaced: true,
+							},
+						},
+					}, nil)
+				})
 
-				Expect(runnableRepo.ListUnstructuredCallCount()).To(Equal(2))
-				_, gvk, namespace, labels := runnableRepo.ListUnstructuredArgsForCall(0)
+				It("makes the selected object available in the templating context", func() {
+					_, _, _ = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 
-				Expect(gvk.Version).To(Equal("apiversion-to-be-selected"))
-				Expect(gvk.Kind).To(Equal("kind-to-be-selected"))
-				Expect(labels).To(Equal(map[string]string{"expected-label": "expected-value"}))
-				Expect(namespace).To(Equal("my-important-ns"))
+					Expect(runnableRepo.ListUnstructuredCallCount()).To(Equal(2))
+					_, gvk, namespace, labels := runnableRepo.ListUnstructuredArgsForCall(0)
 
-				Expect(runnableRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
-				_, stamped, labels := runnableRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
-				Expect(stamped.Object).To(
-					MatchKeys(IgnoreExtras, Keys{
-						"metadata": MatchKeys(IgnoreExtras, Keys{
-							"generateName": Equal("my-stamped-resource-"),
-						}),
-						"apiVersion": Equal("test.run/v1alpha1"),
-						"kind":       Equal("TestObj"),
-						"spec": MatchKeys(IgnoreExtras, Keys{
-							"value": MatchKeys(IgnoreExtras, Keys{
-								"useful-value": Equal("from-selected-object"),
+					Expect(gvk.Version).To(Equal("apiversion-to-be-selected"))
+					Expect(gvk.Kind).To(Equal("kind-to-be-selected"))
+					Expect(labels).To(Equal(map[string]string{"expected-label": "expected-value"}))
+					Expect(namespace).To(Equal("my-important-ns"))
+
+					Expect(runnableRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+					_, stamped, labels := runnableRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+					Expect(stamped.Object).To(
+						MatchKeys(IgnoreExtras, Keys{
+							"metadata": MatchKeys(IgnoreExtras, Keys{
+								"generateName": Equal("my-stamped-resource-"),
+							}),
+							"apiVersion": Equal("test.run/v1alpha1"),
+							"kind":       Equal("TestObj"),
+							"spec": MatchKeys(IgnoreExtras, Keys{
+								"value": MatchKeys(IgnoreExtras, Keys{
+									"useful-value": Equal("from-selected-object"),
+								}),
 							}),
 						}),
-					}),
-				)
-				Expect(labels).To(Equal(map[string]string{
-					"carto.run/runnable-name": "my-runnable",
-				}))
+					)
+					Expect(labels).To(Equal(map[string]string{
+						"carto.run/runnable-name": "my-runnable",
+					}))
+				})
+			})
+
+			Context("the selected object is cluster scoped", func() {
+				BeforeEach(func() {
+					discoveryClient.ServerResourcesForGroupVersionReturns(&metav1.APIResourceList{
+						APIResources: []metav1.APIResource{
+							{
+								Kind:       "kind-to-be-selected",
+								Namespaced: false,
+							},
+						},
+					}, nil)
+				})
+
+				It("makes the selected object available in the templating context", func() {
+					_, _, _ = rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
+
+					Expect(runnableRepo.ListUnstructuredCallCount()).To(Equal(2))
+					_, gvk, namespace, labels := runnableRepo.ListUnstructuredArgsForCall(0)
+
+					Expect(gvk.Version).To(Equal("apiversion-to-be-selected"))
+					Expect(gvk.Kind).To(Equal("kind-to-be-selected"))
+					Expect(labels).To(Equal(map[string]string{"expected-label": "expected-value"}))
+					Expect(namespace).To(Equal(""))
+
+					Expect(runnableRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+					_, stamped, labels := runnableRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+					Expect(stamped.Object).To(
+						MatchKeys(IgnoreExtras, Keys{
+							"metadata": MatchKeys(IgnoreExtras, Keys{
+								"generateName": Equal("my-stamped-resource-"),
+							}),
+							"apiVersion": Equal("test.run/v1alpha1"),
+							"kind":       Equal("TestObj"),
+							"spec": MatchKeys(IgnoreExtras, Keys{
+								"value": MatchKeys(IgnoreExtras, Keys{
+									"useful-value": Equal("from-selected-object"),
+								}),
+							}),
+						}),
+					)
+					Expect(labels).To(Equal(map[string]string{
+						"carto.run/runnable-name": "my-runnable",
+					}))
+				})
 			})
 		})
 
@@ -332,11 +402,12 @@ var _ = Describe("Realizer", func() {
 					},
 					MatchingLabels: map[string]string{"expected-label": "expected-value"},
 				}
+
 				runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{{map[string]interface{}{}}, {map[string]interface{}{}}}, nil)
 			})
 
 			It("returns ResolveSelectorError", func() {
-				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: selector matched multiple objects`))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
@@ -356,7 +427,7 @@ var _ = Describe("Realizer", func() {
 			})
 
 			It("returns ResolveSelectorError", func() {
-				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: selector did not match any objects`))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
@@ -376,9 +447,9 @@ var _ = Describe("Realizer", func() {
 			})
 
 			It("returns ResolveSelectorError", func() {
-				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: failed to list objects matching selector [map[expected-label:expected-value]]: listing unstructured is hard`))
+				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: failed to list objects in namespace matching selector [map[expected-label:expected-value]]: listing unstructured is hard`))
 				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
 			})
 		})
@@ -416,7 +487,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("returns RetrieveOutputError", func() {
-			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [configmap] for run template [my-template]: failed to evaluate path [data.hasnot]: evaluate: failed to find results: hasnot is not found`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
@@ -434,7 +505,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("returns StampError", func() {
-			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`unable to stamp object for run template [my-template]: failed to unmarshal json resource template: unexpected end of JSON input`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.StampError"))
@@ -454,7 +525,7 @@ var _ = Describe("Realizer", func() {
 		})
 
 		It("returns GetRunTemplateError", func() {
-			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo)
+			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`unable to get run template [my-template]: Errol mcErrorFace`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.GetRunTemplateError"))

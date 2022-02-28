@@ -93,13 +93,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
-	runnableClient, err := r.ClientBuilder(secret)
+	runnableClient, discoveryClient, err := r.ClientBuilder(secret, true)
 	if err != nil {
 		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache))
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), discoveryClient)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {

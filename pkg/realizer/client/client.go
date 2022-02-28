@@ -18,25 +18,36 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/discovery"
+	memory "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ClientBuilder func(secret *corev1.Secret) (client.Client, error)
+type ClientBuilder func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error)
 
 func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
-	return func(secret *corev1.Secret) (client.Client, error) {
+	return func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
 		config, err := AddBearerToken(secret, restConfig)
 		if err != nil {
-			return nil, fmt.Errorf("adding bearer token: %w", err)
+			return nil, nil, fmt.Errorf("adding bearer token: %w", err)
 		}
 
 		cl, err := client.New(config, client.Options{})
 		if err != nil {
-			return nil, fmt.Errorf("creating client: %w", err)
+			return nil, nil, fmt.Errorf("creating client: %w", err)
 		}
 
-		return cl, nil
+		var cachedDiscoveryClient discovery.DiscoveryInterface
+		if needDiscovery {
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+			if err != nil {
+				return cl, nil, fmt.Errorf("failed to create discovery client: %w", err)
+			}
+			cachedDiscoveryClient = memory.NewMemCacheClient(discoveryClient)
+		}
+
+		return cl, cachedDiscoveryClient, nil
 	}
 }
 

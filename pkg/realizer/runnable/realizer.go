@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
@@ -33,7 +34,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository) (*unstructured.Unstructured, templates.Outputs, error)
+	Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, discoveryClient discovery.DiscoveryInterface) (*unstructured.Unstructured, templates.Outputs, error)
 }
 
 func NewRealizer() Realizer {
@@ -47,7 +48,8 @@ type TemplatingContext struct {
 	Selected map[string]interface{} `json:"selected"`
 }
 
-func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository) (*unstructured.Unstructured, templates.Outputs, error) {
+//counterfeiter:generate k8s.io/client-go/discovery.DiscoveryInterface
+func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, discoveryClient discovery.DiscoveryInterface) (*unstructured.Unstructured, templates.Outputs, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", runnable.Spec.RunTemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -69,7 +71,7 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		"carto.run/run-template-name": template.GetName(),
 	}
 
-	selected, err := resolveSelector(ctx, runnable.Spec.Selector, runnableRepo, runnable.GetNamespace())
+	selected, err := r.resolveSelector(ctx, runnable.Spec.Selector, runnableRepo, discoveryClient, runnable.GetNamespace())
 	if err != nil {
 		log.Error(err, "failed to resolve selector", "selector", runnable.Spec.Selector)
 		return nil, nil, ResolveSelectorError{
@@ -147,40 +149,40 @@ func (p *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	return stampedObject, outputs, nil
 }
 
-func resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository, namespace string) (map[string]interface{}, error) {
+func (r *runnableRealizer) resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository, discoveryClient discovery.DiscoveryInterface, namespace string) (map[string]interface{}, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	if selector == nil {
 		return nil, nil
 	}
 
-	results, err := repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), namespace, selector.MatchingLabels)
+	apiResourceList, err := discoveryClient.ServerResourcesForGroupVersion(selector.Resource.APIVersion)
 	if err != nil {
-		log.Error(err, "failed to list objects matching selector", "selector", selector.MatchingLabels)
-		return nil, fmt.Errorf("failed to list objects matching selector [%+v]: %w", selector.MatchingLabels, err)
+		log.Error(err, "failed to list server api resources")
+		return nil, fmt.Errorf("failed to list server api resources: %w", err)
 	}
 
-	if len(results) == 0 {
-		log.V(logger.DEBUG).Info("selector did not match any objects, checking resolveClusterScopedSelector")
-		return resolveClusterScopedSelector(ctx, selector, repository)
-	} else if len(results) > 1 {
-		log.V(logger.DEBUG).Info("selector matched multiple objects")
-		return nil, fmt.Errorf("selector matched multiple objects")
+	var namespaced bool
+	for _, apiResource := range apiResourceList.APIResources {
+		if apiResource.Kind == selector.Resource.Kind {
+			namespaced = apiResource.Namespaced
+			break
+		}
 	}
-	return results[0].Object, nil
-}
 
-func resolveClusterScopedSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository) (map[string]interface{}, error) {
-	log := logr.FromContextOrDiscard(ctx)
-
-	queryObj := &unstructured.Unstructured{}
-	queryObj.SetGroupVersionKind(schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind))
-	queryObj.SetLabels(selector.MatchingLabels)
-
-	results, err := repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), "", selector.MatchingLabels)
-	if err != nil {
-		log.Error(err, "failed to list objects matching selector", "selector", selector.MatchingLabels)
-		return nil, fmt.Errorf("failed to list objects matching selector [%+v]: %w", selector.MatchingLabels, err)
+	var results []*unstructured.Unstructured
+	if namespaced {
+		results, err = repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), namespace, selector.MatchingLabels)
+		if err != nil {
+			log.Error(err, "failed to list objects in namespace matching selector", "selector", selector.MatchingLabels)
+			return nil, fmt.Errorf("failed to list objects in namespace matching selector [%+v]: %w", selector.MatchingLabels, err)
+		}
+	} else {
+		results, err = repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), "", selector.MatchingLabels)
+		if err != nil {
+			log.Error(err, "failed to list objects at cluster scope matching selector", "selector", selector.MatchingLabels)
+			return nil, fmt.Errorf("failed to list objects at cluster scope matching selector [%+v]: %w", selector.MatchingLabels, err)
+		}
 	}
 
 	if len(results) == 0 {

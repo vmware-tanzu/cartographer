@@ -49,7 +49,7 @@ type ResourceRealizerBuilder func(secret *corev1.Secret, deliverable *v1alpha1.D
 
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
-		client, err := clientBuilder(secret)
+		client, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
