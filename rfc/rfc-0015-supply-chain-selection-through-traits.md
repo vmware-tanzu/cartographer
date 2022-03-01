@@ -7,7 +7,6 @@ A mechanism to allow a cluster to have multiple Supply Chains declared
 1. With similar purposes (or where one extends the behaviour of another)
 2. That will match the developer's requirements without the developer needing to understand naming permutations.
 
-
 ```gherkin
 Given Supply Chains that represent permutations of a behaviour tree
 When A developer annotates their workload to select for a permutation
@@ -31,6 +30,9 @@ Examples of app characteristics that might make up a permutation:
 
 * `scan`:
     * `security`: the developer wants an image scanner to run across their code.
+
+**Note:** we do not recommend letting developers opt out of security scans. We're using it
+here purely for demonstration purposes.
 
 The permutations, if using a single selector would be vast:
 
@@ -126,33 +128,16 @@ Workloads:
     ```
 
 where the rule is:
-A workload will only be selected by (in priority order) 
-   1. a perfect match
-   2. an over-match which does not match another supply chain more perfectly
+
+1. A workload is selected by the supply chain that matches ALL label selectors.
+2. Where a workload matches more than one supply chain, the supply chain with the larger list
+   of matched labels wins
+3. Where there is multiple supply chains with the largest number of matches, an error is reported
 
 ### 2. Selecting on fields
 
-In the "Characteristics" solution, it's assumed that a workload with `workload/input: source` would have the following 
-snippet:
-
-```yaml
-spec:
-  source:
-    git:
-      url: https://github.com/spring-projects/spring-petclinic.git
-      ref:
-        branch: main
-
-```
-
-and `workload/input: image` would have:
-```yaml
-spec:
-  image: example.com/my/image
-```
-
-Selectors that allow us to match a Supply Chain against field presence (eg: `spec.source.git`) might be less redundant. 
-This could be a combined solution, that is, Characteristics and Field-Selectors are not exclusive.
+This option is now proposed in [this RFC](https://github.com/vmware-tanzu/cartographer/pull/591) (to complement
+selecting on labels as proposed above).
 
 ## Cross References and Prior Art
 
