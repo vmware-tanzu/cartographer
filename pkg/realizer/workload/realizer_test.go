@@ -181,5 +181,4 @@ var _ = Describe("Realize", func() {
 		))
 		Expect(realizedResources[0].Outputs[0].LastTransitionTime).To(Equal(previousTime))
 	})
-
 })

@@ -14,7 +14,7 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: Workload
+kind: Deliverable
 metadata:
   name: petclinic
   labels:

@@ -159,6 +159,7 @@ spec:
                           - ClusterSourceTemplate
                           - ClusterDeploymentTemplate
                           - ClusterTemplate
+                          - ClusterConfigTemplate
                           type: string
                         name:
                           description: Name of the template to apply

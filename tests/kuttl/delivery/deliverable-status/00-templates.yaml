@@ -48,22 +48,6 @@ spec:
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: ClusterImageTemplate
-metadata:
-  name: example-image---deliverable-status
-spec:
-  template:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: example-image-configmap
-    data:
-      player_current_lives: $(sources.solo-source-provider.url)$
-      some_other_info: $(source.revision)$
-  imagePath: data.some_other_info
-
----
-apiVersion: carto.run/v1alpha1
 kind: ClusterConfigTemplate
 metadata:
   name: example-config---deliverable-status-1
@@ -74,7 +58,7 @@ spec:
     metadata:
       name: example-config-configmap
     data:
-      favorite_color: $(image)$
+      favorite_color: $(source.url)$
   configPath: data.favorite_color
 
 ---

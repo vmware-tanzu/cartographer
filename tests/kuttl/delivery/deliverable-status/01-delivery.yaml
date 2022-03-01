@@ -14,7 +14,7 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
+kind: ClusterDelivery
 metadata:
   name: responsible-ops---deliverable-status
 spec:
@@ -31,20 +31,12 @@ spec:
         kind: ClusterSourceTemplate
         name: example-second---deliverable-status
 
-    - name: built-image-provider
-      templateRef:
-        kind: ClusterImageTemplate
-        name: example-image---deliverable-status
-      sources:
-        - resource: source-provider-second
-          name: solo-source-provider
-
     - name: config
       templateRef:
         kind: ClusterConfigTemplate
         name: example-config---deliverable-status-1
-      images:
-        - resource: built-image-provider
+      sources:
+        - resource: source-provider-second
           name: solo-image-provider
 
     - name: config-2

@@ -40,6 +40,7 @@ var ValidDeliveryTemplates = []client.Object{
 	&ClusterSourceTemplate{},
 	&ClusterDeploymentTemplate{},
 	&ClusterTemplate{},
+	&ClusterConfigTemplate{},
 }
 
 // +kubebuilder:object:root=true
@@ -135,7 +136,7 @@ type DeliveryResource struct {
 
 type DeliveryTemplateReference struct {
 	// Kind of the template to apply
-	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
+	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
 	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1

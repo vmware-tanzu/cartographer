@@ -17,6 +17,8 @@ package v1alpha1
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -190,4 +192,23 @@ type FieldSelectorRequirement struct {
 	// the values array must be non-empty. If the operator is Exists or DoesNotExist,
 	// the values array must be empty.
 	Values []string `json:"values,omitempty"`
+}
+
+type RealizedResource struct {
+	Name        string                  `json:"name"`
+	StampedRef  *corev1.ObjectReference `json:"stampedRef,omitempty"`
+	TemplateRef *corev1.ObjectReference `json:"templateRef,omitempty"`
+	Inputs      []Input                 `json:"inputs,omitempty"`
+	Outputs     []Output                `json:"outputs,omitempty"`
+}
+
+type Input struct {
+	Name string `json:"name"`
+}
+
+type Output struct {
+	Name               string      `json:"name"`
+	Preview            string      `json:"preview"`
+	Digest             string      `json:"digest"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 }

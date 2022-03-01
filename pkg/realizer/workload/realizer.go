@@ -66,11 +66,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResource, err := generateRealizedResource(resource, template, stampedObject, out, previousResources)
-		if err != nil {
-			log.Error(err, "failed to generate realized resource data for stampedObject", "object", stampedObject)
-		}
-		realizedResources = append(realizedResources, realizedResource)
+		realizedResources = append(realizedResources, generateRealizedResource(resource, template, stampedObject, out, previousResources))
 
 		outs.AddOutput(resource.Name, out)
 	}
@@ -78,7 +74,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return realizedResources, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) (v1alpha1.RealizedResource, error) {
+func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
 	var inputs []v1alpha1.Input
 	for _, source := range resource.Sources {
 		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
@@ -132,5 +128,5 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		TemplateRef: templateRef,
 		Inputs:      inputs,
 		Outputs:     outputs,
-	}, nil
+	}
 }

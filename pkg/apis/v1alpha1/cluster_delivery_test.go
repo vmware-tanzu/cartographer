@@ -510,12 +510,13 @@ var _ = Describe("Delivery Validation", func() {
 
 var _ = Describe("DeliveryTemplateReference", func() {
 	It("has valid references", func() {
-		Expect(v1alpha1.ValidDeliveryTemplates).To(HaveLen(3))
+		Expect(v1alpha1.ValidDeliveryTemplates).To(HaveLen(4))
 
 		Expect(v1alpha1.ValidDeliveryTemplates).To(ContainElements(
 			&v1alpha1.ClusterSourceTemplate{},
 			&v1alpha1.ClusterDeploymentTemplate{},
 			&v1alpha1.ClusterTemplate{},
+			&v1alpha1.ClusterConfigTemplate{},
 		))
 	})
 

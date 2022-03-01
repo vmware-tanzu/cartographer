@@ -64,7 +64,7 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 }
 
 func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
-	if output == nil {
+	if output == nil || output.Config == nil {
 		return nil
 	}
 

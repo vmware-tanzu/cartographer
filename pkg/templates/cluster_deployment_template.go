@@ -15,7 +15,10 @@
 package templates
 
 import (
+	"crypto/sha256"
 	"fmt"
+
+	"k8s.io/utils/strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -67,8 +70,29 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 	return output, nil
 }
 
-func (t *clusterDeploymentTemplate) GenerateResourceOutput(_ *Output) []v1alpha1.Output {
-	return nil
+func (t *clusterDeploymentTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
+	if output == nil || output.Source == nil {
+		return nil
+	}
+
+	url := fmt.Sprintf("%v", output.Source.URL)
+	urlSHA := sha256.Sum256([]byte(url))
+
+	revision := fmt.Sprintf("%v", output.Source.Revision)
+	revisionSHA := sha256.Sum256([]byte(revision))
+
+	return []v1alpha1.Output{
+		{
+			Name:    "url",
+			Preview: strings.ShortenString(url, 200),
+			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
+		},
+		{
+			Name:    "revision",
+			Preview: strings.ShortenString(revision, 200),
+			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
+		},
+	}
 }
 
 func (t *clusterDeploymentTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

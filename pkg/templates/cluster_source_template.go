@@ -75,7 +75,7 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 }
 
 func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
-	if output == nil {
+	if output == nil || output.Source == nil {
 		return nil
 	}
 

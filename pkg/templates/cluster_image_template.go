@@ -66,7 +66,7 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 }
 
 func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
-	if output == nil {
+	if output == nil || output.Image == nil {
 		return nil
 	}
 
