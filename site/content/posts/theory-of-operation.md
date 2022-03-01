@@ -40,7 +40,7 @@ location in `spec.url` and tells you where the internally hosted URL is at `stat
 
 | Important Definitions                                                                     |
 |-------------------------------------------------------------------------------------------|
-| A changing value (usually in `status`) is an **output**.                                  |
+| A changing value (usually in `status`) is a potential **output**.                         |
 | The **output** is a **level trigger**. We'll explain shortly.                             |
 | **Inputs** to a resource come in the form of **fields in the spec**                       |  
 | **Inputs** can change, causing an eventual **change in the output**                       |
@@ -90,7 +90,6 @@ Let's look at a typical template:
 | Definitions                                                                                                                                                                           |
 |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Supply Chains represent a directed, acyclic graph ([DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph)) of the templates used to create the resources that fulfill your needs. |
-                                                                                                                                                                  |
 
 # Workloads
 
