@@ -35,11 +35,11 @@ Blueprints consist of:
 
 
 #### templateRef
-templateRef consists of a reference to a Template in one of two ways:
+`templateRef` consists of a reference to a Template in one of two ways:
 * kind and name (static), or
 * kind and a list of options (dynamic)
 
-If there is only one option for the template, you can directly refer to the template without a selector. For example:
+If there is only one option for the template, you can directly refer to the template by name. For example:
 ```yaml
 templateRef:
   kind: ClusterSourceTemplate
@@ -63,10 +63,12 @@ templateRef:
           operator: Exists
 ```
 
-The selector currently only supports matchFields. matchFields is a list of template selector requirements. 
-Valid operators are In, NotIn, Exists, and DoesNotExist.
+The selector currently only supports `matchFields`. `matchFields` is a list of template selector requirements. 
+Valid operators are `In`, `NotIn`, `Exists`, and `DoesNotExist`.
 The values set must be non-empty in the case of In and NotIn. 
-All the requirements are ANDded together -- they must all be satisfied in order to match.
+All the requirements are ANDed together -- they must all be satisfied in order to match.
+
+This process is similar to [set-based requirements in Kubernetes resources](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
 
 
 ### Templates
@@ -130,7 +132,7 @@ this new image and update downstream resources.
 
 When Cartographer reconciles an owner, each resource in the matching blueprint is applied:
 
-0. **Determine Template**: @TODO - Can we skip this?
+0. **Determine Template**: If options are present, resolve selector to find matching template. Otherwise, use template name specified. See [templateRef](#templateRef).
 1. **Generate Inputs**: Using the **blueprint resource's** `inputs` as a reference, select outputs from previously applied **Kubernetes resources**
 2. **Generate Params**: Using the [Parameter Hierarchy](architecture.md#parameter-hierarchy), generate parameter values   
 3. **Generate and apply resource spec**: Apply the result of interpolating `spec.template` (or `spec.ytt`), **inputs**, **params** and the **owner spec**. 
