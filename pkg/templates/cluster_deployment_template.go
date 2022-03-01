@@ -17,13 +17,10 @@ package templates
 import (
 	"crypto/sha256"
 	"fmt"
-
-	"k8s.io/utils/strings"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 )
 
 type clusterDeploymentTemplate struct {
