@@ -45,7 +45,7 @@
 
 1. Grab the schema with:
    ```
-   cat config/crd/bases/carto.run_clustersupplychains.yaml | yq '.spec.versions[] | select(.name="v1alpha1") | .schema.openAPIV3Schema'
+   cat ../../config/crd/bases/carto.run_clustersupplychains.yaml | yq '.spec.versions[] | select(.name="v1alpha1") | .schema.openAPIV3Schema'
    ```
 2. paste into [`./hack/schema.js`](./hack/schema.js)
 3. then run 
@@ -53,7 +53,7 @@
    ./hack/schema.js  | pbcopy
    ```
 
-4. and paste final schema into [`./src/main.js`](./src/main.js)
+4. and paste final schema into [`./src/lib/monaco/schema.js`](./src/lib/monaco/schema.js)
 
 
 ## Install/Update blog post
