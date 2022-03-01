@@ -67,6 +67,7 @@ status:
     - name:                  # string
       digest:                # string
       path:                  # string
+      preview:               # string (max 200 characters)
       lastTransitionTime:    # metav1.Time
 ```
 
@@ -91,10 +92,12 @@ status:
     - name: url
       digest: sha256:0c20a75353e12f51e4e7f42525d2a0f135b9dacea1648406fd90dac76f46e27c
       path: .status.artifact.url
+      preview: http://source-controller.flux-system.svc.cluster.local./gitrepository/default/my-workload/3d42c19a618bb8fc13f72178b8b5e214a2f989c4.tar.gz
       lastTransitionTime: "2022-02-16T03:29:52Z"
     - name: revision
       digest: sha256:76004630fc3135b24df7d411182476d9324e091975f7ef15137fc4c25acd5056
       path: .status.artifact.revision
+      preview: main/3d42c19a618bb8fc13f72178b8b5e214a2f989c4
       lastTransitionTime: "2022-02-16T03:29:52Z"
   - name: image-builder
     stampedRef:
@@ -112,6 +115,7 @@ status:
     - name: image
       digest: sha256:eeedc5e676261368af5f5ebd6c66d3f853c7deff4cb2966a0621f8f546d77a42
       path: .status.latestImage
+      preview: registry.example/supply-chain/my-workload@sha256:68f8e8fc6e8ede7a411db9182cd695eac7b3e7e19e4ff9dcb9ba21205c135697
       lastTransitionTime: "2022-02-16T03:23:37Z"
   - name: deployer
     stampedRef:
@@ -139,6 +143,7 @@ status:
 - `.status.resources[*].outputs[*].name` the name of the output. Output names are fixed and defined by the template type.
 - `.status.resources[*].outputs[*].digest` sha256sum of the raw output value.
 - `.status.resources[*].outputs[*].path` JSON Path to resolve the actual value from the stamped resource as defined by the template for the output.
+- `.status.resources[*].outputs[*].preview` short (up to 200 characters), human friendly representation of the value.
 - `.status.resources[*].outputs[*].lastTransitionTime` time of the most recent observed change of value. this is not the last time the value observed. This value is helpful to know if a supply chain is progressing. As this field is the result of observation of an edge triggered change, it should not be relied upon when accuracy matters. This is the same behavior as the lastTransitionTime field within a Condition.
 
 In the future, additional information about particular resources may be added. Like an indication of health with an error message when unhealthy. Support is not included in this RFC as it will require additional support within the template to know how to interpret the health of a resource and should be defined in a separate RFC.
