@@ -174,7 +174,8 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 		matchedAllFields := true
 		for _, field := range option.Selector.MatchFields {
 			wkContext := map[string]interface{}{
-				"workload": r.workload,
+				"spec":     r.workload.Spec,
+				"metadata": r.workload.ObjectMeta,
 			}
 			matched, err := selector.Matches(field, wkContext)
 			if err != nil {

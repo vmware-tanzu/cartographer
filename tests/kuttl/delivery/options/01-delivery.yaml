@@ -27,10 +27,10 @@ spec:
         - name: git-template---options-delivery
           selector:
             matchFields:
-              - key: deliverable.spec.source.git
+              - key: spec.source.git
                 operator: Exists
         - name: imgpkg-bundle-template---options-delivery
           selector:
             matchFields:
-              - key: deliverable.spec.source.image
+              - key: spec.source.image
                 operator: Exists

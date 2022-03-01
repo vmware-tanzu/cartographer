@@ -428,7 +428,7 @@ var _ = Describe("Resource", func() {
 								Selector: v1alpha1.Selector{
 									MatchFields: []v1alpha1.FieldSelectorRequirement{
 										{
-											Key:      "workload.spec.source.image",
+											Key:      "spec.source.image",
 											Operator: "Exists",
 										},
 									},
@@ -439,7 +439,7 @@ var _ = Describe("Resource", func() {
 								Selector: v1alpha1.Selector{
 									MatchFields: []v1alpha1.FieldSelectorRequirement{
 										{
-											Key:      "workload.spec.source.git.url",
+											Key:      "spec.source.git.url",
 											Operator: "Exists",
 										},
 									},
@@ -502,7 +502,7 @@ var _ = Describe("Resource", func() {
 
 			When("more than one option matches", func() {
 				It("returns a TemplateOptionsMatchError", func() {
-					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = "workload.spec.source.git.ref.branch"
+					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = "spec.source.git.ref.branch"
 
 					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 					Expect(template).To(BeNil())
@@ -515,8 +515,8 @@ var _ = Describe("Resource", func() {
 
 			When("zero options match", func() {
 				It("returns a TemplateOptionsMatchError", func() {
-					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = "workload.spec.source.image"
-					resource.TemplateRef.Options[1].Selector.MatchFields[0].Key = "workload.spec.source.subPath"
+					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = "spec.source.image"
+					resource.TemplateRef.Options[1].Selector.MatchFields[0].Key = "spec.source.subPath"
 
 					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 
@@ -529,21 +529,21 @@ var _ = Describe("Resource", func() {
 
 			When("key does not exist in the spec", func() {
 				It("returns a ResolveTemplateOptionError", func() {
-					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = `workload.spec.env[?(@.name=="some-name")].bad`
+					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
 
 					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 
 					Expect(template).To(BeNil())
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(`key [workload.spec.env[?(@.name=="some-name")].bad] is invalid in template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]: evaluate: failed to find results: bad is not found`))
+					Expect(err.Error()).To(ContainSubstring(`key [spec.env[?(@.name=="some-name")].bad] is invalid in template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]: evaluate: failed to find results: bad is not found`))
 				})
 			})
 
 			When("one option matches with multiple fields", func() {
 				It("finds the correct template", func() {
 					resource.TemplateRef.Options[0].Selector.MatchFields = append(resource.TemplateRef.Options[0].Selector.MatchFields, v1alpha1.FieldSelectorRequirement{
-						Key:      "workload.spec.source.git.ref.branch",
+						Key:      "spec.source.git.ref.branch",
 						Operator: "Exists",
 					})
 

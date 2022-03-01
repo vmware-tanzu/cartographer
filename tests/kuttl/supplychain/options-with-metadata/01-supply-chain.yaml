@@ -13,25 +13,23 @@
 # limitations under the License.
 
 apiVersion: carto.run/v1alpha1
-kind: ClusterDelivery
+kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---options-with-values-delivery
+  name: responsible-ops---options-with-metadata
 spec:
   selector:
-    integration-test: "options-with-values-delivery"
+    integration-test: "options-with-metadata"
   resources:
     - name: source-provider
       templateRef:
         kind: ClusterSourceTemplate
         options:
-        - name: git-template---options-with-values-delivery
+        - name: git-template---options-with-metadata
           selector:
             matchFields:
-              - key: spec.source.git.url
-                operator: NotIn
-                values:
-                  -  "https://example.com"
-        - name: imgpkg-bundle-template---options-with-values-delivery
+              - key: metadata.labels.has-tests
+                operator: Exists
+        - name: imgpkg-bundle-template---options-with-metadata
           selector:
             matchFields:
               - key: spec.source.image

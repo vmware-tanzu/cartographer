@@ -13,24 +13,22 @@
 # limitations under the License.
 
 apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
+kind: Deliverable
 metadata:
-  name: responsible-ops---options
+  name: petclinic
+  labels:
+    integration-test: "options-delivery-with-metadata"
+    has-tests: "true"
 spec:
-  selector:
-    integration-test: "options"
-  resources:
-    - name: source-provider
-      templateRef:
-        kind: ClusterSourceTemplate
-        options:
-        - name: git-template---options
-          selector:
-            matchFields:
-              - key: spec.source.git
-                operator: Exists
-        - name: imgpkg-bundle-template---options
-          selector:
-            matchFields:
-              - key: spec.source.image
-                operator: Exists
+  serviceAccountName: my-service-account
+  params:
+    - name: waciuma-com/quality
+      value: beta
+    - name: waciuma-com/java-version
+      value: 11
+
+  source:
+    git:
+      url: https://github.com/spring-projects/spring-petclinic.git
+      ref:
+        branch: main
