@@ -17,14 +17,13 @@ package supplychain
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -33,18 +32,14 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 )
 
-type Timer interface {
-	Now() metav1.Time
-}
-
-type Reconciler struct {
+type SourceReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
 	DependencyTracker       dependency.DependencyTracker
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *SourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
@@ -52,11 +47,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log = log.WithValues("supply chain", req.NamespacedName)
 	ctx = logr.NewContext(ctx, log)
 
-	supplyChain, err := r.Repo.GetSupplyChain(ctx, req.Name)
+	supplyChainObject, err := r.Repo.GetTypedSupplyChain(ctx, req.Name, "ClusterSourceSupplyChain")
 	if err != nil {
 		log.Error(err, "failed to get supply chain")
 		return ctrl.Result{}, fmt.Errorf("failed to get supply chain [%s]: %w", req.NamespacedName, err)
 	}
+
+	supplyChain := supplyChainObject.(*v1alpha1.ClusterSourceSupplyChain)
 
 	if supplyChain == nil {
 		log.Info("supply chain no longer exists")
@@ -70,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.completeReconciliation(ctx, supplyChain, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
+func (r *SourceReconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSourceSupplyChain, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var changed bool
@@ -97,7 +94,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain) error {
+func (r *SourceReconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSourceSupplyChain) error {
 	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
@@ -138,7 +135,7 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 	return nil
 }
 
-func (r *Reconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, templateName, templateKind string) (bool, error) {
+func (r *SourceReconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSourceSupplyChain, templateName, templateKind string) (bool, error) {
 	var template client.Object
 	var err error
 

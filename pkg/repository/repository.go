@@ -41,11 +41,12 @@ type Repository interface {
 	EnsureMutableObjectExistsOnCluster(ctx context.Context, obj *unstructured.Unstructured) error
 	GetTemplate(ctx context.Context, name, kind string) (client.Object, error)
 	GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
-	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error)
+	GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]client.Object, error)
 	GetDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) ([]*v1alpha1.ClusterDelivery, error)
 	GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error)
 	GetDeliverable(ctx context.Context, name string, namespace string) (*v1alpha1.Deliverable, error)
 	GetSupplyChain(ctx context.Context, name string) (*v1alpha1.ClusterSupplyChain, error)
+	GetTypedSupplyChain(ctx context.Context, name, kind string) (client.Object, error)
 	StatusUpdate(ctx context.Context, object client.Object) error
 	GetRunnable(ctx context.Context, name string, namespace string) (*v1alpha1.Runnable, error)
 	GetUnstructured(ctx context.Context, obj *unstructured.Unstructured) (*unstructured.Unstructured, error)
@@ -317,7 +318,7 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 	return nil
 }
 
-func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]*v1alpha1.ClusterSupplyChain, error) {
+func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) ([]client.Object, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetSupplyChainsForWorkload")
 
@@ -327,17 +328,28 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
+	list2 := &v1alpha1.ClusterSourceSupplyChainList{}
+	if err := r.cl.List(ctx, list2); err != nil {
+		log.Error(err, "unable to list source supply chains from api server")
+		return nil, fmt.Errorf("unable to list source supply chains from api server: %w", err)
+	}
+
 	var selectorGetters []SelectorGetter
 	for _, item := range list.Items {
 		item := item
 		selectorGetters = append(selectorGetters, &item)
 	}
 
-	var supplyChains []*v1alpha1.ClusterSupplyChain
+	for _, item := range list2.Items {
+		item := item
+		selectorGetters = append(selectorGetters, &item)
+	}
+
+	var supplyChains []client.Object
 	for _, matchingObject := range BestLabelMatches(workload, selectorGetters) {
 		log.V(logger.DEBUG).Info("supply chain matched workload",
 			"supply chain", matchingObject)
-		supplyChains = append(supplyChains, matchingObject.(*v1alpha1.ClusterSupplyChain))
+		supplyChains = append(supplyChains, matchingObject.(client.Object))
 	}
 
 	return supplyChains, nil
@@ -477,6 +489,30 @@ func (r *repository) GetSupplyChain(ctx context.Context, name string) (*v1alpha1
 	}
 
 	return &supplyChain, nil
+}
+
+func (r *repository) GetTypedSupplyChain(ctx context.Context, name, kind string) (client.Object, error) {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(logger.DEBUG).Info("GetTypedSupplyChain")
+
+	apiSupplyChain, err := v1alpha1.GetAPISupplyChain(kind)
+	if err != nil {
+		log.Error(err, "unable to get api supply chain")
+		return nil, fmt.Errorf("unable to get api supply chain [%s/%s]: %w", kind, name, err)
+	}
+
+	err = r.getObject(ctx, name, "", apiSupplyChain)
+	//TODO: Remove IsNotFound check, this should just be an error, breaks kuttl test
+	if kerrors.IsNotFound(err) {
+		log.V(logger.DEBUG).Info("supply chain is not found on api server")
+		return nil, nil
+	}
+	if err != nil {
+		log.Error(err, "failed to get supply chain object from api server")
+		return nil, fmt.Errorf("failed to get supply chain object from api server [%s/%s]: %w", kind, name, err)
+	}
+
+	return apiSupplyChain, nil
 }
 
 func (r *repository) StatusUpdate(ctx context.Context, object client.Object) error {

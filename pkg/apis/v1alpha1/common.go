@@ -159,6 +159,18 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 	return template, nil
 }
 
+func GetAPISupplyChain(kind string) (client.Object, error) {
+	var supplyChain client.Object
+
+	switch kind {
+	case "ClusterSourceSupplyChain":
+		supplyChain = &ClusterSourceSupplyChain{}
+	default:
+		return nil, fmt.Errorf("resource does not have valid kind: %s", kind)
+	}
+	return supplyChain, nil
+}
+
 type TemplateOption struct {
 	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1

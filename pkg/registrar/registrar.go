@@ -81,6 +81,10 @@ func RegisterControllers(mgr manager.Manager) error {
 		return fmt.Errorf("register supply-chain controller: %w", err)
 	}
 
+	if err := registerSourceSupplyChainController(mgr); err != nil {
+		return fmt.Errorf("register source-supply-chain controller: %w", err)
+	}
+
 	if err := registerDeliveryController(mgr); err != nil {
 		return fmt.Errorf("register delivery controller: %w", err)
 	}
@@ -182,6 +186,43 @@ func registerSupplyChainController(mgr manager.Manager) error {
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &v1alpha1.ClusterSupplyChain{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return fmt.Errorf("watch: %w", err)
+	}
+
+	for _, template := range v1alpha1.ValidSupplyChainTemplates {
+		if err := ctrl.Watch(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, reconciler.DependencyTracker, mgr.GetScheme()),
+		); err != nil {
+			return fmt.Errorf("watch template: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func registerSourceSupplyChainController(mgr manager.Manager) error {
+	repo := repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("source-supply-chain-repo-cache")),
+	)
+
+	reconciler := &supplychain.SourceReconciler{
+		Repo:                    repo,
+		ConditionManagerBuilder: conditions.NewConditionManager,
+		DependencyTracker:       dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-source-supply-chain")),
+	}
+	ctrl, err := pkgcontroller.New("source-supply-chain", mgr, pkgcontroller.Options{
+		Reconciler: reconciler,
+	})
+	if err != nil {
+		return fmt.Errorf("controller new: %w", err)
+	}
+
+	if err := ctrl.Watch(
+		&source.Kind{Type: &v1alpha1.ClusterSourceSupplyChain{}},
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return fmt.Errorf("watch: %w", err)

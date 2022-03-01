@@ -19,14 +19,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
-  name: clustersupplychains.carto.run
+  name: clustersourcesupplychains.carto.run
 spec:
   group: carto.run
   names:
-    kind: ClusterSupplyChain
-    listKind: ClusterSupplyChainList
-    plural: clustersupplychains
-    singular: clustersupplychain
+    kind: ClusterSourceSupplyChain
+    listKind: ClusterSourceSupplyChainList
+    plural: clustersourcesupplychains
+    singular: clustersourcesupplychain
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -252,6 +252,12 @@ spec:
                   - templateRef
                   type: object
                 type: array
+              revisionPath:
+                description: 'RevisionPath is a path into the templated object''s
+                  data that contains a revision. The revision, along with the URL,
+                  represents the output of the Template. RevisionPath is specified
+                  in jsonpath format, eg: .status.artifact.revision'
+                type: string
               selector:
                 additionalProperties:
                   type: string
@@ -275,9 +281,16 @@ spec:
                 required:
                 - name
                 type: object
+              urlPath:
+                description: 'URLPath is a path into the templated object''s data
+                  that contains a URL. The URL, along with the revision, represents
+                  the output of the Template. URLPath is specified in jsonpath format,
+                  eg: .status.artifact.url'
+                type: string
             required:
             - resources
-            - selector
+            - revisionPath
+            - urlPath
             type: object
           status:
             description: 'Status conforms to the Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
