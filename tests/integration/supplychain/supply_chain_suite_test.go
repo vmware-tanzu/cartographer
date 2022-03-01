@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"go.uber.org/zap/zapcore"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,7 +81,15 @@ var _ = BeforeSuite(func() {
 
 	controllerBuffer = gbytes.NewBuffer()
 	controllerOutput := io.MultiWriter(controllerBuffer, GinkgoWriter)
-	logger := zap.New(zap.WriteTo(controllerOutput))
+
+	level := zapcore.InfoLevel
+	if os.Getenv("LOG_LEVEL") == "debug" {
+		level = zapcore.DebugLevel
+	}
+	logger := zap.New(zap.UseFlagOptions(&zap.Options{
+		Level:      level,
+		DestWriter: controllerOutput,
+	}))
 
 	controllerError = make(chan error)
 

@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -112,7 +111,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		testToUpdate.Status.Conditions = append(testToUpdate.Status.Conditions, metav1.Condition{
 			Type:               conditionType,
 			Status:             conditionStatus,
-			LastTransitionTime: v1.Now(),
+			LastTransitionTime: metav1.Now(),
 			Reason:             "SetByTest",
 			Message:            "",
 		})
@@ -123,8 +122,8 @@ var _ = Describe("DeliverableReconciler", func() {
 
 	var newClusterDelivery = func(name string, selector map[string]string) *v1alpha1.ClusterDelivery {
 		return &v1alpha1.ClusterDelivery{
-			TypeMeta: v1.TypeMeta{},
-			ObjectMeta: v1.ObjectMeta{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
 			Spec: v1alpha1.DeliverySpec{
@@ -230,7 +229,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		})
 
 		It("does not update the lastTransitionTime on subsequent reconciliation if the status does not change", func() {
-			var lastConditions []v1.Condition
+			var lastConditions []metav1.Condition
 
 			Eventually(func() bool {
 				deliverable := &v1alpha1.Deliverable{}
@@ -238,7 +237,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				lastConditions = deliverable.Status.Conditions
 				return deliverable.Status.ObservedGeneration == deliverable.Generation
-			}, 5*time.Second).Should(BeTrue())
+			}).Should(BeTrue())
 
 			reconcileAgain()
 
@@ -252,8 +251,8 @@ var _ = Describe("DeliverableReconciler", func() {
 		Context("and reconciliation will end in an unknown status", func() {
 			BeforeEach(func() {
 				template := &v1alpha1.ClusterSourceTemplate{
-					TypeMeta: v1.TypeMeta{},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{
 						Name: "proper-template-bob",
 					},
 					Spec: v1alpha1.SourceTemplateSpec{
@@ -285,22 +284,22 @@ var _ = Describe("DeliverableReconciler", func() {
 			})
 
 			It("does not error if the reconciliation ends in an unknown status", func() {
-				Eventually(func() []v1.Condition {
+				Eventually(func() []metav1.Condition {
 					obj := &v1alpha1.Deliverable{}
 					err := c.Get(ctx, client.ObjectKey{Name: "deliverable-bob", Namespace: testNS}, obj)
 					Expect(err).NotTo(HaveOccurred())
 
 					return obj.Status.Conditions
-				}, 5*time.Second).Should(ContainElements(
+				}).Should(ContainElements(
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("ResourcesSubmitted"),
 						"Reason": Equal("MissingValueAtPath"),
-						"Status": Equal(v1.ConditionStatus("Unknown")),
+						"Status": Equal(metav1.ConditionStatus("Unknown")),
 					}),
 					MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal("Ready"),
 						"Reason": Equal("MissingValueAtPath"),
-						"Status": Equal(v1.ConditionStatus("Unknown")),
+						"Status": Equal(metav1.ConditionStatus("Unknown")),
 					}),
 				))
 				Expect(controllerBuffer).NotTo(gbytes.Say("Reconciler error.*unable to retrieve outputs from stamped object for resource"))

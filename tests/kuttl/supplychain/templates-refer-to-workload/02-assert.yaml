@@ -18,7 +18,7 @@ metadata:
   name: test-configmap-source
   labels:
     carto.run/workload-name: petclinic
-    carto.run/cluster-supply-chain-name: responsible-ops---templates-refer-to-workload
+    carto.run/supply-chain-name: responsible-ops---templates-refer-to-workload
     carto.run/resource-name: source-provider
     carto.run/cluster-template-name: git-template---templates-refer-to-workload
   ownerReferences:

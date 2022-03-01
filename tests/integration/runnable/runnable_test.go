@@ -198,7 +198,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					Eventually(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 						return len(resourceList.Items), err
-					}, "3s").Should(Equal(2))
+					}).Should(Equal(2))
 
 					Consistently(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
@@ -649,7 +649,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			err := c.Status().Update(ctx, testToUpdate)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(getRunnableTestStatus, "10s").Should(MatchFields(IgnoreExtras, Fields{
+			Eventually(getRunnableTestStatus).Should(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("Ready"),
 				"Status": Equal(metav1.ConditionStatus("True")),
 				"Reason": Equal("LifeIsGood"),
@@ -700,7 +700,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			err = c.Status().Update(ctx, testToUpdate)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(getRunnableTestStatus, "10s").Should(MatchFields(IgnoreExtras, Fields{
+			Eventually(getRunnableTestStatus).Should(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("Ready"),
 				"Status": Equal(metav1.ConditionStatus("True")),
 				"Reason": Equal("LifeIsGreat"),
@@ -881,7 +881,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			err := c.Status().Update(ctx, testToUpdate)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(getRunnableTestStatus, "10s").Should(MatchFields(IgnoreExtras, Fields{
+			Eventually(getRunnableTestStatus).Should(MatchFields(IgnoreExtras, Fields{
 				"Message": Equal("this is generation 2"),
 			}))
 

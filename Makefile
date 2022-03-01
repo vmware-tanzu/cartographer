@@ -3,6 +3,11 @@ ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
 GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
 
+ifndef ($LOG_LEVEL)
+	# set a default LOG_LEVEL whenever we run the controller
+	# and for our kuttl tests which require something to be set.
+	export LOG_LEVEL = info
+endif
 
 .PHONY: build
 build: gen-objects gen-manifests
@@ -70,6 +75,10 @@ test-unit: test-gen-objects
 	$(GINKGO) -r pkg
 
 .PHONY: test-integration
+ifeq ($(CI), true)
+test-integration: export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT = 10s
+test-integration: export GOMEGA_DEFAULT_CONSISTENTLY_DURATION = 2s
+endif
 test-integration: test-gen-manifests test-gen-objects
 	$(GINKGO) -r tests/integration
 
@@ -88,7 +97,6 @@ test-kuttl-supplychain: build test-gen-manifests
 .PHONY: test-kuttl-delivery
 test-kuttl-delivery: build test-gen-manifests
 	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/delivery --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/delivery; fi
-
 
 .PHONY: list-kuttl
 list-kuttl:
@@ -128,6 +136,7 @@ copyright:
 		-ignore site/static/\*\* \
 		-ignore site/content/docs/\*/crds/\*.yaml \
 		-ignore site/themes/\*\* \
+		-ignore experimental/live-editor/node_modules/\*\* \
 		.
 
 .PHONY: pre-push .pre-push-check
@@ -145,7 +154,6 @@ pre-push:
 	$(MAKE) .pre-push-check
 	[ -z "$$(git status --porcelain)" ] || (echo "changes occurred during pre-push check" && git diff HEAD --exit-code)
 
-
 .PHONY: docs-serve
 docs-serve:
 	$(MAKE) -C site serve
@@ -153,7 +161,6 @@ docs-serve:
 .PHONY: docs-release
 docs-release:
 	$(MAKE) -C site release
-
 
 .PHONY: docs-gen-crds
 docs-gen-crds: gen-manifests

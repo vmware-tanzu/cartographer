@@ -1,0 +1,27 @@
+{{ define "main" }}
+<main>
+    <div class="hero subpage-hero">
+        <div class="wrapper">
+            <h1>{{ .Page.Title }}</h1>
+        </div>
+    </div>
+
+    <div class="wrapper common clearfix">
+        <div class="content">
+            {{ .Content }}
+        </div>
+
+        {{ if ne .TableOfContents "<nav id=\"TableOfContents\"></nav>" }}
+        <div class="right-nav" id="right-nav">
+            <div class="right-nav-content">
+                <h4 class="strong">On this page:</h4>
+                {{ .TableOfContents }}
+
+            </div>
+        </div>
+        {{ end }}
+
+    </div>
+
+</main>
+{{ end }}

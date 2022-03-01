@@ -50,7 +50,7 @@ type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Work
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
-		workloadClient, err := clientBuilder(secret)
+		workloadClient, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
@@ -100,12 +100,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	}
 
 	labels := map[string]string{
-		"carto.run/workload-name":             r.workload.Name,
-		"carto.run/workload-namespace":        r.workload.Namespace,
-		"carto.run/cluster-supply-chain-name": supplyChainName,
-		"carto.run/resource-name":             resource.Name,
-		"carto.run/template-kind":             template.GetKind(),
-		"carto.run/cluster-template-name":     template.GetName(),
+		"carto.run/workload-name":         r.workload.Name,
+		"carto.run/workload-namespace":    r.workload.Namespace,
+		"carto.run/supply-chain-name":     supplyChainName,
+		"carto.run/resource-name":         resource.Name,
+		"carto.run/template-kind":         template.GetKind(),
+		"carto.run/cluster-template-name": template.GetName(),
 	}
 
 	inputs := outputs.GenerateInputs(resource)

@@ -14,11 +14,11 @@
 
 linters:
   enable:
-    - goimports
+    - gci
     - govet
 
 linters-settings:
-  goimports:
+  gci:
     local-prefixes: github.com/vmware-tanzu/cartographer
   govet:
     disable:

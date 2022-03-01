@@ -49,7 +49,7 @@ type ResourceRealizerBuilder func(secret *corev1.Secret, deliverable *v1alpha1.D
 
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
-		client, err := clientBuilder(secret)
+		client, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
@@ -99,7 +99,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	labels := map[string]string{
 		"carto.run/deliverable-name":      r.deliverable.Name,
 		"carto.run/deliverable-namespace": r.deliverable.Namespace,
-		"carto.run/cluster-delivery-name": deliveryName,
+		"carto.run/delivery-name":         deliveryName,
 		"carto.run/resource-name":         resource.Name,
 		"carto.run/template-kind":         template.GetKind(),
 		"carto.run/cluster-template-name": template.GetName(),

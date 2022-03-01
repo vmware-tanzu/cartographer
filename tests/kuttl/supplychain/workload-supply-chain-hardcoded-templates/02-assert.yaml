@@ -18,7 +18,7 @@ metadata:
   name: test-configmap-source
   labels:
     carto.run/workload-name: petclinic
-    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
     carto.run/resource-name: source-provider
     carto.run/cluster-template-name: git-template---workload-supply-chain-hardcoded-templates
   ownerReferences:
@@ -36,7 +36,7 @@ metadata:
   name: test-configmap-image
   labels:
     carto.run/workload-name: petclinic
-    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
     carto.run/resource-name: image-provider
     carto.run/cluster-template-name: kpack-template---workload-supply-chain-hardcoded-templates
   ownerReferences:
@@ -54,7 +54,7 @@ metadata:
   name: test-configmap-config
   labels:
     carto.run/workload-name: petclinic
-    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
     carto.run/resource-name: config-provider
     carto.run/cluster-template-name: config-template---workload-supply-chain-hardcoded-templates
   ownerReferences:
@@ -72,7 +72,7 @@ metadata:
   name: test-configmap
   labels:
     carto.run/workload-name: petclinic
-    carto.run/cluster-supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
+    carto.run/supply-chain-name: responsible-ops---workload-supply-chain-hardcoded-templates
     carto.run/resource-name: cluster-sink
     carto.run/cluster-template-name: sink-template---workload-supply-chain-hardcoded-templates
   ownerReferences:

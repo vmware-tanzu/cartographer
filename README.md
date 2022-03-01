@@ -1,7 +1,7 @@
 # Cartographer
 
 <img src="site/themes/template/static/img/cartographer-logo.png">
-<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="site/themes/template/static/img/passing.svg">
+<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="site/themes/template/static/img/passing.svg"></a>
 
 Cartographer is a Kubernetes-native [Choreographer] providing higher modularity and scalability for the software supply chain.
 
@@ -38,8 +38,6 @@ And you're done!
 
 <img src="site/themes/template/static/img/Carto-install-yaml-v2.gif">
 
-
-
 ## Documentation
 
 Detailed documentation for Cartographer can be found in the `site` folder of this repository:
@@ -53,14 +51,6 @@ Detailed documentation for Cartographer can be found in the `site` folder of thi
   * [Deliverable and Delivery](https://cartographer.sh/docs/latest/reference/deliverable/)
   * [Templates](https://cartographer.sh/docs/latest/reference/template/)
   * [Runnable](https://cartographer.sh/docs/latest/reference/runnable/)
-
-
-
-
-
-
-
-
 
 ## 🤗 Community, discussion, contribution, and support
 
