@@ -1,9 +1,9 @@
 # Meta
 [meta]: #meta
 - Name: Resource Tracing
-- Start Date: 2020-02-15
+- Start Date: 2022-02-15
 - Author(s): @scothis
-- Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
+- Status: Approved <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
 - RFC Pull Request: (leave blank)
 - Supersedes: N/A
 
