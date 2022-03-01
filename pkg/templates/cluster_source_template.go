@@ -88,12 +88,12 @@ func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) []v1alpha
 	return []v1alpha1.Output{
 		{
 			Name:    "url",
-			Preview: strings.ShortenString(url, 200),
+			Preview: strings.ShortenString(url, PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
 		},
 		{
 			Name:    "revision",
-			Preview: strings.ShortenString(revision, 200),
+			Preview: strings.ShortenString(revision, PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
 		},
 	}

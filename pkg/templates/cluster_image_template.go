@@ -76,7 +76,7 @@ func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) []v1alpha1
 	return []v1alpha1.Output{
 		{
 			Name:    "image",
-			Preview: strings.ShortenString(image, 200),
+			Preview: strings.ShortenString(image, PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", imageSHA),
 		},
 	}

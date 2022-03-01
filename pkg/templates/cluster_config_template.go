@@ -74,7 +74,7 @@ func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) []v1alpha
 	return []v1alpha1.Output{
 		{
 			Name:    "config",
-			Preview: strings.ShortenString(config, 200),
+			Preview: strings.ShortenString(config, PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", configSHA),
 		},
 	}
