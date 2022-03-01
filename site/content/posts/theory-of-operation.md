@@ -79,7 +79,25 @@ Let's look at a typical template:
 
 {{< figure src="/img/posts/theory-of-operation/typical-template.svg" alt="Typical Template" width="800px" >}}
 
+* The `$(source)$` interpolation specifies a source input. This is the only input in this template, so the input to this 
+  template _must_ be a source. 
+* The `imagePath` specifies where the **output** can be found once the resource is reconciled. It specifies that
+  the output _must_ be an image.  
 
+
+# Supply Chains
+
+| Definitions                                                                                                                                                                           |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Supply Chains represent a directed, acyclic graph ([DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph)) of the templates used to create the resources that fulfill your needs. |
+                                                                                                                                                                  |
+
+# Workloads
+
+| Definitions                                                                                                             |
+|-------------------------------------------------------------------------------------------------------------------------|
+| Workloads cause Supply Chains to **fulfill templates**, and **apply** the resulting resource definitions to the cluster |
+| Each workload is the `owner` of the resources created by the Supply Chain on its behalf |
 
 # Terminating (Run-and-Done) Resources
 
