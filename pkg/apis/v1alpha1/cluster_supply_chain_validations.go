@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"reflect"
 )
 
 func (c *ClusterSupplyChain) validateNewState() error {
@@ -136,54 +135,8 @@ func validateSupplyChainTemplateRef(ref SupplyChainTemplateReference) error {
 		return fmt.Errorf("exactly one of templateRef.Name or templateRef.Options must be specified, found neither")
 	}
 
-	if err := validateResourceOptions(ref.Options); err != nil {
+	if err := validateResourceOptions(ref.Options, ValidWorkloadPaths, ValidWorkloadPrefixes); err != nil {
 		return err
-	}
-	return nil
-}
-
-// TODO: move to common validation, shared with delivery
-func validateResourceOptions(options []TemplateOption) error {
-	for _, option := range options {
-		if err := validateFieldSelectorRequirements(option.Selector.MatchFields); err != nil {
-			return fmt.Errorf("error validating option [%s]: %w", option.Name, err)
-		}
-	}
-
-	for _, option1 := range options {
-		for _, option2 := range options {
-			if option1.Name != option2.Name && reflect.DeepEqual(option1.Selector, option2.Selector) {
-				return fmt.Errorf(
-					"duplicate selector found in options [%s, %s]",
-					option1.Name,
-					option2.Name,
-				)
-			}
-		}
-	}
-
-	return nil
-}
-
-// TODO: move to common validation, shared with delivery
-func validateFieldSelectorRequirements(reqs []FieldSelectorRequirement) error {
-	for _, req := range reqs {
-		switch req.Operator {
-		case FieldSelectorOpExists, FieldSelectorOpDoesNotExist:
-			if len(req.Values) != 0 {
-				return fmt.Errorf("cannot specify values with operator [%s]", req.Operator)
-			}
-		case FieldSelectorOpIn, FieldSelectorOpNotIn:
-			if len(req.Values) == 0 {
-				return fmt.Errorf("must specify values with operator [%s]", req.Operator)
-			}
-		default:
-			return fmt.Errorf("operator [%s] is invalid", req.Operator)
-		}
-
-		if !validWorkloadPath(req.Key) {
-			return fmt.Errorf("requirement key [%s] is not a valid workload path", req.Key)
-		}
 	}
 	return nil
 }

@@ -169,7 +169,8 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryR
 		matchedAllFields := true
 		for _, field := range option.Selector.MatchFields {
 			dlContext := map[string]interface{}{
-				"deliverable": r.deliverable,
+				"spec":     r.deliverable.Spec,
+				"metadata": r.deliverable.ObjectMeta,
 			}
 			matched, err := selector.Matches(field, dlContext)
 			if err != nil {

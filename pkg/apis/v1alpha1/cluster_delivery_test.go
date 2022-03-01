@@ -206,7 +206,7 @@ var _ = Describe("Delivery Validation", func() {
 										Selector: v1alpha1.Selector{
 											MatchFields: []v1alpha1.FieldSelectorRequirement{
 												{
-													Key:      "workload.spec.source.git.url",
+													Key:      "spec.source.git.url",
 													Operator: v1alpha1.FieldSelectorOpExists,
 												},
 											},
@@ -217,7 +217,7 @@ var _ = Describe("Delivery Validation", func() {
 										Selector: v1alpha1.Selector{
 											MatchFields: []v1alpha1.FieldSelectorRequirement{
 												{
-													Key:      "workload.spec.source.git.url",
+													Key:      "spec.source.git.url",
 													Operator: v1alpha1.FieldSelectorOpDoesNotExist,
 												},
 											},
@@ -422,18 +422,18 @@ var _ = Describe("Delivery Validation", func() {
 
 		Context("option points to key that doesn't exist in spec", func() {
 			BeforeEach(func() {
-				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = "workload.spec.does.not.exist"
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = "spec.does.not.exist"
 			})
 
 			It("on create, it rejects the Resource", func() {
 				Expect(delivery.ValidateCreate()).To(MatchError(
-					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [workload.spec.does.not.exist] is not a valid workload path",
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
 				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [workload.spec.does.not.exist] is not a valid workload path",
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
@@ -444,7 +444,7 @@ var _ = Describe("Delivery Validation", func() {
 
 		Context("option points to key that is a valid prefix into an array", func() {
 			BeforeEach(func() {
-				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = `workload.spec.env[?(@.name=="some-name")].value`
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = `spec.params[?(@.name=="some-name")].value`
 			})
 
 			It("on create, it does not reject the Resource", func() {
