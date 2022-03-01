@@ -18,6 +18,7 @@ package workload
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -69,7 +70,15 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		outs.AddOutput(resource.Name, out)
+		if out != nil {
+			fmt.Printf("output found for resource: %s\n", resource.Name)
+			fmt.Printf("out: %+v\n", out)
+			outs.AddOutput(resource.Name, out)
+		} else {
+			fmt.Printf("no output found for resource [%s], assuming it's not selected\n", resource.Name)
+		}
+		fmt.Printf("ALL outs: %+v\n", outs)
+
 	}
 
 	return selectedTemplates, stampedObjects, firstError

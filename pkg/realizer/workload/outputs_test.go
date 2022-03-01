@@ -41,10 +41,12 @@ var _ = Describe("Outputs", func() {
 			Context("And the sources have a match with the outputs", func() {
 				It("Adds sources to inputs", func() {
 					resource := &v1alpha1.SupplyChainResource{
-						Sources: []v1alpha1.ResourceReference{
-							{
-								Name:     "source-ref",
-								Resource: "source-output",
+						ResourceInputs: v1alpha1.ResourceInputs{
+							Sources: []v1alpha1.ResourceReference{
+								{
+									Name:     "source-ref",
+									Resource: "source-output",
+								},
 							},
 						},
 					}
@@ -59,10 +61,12 @@ var _ = Describe("Outputs", func() {
 			Context("And the sources do not have a match with the outputs", func() {
 				It("Does not add sources to inputs", func() {
 					resource := &v1alpha1.SupplyChainResource{
-						Sources: []v1alpha1.ResourceReference{
-							{
-								Name:     "source-ref",
-								Resource: "source-output-does-not-exist",
+						ResourceInputs: v1alpha1.ResourceInputs{
+							Sources: []v1alpha1.ResourceReference{
+								{
+									Name:     "source-ref",
+									Resource: "source-output-does-not-exist",
+								},
 							},
 						},
 					}
@@ -85,10 +89,12 @@ var _ = Describe("Outputs", func() {
 			Context("And the images have a match with the outputs", func() {
 				It("Adds images to inputs", func() {
 					resource := &v1alpha1.SupplyChainResource{
-						Images: []v1alpha1.ResourceReference{
-							{
-								Name:     "image-ref",
-								Resource: "image-output",
+						ResourceInputs: v1alpha1.ResourceInputs{
+							Images: []v1alpha1.ResourceReference{
+								{
+									Name:     "image-ref",
+									Resource: "image-output",
+								},
 							},
 						},
 					}
@@ -102,10 +108,12 @@ var _ = Describe("Outputs", func() {
 			Context("And the images do not have a match with the outputs", func() {
 				It("Does not add images to inputs", func() {
 					resource := &v1alpha1.SupplyChainResource{
-						Images: []v1alpha1.ResourceReference{
-							{
-								Name:     "image-ref",
-								Resource: "image-output-does-not-exist",
+						ResourceInputs: v1alpha1.ResourceInputs{
+							Images: []v1alpha1.ResourceReference{
+								{
+									Name:     "image-ref",
+									Resource: "image-output-does-not-exist",
+								},
 							},
 						},
 					}
@@ -129,10 +137,12 @@ var _ = Describe("Outputs", func() {
 			Context("And the configs have a match with the outputs", func() {
 				It("Adds configs to inputs", func() {
 					resource := &v1alpha1.SupplyChainResource{
-						Configs: []v1alpha1.ResourceReference{
-							{
-								Name:     "config-ref",
-								Resource: "config-output",
+						ResourceInputs: v1alpha1.ResourceInputs{
+							Configs: []v1alpha1.ResourceReference{
+								{
+									Name:     "config-ref",
+									Resource: "config-output",
+								},
 							},
 						},
 					}
@@ -146,10 +156,12 @@ var _ = Describe("Outputs", func() {
 			Context("And the configs do not have a match with the outputs", func() {
 				It("Does not add configs to inputs", func() {
 					resource := &v1alpha1.SupplyChainResource{
-						Configs: []v1alpha1.ResourceReference{
-							{
-								Name:     "config-ref",
-								Resource: "config-output-does-not-exist",
+						ResourceInputs: v1alpha1.ResourceInputs{
+							Configs: []v1alpha1.ResourceReference{
+								{
+									Name:     "config-ref",
+									Resource: "config-output-does-not-exist",
+								},
 							},
 						},
 					}

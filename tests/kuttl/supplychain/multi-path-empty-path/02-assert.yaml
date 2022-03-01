@@ -1,0 +1,119 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  labels:
+    integration-test: multi-path-empty-path
+  name: withouttest-app
+spec:
+  serviceAccountName: my-service-account
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/spring-projects/spring-petclinic.git
+status:
+  conditions:
+    - message: ""
+      reason: Ready
+      status: "True"
+      type: SupplyChainReady
+    - message: ""
+      reason: ResourceSubmissionComplete
+      status: "True"
+      type: ResourcesSubmitted
+    - message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+  supplyChainRef:
+    kind: ClusterSupplyChain
+    name: multi-path-empty-path-sc
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: withouttest-app-provide-source-instance
+spec:
+  value:
+    revision: 1234
+    url: https://source/constrained
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: withouttest-app-build-image-instance
+spec:
+  value:
+    upstream:
+      name: source
+      revision: 1234
+      url: https://source/constrained
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  labels:
+    has-test: youbetcha
+    integration-test: multi-path-empty-path
+  name: withtest-app
+spec:
+  serviceAccountName: my-service-account
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/spring-projects/spring-petclinic.git
+status:
+  conditions:
+    - message: ""
+      reason: Ready
+      status: "True"
+      type: SupplyChainReady
+    - message: ""
+      reason: ResourceSubmissionComplete
+      status: "True"
+      type: ResourcesSubmitted
+    - message: ""
+      reason: Ready
+      status: "True"
+      type: Ready
+  supplyChainRef:
+    kind: ClusterSupplyChain
+    name: multi-path-empty-path-sc
+
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: withtest-app-provide-source-instance
+spec:
+  value:
+    revision: 1234
+    url: https://source/constrained
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: withtest-app-test-source-instance
+spec:
+  value:
+    revision: 5678
+    url: https://source/constrained
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: withtest-app-build-image-instance
+spec:
+  value:
+    upstream:
+      name: source
+      revision: 5678
+      url: https://source/constrained

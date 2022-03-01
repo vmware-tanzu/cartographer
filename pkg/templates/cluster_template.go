@@ -41,7 +41,9 @@ func (t *clusterTemplate) SetInputs(_ *Inputs) {}
 func (t *clusterTemplate) SetStampedObject(_ *unstructured.Unstructured) {}
 
 func (t *clusterTemplate) GetOutput() (*Output, error) {
-	return &Output{}, nil
+	return &Output{
+		//Selected: true
+	}, nil
 }
 
 func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
