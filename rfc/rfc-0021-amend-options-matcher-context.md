@@ -3,7 +3,7 @@
 - Name: Amend options matcher context to remove workload prefix
 - Start Date: 2022-02-22
 - Author(s): @jwntrs
-- Status: Draft
+- Status: Approved
 - RFC Pull Request:
 - Supersedes: N/A
 
