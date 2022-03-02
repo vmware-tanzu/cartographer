@@ -1128,7 +1128,7 @@ spec:
 					_, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).To(MatchError(ContainSubstring("evaluating supply chain selectors against workload [myNS/workload-name] failed")))
 					Expect(err).To(MatchError(ContainSubstring("failed to evaluate all matched fields of [ClusterSupplyChain/supplychain-name]")))
-					Expect(err).To(MatchError(ContainSubstring("unable to match field requirement with key [Spec.env[asdfasdfadkf3] operator [Exists] values [[]]")))
+					Expect(err).To(MatchError(ContainSubstring("unable to match field requirement with key [spec.env[asdfasdfadkf3] operator [Exists] values [[]]")))
 				})
 			})
 
