@@ -18,6 +18,7 @@ package templates
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -65,21 +66,24 @@ func (t *clusterImageTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
+func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
 	if output == nil || output.Image == nil {
-		return nil
+		return nil, nil
 	}
 
-	image := fmt.Sprintf("%v", output.Image)
-	imageSHA := sha256.Sum256([]byte(image))
+	image, err := json.Marshal(output.Image)
+	if err != nil {
+		return nil, err
+	}
+	imageSHA := sha256.Sum256(image)
 
 	return []v1alpha1.Output{
 		{
 			Name:    "image",
-			Preview: strings.ShortenString(image, PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(image), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", imageSHA),
 		},
-	}
+	}, nil
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

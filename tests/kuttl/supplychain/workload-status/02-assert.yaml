@@ -54,7 +54,7 @@ status:
       status: "True"
       reason: Ready
   supplyChainRef:
-    name: responsible-ops---deliverable-status
+    name: responsible-ops---workload-status
     kind: ClusterSupplyChain
   resources:
     - name: source-provider-first
@@ -65,23 +65,14 @@ status:
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterSourceTemplate
-        name: example-first---deliverable-status
+        name: example-first---workload-status
       outputs:
         - name: url
-          preview: three
-          digest: sha256:8b5b9db0c13db24256c829aa364aa90c6d2eba318b9232a4ab9313b954d3555f
+          preview: '"three"'
+          digest: sha256:097a4dfb7f430ff3e44aa2399549a038c1f29465540d1e18701e8b5cd3fd2ccb
         - name: revision
-          preview: |-
-            some over 1000 character thing the player loves ................................................................
-            ................................................................................................................
-            ................................................................................................................
-            ................................................................................................................
-            ................................................................................................................
-            ................................................................................................................
-            ................................................................................................................
-            ................................................................................................................
-            ..................................................................................youll see this
-          digest: sha256:8ef2ab827f1ba064a046bce85af94837540bd322d6b1897d05844a02d4a1a6f9
+          preview: '"some over 1000 character thing the player loves ................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n.........................................................................youll see this'
+          digest: sha256:95a672772645f0e680b01831844aef1a908c7fd82af70113e2b8e351502d5fc7
     - name: source-provider-second
       stampedRef:
         apiVersion: v1
@@ -90,14 +81,14 @@ status:
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterSourceTemplate
-        name: example-second---deliverable-status
+        name: example-second---workload-status
       outputs:
         - name: url
-          preview: "5"
-          digest: sha256:ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d
+          preview: '"5"'
+          digest: sha256:d10a4bc9e0c1fa4e8f3d7ce2512b8756e47ca5fa451f373c39a1431bb88db49f
         - name: revision
-          preview: knitting
-          digest: sha256:dfc8d0dd82f3fba0293ceeefab71e174e4e2315cd2070adf27381003a3e534b9
+          preview: '"knitting"'
+          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
     - name: built-image-provider
       stampedRef:
         apiVersion: v1
@@ -106,13 +97,13 @@ status:
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterImageTemplate
-        name: example-image---deliverable-status
+        name: example-image---workload-status
       inputs:
         - name: source-provider-second
       outputs:
         - name: image
-          preview: knitting
-          digest: sha256:dfc8d0dd82f3fba0293ceeefab71e174e4e2315cd2070adf27381003a3e534b9
+          preview: '"knitting"'
+          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
     - name: config
       stampedRef:
         apiVersion: v1
@@ -121,13 +112,13 @@ status:
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterConfigTemplate
-        name: example-config---deliverable-status-1
+        name: example-config---workload-status-1
       inputs:
         - name: built-image-provider
       outputs:
         - name: config
-          preview: knitting
-          digest: sha256:dfc8d0dd82f3fba0293ceeefab71e174e4e2315cd2070adf27381003a3e534b9
+          preview: '"knitting"'
+          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
     - name: config-2
       stampedRef:
         apiVersion: v1
@@ -136,6 +127,6 @@ status:
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterTemplate
-        name: example-config---deliverable-status-2
+        name: example-config---workload-status-2
       inputs:
         - name: config

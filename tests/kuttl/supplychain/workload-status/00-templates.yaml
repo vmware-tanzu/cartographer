@@ -16,7 +16,7 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: example-first---deliverable-status
+  name: example-first---workload-status
 spec:
   template:
     apiVersion: v1
@@ -34,7 +34,7 @@ spec:
         ................................................................................................................
         ................................................................................................................
         ................................................................................................................
-        ..................................................................................youll see this you wont see me
+        .........................................................................youll see this you wont see me
   urlPath: data.player_initial_lives
   revisionPath: data.player_loves
 
@@ -42,7 +42,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
 metadata:
-  name: example-second---deliverable-status
+  name: example-second---workload-status
 spec:
   template:
     apiVersion: v1
@@ -59,7 +59,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterImageTemplate
 metadata:
-  name: example-image---deliverable-status
+  name: example-image---workload-status
 spec:
   template:
     apiVersion: v1
@@ -75,7 +75,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterConfigTemplate
 metadata:
-  name: example-config---deliverable-status-1
+  name: example-config---workload-status-1
 spec:
   template:
     apiVersion: v1
@@ -90,7 +90,7 @@ spec:
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: example-config---deliverable-status-2
+  name: example-config---workload-status-2
 spec:
   template:
     apiVersion: v1

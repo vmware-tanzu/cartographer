@@ -103,7 +103,34 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
-		outputs = template.GenerateResourceOutput(output)
+		var err error
+		outputs, err = template.GenerateResourceOutput(output)
+		if err != nil {
+			for _, previousResource := range previousResources {
+				if previousResource.Name == resource.Name {
+					outputs = previousResource.Outputs
+					break
+				}
+			}
+		} else {
+			currTime := metav1.NewTime(time.Now())
+			for j, out := range outputs {
+				outputs[j].LastTransitionTime = currTime
+				for _, previousResource := range previousResources {
+					if previousResource.Name == resource.Name {
+						for _, previousOutput := range previousResource.Outputs {
+							if previousOutput.Name == out.Name {
+								if previousOutput.Digest == out.Digest {
+									outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+								}
+								break
+							}
+						}
+						break
+					}
+				}
+			}
+		}
 	}
 
 	var stampedRef *corev1.ObjectReference
@@ -113,24 +140,6 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 			Namespace:  stampedObject.GetNamespace(),
 			Name:       stampedObject.GetName(),
 			APIVersion: stampedObject.GetAPIVersion(),
-		}
-	}
-
-	currTime := metav1.NewTime(time.Now())
-	for j, out := range outputs {
-		outputs[j].LastTransitionTime = currTime
-		for _, previousResource := range previousResources {
-			if previousResource.Name == resource.Name {
-				for _, previousOutput := range previousResource.Outputs {
-					if previousOutput.Name == out.Name {
-						if previousOutput.Digest == out.Digest {
-							outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-						}
-						break
-					}
-				}
-				break
-			}
 		}
 	}
 

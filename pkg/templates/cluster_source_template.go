@@ -16,6 +16,7 @@ package templates
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -74,29 +75,36 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 	}, nil
 }
 
-func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) []v1alpha1.Output {
+func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
 	if output == nil || output.Source == nil {
-		return nil
+		return nil, nil
 	}
 
-	url := fmt.Sprintf("%v", output.Source.URL)
-	urlSHA := sha256.Sum256([]byte(url))
+	url, err := json.Marshal(output.Source.URL)
+	if err != nil {
+		return nil, err
+	}
 
-	revision := fmt.Sprintf("%v", output.Source.Revision)
-	revisionSHA := sha256.Sum256([]byte(revision))
+	revision, err := json.Marshal(output.Source.Revision)
+	if err != nil {
+		return nil, err
+	}
+
+	urlSHA := sha256.Sum256(url)
+	revisionSHA := sha256.Sum256(revision)
 
 	return []v1alpha1.Output{
 		{
 			Name:    "url",
-			Preview: strings.ShortenString(url, PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(url), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
 		},
 		{
 			Name:    "revision",
-			Preview: strings.ShortenString(revision, PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(revision), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
 		},
-	}
+	}, nil
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

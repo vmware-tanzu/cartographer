@@ -134,15 +134,15 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("url"),
-					"Preview": Equal("whatever"),
-					"Digest":  Equal("sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281"),
+					"Preview": Equal(`"whatever"`),
+					"Digest":  Equal("sha256:057988d9edd6b3dd89ce693cfc5c88a0786e2e57dc4f789af75cb87b082475c1"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("revision"),
-					"Preview": Equal("whatever-rev"),
-					"Digest":  Equal("sha256:4829ca8682c2089cde1ddd694c5b27f7912e2cdebb6c61b6c5e36c93a534aab1"),
+					"Preview": Equal(`"whatever-rev"`),
+					"Digest":  Equal("sha256:7fc9337f66f9fae0a08b14e3d1ed52f1352ea68d1b3ca965f396823e6da8cc81"),
 				},
 			))
 			Expect(time.Since(realizedResources[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
@@ -236,7 +236,7 @@ var _ = Describe("Realize", func() {
 						{
 							Name:               "config",
 							Preview:            "whatever",
-							Digest:             "sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281",
+							Digest:             "sha256:057988d9edd6b3dd89ce693cfc5c88a0786e2e57dc4f789af75cb87b082475c1",
 							LastTransitionTime: previousTime,
 						},
 					},
@@ -348,15 +348,15 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("url"),
-					"Preview": Equal("hi"),
-					"Digest":  Equal("sha256:8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"),
+					"Preview": Equal(`"hi"`),
+					"Digest":  Equal("sha256:b49177e05868b7af8e82a644c1ce20e521af46497adeaffe861d294d9b4bb75e"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("revision"),
-					"Preview": Equal("bye"),
-					"Digest":  Equal("sha256:b49f425a7e1f9cff3856329ada223f2f9d368f15a00cf48df16ca95986137fe8"),
+					"Preview": Equal(`"bye"`),
+					"Digest":  Equal("sha256:55a4e9f5aff0a85f2770bcb4ca1bae728bccb7bc9d248ecdd5feb95ffaf64483"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))

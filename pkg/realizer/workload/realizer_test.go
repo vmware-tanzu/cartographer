@@ -127,8 +127,8 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("image"),
-					"Preview": Equal("whatever"),
-					"Digest":  Equal("sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281"),
+					"Preview": Equal(`"whatever"`),
+					"Digest":  Equal("sha256:057988d9edd6b3dd89ce693cfc5c88a0786e2e57dc4f789af75cb87b082475c1"),
 				},
 			))
 			Expect(time.Since(realizedResources[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
@@ -221,8 +221,8 @@ var _ = Describe("Realize", func() {
 					Outputs: []v1alpha1.Output{
 						{
 							Name:               "image",
-							Preview:            "whatever",
-							Digest:             "sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281",
+							Preview:            `"whatever"`,
+							Digest:             "sha256:057988d9edd6b3dd89ce693cfc5c88a0786e2e57dc4f789af75cb87b082475c1",
 							LastTransitionTime: previousTime,
 						},
 					},
@@ -334,15 +334,15 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("url"),
-					"Preview": Equal("hi"),
-					"Digest":  Equal("sha256:8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"),
+					"Preview": Equal(`"hi"`),
+					"Digest":  Equal("sha256:b49177e05868b7af8e82a644c1ce20e521af46497adeaffe861d294d9b4bb75e"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("revision"),
-					"Preview": Equal("bye"),
-					"Digest":  Equal("sha256:b49f425a7e1f9cff3856329ada223f2f9d368f15a00cf48df16ca95986137fe8"),
+					"Preview": Equal(`"bye"`),
+					"Digest":  Equal("sha256:55a4e9f5aff0a85f2770bcb4ca1bae728bccb7bc9d248ecdd5feb95ffaf64483"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))
