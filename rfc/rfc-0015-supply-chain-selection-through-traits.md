@@ -46,12 +46,7 @@ The permutations, if using a single selector would be vast:
 
 Further, the developer would need to know that `web-image-test-scan` is valid, not `web-image-test-scan`  
 
-## Possible Solutions
-
-
-[Draft Text](https://github.com/vmware-tanzu/cartographer/blob/rfc-0015-supply-chain-selection-through-traits-impl/rfc/rfc-0015-supply-chain-selection-through-traits.md)
-### 1. Characteristics
-
+## Solution
 With operators defining a simple set of available `characteristics', developers can select for appropriate supply chains
 in a more readable manner. Further, the operators can change the available set of supply chains without breaking existing
 workloads.
@@ -134,7 +129,8 @@ where the rule is:
    of matched labels wins
 3. Where there is multiple supply chains with the largest number of matches, an error is reported
 
-### 2. Selecting on fields
+## Alternatives/Extensions
+### Selecting on fields
 
 This option is now proposed in [this RFC](https://github.com/vmware-tanzu/cartographer/pull/591) (to complement
 selecting on labels as proposed above).
