@@ -103,34 +103,7 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
-		var err error
-		outputs, err = template.GenerateResourceOutput(output)
-		if err != nil {
-			for _, previousResource := range previousResources {
-				if previousResource.Name == resource.Name {
-					outputs = previousResource.Outputs
-					break
-				}
-			}
-		} else {
-			currTime := metav1.NewTime(time.Now())
-			for j, out := range outputs {
-				outputs[j].LastTransitionTime = currTime
-				for _, previousResource := range previousResources {
-					if previousResource.Name == resource.Name {
-						for _, previousOutput := range previousResource.Outputs {
-							if previousOutput.Name == out.Name {
-								if previousOutput.Digest == out.Digest {
-									outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-								}
-								break
-							}
-						}
-						break
-					}
-				}
-			}
-		}
+		outputs = getOutputs(resource.Name, template, previousResources, output)
 	}
 
 	var stampedRef *corev1.ObjectReference
@@ -150,4 +123,36 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		Inputs:      inputs,
 		Outputs:     outputs,
 	}
+}
+
+func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+	outputs, err := template.GenerateResourceOutput(output)
+	if err != nil {
+		for _, previousResource := range previousResources {
+			if previousResource.Name == resourceName {
+				outputs = previousResource.Outputs
+				break
+			}
+		}
+	} else {
+		currTime := metav1.NewTime(time.Now())
+		for j, out := range outputs {
+			outputs[j].LastTransitionTime = currTime
+			for _, previousResource := range previousResources {
+				if previousResource.Name == resourceName {
+					for _, previousOutput := range previousResource.Outputs {
+						if previousOutput.Name == out.Name {
+							if previousOutput.Digest == out.Digest {
+								outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+							}
+							break
+						}
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return outputs
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
-const PREVIEW_CHARACTER_LIMIT = 1000
+const PREVIEW_CHARACTER_LIMIT = 1024
 
 type Template interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec

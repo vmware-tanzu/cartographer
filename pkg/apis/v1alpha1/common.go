@@ -194,20 +194,37 @@ type FieldSelectorRequirement struct {
 }
 
 type RealizedResource struct {
-	Name        string                  `json:"name"`
-	StampedRef  *corev1.ObjectReference `json:"stampedRef,omitempty"`
+	// Name is the name of the resource in the blueprint
+	Name string `json:"name"`
+
+	// StampedRef is a reference to the object that was created by the resource
+	StampedRef *corev1.ObjectReference `json:"stampedRef,omitempty"`
+
+	// TemplateRef is a reference to the template used to create the object in StampedRef
 	TemplateRef *corev1.ObjectReference `json:"templateRef,omitempty"`
-	Inputs      []Input                 `json:"inputs,omitempty"`
-	Outputs     []Output                `json:"outputs,omitempty"`
+
+	// Inputs are references to resources that were used to template the object in StampedRef
+	Inputs []Input `json:"inputs,omitempty"`
+
+	// Outputs are values from the object in StampedRef that can be consumed by other resources
+	Outputs []Output `json:"outputs,omitempty"`
 }
 
 type Input struct {
+	// Name is the name of the resource in the blueprint whose output the resource consumes as an input
 	Name string `json:"name"`
 }
 
 type Output struct {
-	Name               string      `json:"name"`
-	Preview            string      `json:"preview"`
-	Digest             string      `json:"digest"`
+	// Name is the output type generated from the resource [url, revision, image or config]
+	Name string `json:"name"`
+
+	// Preview is a preview of the value of the output
+	Preview string `json:"preview"`
+
+	// Digest is a sha256 of the full value of the output
+	Digest string `json:"digest"`
+
+	// LastTransitionTime is a timestamp of the last time the value changed
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 }
