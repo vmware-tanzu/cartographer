@@ -699,6 +699,20 @@ func (in *DeliverySpec) DeepCopyInto(out *DeliverySpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.SelectorMatchExpressions != nil {
+		in, out := &in.SelectorMatchExpressions, &out.SelectorMatchExpressions
+		*out = make([]v1.LabelSelectorRequirement, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.SelectorMatchFields != nil {
+		in, out := &in.SelectorMatchFields, &out.SelectorMatchFields
+		*out = make([]FieldSelectorRequirement, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Params != nil {
 		in, out := &in.Params, &out.Params
 		*out = make([]BlueprintParam, len(*in))
@@ -1396,6 +1410,20 @@ func (in *SupplyChainSpec) DeepCopyInto(out *SupplyChainSpec) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.SelectorMatchExpressions != nil {
+		in, out := &in.SelectorMatchExpressions, &out.SelectorMatchExpressions
+		*out = make([]v1.LabelSelectorRequirement, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.SelectorMatchFields != nil {
+		in, out := &in.SelectorMatchFields, &out.SelectorMatchFields
+		*out = make([]FieldSelectorRequirement, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Params != nil {

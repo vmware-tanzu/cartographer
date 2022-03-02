@@ -327,14 +327,18 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
-	var selectorGetters []SelectorGetter
+	var selectorGetters []Selector
 	for _, item := range list.Items {
-		item := item
-		selectorGetters = append(selectorGetters, &item)
+		itemValue := item
+		selectorGetters = append(selectorGetters, &itemValue)
 	}
 
 	var supplyChains []*v1alpha1.ClusterSupplyChain
-	for _, matchingObject := range BestLabelMatches(workload, selectorGetters) {
+	matches, err := BestSelectorMatch(workload, selectorGetters)
+	if err != nil {
+		return nil, fmt.Errorf("evaluating supply chain selectors against workload [%s/%s] failed: %w", workload.Namespace, workload.Name, err)
+	}
+	for _, matchingObject := range matches {
 		log.V(logger.DEBUG).Info("supply chain matched workload",
 			"supply chain", matchingObject)
 		supplyChains = append(supplyChains, matchingObject.(*v1alpha1.ClusterSupplyChain))
@@ -353,14 +357,18 @@ func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverabl
 		return nil, fmt.Errorf("unable to list deliveries from api server: %w", err)
 	}
 
-	var selectorGetters []SelectorGetter
+	var selectorGetters []Selector
 	for _, item := range list.Items {
-		item := item
-		selectorGetters = append(selectorGetters, &item)
+		itemValue := item
+		selectorGetters = append(selectorGetters, &itemValue)
 	}
 
 	var deliveries []*v1alpha1.ClusterDelivery
-	for _, matchingObject := range BestLabelMatches(deliverable, selectorGetters) {
+	matches, err := BestSelectorMatch(deliverable, selectorGetters)
+	if err != nil {
+		return nil, fmt.Errorf("evaluating supply chain selectors against deliverable [%s/%s] failed: %w", deliverable.Namespace, deliverable.Name, err)
+	}
+	for _, matchingObject := range matches {
 		log.V(logger.DEBUG).Info("delivery matched deliverable",
 			"delivery", matchingObject)
 		deliveries = append(deliveries, matchingObject.(*v1alpha1.ClusterDelivery))
