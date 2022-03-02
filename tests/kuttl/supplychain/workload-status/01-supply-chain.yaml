@@ -16,25 +16,25 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterSupplyChain
 metadata:
-  name: responsible-ops---deliverable-status
+  name: responsible-ops---workload-status
 spec:
   selector:
-    integration-test: "deliverable-status"
+    integration-test: "workload-status"
   resources:
     - name: source-provider-first
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-first---deliverable-status
+        name: example-first---workload-status
 
     - name: source-provider-second
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-second---deliverable-status
+        name: example-second---workload-status
 
     - name: built-image-provider
       templateRef:
         kind: ClusterImageTemplate
-        name: example-image---deliverable-status
+        name: example-image---workload-status
       sources:
         - resource: source-provider-second
           name: solo-source-provider
@@ -42,7 +42,7 @@ spec:
     - name: config
       templateRef:
         kind: ClusterConfigTemplate
-        name: example-config---deliverable-status-1
+        name: example-config---workload-status-1
       images:
         - resource: built-image-provider
           name: solo-image-provider
@@ -50,7 +50,7 @@ spec:
     - name: config-2
       templateRef:
         kind: ClusterTemplate
-        name: example-config---deliverable-status-2
+        name: example-config---workload-status-2
       configs:
         - resource: config
           name: solo-config-provider
