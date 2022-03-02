@@ -17,9 +17,10 @@ package templates
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
+	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v3"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
@@ -71,16 +72,24 @@ func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) ([]v1alpha
 		return nil, nil
 	}
 
-	image, err := json.Marshal(output.Image)
+	var b bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&b)
+	yamlEncoder.SetIndent(2)
+	err := yamlEncoder.Encode(&output.Config)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	imageSHA := sha256.Sum256(image)
+	err = yamlEncoder.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	imageSHA := sha256.Sum256(b.Bytes())
 
 	return []v1alpha1.Output{
 		{
 			Name:    "image",
-			Preview: strings.ShortenString(string(image), PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(b.String(), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", imageSHA),
 		},
 	}, nil

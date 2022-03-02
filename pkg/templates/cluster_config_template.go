@@ -15,9 +15,10 @@
 package templates
 
 import (
+	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v3"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
@@ -69,17 +70,24 @@ func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) ([]v1alph
 		return nil, nil
 	}
 
-	config, err := json.Marshal(output.Config)
+	var b bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&b)
+	yamlEncoder.SetIndent(2)
+	err := yamlEncoder.Encode(&output.Config)
 	if err != nil {
-		return nil, err
+		panic(err)
+	}
+	err = yamlEncoder.Close()
+	if err != nil {
+		panic(err)
 	}
 
-	configSHA := sha256.Sum256(config)
+	configSHA := sha256.Sum256(b.Bytes())
 
 	return []v1alpha1.Output{
 		{
 			Name:    "config",
-			Preview: strings.ShortenString(string(config), PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(b.Bytes()), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", configSHA),
 		},
 	}, nil
