@@ -308,6 +308,9 @@ func (r *Reconciler) cleanupOrphanedObjects(ctx context.Context, previousResourc
 
 	var orphanedObjs []*corev1.ObjectReference
 	for _, prevResource := range previousResources {
+		if prevResource.StampedRef == nil {
+			continue
+		}
 		orphaned := true
 		for _, realizedResource := range realizedResources {
 			if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
