@@ -118,7 +118,7 @@ func validateDeliveryTemplateRef(ref DeliveryTemplateReference) error {
 		return fmt.Errorf("exactly one of templateRef.Name or templateRef.Options must be specified, found neither")
 	}
 
-	if err := validateResourceOptions(ref.Options); err != nil {
+	if err := validateResourceOptions(ref.Options, ValidDeliverablePaths, ValidDeliverablePrefixes); err != nil {
 		return err
 	}
 	return nil

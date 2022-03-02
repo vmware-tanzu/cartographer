@@ -12,25 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
+apiVersion: test.run/v1alpha1
+kind: Test
 metadata:
-  name: responsible-ops---options
+  name: test-git-template
 spec:
-  selector:
-    integration-test: "options"
-  resources:
-    - name: source-provider
-      templateRef:
-        kind: ClusterSourceTemplate
-        options:
-        - name: git-template---options
-          selector:
-            matchFields:
-              - key: spec.source.git
-                operator: Exists
-        - name: imgpkg-bundle-template---options
-          selector:
-            matchFields:
-              - key: spec.source.image
-                operator: Exists
+  value:
+    env:
+      - name: SPRING_PROFILES_ACTIVE
+        value: mysql
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  supplyChainRef:
+    name: responsible-ops---options-with-metadata
+    kind: ClusterSupplyChain

@@ -19,8 +19,6 @@
 package v1alpha1
 
 import (
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -44,28 +42,28 @@ const (
 
 // ValidWorkloadPaths Note: this needs to be updated anytime the spec changes
 var ValidWorkloadPaths = map[string]bool{
-	"workload.spec.source":                true,
-	"workload.spec.source.git":            true,
-	"workload.spec.source.git.url":        true,
-	"workload.spec.source.git.ref":        true,
-	"workload.spec.source.git.ref.branch": true,
-	"workload.spec.source.git.ref.tag":    true,
-	"workload.spec.source.git.ref.commit": true,
-	"workload.spec.source.image":          true,
-	"workload.spec.source.subPath":        true,
-	"workload.spec.build":                 true,
-	"workload.spec.image":                 true,
-	"workload.spec.serviceAccountName":    true,
+	"spec.source":                true,
+	"spec.source.git":            true,
+	"spec.source.git.url":        true,
+	"spec.source.git.ref":        true,
+	"spec.source.git.ref.branch": true,
+	"spec.source.git.ref.tag":    true,
+	"spec.source.git.ref.commit": true,
+	"spec.source.image":          true,
+	"spec.source.subPath":        true,
+	"spec.build":                 true,
+	"spec.image":                 true,
+	"spec.serviceAccountName":    true,
 }
 
 // ValidWorkloadPrefixes Note: this needs to be updated anytime the spec changes
 var ValidWorkloadPrefixes = []string{
-	"workload.spec.params",
-	"workload.spec.build.env",
-	"workload.spec.env",
-	"workload.spec.resources",
-	"workload.spec.serviceClaims",
-	"workload.metadata",
+	"spec.params",
+	"spec.build.env",
+	"spec.env",
+	"spec.resources",
+	"spec.serviceClaims",
+	"metadata",
 }
 
 // +kubebuilder:object:root=true
@@ -172,20 +170,6 @@ type WorkloadList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Workload `json:"items"`
-}
-
-func validWorkloadPath(path string) bool {
-	if ValidWorkloadPaths[path] {
-		return true
-	}
-
-	for _, prefix := range ValidWorkloadPrefixes {
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-
-	return false
 }
 
 func init() {

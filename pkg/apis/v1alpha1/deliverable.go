@@ -43,21 +43,21 @@ const (
 )
 
 var ValidDeliverablePaths = map[string]bool{
-	"deliverable.spec.source":                true,
-	"deliverable.spec.source.git":            true,
-	"deliverable.spec.source.git.url":        true,
-	"deliverable.spec.source.git.ref":        true,
-	"deliverable.spec.source.git.ref.branch": true,
-	"deliverable.spec.source.git.ref.tag":    true,
-	"deliverable.spec.source.git.ref.commit": true,
-	"deliverable.spec.source.image":          true,
-	"deliverable.spec.source.subPath":        true,
-	"deliverable.spec.serviceAccountName":    true,
+	"spec.source":                true,
+	"spec.source.git":            true,
+	"spec.source.git.url":        true,
+	"spec.source.git.ref":        true,
+	"spec.source.git.ref.branch": true,
+	"spec.source.git.ref.tag":    true,
+	"spec.source.git.ref.commit": true,
+	"spec.source.image":          true,
+	"spec.source.subPath":        true,
+	"spec.serviceAccountName":    true,
 }
 
 var ValidDeliverablePrefixes = []string{
-	"deliverable.spec.params",
-	"deliverable.metadata",
+	"spec.params",
+	"metadata",
 }
 
 // +kubebuilder:object:root=true

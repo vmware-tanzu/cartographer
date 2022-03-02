@@ -27,12 +27,12 @@ spec:
         - name: git-template---options-with-values
           selector:
             matchFields:
-              - key: workload.spec.source.git.url
+              - key: spec.source.git.url
                 operator: NotIn
                 values:
                   - "https://example.com"
         - name: imgpkg-bundle-template---options-with-values
           selector:
             matchFields:
-              - key: workload.spec.source.image
+              - key: spec.source.image
                 operator: Exists

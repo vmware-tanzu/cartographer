@@ -12,25 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
+apiVersion: test.run/v1alpha1
+kind: Test
 metadata:
-  name: responsible-ops---options
+  name: test-git-template-options-with-metadata
 spec:
-  selector:
-    integration-test: "options"
-  resources:
-    - name: source-provider
-      templateRef:
-        kind: ClusterSourceTemplate
-        options:
-        - name: git-template---options
-          selector:
-            matchFields:
-              - key: spec.source.git
-                operator: Exists
-        - name: imgpkg-bundle-template---options
-          selector:
-            matchFields:
-              - key: spec.source.image
-                operator: Exists
+  value:
+    foo: fizz
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: DeliveryReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  deliveryRef:
+    name: responsible-ops---options-delivery-with-metadata
+    kind: ClusterDelivery
