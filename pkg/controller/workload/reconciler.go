@@ -19,12 +19,14 @@ package workload
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,7 +38,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -80,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
-		return r.completeReconciliation(ctx, workload, err)
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, err)
 	}
 
 	log = log.WithValues("supply chain", supplyChain.Name)
@@ -89,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
-		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, controller.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
 		)
 	}
@@ -100,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !r.isSupplyChainReady(supplyChain) {
 		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
 		log.Info("supply chain is not in ready state")
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
 	}
 	r.conditionManager.AddPositive(SupplyChainReadyCondition())
 
@@ -110,18 +111,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
-		return r.completeReconciliation(ctx, workload, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, controller.NewUnhandledError(
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	selectedTemplates, stampedObjects, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -147,41 +148,45 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	} else {
 		if log.V(logger.DEBUG).Enabled() {
-			for _, stampedObject := range stampedObjects {
+			for _, resource := range realizedResources {
 				log.V(logger.DEBUG).Info("realized object",
-					"object", stampedObject)
+					"object", resource.StampedRef)
 			}
 		}
 		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
-	r.trackDependencies(workload, selectedTemplates, serviceAccountName, serviceAccountNS)
+	r.trackDependencies(workload, realizedResources, serviceAccountName, serviceAccountNS)
 
 	var trackingError error
-	if len(stampedObjects) > 0 {
-		for _, stampedObject := range stampedObjects {
-			trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
-			if trackingError != nil {
-				log.Error(err, "failed to add informer for object",
-					"object", stampedObject)
-				err = controller.NewUnhandledError(trackingError)
-			} else {
-				log.V(logger.DEBUG).Info("added informer for object",
-					"object", stampedObject)
-			}
+	for _, resource := range realizedResources {
+		if resource.StampedRef == nil {
+			continue
+		}
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(resource.StampedRef.GroupVersionKind())
+
+		trackingError = r.StampedTracker.Watch(log, obj, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
+		if trackingError != nil {
+			log.Error(err, "failed to add informer for object",
+				"object", resource.StampedRef)
+			err = controller.NewUnhandledError(trackingError)
+		} else {
+			log.V(logger.DEBUG).Info("added informer for object",
+				"object", resource.StampedRef)
 		}
 	}
 
-	return r.completeReconciliation(ctx, workload, err)
+	return r.completeReconciliation(ctx, workload, realizedResources, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, err error) (ctrl.Result, error) {
+func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	workload.Status.Conditions, changed = r.conditionManager.Finalize()
-
 	var updateErr error
-	if changed || (workload.Status.ObservedGeneration != workload.Generation) {
+	if changed || (workload.Status.ObservedGeneration != workload.Generation) || !reflect.DeepEqual(workload.Status.Resources, realizedResources) {
+		workload.Status.Resources = realizedResources
 		workload.Status.ObservedGeneration = workload.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, workload)
 		if updateErr != nil {
@@ -251,7 +256,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	return supplyChains[0], nil
 }
 
-func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemplates []templates.Template, serviceAccountName, serviceAccountNS string) {
+func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: workload.Namespace,
 		Name:      workload.Name,
@@ -271,15 +276,18 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, selectedTemp
 		Name:      workload.Name,
 	})
 
-	for _, selectedTemplate := range selectedTemplates {
+	for _, resource := range realizedResources {
+		if resource.TemplateRef == nil {
+			continue
+		}
 		r.DependencyTracker.Track(
 			dependency.Key{
 				GroupKind: schema.GroupKind{
 					Group: v1alpha1.SchemeGroupVersion.Group,
-					Kind:  selectedTemplate.GetKind(),
+					Kind:  resource.TemplateRef.Kind,
 				},
 				NamespacedName: types.NamespacedName{
-					Name: selectedTemplate.GetName(),
+					Name: resource.TemplateRef.Name,
 				},
 			},
 			types.NamespacedName{

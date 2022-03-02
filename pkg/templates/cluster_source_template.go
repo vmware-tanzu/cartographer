@@ -15,9 +15,12 @@
 package templates
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -68,6 +71,38 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 		Source: &Source{
 			URL:      url,
 			Revision: revision,
+		},
+	}, nil
+}
+
+func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
+	if output == nil || output.Source == nil {
+		return nil, nil
+	}
+
+	url, err := json.Marshal(output.Source.URL)
+	if err != nil {
+		return nil, err
+	}
+
+	revision, err := json.Marshal(output.Source.Revision)
+	if err != nil {
+		return nil, err
+	}
+
+	urlSHA := sha256.Sum256(url)
+	revisionSHA := sha256.Sum256(revision)
+
+	return []v1alpha1.Output{
+		{
+			Name:    "url",
+			Preview: strings.ShortenString(string(url), PREVIEW_CHARACTER_LIMIT),
+			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
+		},
+		{
+			Name:    "revision",
+			Preview: strings.ShortenString(string(revision), PREVIEW_CHARACTER_LIMIT),
+			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
 		},
 	}, nil
 }

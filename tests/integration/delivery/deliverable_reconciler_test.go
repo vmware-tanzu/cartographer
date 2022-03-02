@@ -459,6 +459,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							return err
 						}).Should(HaveOccurred())
 					})
+
 					It("the deliverable has an unknown Ready condition", func() {
 						deliverable := &v1alpha1.Deliverable{}
 

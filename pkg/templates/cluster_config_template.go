@@ -15,9 +15,12 @@
 package templates
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -58,6 +61,27 @@ func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
 
 	return &Output{
 		Config: config,
+	}, nil
+}
+
+func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
+	if output == nil || output.Config == nil {
+		return nil, nil
+	}
+
+	config, err := json.Marshal(output.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	configSHA := sha256.Sum256(config)
+
+	return []v1alpha1.Output{
+		{
+			Name:    "config",
+			Preview: strings.ShortenString(string(config), PREVIEW_CHARACTER_LIMIT),
+			Digest:  fmt.Sprintf("sha256:%x", configSHA),
+		},
 	}, nil
 }
 

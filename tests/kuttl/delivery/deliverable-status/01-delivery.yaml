@@ -14,43 +14,35 @@
 
 ---
 apiVersion: carto.run/v1alpha1
-kind: ClusterSupplyChain
+kind: ClusterDelivery
 metadata:
-  name: responsible-ops---consume-output-of-resources
+  name: responsible-ops---deliverable-status
 spec:
   selector:
-    integration-test: "templates-consume-output-of-resources"
+    integration-test: "deliverable-status"
   resources:
     - name: source-provider-first
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-first---consume-output-of-resources
+        name: example-first---deliverable-status
 
     - name: source-provider-second
       templateRef:
         kind: ClusterSourceTemplate
-        name: example-second---consume-output-of-resources
-
-    - name: built-image-provider
-      templateRef:
-        kind: ClusterImageTemplate
-        name: example-image---consume-output-of-resources
-      sources:
-        - resource: source-provider-second
-          name: solo-source-provider
+        name: example-second---deliverable-status
 
     - name: config
       templateRef:
         kind: ClusterConfigTemplate
-        name: example-config---consume-output-of-resources-1
-      images:
-        - resource: built-image-provider
+        name: example-config---deliverable-status-1
+      sources:
+        - resource: source-provider-second
           name: solo-image-provider
 
     - name: config-2
       templateRef:
         kind: ClusterTemplate
-        name: example-config---consume-output-of-resources-2
+        name: example-config---deliverable-status-2
       configs:
         - resource: config
           name: solo-config-provider

@@ -1,0 +1,117 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-second-configmap
+data:
+  player_initial_lives: "5"
+  player_loves: "knitting"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-config-configmap
+data:
+  favorite_color: "5"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-config
+data:
+  best_name: "5"
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: DeliveryReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  deliveryRef:
+    name: responsible-ops---deliverable-status
+    kind: ClusterDelivery
+  resources:
+    - name: source-provider-first
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-first-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-first---deliverable-status
+      outputs:
+        - name: url
+          preview: '"three"'
+          digest: sha256:097a4dfb7f430ff3e44aa2399549a038c1f29465540d1e18701e8b5cd3fd2ccb
+        - name: revision
+          preview: '"some over 1000 character thing the player loves ................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n.................................................................................................youll see this'
+          digest: sha256:9c60f8db9af5a5d92ac1c932aa70a4f3fffd0ed248ed4eabad3c9b17a7e803ed
+    - name: source-provider-second
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-second-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-second---deliverable-status
+      outputs:
+        - name: url
+          preview: '"5"'
+          digest: sha256:d10a4bc9e0c1fa4e8f3d7ce2512b8756e47ca5fa451f373c39a1431bb88db49f
+        - name: revision
+          preview: '"knitting"'
+          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
+    - name: config
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-config-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterConfigTemplate
+        name: example-config---deliverable-status-1
+      inputs:
+        - name: source-provider-second
+      outputs:
+        - name: config
+          preview: '"5"'
+          digest: sha256:d10a4bc9e0c1fa4e8f3d7ce2512b8756e47ca5fa451f373c39a1431bb88db49f
+    - name: config-2
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-config
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterTemplate
+        name: example-config---deliverable-status-2
+      inputs:
+        - name: config

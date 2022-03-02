@@ -109,6 +109,10 @@ type DeliverableStatus struct {
 
 	// DeliveryRef is the Delivery resource that was used when this status was set.
 	DeliveryRef ObjectReference `json:"deliveryRef,omitempty"`
+
+	// Resources contain references to the objects created by the Delivery and the templates used to create them.
+	// It also contains Inputs and Outputs that were passed between the templates as the Delivery was processed.
+	Resources []RealizedResource `json:"resources,omitempty"`
 }
 
 // +kubebuilder:object:root=true
