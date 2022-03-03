@@ -17,7 +17,8 @@ package templates
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
+
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 
@@ -74,27 +75,29 @@ func (t *clusterDeploymentTemplate) GenerateResourceOutput(output *Output) ([]v1
 		return nil, nil
 	}
 
-	url, err := utils.EncodeYaml(output.Source.URL)
+	urlBytes, err := yaml.Marshal(output.Source.URL)
 	if err != nil {
 		return nil, err
 	}
-	urlSHA := sha256.Sum256([]byte(url))
 
-	rev, err := utils.EncodeYaml(output.Source.Revision)
+	urlSHA := sha256.Sum256(urlBytes)
+
+	revBytes, err := yaml.Marshal(output.Source.Revision)
 	if err != nil {
 		return nil, err
 	}
-	revSHA := sha256.Sum256([]byte(rev))
+
+	revSHA := sha256.Sum256(revBytes)
 
 	return []v1alpha1.Output{
 		{
 			Name:    "url",
-			Preview: strings.ShortenString(url, PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(urlBytes), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
 		},
 		{
 			Name:    "revision",
-			Preview: strings.ShortenString(rev, PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(revBytes), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", revSHA),
 		},
 	}, nil

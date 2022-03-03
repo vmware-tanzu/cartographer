@@ -59,8 +59,8 @@ status:
   resources:
     - name: source-provider-first
       stampedRef:
-        apiVersion: v1
-        kind: ConfigMap
+        apiVersion: test.run/v1alpha1
+        kind: Test
         name: example-first-configmap
       templateRef:
         apiVersion: carto.run/v1alpha1
@@ -72,30 +72,30 @@ status:
             three
           digest: sha256:f6936912184481f5edd4c304ce27c5a1a827804fc7f329f43d273b8621870776
         - name: revision
-          preview: |
+          preview: |-
+            apiVersion: example.com/v1alpha1
             data:
-              player_initial_lives: three
-              player_loves: hockey
+                player_initial_lives: three
+                player_loves: hockey
             kind: SomeService
             metadata:
-              name: service
+                name: service
             spec:
-              template:
-                apiVersion: v1
-                data:
-                  aa: bar....................................................................................................
-                  bb: bar....................................................................................................
-                  cc: bar....................................................................................................
-                  dd: bar....................................................................................................
-                  ee: bar....................................................................................................
-                  ff: bar....................................................................................................
-                  gg: bar....................................................................................................
-                  hh: bar................you can see me
-          digest: sha256:4692618e414d4d75ccf6393f1ea0b8a40845fc2bacbbe26c4ce2bc8b7df49efb
+                template:
+                    apiVersion: v1
+                    data:
+                        aa: bar....................................................................................................
+                        bb: bar....................................................................................................
+                        cc: bar....................................................................................................
+                        dd: bar....................................................................................................
+                        ee: bar....................................................................................................
+                        ff: bar....................................................................................................
+                        gg: bar........................................................................you can see me
+          digest: sha256:868a6f6b23762ce221f64bee95aacb0d431b6f0900bb2d23cce6f1f02224a56a
     - name: source-provider-second
       stampedRef:
-        apiVersion: test.run/v1alpha1
-        kind: Test
+        apiVersion: v1
+        kind: ConfigMap
         name: example-second-configmap
       templateRef:
         apiVersion: carto.run/v1alpha1
