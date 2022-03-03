@@ -694,6 +694,7 @@ test_gitops_to_app() {
                 done
 
                 kubectl tree deliverable gitops
+                kubectl get -o yaml app.kappctrl.k14s.io gitops
         done
 
         log "testing gitops-to-app FAILED :("
