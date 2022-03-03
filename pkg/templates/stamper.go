@@ -149,9 +149,13 @@ func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateS
 		return nil, err
 	}
 
-	if stampedObject.GetNamespace() == "" {
-		stampedObject.SetNamespace(s.Owner.GetNamespace())
+	// option 1
+	if stampedObject.GetNamespace() != "" {
+		// BLOW UP
 	}
+
+	//  option 2
+	stampedObject.SetNamespace(s.Owner.GetNamespace())
 
 	apiVersion, kind := s.Owner.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
 	stampedObject.SetOwnerReferences([]metav1.OwnerReference{
