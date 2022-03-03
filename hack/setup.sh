@@ -571,7 +571,7 @@ test_gitops() {
       setup_source_to_gitops
       test_source_to_gitops
       setup_gitops_to_app
-      test_example_sc "gitwriter-sc"
+      test_gitops_to_app
       teardown_gitops_example
 }
 
@@ -672,6 +672,32 @@ setup_gitops_to_app() {
                 --data-value git_writer.base64_encoded_ssh_key="$(echo "$(cat hack/gitea-key)" | base64)" \
                 --data-value git_writer.base64_encoded_known_hosts="$(echo "$GIT_WRITER_SERVER_PUBLIC_TOKEN" | base64)" |
                 kapp deploy --yes -a example-deliver -f-
+}
+
+test_gitops_to_app() {
+        log "testing gitops-to-app"
+
+        for _ in {1..5}; do
+                for sleep_duration in {15..1}; do
+                        local deployed_pods
+                        deployed_pods=$(kubectl get pods \
+                                -l "serving.knative.dev/configuration=gitwriter-sc" \
+                                -o name)
+
+                        if [[ "$deployed_pods" == *"gitwriter-sc"* ]]; then
+                                log "testing '$test_name' SUCCEEDED! sweet"
+                                return 0
+                        fi
+
+                        echo "- waiting $sleep_duration seconds"
+                        sleep "$sleep_duration"
+                done
+
+                kubectl tree deliverable gitops
+        done
+
+        log "testing gitops-to-app FAILED :("
+        exit 1
 }
 
 delete_containers() {
