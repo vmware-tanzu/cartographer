@@ -166,10 +166,10 @@ type TemplateOption struct {
 	Name string `json:"name"`
 
 	// Selector is a field query over a workload or deliverable resource.
-	Selector Selector `json:"selector"`
+	Selector OptionSelector `json:"selector"`
 }
 
-type Selector struct {
+type OptionSelector struct {
 	// MatchFields is a list of field selector requirements. The requirements are ANDed.
 	// +kubebuilder:validation:MinItems=1
 	MatchFields []FieldSelectorRequirement `json:"matchFields"`

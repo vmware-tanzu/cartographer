@@ -163,7 +163,7 @@ type SupplyChainTemplateReference struct {
 	Name string `json:"name,omitempty"`
 
 	// Options is a list of template names and Selectors. The templates must all be of type Kind.
-	// A template will be selected if the workload matches the specified Selector.
+	// A template will be selected if the workload matches the specified selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
 	// Minimum number of items in list is two.

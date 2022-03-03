@@ -483,7 +483,7 @@ var _ = Describe("Webhook Validation", func() {
 								Options: []v1alpha1.TemplateOption{
 									{
 										Name: "source-1",
-										Selector: v1alpha1.Selector{
+										Selector: v1alpha1.OptionSelector{
 											MatchFields: []v1alpha1.FieldSelectorRequirement{
 												{
 													Key:      "spec.source.git.url",
@@ -494,7 +494,7 @@ var _ = Describe("Webhook Validation", func() {
 									},
 									{
 										Name: "source-2",
-										Selector: v1alpha1.Selector{
+										Selector: v1alpha1.OptionSelector{
 											MatchFields: []v1alpha1.FieldSelectorRequirement{
 												{
 													Key:      "spec.source.git.url",
@@ -552,7 +552,7 @@ var _ = Describe("Webhook Validation", func() {
 				supplyChain.Spec.Resources[0].TemplateRef.Options = []v1alpha1.TemplateOption{
 					{
 						Name:     "only-option",
-						Selector: v1alpha1.Selector{},
+						Selector: v1alpha1.OptionSelector{},
 					},
 				}
 			})

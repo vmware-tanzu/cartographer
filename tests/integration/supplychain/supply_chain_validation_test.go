@@ -104,7 +104,7 @@ var _ = Describe("SupplyChainValidation", func() {
 								},
 								{
 									Name: "some-other-template",
-									Selector: v1alpha1.Selector{
+									Selector: v1alpha1.OptionSelector{
 										MatchFields: []v1alpha1.FieldSelectorRequirement{
 											{
 												Key:      "workload.spec.source.git.url",

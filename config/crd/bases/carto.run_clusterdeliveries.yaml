@@ -178,7 +178,7 @@ spec:
                         options:
                           description: Options is a list of template names and Selectors.
                             The templates must all be of type Kind. A template will
-                            be selected if the deliverable matches the specified Selector.
+                            be selected if the deliverable matches the specified selector.
                             Only one template can be selected. Only one of Name and
                             Options can be specified.
                           items:
