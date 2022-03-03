@@ -257,6 +257,68 @@ spec:
                 description: 'Specifies the label key-value pairs used to select workloads
                   See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
                 type: object
+              selectorMatchExpressions:
+                description: 'Specifies the requirements used to select workloads
+                  based on their labels See: FIXME update docs and provide link'
+                items:
+                  description: A label selector requirement is a selector that contains
+                    values, a key, and an operator that relates the key and values.
+                  properties:
+                    key:
+                      description: key is the label key that the selector applies
+                        to.
+                      type: string
+                    operator:
+                      description: operator represents a key's relationship to a set
+                        of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                      type: string
+                    values:
+                      description: values is an array of string values. If the operator
+                        is In or NotIn, the values array must be non-empty. If the
+                        operator is Exists or DoesNotExist, the values array must
+                        be empty. This array is replaced during a strategic merge
+                        patch.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - key
+                  - operator
+                  type: object
+                type: array
+              selectorMatchFields:
+                description: 'Specifies the requirements used to select workloads
+                  based on their fields See: FIXME update docs and provide link'
+                items:
+                  properties:
+                    key:
+                      description: 'Key is the JSON path in the workload to match
+                        against. e.g. for workload: "workload.spec.source.git.url",
+                        e.g. for deliverable: "deliverable.spec.source.git.url"'
+                      minLength: 1
+                      type: string
+                    operator:
+                      description: Operator represents a key's relationship to a set
+                        of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                      enum:
+                      - In
+                      - NotIn
+                      - Exists
+                      - DoesNotExist
+                      type: string
+                    values:
+                      description: Values is an array of string values. If the operator
+                        is In or NotIn, the values array must be non-empty. If the
+                        operator is Exists or DoesNotExist, the values array must
+                        be empty.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - key
+                  - operator
+                  type: object
+                type: array
               serviceAccountRef:
                 description: "ServiceAccountName refers to the Service account with
                   permissions to create resources submitted by the supply chain. \n
@@ -276,7 +338,6 @@ spec:
                 type: object
             required:
             - resources
-            - selector
             type: object
           status:
             description: 'Status conforms to the Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'

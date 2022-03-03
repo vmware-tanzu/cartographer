@@ -1092,6 +1092,46 @@ spec:
 		})
 
 		Context("GetSupplyChainsForWorkload", func() {
+			Context("When a matchFields key is invalid", func() {
+				BeforeEach(func() {
+					var supplyChain = &v1alpha1.ClusterSupplyChain{
+						TypeMeta: metav1.TypeMeta{
+							Kind: "ClusterSupplyChain",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "supplychain-name",
+						},
+						Spec: v1alpha1.SupplyChainSpec{
+							SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+								{
+									Key:      "spec.env[asdfasdfadkf3",
+									Operator: "Exists",
+								},
+							},
+						},
+					}
+					supplyChain.GetObjectKind()
+					clientObjects = []client.Object{supplyChain}
+				})
+
+				It("returns an error", func() {
+					workload := &v1alpha1.Workload{
+						TypeMeta: metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "workload-name",
+							Namespace: "myNS",
+							Labels:    map[string]string{"foo": "bar"},
+						},
+						Spec:   v1alpha1.WorkloadSpec{},
+						Status: v1alpha1.WorkloadStatus{},
+					}
+					_, err := repo.GetSupplyChainsForWorkload(ctx, workload)
+					Expect(err).To(MatchError(ContainSubstring("evaluating supply chain selectors against workload [myNS/workload-name] failed")))
+					Expect(err).To(MatchError(ContainSubstring("failed to evaluate all matched fields of [ClusterSupplyChain/supplychain-name]")))
+					Expect(err).To(MatchError(ContainSubstring("unable to match field requirement with key [spec.env[asdfasdfadkf3] operator [Exists] values [[]]")))
+				})
+			})
+
 			Context("One supply chain", func() {
 				BeforeEach(func() {
 					supplyChain := &v1alpha1.ClusterSupplyChain{

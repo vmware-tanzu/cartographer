@@ -21,7 +21,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
-func Matches(req v1alpha1.FieldSelectorRequirement, context map[string]interface{}) (bool, error) {
+func Matches(req v1alpha1.FieldSelectorRequirement, context interface{}) (bool, error) {
 	evaluator := eval.EvaluatorBuilder()
 	actualValue, err := evaluator.EvaluateJsonPath(req.Key, context)
 	if err != nil {

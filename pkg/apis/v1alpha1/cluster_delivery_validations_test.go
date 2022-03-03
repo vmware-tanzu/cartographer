@@ -41,6 +41,7 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
+					Selector: map[string]string { "requires": "at-least-one" },
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -195,6 +196,7 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
+					Selector: map[string]string { "one-selector-of-any-kind": "is-needed" },
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -506,6 +508,138 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 	})
+
+	Describe("OneOf Selector, SelectorMatchExpressions, or SelectorMatchFields", func() {
+		var deliveryFactory = func(selector map[string]string, expressions []metav1.LabelSelectorRequirement, fields []v1alpha1.FieldSelectorRequirement) *v1alpha1.ClusterDelivery {
+			return &v1alpha1.ClusterDelivery{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "delivery-resource",
+					Namespace: "default",
+				},
+				Spec: v1alpha1.DeliverySpec{
+					Selector: selector,
+					SelectorMatchExpressions: expressions,
+					SelectorMatchFields: fields,
+					Resources: []v1alpha1.DeliveryResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "source-template",
+							},
+						},
+						{
+							Name: "other-source-provider",
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "source-template",
+							},
+						},
+					},
+				},
+			}
+
+		}
+		Context("No selection", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(nil, nil, nil)
+			})
+
+			It("on create, returns an error", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("on update, returns an error", func() {
+				Expect(delivery.ValidateUpdate(nil)).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("Empty selection", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(map[string]string{}, []metav1.LabelSelectorRequirement{}, []v1alpha1.FieldSelectorRequirement{})
+			})
+
+			It("on create, returns an error", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("on update, returns an error", func() {
+				Expect(delivery.ValidateUpdate(nil)).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("A Selector", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(map[string]string{"foo":"bar"}, nil, nil)
+			})
+
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("on update, returns an error", func() {
+				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("A SelectorMatchExpression", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(nil, []metav1.LabelSelectorRequirement{{Key: "whatever", Operator: "Exists" }}, nil)
+			})
+
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("A SelectorMatchFields", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "whatever", Operator: "Exists" }})
+			})
+
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+	})
+
 })
 
 var _ = Describe("DeliveryTemplateReference", func() {
