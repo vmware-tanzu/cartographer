@@ -15,11 +15,9 @@
 package templates
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"gopkg.in/yaml.v3"
-
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 
@@ -70,24 +68,16 @@ func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) ([]v1alph
 		return nil, nil
 	}
 
-	var b bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&b)
-	yamlEncoder.SetIndent(2)
-	err := yamlEncoder.Encode(&output.Config)
+	config, err := utils.EncodeYaml(output.Config)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	err = yamlEncoder.Close()
-	if err != nil {
-		panic(err)
-	}
-
-	configSHA := sha256.Sum256(b.Bytes())
+	configSHA := sha256.Sum256([]byte(config))
 
 	return []v1alpha1.Output{
 		{
 			Name:    "config",
-			Preview: strings.ShortenString(string(b.Bytes()), PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(config, PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", configSHA),
 		},
 	}, nil

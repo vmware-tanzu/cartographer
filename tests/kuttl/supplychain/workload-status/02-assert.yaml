@@ -68,15 +68,34 @@ status:
         name: example-first---workload-status
       outputs:
         - name: url
-          preview: '"three"'
-          digest: sha256:097a4dfb7f430ff3e44aa2399549a038c1f29465540d1e18701e8b5cd3fd2ccb
+          preview: |
+            three
+          digest: sha256:f6936912184481f5edd4c304ce27c5a1a827804fc7f329f43d273b8621870776
         - name: revision
-          preview: '"some over 1000 character thing the player loves ................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n................................................................................................................\n.................................................................................................youll see this'
-          digest: sha256:9c60f8db9af5a5d92ac1c932aa70a4f3fffd0ed248ed4eabad3c9b17a7e803ed
+          preview: |
+            data:
+              player_initial_lives: three
+              player_loves: hockey
+            kind: SomeService
+            metadata:
+              name: service
+            spec:
+              template:
+                apiVersion: v1
+                data:
+                  aa: bar....................................................................................................
+                  bb: bar....................................................................................................
+                  cc: bar....................................................................................................
+                  dd: bar....................................................................................................
+                  ee: bar....................................................................................................
+                  ff: bar....................................................................................................
+                  gg: bar....................................................................................................
+                  hh: bar................you can see me
+          digest: sha256:4692618e414d4d75ccf6393f1ea0b8a40845fc2bacbbe26c4ce2bc8b7df49efb
     - name: source-provider-second
       stampedRef:
-        apiVersion: v1
-        kind: ConfigMap
+        apiVersion: test.run/v1alpha1
+        kind: Test
         name: example-second-configmap
       templateRef:
         apiVersion: carto.run/v1alpha1
@@ -84,11 +103,13 @@ status:
         name: example-second---workload-status
       outputs:
         - name: url
-          preview: '"5"'
-          digest: sha256:d10a4bc9e0c1fa4e8f3d7ce2512b8756e47ca5fa451f373c39a1431bb88db49f
+          preview: |
+            "5"
+          digest: sha256:11fd182657d58787e0e5b61c5da79195f8715fef7f957b9cdba2d8a581b2ca33
         - name: revision
-          preview: '"knitting"'
-          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
+          preview: |
+            knitting
+          digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
     - name: built-image-provider
       stampedRef:
         apiVersion: v1
@@ -102,8 +123,9 @@ status:
         - name: source-provider-second
       outputs:
         - name: image
-          preview: '"knitting"'
-          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
+          preview: |
+            knitting
+          digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
     - name: config
       stampedRef:
         apiVersion: v1
@@ -117,8 +139,9 @@ status:
         - name: built-image-provider
       outputs:
         - name: config
-          preview: '"knitting"'
-          digest: sha256:d660f574d66d09f7c3e3ba2fa5ac17bdcd0b3db1083da0d577425acbfc8c169f
+          preview: |
+            knitting
+          digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
     - name: config-2
       stampedRef:
         apiVersion: v1

@@ -15,8 +15,10 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"strconv"
 	"strings"
 
@@ -102,4 +104,19 @@ func GetFullyQualifiedType(obj *unstructured.Unstructured) string {
 			obj.GetObjectKind().GroupVersionKind().Group)
 	}
 	return fullyQualifiedType
+}
+
+func EncodeYaml(val interface{}) (string, error) {
+	var b bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&b)
+	yamlEncoder.SetIndent(2)
+	err := yamlEncoder.Encode(val)
+	if err != nil {
+		return "", err
+	}
+	err = yamlEncoder.Close()
+	if err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }

@@ -15,11 +15,9 @@
 package templates
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"gopkg.in/yaml.v3"
-
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 
@@ -76,45 +74,28 @@ func (t *clusterDeploymentTemplate) GenerateResourceOutput(output *Output) ([]v1
 		return nil, nil
 	}
 
-	var b bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&b)
-	yamlEncoder.SetIndent(2)
-	err := yamlEncoder.Encode(&output.Source.URL)
+	url, err := utils.EncodeYaml(output.Source.URL)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	err = yamlEncoder.Close()
-	if err != nil {
-		panic(err)
-	}
+	urlSHA := sha256.Sum256([]byte(url))
 
-	urlSHA := sha256.Sum256(b.Bytes())
-
-	// TODO: I'm sure we can reuse buffer and encoder
-	var bRev bytes.Buffer
-	yamlEncoderRev := yaml.NewEncoder(&bRev)
-	yamlEncoderRev.SetIndent(2)
-	err = yamlEncoderRev.Encode(&output.Source.Revision)
+	rev, err := utils.EncodeYaml(output.Source.Revision)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	err = yamlEncoderRev.Close()
-	if err != nil {
-		panic(err)
-	}
-
-	revisionSHA := sha256.Sum256(bRev.Bytes())
+	revSHA := sha256.Sum256([]byte(rev))
 
 	return []v1alpha1.Output{
 		{
 			Name:    "url",
-			Preview: strings.ShortenString(b.String(), PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(url, PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
 		},
 		{
 			Name:    "revision",
-			Preview: strings.ShortenString(bRev.String(), PREVIEW_CHARACTER_LIMIT),
-			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
+			Preview: strings.ShortenString(rev, PREVIEW_CHARACTER_LIMIT),
+			Digest:  fmt.Sprintf("sha256:%x", revSHA),
 		},
 	}, nil
 }

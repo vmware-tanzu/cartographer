@@ -127,6 +127,10 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 
 func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
+	// TODO: REMOVE
+	if err != nil {
+		panic(err)
+	}
 	if err != nil {
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resourceName {
