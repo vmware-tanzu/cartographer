@@ -16,9 +16,9 @@ package templates
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 
@@ -80,29 +80,30 @@ func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alph
 		return nil, nil
 	}
 
-	url, err := json.Marshal(output.Source.URL)
+	urlBytes, err := yaml.Marshal(output.Source.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	revision, err := json.Marshal(output.Source.Revision)
+	urlSHA := sha256.Sum256(urlBytes)
+
+	revBytes, err := yaml.Marshal(output.Source.Revision)
 	if err != nil {
 		return nil, err
 	}
 
-	urlSHA := sha256.Sum256(url)
-	revisionSHA := sha256.Sum256(revision)
+	revSHA := sha256.Sum256(revBytes)
 
 	return []v1alpha1.Output{
 		{
 			Name:    "url",
-			Preview: strings.ShortenString(string(url), PREVIEW_CHARACTER_LIMIT),
+			Preview: strings.ShortenString(string(urlBytes), PREVIEW_CHARACTER_LIMIT),
 			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
 		},
 		{
 			Name:    "revision",
-			Preview: strings.ShortenString(string(revision), PREVIEW_CHARACTER_LIMIT),
-			Digest:  fmt.Sprintf("sha256:%x", revisionSHA),
+			Preview: strings.ShortenString(string(revBytes), PREVIEW_CHARACTER_LIMIT),
+			Digest:  fmt.Sprintf("sha256:%x", revSHA),
 		},
 	}, nil
 }

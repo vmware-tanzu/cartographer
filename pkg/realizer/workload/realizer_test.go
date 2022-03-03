@@ -16,7 +16,9 @@ package workload_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -127,8 +129,8 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("image"),
-					"Preview": Equal(`"whatever"`),
-					"Digest":  Equal("sha256:057988d9edd6b3dd89ce693cfc5c88a0786e2e57dc4f789af75cb87b082475c1"),
+					"Preview": Equal("whatever\n"),
+					"Digest":  HavePrefix("sha256"),
 				},
 			))
 			Expect(time.Since(realizedResources[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
@@ -188,14 +190,14 @@ var _ = Describe("Realize", func() {
 					Outputs: []v1alpha1.Output{
 						{
 							Name:               "url",
-							Preview:            "http://example.com",
-							Digest:             "sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281",
+							Preview:            "http://example.com\n",
+							Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("http://example.com\n"))),
 							LastTransitionTime: previousTime,
 						},
 						{
 							Name:               "revision",
-							Preview:            "main",
-							Digest:             "sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281",
+							Preview:            "main\n",
+							Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("main\n"))),
 							LastTransitionTime: previousTime,
 						},
 					},
@@ -221,8 +223,8 @@ var _ = Describe("Realize", func() {
 					Outputs: []v1alpha1.Output{
 						{
 							Name:               "image",
-							Preview:            `"whatever"`,
-							Digest:             "sha256:057988d9edd6b3dd89ce693cfc5c88a0786e2e57dc4f789af75cb87b082475c1",
+							Preview:            "whatever\n",
+							Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("whatever\n"))),
 							LastTransitionTime: previousTime,
 						},
 					},
@@ -243,8 +245,8 @@ var _ = Describe("Realize", func() {
 					Outputs: []v1alpha1.Output{
 						{
 							Name:               "config",
-							Preview:            "whatever",
-							Digest:             "sha256:85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281",
+							Preview:            "whatever\n",
+							Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("whatever\n"))),
 							LastTransitionTime: previousTime,
 						},
 					},
@@ -334,15 +336,15 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("url"),
-					"Preview": Equal(`"hi"`),
-					"Digest":  Equal("sha256:b49177e05868b7af8e82a644c1ce20e521af46497adeaffe861d294d9b4bb75e"),
+					"Preview": Equal("hi\n"),
+					"Digest":  HavePrefix("sha256"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("revision"),
-					"Preview": Equal(`"bye"`),
-					"Digest":  Equal("sha256:55a4e9f5aff0a85f2770bcb4ca1bae728bccb7bc9d248ecdd5feb95ffaf64483"),
+					"Preview": Equal("bye\n"),
+					"Digest":  HavePrefix("sha256"),
 				},
 			))
 			Expect(realizedResources[0].Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))
