@@ -39,7 +39,7 @@ toc:
         url: /reference/runnable
   - title: Examples
     subfolderitems:
-      - page: Multi-cluster
+      - page: Multi-Cluster
         url: /multi-cluster
       - page: Examples
         url: /examples
