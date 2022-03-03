@@ -3,6 +3,7 @@ module github.com/vmware-tanzu/cartographer/hack/tools
 go 1.17
 
 require (
+	github.com/daixiang0/gci v0.3.1-0.20220208004058-76d765e3ab48
 	github.com/golangci/golangci-lint v1.44.2
 	github.com/google/addlicense v1.0.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
@@ -32,7 +33,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/charithe/durationcheck v0.0.9 // indirect
 	github.com/chavacava/garif v0.0.0-20210405164556-e8a0a408d6af // indirect
-	github.com/daixiang0/gci v0.3.1-0.20220208004058-76d765e3ab48 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/esimonov/ifshort v1.0.4 // indirect
