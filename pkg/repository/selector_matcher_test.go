@@ -295,6 +295,67 @@ var _ = Describe("BestSelectorMatch", func() {
 
 		// TODO: Error cases and handling with field context
 	)
+
+	Describe("malformed selectors", func() {
+		Context("label selector invalid", func() {
+			var sel []repository.Selector
+			BeforeEach(func() {
+				sel = []repository.Selector{
+					&selector{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Test",
+							APIVersion: "testv1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-selector",
+						},
+						labels: labels2.Set{
+							"fred-": "derf-",
+						},
+					},
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := repository.BestSelectorMatch(selectable{}, sel)
+				Expect(err).To(MatchError(ContainSubstring("selectorMatchExpressions or selectors of [Test/my-selector] are not valid")))
+				Expect(err).To(MatchError(ContainSubstring("key: Invalid value")))
+			})
+		})
+
+		Context("expression selector invalid", func() {
+			var sel []repository.Selector
+			BeforeEach(func() {
+				sel = []repository.Selector{
+					&selector{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Test",
+							APIVersion: "testv1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-selector",
+						},
+						labels: nil,
+						expressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "fred",
+								Operator: "Matchingest",
+								Values:   nil,
+							},
+						},
+						fields: nil,
+					},
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := repository.BestSelectorMatch(selectable{}, sel)
+				Expect(err).To(MatchError(ContainSubstring("selectorMatchExpressions or selectors of [Test/my-selector] are not valid")))
+				// TODO: 'pod' - Hmmmmm - perhaps we shouldn't be using v1 code?
+				Expect(err).To(MatchError(ContainSubstring("\"Matchingest\" is not a valid pod selector operator")))
+			})
+		})
+	})
 })
 
 type fields []v1alpha1.FieldSelectorRequirement
@@ -315,16 +376,14 @@ func (o selectable) GetLabels() map[string]string {
 
 type selector struct {
 	metav1.TypeMeta
-	labels labels2.Set
+	metav1.ObjectMeta
+	labels      labels2.Set
+	expressions []metav1.LabelSelectorRequirement
 	fields
 }
 
 func (b *selector) GetMatchExpressions() []metav1.LabelSelectorRequirement {
-	return []metav1.LabelSelectorRequirement{}
-}
-
-func (b *selector) GetName() string {
-	return "fred"
+	return b.expressions
 }
 
 func (b *selector) GetMatchFields() []v1alpha1.FieldSelectorRequirement {

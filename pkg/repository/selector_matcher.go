@@ -69,8 +69,12 @@ func BestSelectorMatch(selectable Selectable, blueprints []Selector) ([]Selector
 		// -- Labels
 		sel, err := metav1.LabelSelectorAsSelector(labelSelector)
 		if err != nil {
-			// TODO deal with me
-			panic(err)
+			return nil, fmt.Errorf(
+				"selectorMatchExpressions or selectors of [%s/%s] are not valid: %w",
+				target.GetObjectKind().GroupVersionKind().Kind,
+				target.GetName(),
+				err,
+			)
 		}
 		if !sel.Matches(labels.Set(selectable.GetLabels())) {
 			continue // Bail early!
@@ -83,6 +87,7 @@ func BestSelectorMatch(selectable Selectable, blueprints []Selector) ([]Selector
 		matchFields := target.GetMatchFields()
 		allFieldsMatched, err := matchesAllFields(selectable, matchFields)
 		if err != nil {
+			// Todo: test in unit test
 			return nil, fmt.Errorf(
 				"failed to evaluate all matched fields of [%s/%s]: %w",
 				target.GetObjectKind().GroupVersionKind().Kind,
