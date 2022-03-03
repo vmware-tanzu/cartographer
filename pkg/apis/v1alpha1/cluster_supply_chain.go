@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -65,24 +64,11 @@ type ClusterSupplyChain struct {
 }
 
 type SupplyChainSpec struct {
+	Selectors `json:",inline"`
+
 	// Resources that are responsible for bringing the application to a
 	// deliverable state.
 	Resources []SupplyChainResource `json:"resources"`
-
-	// Specifies the label key-value pairs used to select workloads
-	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
-	// +optional
-	Selector map[string]string `json:"selector,omitempty"`
-
-	// Specifies the requirements used to select workloads based on their labels
-	// See: FIXME update docs and provide link
-	// +optional
-	SelectorMatchExpressions []metav1.LabelSelectorRequirement `json:"selectorMatchExpressions,omitempty"`
-
-	// Specifies the requirements used to select workloads based on their fields
-	// See: FIXME update docs and provide link
-	// +optional
-	SelectorMatchFields []FieldSelectorRequirement `json:"selectorMatchFields,omitempty"`
 
 	// Additional parameters.
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
@@ -201,16 +187,8 @@ func (c *ClusterSupplyChain) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterSupplyChain) GetMatchLabels() labels.Set {
-	return c.Spec.Selector
-}
-
-func (c *ClusterSupplyChain) GetMatchExpressions() []metav1.LabelSelectorRequirement {
-	return c.Spec.SelectorMatchExpressions
-}
-
-func (c *ClusterSupplyChain) GetMatchFields() []FieldSelectorRequirement {
-	return c.Spec.SelectorMatchFields
+func (c *ClusterSupplyChain) GetSelectors() Selectors {
+	return c.Spec.Selectors
 }
 
 

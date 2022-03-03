@@ -56,7 +56,9 @@ var _ = Describe("Webhook Validation", func() {
 							},
 						},
 					},
-					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					Selectors: v1alpha1.Selectors{
+						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					},
 					Params: []v1alpha1.BlueprintParam{
 						{
 							Name:  "some-param",
@@ -270,7 +272,9 @@ var _ = Describe("Webhook Validation", func() {
 								},
 							},
 						},
-						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+						Selectors: v1alpha1.Selectors{
+							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+						},
 					},
 				}
 			})
@@ -356,9 +360,11 @@ var _ = Describe("Webhook Validation", func() {
 							},
 						},
 					},
-					Selector:                 selector,
-					SelectorMatchExpressions: expressions,
-					SelectorMatchFields:      fields,
+					Selectors: v1alpha1.Selectors{
+						Selector:                 selector,
+						SelectorMatchExpressions: expressions,
+						SelectorMatchFields:      fields,
+					},
 				},
 			}
 		}
@@ -474,7 +480,9 @@ var _ = Describe("Webhook Validation", func() {
 					Name: "responsible-ops---default-params",
 				},
 				Spec: v1alpha1.SupplyChainSpec{
-					Selector: map[string]string{"foo": "bar"},
+					Selectors: v1alpha1.Selectors{
+						Selector: map[string]string{"foo": "bar"},
+					},
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",

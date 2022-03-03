@@ -254,12 +254,12 @@ spec:
               selector:
                 additionalProperties:
                   type: string
-                description: 'Specifies the label key-value pairs used to select workloads
+                description: 'Specifies the label key-value pairs used to select owners
                   See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
                 type: object
               selectorMatchExpressions:
-                description: 'Specifies the requirements used to select workloads
-                  based on their labels See: FIXME update docs and provide link'
+                description: 'Specifies the requirements used to select owners based
+                  on their labels See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
                 items:
                   description: A label selector requirement is a selector that contains
                     values, a key, and an operator that relates the key and values.
@@ -287,8 +287,8 @@ spec:
                   type: object
                 type: array
               selectorMatchFields:
-                description: 'Specifies the requirements used to select workloads
-                  based on their fields See: FIXME update docs and provide link'
+                description: 'Specifies the requirements used to select owners based
+                  on their fields See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
                 items:
                   properties:
                     key:

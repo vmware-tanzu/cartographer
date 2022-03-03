@@ -41,7 +41,10 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
-					Selector: map[string]string { "requires": "at-least-one" },
+					Selectors: v1alpha1.Selectors{
+						Selector: map[string]string{"requires": "at-least-one"},
+					},
+
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -196,7 +199,9 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
-					Selector: map[string]string { "one-selector-of-any-kind": "is-needed" },
+					Selectors: v1alpha1.Selectors{
+						Selector: map[string]string{"one-selector-of-any-kind": "is-needed"},
+					},
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -517,9 +522,11 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
-					Selector: selector,
-					SelectorMatchExpressions: expressions,
-					SelectorMatchFields: fields,
+					Selectors: v1alpha1.Selectors{
+						Selector:                 selector,
+						SelectorMatchExpressions: expressions,
+						SelectorMatchFields:      fields,
+					},
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -587,7 +594,7 @@ var _ = Describe("Delivery Validation", func() {
 		Context("A Selector", func() {
 			var delivery *v1alpha1.ClusterDelivery
 			BeforeEach(func() {
-				delivery = deliveryFactory(map[string]string{"foo":"bar"}, nil, nil)
+				delivery = deliveryFactory(map[string]string{"foo": "bar"}, nil, nil)
 			})
 
 			It("creates without error", func() {
@@ -605,7 +612,7 @@ var _ = Describe("Delivery Validation", func() {
 		Context("A SelectorMatchExpression", func() {
 			var delivery *v1alpha1.ClusterDelivery
 			BeforeEach(func() {
-				delivery = deliveryFactory(nil, []metav1.LabelSelectorRequirement{{Key: "whatever", Operator: "Exists" }}, nil)
+				delivery = deliveryFactory(nil, []metav1.LabelSelectorRequirement{{Key: "whatever", Operator: "Exists"}}, nil)
 			})
 
 			It("creates without error", func() {
@@ -623,7 +630,7 @@ var _ = Describe("Delivery Validation", func() {
 		Context("A SelectorMatchFields", func() {
 			var delivery *v1alpha1.ClusterDelivery
 			BeforeEach(func() {
-				delivery = deliveryFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "whatever", Operator: "Exists" }})
+				delivery = deliveryFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "whatever", Operator: "Exists"}})
 			})
 
 			It("creates without error", func() {

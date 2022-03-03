@@ -83,7 +83,9 @@ var _ = Describe("Reconciler", func() {
 				Generation: 1,
 			},
 			Spec: v1alpha1.SupplyChainSpec{
-				Selector: map[string]string{},
+				Selectors: v1alpha1.Selectors{
+					Selector: map[string]string{},
+				},
 			},
 		}
 

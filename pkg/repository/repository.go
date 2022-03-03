@@ -327,7 +327,7 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
-	var selectorGetters []Selector
+	var selectorGetters []SelectingObject
 	for _, item := range list.Items {
 		itemValue := item
 		selectorGetters = append(selectorGetters, &itemValue)
@@ -357,7 +357,7 @@ func (r *repository) GetDeliveriesForDeliverable(ctx context.Context, deliverabl
 		return nil, fmt.Errorf("unable to list deliveries from api server: %w", err)
 	}
 
-	var selectorGetters []Selector
+	var selectorGetters []SelectingObject
 	for _, item := range list.Items {
 		itemValue := item
 		selectorGetters = append(selectorGetters, &itemValue)
