@@ -11,7 +11,19 @@ will pick up that configuration from the Git repository to be deployed and teste
 
 ![Multi-Cluster](../img/multi-cluster.jpg)
 
-## Examples
+### Example PR based flow
+0. Developer commits new source code
+1. ClusterSupplyChain in the development cluster generates Kubernetes configuration and commits it to a
+   git repository/branch (i.e. staging/feature-a)
+2. "Staging environment maintainer" opens a PR and merges staging/feature-a into staging
+3. ClusterDelivery in the staging cluster picks up the merged PR and deploys the Kubernetes configuration to be tested and commits
+   it to a git repository/branch (i.e. production/feature-a)
+4. "Production environment maintainer" opens a PR and merges production/feature-a into production
+5. ClusterDelivery in the production cluster picks up the merged PR and deploys the Kubernetes configuration.
+
+[comment]: <> (TODO: Create this diagram)
+
+## Basic example without PRs
 - [Supply Chain: Source ➡️ Image ➡️ Git](https://github.com/vmware-tanzu/cartographer/tree/main/examples/gitwriter-sc/README.md)
   - This simple ClusterSupplyChain takes source code, builds an image, generates app configuration, and writes it to a Git repository.
   
