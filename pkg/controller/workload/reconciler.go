@@ -158,6 +158,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	r.trackDependencies(workload, realizedResources, serviceAccountName, serviceAccountNS)
 
+	cleanupErr := r.cleanupOrphanedObjects(ctx, workload.Status.Resources, realizedResources)
+	if cleanupErr != nil {
+		log.Error(cleanupErr, "failed to cleanup orphaned objects")
+	}
+
 	var trackingError error
 	for _, resource := range realizedResources {
 		if resource.StampedRef == nil {
@@ -296,6 +301,44 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, realizedReso
 			},
 		)
 	}
+}
+
+func (r *Reconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
+	log := logr.FromContextOrDiscard(ctx)
+
+	var orphanedObjs []*corev1.ObjectReference
+	for _, prevResource := range previousResources {
+		if prevResource.StampedRef == nil {
+			continue
+		}
+		orphaned := true
+		for _, realizedResource := range realizedResources {
+			if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
+				realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
+				realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
+				orphaned = false
+				break
+			}
+		}
+		if orphaned {
+			orphanedObjs = append(orphanedObjs, prevResource.StampedRef)
+		}
+	}
+
+	for _, orphanedObj := range orphanedObjs {
+		obj := &unstructured.Unstructured{}
+		obj.SetNamespace(orphanedObj.Namespace)
+		obj.SetName(orphanedObj.Name)
+		obj.SetGroupVersionKind(orphanedObj.GroupVersionKind())
+
+		log.V(logger.DEBUG).Info("deleting orphaned object", "object", orphanedObj)
+		err := r.Repo.Delete(ctx, obj)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {

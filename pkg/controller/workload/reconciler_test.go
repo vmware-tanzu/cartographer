@@ -17,6 +17,7 @@ package workload_test
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -1000,6 +1001,101 @@ var _ = Describe("Reconciler", func() {
 			obj := dependencyTracker.ClearTrackedArgsForCall(0)
 			Expect(obj.Name).To(Equal("my-workload-name"))
 			Expect(obj.Namespace).To(Equal("my-namespace"))
+		})
+	})
+
+	Describe("cleaning up orphaned objects", func() {
+		BeforeEach(func() {
+			supplyChain := v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-supply-chain",
+				},
+				Status: v1alpha1.SupplyChainStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Ready",
+							Status:             "True",
+							LastTransitionTime: metav1.Time{},
+							Reason:             "Ready",
+							Message:            "Ready",
+						},
+					},
+				},
+			}
+			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
+
+			rlzr.RealizeReturns([]v1alpha1.RealizedResource{
+				{
+					Name: "some-resource",
+					StampedRef: &corev1.ObjectReference{
+						APIVersion: "some-api-version",
+						Kind:       "some-kind",
+						Name:       "some-new-stamped-obj-name",
+					},
+				},
+			}, nil)
+		})
+		Context("template does not change so there are no orphaned objects", func() {
+			BeforeEach(func() {
+				wl.Status.Resources = []v1alpha1.RealizedResource{
+					{
+						Name: "some-resource",
+						StampedRef: &corev1.ObjectReference{
+							APIVersion: "some-api-version",
+							Kind:       "some-kind",
+							Name:       "some-new-stamped-obj-name",
+						},
+					},
+				}
+				repo.GetWorkloadReturns(wl, nil)
+			})
+
+			It("does not attempt to delete any objects", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(repo.DeleteCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("a template changes so there are orphaned objects", func() {
+			BeforeEach(func() {
+				wl.Status.Resources = []v1alpha1.RealizedResource{
+					{
+						Name: "some-resource",
+						StampedRef: &corev1.ObjectReference{
+							APIVersion: "some-api-version",
+							Kind:       "some-kind",
+							Name:       "some-old-stamped-obj-name",
+						},
+					},
+				}
+				repo.GetWorkloadReturns(wl, nil)
+			})
+
+			It("deletes the orphaned objects", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(repo.DeleteCallCount()).To(Equal(1))
+
+				_, obj := repo.DeleteArgsForCall(0)
+				Expect(obj.GetName()).To(Equal("some-old-stamped-obj-name"))
+				Expect(obj.GetKind()).To(Equal("some-kind"))
+			})
+
+			Context("deleting the object fails", func() {
+				BeforeEach(func() {
+					repo.DeleteReturns(fmt.Errorf("some error"))
+				})
+
+				It("logs an error but does not requeue", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":"my-namespace/my-workload-name"`))
+				})
+			})
 		})
 	})
 })
