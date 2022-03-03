@@ -21,35 +21,38 @@ spec:
 
   ytt: |
     #@ load("@ytt:data", "data")
+    #@ load("@ytt:yaml", "yaml")
+
+    #@ def service():
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      labels:
+        #@ if "labels" in data.values.workload.metadata and \
+        #@    "app.kubernetes.io/part-of" in data.values.workload.metadata.labels:
+        app.kubernetes.io/part-of: #@ data.values.workload.metadata.labels["app.kubernetes.io/part-of"]
+        #@ end
+        carto.run/workload-name: #@ data.values.workload.metadata.name
+        app.kubernetes.io/component: run
+    spec:
+      template:
+        metadata:
+          annotations:
+            autoscaling.knative.dev/minScale: "1"
+        spec:
+          containers:
+            - name: workload
+              image: #@ data.values.image
+              securityContext:
+                runAsUser: 1000
+          imagePullSecrets:
+            - name: registry-credentials
+    #@ end
+    ---
     apiVersion: v1
     kind: ConfigMap
     metadata:
       name: #@ data.values.workload.metadata.name
     data:
-      #@yaml/text-templated-strings
-      manifest: |
-        apiVersion: serving.knative.dev/v1
-        kind: Service
-        metadata:
-          name: (@= data.values.workload.metadata.name @)
-          labels:
-            (@- if hasattr(data.values.workload.metadata, "labels"): @)
-            (@- if hasattr(data.values.workload.metadata.labels, "app.kubernetes.io/part-of"): @)
-            app.kubernetes.io/part-of: (@= data.values.workload.metadata.labels["app.kubernetes.io/part-of"] @)
-            (@ end -@)
-            (@ end -@)
-            carto.run/workload-name: (@= data.values.workload.metadata.name @)
-            app.kubernetes.io/component: run
-        spec:
-          template:
-            metadata:
-              annotations:
-                autoscaling.knative.dev/minScale: '1'
-            spec:
-              containers:
-                - name: workload
-                  image: (@= data.values.image @)
-                  securityContext:
-                    runAsUser: 1000
-              imagePullSecrets:
-                - name: registry-credentials
+      manifest: #@ yaml.encode(service())

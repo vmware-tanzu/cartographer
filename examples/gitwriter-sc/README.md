@@ -195,41 +195,49 @@ spec:
   # context is avoided.
   ytt: |
     #@ load("@ytt:data", "data")
-    apiVersion: v1
-    kind: ConfigMap # <=== a configmap is templated
+    #@ load("@ytt:yaml", "yaml")
+
+    #! `service()` returns a YAML fragment that is the Service object
+    #@ def service():
+    apiVersion: serving.knative.dev/v1
+    kind: Service
     metadata:
-      name: #@ data.values.workload.metadata.name # <=== The same templating context is available
-                                                         with info about the workload, params and artifacts
-                                                         created earlier by the supply chain
-    data:
-      #@yaml/text-templated-strings
-      manifest: |
-        apiVersion: serving.knative.dev/v1
-        kind: Service # <=== in the configmap.data field, a Service object is configured
+      name: #@ data.values.workload.metadata.name
+      labels:
+        #! An optional label for kapp-controller is written if specified by the app dev
+        #@ if "labels" in data.values.workload.metadata and \
+        #@    "app.kubernetes.io/part-of" in data.values.workload.metadata.labels:
+        app.kubernetes.io/part-of: #@ data.values.workload.metadata.labels["app.kubernetes.io/part-of"]
+        #@ end
+        carto.run/workload-name: #@ data.values.workload.metadata.name
+        app.kubernetes.io/component: run
+    spec:
+      template:
         metadata:
-          name: (@= data.values.workload.metadata.name @)
-          labels:
-            (@- if hasattr(data.values.workload.metadata, "labels"): @) # <=== an optional label for kapp controller
-                                                                               is written if specified by the app dev
-            (@- if hasattr(data.values.workload.metadata.labels, "app.kubernetes.io/part-of"): @)
-            app.kubernetes.io/part-of: (@= data.values.workload.metadata.labels["app.kubernetes.io/part-of"] @)
-            (@ end -@)
-            (@ end -@)
-            carto.run/workload-name: (@= data.values.workload.metadata.name @)
-            app.kubernetes.io/component: run
+          annotations:
+            autoscaling.knative.dev/minScale: "1"
         spec:
-          template:
-            metadata:
-              annotations:
-                autoscaling.knative.dev/minScale: "1"
-            spec:
-              containers:
-                - name: workload
-                  image: (@= data.values.image @)
-                  securityContext:
-                    runAsUser: 1000
-              imagePullSecrets:
-                - name: registry-credentials
+          containers:
+            - name: workload
+              image: #@ data.values.image
+              securityContext:
+                runAsUser: 1000
+          imagePullSecrets:
+            - name: registry-credentials
+    #@ end  # service()
+
+    #! ConfigMap contains the manifest for the Service object
+    ---
+    apiVersion: v1
+    kind: ConfigMap    #! <=== a configmap is templated
+    metadata:
+      #! The same templating context is available
+      #! with info about the workload, params and artifacts
+      #! created earlier by the supply chain
+      name: #@ data.values.workload.metadata.name
+    data:
+      #! contents are the string-encoding of the YAML fragment, above.
+      manifest: #@ yaml.encode(service())
 ```
 
 ### Writing the configuration to git
