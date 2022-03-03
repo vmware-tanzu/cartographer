@@ -32,7 +32,7 @@ spec:
     matchLabels:                                                # <=========== move existing labels under this heading
       app.tanzu.vmware.com/workload-type: web
     matchFields:                                                                             # <=========== add this
-      - { key: "spec.image", operation: exists }                                             # <=========== 
+      - { key: "spec.image", operator: Exists }                                             # <=========== 
     matchExpressions:                                                                        # <=========== add this
     - { key: app.tanzu.vmware.com/workload-type, operator: In, values [web] }                # <===========
 ```
@@ -47,7 +47,7 @@ spec:
   selector:
     app.tanzu.vmware.com/workload-type: web
   selectorMatchFields:                                                                       # <=========== add this
-    - { key: "spec.image", operation: exists }                                               # <=========== 
+    - { key: "spec.image", operator: Exists }                                               # <=========== 
   selectorMatchExpressions:                                                                  # <=========== add this
     - { key: app.tanzu.vmware.com/workload-type, operator: In, values [web] }                # <===========
 ```
@@ -108,7 +108,7 @@ spec:
   selector:
     app.tanzu.vmware.com/workload-type: web
   selectorMatchFields:                                                                       # <=========== add this
-    - { key: "spec.image", operation: exists }                                               # <=========== 
+    - { key: "spec.image", operator: Exists }                                               # <=========== 
   selectorMatchExpressions:                                                                  # <=========== add this
     - { key: app.tanzu.vmware.com/workload-type, operator: In, values [web] }                # <===========
 ```
