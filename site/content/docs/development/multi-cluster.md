@@ -20,7 +20,7 @@ will pick up that configuration from the Git repository to be deployed and teste
 4. "Production environment maintainer" opens a PR and merges production/feature-a into production
 5. ClusterDelivery in the production cluster picks up the merged PR and deploys the Kubernetes configuration.
 
-![Multi-Cluster](../img/mc.jpg)
+![Multi-Cluster](../img/multi-cluster.jpg)
 
 ### Basic example without PRs
 - [Supply Chain: Source ➡️ Image ➡️ Git](https://github.com/vmware-tanzu/cartographer/tree/main/examples/gitwriter-sc/README.md)
