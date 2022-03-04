@@ -128,7 +128,9 @@ var _ = Describe("DeliverableReconciler", func() {
 			},
 			Spec: v1alpha1.DeliverySpec{
 				Resources: []v1alpha1.DeliveryResource{},
-				Selector:  selector,
+				Selectors: v1alpha1.Selectors{
+					Selector: selector,
+				},
 			},
 		}
 	}

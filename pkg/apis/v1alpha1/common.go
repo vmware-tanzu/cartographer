@@ -166,10 +166,10 @@ type TemplateOption struct {
 	Name string `json:"name"`
 
 	// Selector is a field query over a workload or deliverable resource.
-	Selector Selector `json:"selector"`
+	Selector OptionSelector `json:"selector"`
 }
 
-type Selector struct {
+type OptionSelector struct {
 	// MatchFields is a list of field selector requirements. The requirements are ANDed.
 	// +kubebuilder:validation:MinItems=1
 	MatchFields []FieldSelectorRequirement `json:"matchFields"`
@@ -227,4 +227,24 @@ type Output struct {
 
 	// LastTransitionTime is a timestamp of the last time the value changed
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+}
+
+// Selectors are the collection of selection fields used congruously to specify
+// the selection of a target Owner, or ensure the owner matches a selection for a template Option
+// TODO: when we switch to v1alpha2 we can rename this just "Selector"
+type Selectors struct {
+	// Specifies the label key-value pairs used to select owners
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	Selector map[string]string `json:"selector,omitempty"`
+
+	// Specifies the requirements used to select owners based on their labels
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	SelectorMatchExpressions []metav1.LabelSelectorRequirement `json:"selectorMatchExpressions,omitempty"`
+
+	// Specifies the requirements used to select owners based on their fields
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	SelectorMatchFields []FieldSelectorRequirement `json:"selectorMatchFields,omitempty"`
 }

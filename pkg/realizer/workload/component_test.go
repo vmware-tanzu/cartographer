@@ -425,7 +425,7 @@ var _ = Describe("Resource", func() {
 						Options: []v1alpha1.TemplateOption{
 							{
 								Name: "template-not-chosen",
-								Selector: v1alpha1.Selector{
+								Selector: v1alpha1.OptionSelector{
 									MatchFields: []v1alpha1.FieldSelectorRequirement{
 										{
 											Key:      "spec.source.image",
@@ -436,7 +436,7 @@ var _ = Describe("Resource", func() {
 							},
 							{
 								Name: "template-chosen",
-								Selector: v1alpha1.Selector{
+								Selector: v1alpha1.OptionSelector{
 									MatchFields: []v1alpha1.FieldSelectorRequirement{
 										{
 											Key:      "spec.source.git.url",

@@ -25,21 +25,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
 )
 
-// * handle errors correctly (panic!)
-
-// Selector interface is an object we can find selectors on, and identify in errors
-// TODO: Refactor GetMatchLabels, GetMatchFields and GetMatchLabelExpressions as
-//  GetSelector() v1alpha1.Selector
-//  and make that return type:
-//  type Selector struct {
-//      metav1.LabelSelector
-//  	SelectorMatchFields []v1alpha1.FieldSelectorRequirement
-//  }
-
-type Selector interface {
-	GetMatchLabels() labels.Set
-	GetMatchFields() []v1alpha1.FieldSelectorRequirement
-	GetMatchExpressions() []metav1.LabelSelectorRequirement
+type SelectingObject interface {
+	GetSelectors() v1alpha1.Selectors
 	GetObjectKind() schema.ObjectKind
 	GetName() string
 }
@@ -50,20 +37,27 @@ type Selectable interface {
 
 // BestSelectorMatch attempts at finding the selectors that best match their selectors
 // against the selectors.
-func BestSelectorMatch(selectable Selectable, blueprints []Selector) ([]Selector, error) {
+func BestSelectorMatch(selectable Selectable, blueprints []SelectingObject) ([]SelectingObject, error) {
 
+	sc := &v1alpha1.ClusterSupplyChain{}
+
+	sc.GetSelectors()
+	sc.GetObjectKind()
+	sc.GetName()
 	if len(blueprints) == 0 {
 		return nil, nil
 	}
 
-	var matchingSelectors = map[int][]Selector{}
+	var matchingSelectors = map[int][]SelectingObject{}
 	var highWaterMark = 0
 
 	for _, target := range blueprints {
+		selectors := target.GetSelectors()
+
 		size := 0
 		labelSelector := &metav1.LabelSelector{
-			MatchLabels:      target.GetMatchLabels(),
-			MatchExpressions: target.GetMatchExpressions(),
+			MatchLabels:      selectors.Selector,
+			MatchExpressions: selectors.SelectorMatchExpressions,
 		}
 
 		// -- Labels
@@ -84,8 +78,7 @@ func BestSelectorMatch(selectable Selectable, blueprints []Selector) ([]Selector
 		size += len(labelSelector.MatchExpressions)
 
 		// -- Fields
-		matchFields := target.GetMatchFields()
-		allFieldsMatched, err := matchesAllFields(selectable, matchFields)
+		allFieldsMatched, err := matchesAllFields(selectable, selectors.SelectorMatchFields)
 		if err != nil {
 			// Todo: test in unit test
 			return nil, fmt.Errorf(
@@ -98,12 +91,12 @@ func BestSelectorMatch(selectable Selectable, blueprints []Selector) ([]Selector
 		if !allFieldsMatched {
 			continue // Bail early!
 		}
-		size += len(matchFields)
+		size += len(selectors.SelectorMatchFields)
 
 		// -- decision time
 		if size > 0 {
 			if matchingSelectors[size] == nil {
-				matchingSelectors[size] = []Selector{}
+				matchingSelectors[size] = []SelectingObject{}
 			}
 			if size > highWaterMark {
 				highWaterMark = size

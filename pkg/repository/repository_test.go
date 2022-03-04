@@ -1102,10 +1102,12 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
-								{
-									Key:      "spec.env[asdfasdfadkf3",
-									Operator: "Exists",
+							Selectors: v1alpha1.Selectors{
+								SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+									{
+										Key:      "spec.env[asdfasdfadkf3",
+										Operator: "Exists",
+									},
 								},
 							},
 						},
@@ -1140,7 +1142,9 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selector: map[string]string{"foo": "bar"},
+							Selectors: v1alpha1.Selectors{
+								Selector: map[string]string{"foo": "bar"},
+							},
 						},
 					}
 					clientObjects = []client.Object{supplyChain}
@@ -1171,7 +1175,9 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selector: map[string]string{"foo": "bar"},
+							Selectors: v1alpha1.Selectors{
+								Selector: map[string]string{"foo": "bar"},
+							},
 						},
 					}
 					supplyChain2 := &v1alpha1.ClusterSupplyChain{
@@ -1180,7 +1186,9 @@ spec:
 							Name: "supplychain-name2",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selector: map[string]string{"foo": "baz"},
+							Selectors: v1alpha1.Selectors{
+								Selector: map[string]string{"foo": "baz"},
+							},
 						},
 					}
 					clientObjects = []client.Object{supplyChain, supplyChain2}

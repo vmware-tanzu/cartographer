@@ -39,7 +39,9 @@ var _ = Describe("SupplyChainValidation", func() {
 			},
 			Spec: v1alpha1.SupplyChainSpec{
 				Resources: []v1alpha1.SupplyChainResource{},
-				Selector:  map[string]string{"integration-test": "workload-no-supply-chain"},
+				Selectors: v1alpha1.Selectors{
+					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+				},
 			},
 		}
 	}
@@ -104,7 +106,7 @@ var _ = Describe("SupplyChainValidation", func() {
 								},
 								{
 									Name: "some-other-template",
-									Selector: v1alpha1.Selector{
+									Selector: v1alpha1.OptionSelector{
 										MatchFields: []v1alpha1.FieldSelectorRequirement{
 											{
 												Key:      "workload.spec.source.git.url",

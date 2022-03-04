@@ -56,7 +56,9 @@ var _ = Describe("Webhook Validation", func() {
 							},
 						},
 					},
-					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					Selectors: v1alpha1.Selectors{
+						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					},
 					Params: []v1alpha1.BlueprintParam{
 						{
 							Name:  "some-param",
@@ -270,7 +272,9 @@ var _ = Describe("Webhook Validation", func() {
 								},
 							},
 						},
-						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+						Selectors: v1alpha1.Selectors{
+							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+						},
 					},
 				}
 			})
@@ -356,9 +360,11 @@ var _ = Describe("Webhook Validation", func() {
 							},
 						},
 					},
-					Selector:                 selector,
-					SelectorMatchExpressions: expressions,
-					SelectorMatchFields:      fields,
+					Selectors: v1alpha1.Selectors{
+						Selector:                 selector,
+						SelectorMatchExpressions: expressions,
+						SelectorMatchFields:      fields,
+					},
 				},
 			}
 		}
@@ -474,7 +480,9 @@ var _ = Describe("Webhook Validation", func() {
 					Name: "responsible-ops---default-params",
 				},
 				Spec: v1alpha1.SupplyChainSpec{
-					Selector: map[string]string{"foo": "bar"},
+					Selectors: v1alpha1.Selectors{
+						Selector: map[string]string{"foo": "bar"},
+					},
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
@@ -483,7 +491,7 @@ var _ = Describe("Webhook Validation", func() {
 								Options: []v1alpha1.TemplateOption{
 									{
 										Name: "source-1",
-										Selector: v1alpha1.Selector{
+										Selector: v1alpha1.OptionSelector{
 											MatchFields: []v1alpha1.FieldSelectorRequirement{
 												{
 													Key:      "spec.source.git.url",
@@ -494,7 +502,7 @@ var _ = Describe("Webhook Validation", func() {
 									},
 									{
 										Name: "source-2",
-										Selector: v1alpha1.Selector{
+										Selector: v1alpha1.OptionSelector{
 											MatchFields: []v1alpha1.FieldSelectorRequirement{
 												{
 													Key:      "spec.source.git.url",
@@ -552,7 +560,7 @@ var _ = Describe("Webhook Validation", func() {
 				supplyChain.Spec.Resources[0].TemplateRef.Options = []v1alpha1.TemplateOption{
 					{
 						Name:     "only-option",
-						Selector: v1alpha1.Selector{},
+						Selector: v1alpha1.OptionSelector{},
 					},
 				}
 			})

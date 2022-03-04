@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -65,24 +64,11 @@ type ClusterDelivery struct {
 }
 
 type DeliverySpec struct {
+	Selectors `json:",inline"`
+
 	// Resources that are responsible for deploying and validating
 	// the deliverable
 	Resources []DeliveryResource `json:"resources"`
-
-	// Specifies the label key-value pairs used to select deliverables
-	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
-	// +optional
-	Selector map[string]string `json:"selector,omitempty"`
-
-	// Specifies the requirements used to select deliverables based on their labels
-	// See: FIXME update docs and provide link
-	// +optional
-	SelectorMatchExpressions []metav1.LabelSelectorRequirement `json:"selectorMatchExpressions,omitempty"`
-
-	// Specifies the requirements used to select deliverables based on their fields
-	// See: FIXME update docs and provide link
-	// +optional
-	SelectorMatchFields []FieldSelectorRequirement `json:"selectorMatchFields,omitempty"`
 
 	// Additional parameters.
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
@@ -158,7 +144,7 @@ type DeliveryTemplateReference struct {
 	Name string `json:"name,omitempty"`
 
 	// Options is a list of template names and Selectors. The templates must all be of type Kind.
-	// A template will be selected if the deliverable matches the specified Selector.
+	// A template will be selected if the deliverable matches the specified selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
 	// +kubebuilder:validation:MinItems=2
@@ -197,16 +183,8 @@ func (c *ClusterDelivery) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterDelivery) GetMatchLabels() labels.Set {
-	return c.Spec.Selector
-}
-
-func (c *ClusterDelivery) GetMatchExpressions() []metav1.LabelSelectorRequirement {
-	return c.Spec.SelectorMatchExpressions
-}
-
-func (c *ClusterDelivery) GetMatchFields() []FieldSelectorRequirement {
-	return c.Spec.SelectorMatchFields
+func (c *ClusterDelivery) GetSelectors() Selectors {
+	return c.Spec.Selectors
 }
 
 func init() {
