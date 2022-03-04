@@ -69,7 +69,7 @@ main() {
                         ;;
 
                 cartographer)
-                        install_cartographer_package
+                        install_cartographer
                         ;;
 
                 example-dependencies)
@@ -119,15 +119,19 @@ main() {
         done
 }
 
-install_cartographer_package() {
-        log "build cartographer release and installing it"
-        env REGISTRY="$REGISTRY" RELEASE_VERSION="$RELEASE_VERSION" DOCKER_CONFIG="$DOCKER_CONFIG" ./hack/release.sh
+install_cartographer() {
+        log "build cartographer release and install it"
+        env \
+                REGISTRY="$REGISTRY" \
+                RELEASE_VERSION="$RELEASE_VERSION" \
+                DOCKER_CONFIG="$DOCKER_CONFIG" \
+                ./hack/release.sh
 
         ytt --ignore-unknown-comments \
                 --data-value registry="$REGISTRY" \
                 -f ./hack/registry-auth |
                 kapp deploy -a cartographer --yes \
-                        -f ./release/package \
+                        -f ./release \
                         -f-
 }
 
