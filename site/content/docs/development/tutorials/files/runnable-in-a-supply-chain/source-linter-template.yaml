@@ -1,0 +1,20 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source-linter
+spec:
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Runnable
+    metadata:
+      name: $(workload.metadata.name)$-linter
+    spec:
+      runTemplateRef:
+        name: md-linting-pipelinerun
+      inputs:
+        repository: $(workload.spec.source.git.url)$
+        revision: $(workload.spec.source.git.ref.branch)$
+      serviceAccountName: pipeline-run-management-sa
+  urlPath: .status.outputs.url
+  revisionPath: .status.outputs.revision

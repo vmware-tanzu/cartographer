@@ -37,6 +37,18 @@ toc:
         url: /reference/template
       - page: Runnable
         url: /reference/runnable
+  - title: Tutorials
+    subfolderitems:
+      - page: First Supply Chain
+        url: /tutorials/first-supply-chain
+      - page: Using Params
+        url: /tutorials/using-params
+      - page: Extending a Supply Chain
+        url: /tutorials/extending-a-supply-chain
+      - page: Runnable
+        url: /tutorials/runnable
+      - page: Runnable in a Supply Chain
+        url: /tutorials/runnable-in-a-supply-chain
   - title: Examples
     subfolderitems:
       - page: Multi-Cluster

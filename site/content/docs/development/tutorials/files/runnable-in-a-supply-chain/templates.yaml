@@ -1,0 +1,58 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: image-builder-from-previous-step
+spec:
+  template:
+    apiVersion: kpack.io/v1alpha2
+    kind: Image
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      tag: $(params.image_prefix)$$(workload.metadata.name)$
+      serviceAccountName: $(params.image-pull-sa-name)$
+      builder:
+        kind: ClusterBuilder
+        name: my-builder
+      source:
+        git:
+          url: $(sources.source.url)$
+          revision: $(sources.source.revision)$
+  params:
+    - name: image-pull-sa-name
+      default: expected-service-account
+    - name: image_prefix
+      default: 0.0.0.0:5000/example-basic-sc- # <=== Change to proper image registry
+  imagePath: .status.latestImage
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: app-deploy-from-sc-image
+spec:
+  template:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: $(workload.metadata.name)$-deployment
+      labels:
+        app: $(workload.metadata.name)$
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: $(workload.metadata.name)$
+      template:
+        metadata:
+          labels:
+            app: $(workload.metadata.name)$
+        spec:
+          serviceAccountName: $(params.image-pull-sa-name)$
+          containers:
+            - name: $(workload.metadata.name)$
+              image: $(images.built-image.image)$
+  params:
+    - name: image-pull-sa-name
+      default: expected-service-account

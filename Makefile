@@ -147,6 +147,7 @@ copyright:
 		-f ./hack/boilerplate.go.txt \
 		-ignore site/static/\*\* \
 		-ignore site/content/docs/\*/crds/\*.yaml \
+		-ignore site/content/docs/\*/tutorials/files/\*/\*.yaml \
 		-ignore site/themes/\*\* \
 		-ignore experimental/live-editor/node_modules/\*\* \
 		.

@@ -1,0 +1,5 @@
+{{ $version := .Page.CurrentSection.Params.version }}
+{{ $tutorialTitle := .Page.File.TranslationBaseName }}
+{{ $filename := (path.Join "/content/docs" $version "tutorials/files" $tutorialTitle (.Get 0)) }}
+{{ $file := $filename | readFile }}
+{{ (print "```yaml\n" $file "\n```") | markdownify }}
