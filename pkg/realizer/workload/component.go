@@ -86,10 +86,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 
 	if len(resource.TemplateRef.Options) > 0 {
 		matchedOption, err = r.findMatchingTemplateName(resource, supplyChainName, outputs)
-		templateName = matchedOption.Name
 		if err != nil {
 			return nil, nil, nil, err
 		}
+		templateName = matchedOption.Name
 	} else {
 		templateName = resource.TemplateRef.Name
 	}
