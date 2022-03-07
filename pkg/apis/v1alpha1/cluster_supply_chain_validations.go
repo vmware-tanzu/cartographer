@@ -33,19 +33,19 @@ func (c *ClusterSupplyChain) validateNewState() error {
 		names[resource.Name] = true
 	}
 
-	for _, resource := range c.Spec.Resources {
-		optionNames := make(map[string]bool)
-		for _, option := range resource.TemplateRef.Options {
-			if _, ok := optionNames[option.Name]; ok {
-				return fmt.Errorf(
-					"duplicate template name [%s] found in options for resource [%s]",
-					option.Name,
-					resource.Name,
-				)
-			}
-			optionNames[option.Name] = true
-		}
-	}
+	//for _, resource := range c.Spec.Resources {
+	//	optionNames := make(map[string]bool)
+	//	for _, option := range resource.TemplateRef.Options {
+	//		if _, ok := optionNames[option.Name]; ok {
+	//			return fmt.Errorf(
+	//				"duplicate template name [%s] found in options for resource [%s]",
+	//				option.Name,
+	//				resource.Name,
+	//			)
+	//		}
+	//		optionNames[option.Name] = true
+	//	}
+	//}
 
 	for _, resource := range c.Spec.Resources {
 		if err := validateSupplyChainTemplateRef(resource.TemplateRef); err != nil {

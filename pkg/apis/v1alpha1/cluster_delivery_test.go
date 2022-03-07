@@ -245,27 +245,27 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 
-		Context("Two options with the same name", func() {
-			BeforeEach(func() {
-				delivery.Spec.Resources[0].TemplateRef.Options[0].Name = delivery.Spec.Resources[0].TemplateRef.Options[1].Name
-			})
-
-			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
-					"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
-				))
-			})
-
-			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-					"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
-				))
-			})
-
-			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
-			})
-		})
+		//Context("Two options with the same name", func() {
+		//	BeforeEach(func() {
+		//		delivery.Spec.Resources[0].TemplateRef.Options[0].Name = delivery.Spec.Resources[0].TemplateRef.Options[1].Name
+		//	})
+		//
+		//	It("on create, it rejects the Resource", func() {
+		//		Expect(delivery.ValidateCreate()).To(MatchError(
+		//			"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
+		//		))
+		//	})
+		//
+		//	It("on update, it rejects the Resource", func() {
+		//		Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+		//			"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
+		//		))
+		//	})
+		//
+		//	It("deletes without error", func() {
+		//		Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+		//	})
+		//})
 
 		Context("only one option is specified", func() {
 			BeforeEach(func() {
