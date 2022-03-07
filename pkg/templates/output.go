@@ -24,7 +24,7 @@ type Image interface{}
 type Config interface{}
 
 type Output struct {
-	Source *Source
-	Image  Image
-	Config Config
+	Source   *Source
+	Image    Image
+	Config   Config
 }

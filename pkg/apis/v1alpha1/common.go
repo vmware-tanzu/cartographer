@@ -93,6 +93,39 @@ func (p *BlueprintParam) neitherValueSet() bool {
 	return p.DefaultValue == nil && p.Value == nil
 }
 
+type ResourceInputs struct {
+	// Sources is a list of references to other 'source' resources in this list.
+	// A source resource has the kind ClusterSourceTemplate
+	//
+	// In a template, sources can be consumed as:
+	//    $(sources.<name>.url)$ and $(sources.<name>.revision)$
+	//
+	// If there is only one source, it can be consumed as:
+	//    $(source.url)$ and $(source.revision)$
+	Sources []ResourceReference `json:"sources,omitempty"`
+
+	// Images is a list of references to other 'image' resources in this list.
+	// An image resource has the kind ClusterImageTemplate
+	//
+	// In a template, images can be consumed as:
+	//   $(images.<name>.image)$
+	//
+	// If there is only one image, it can be consumed as:
+	//   $(image)$
+	Images []ResourceReference `json:"images,omitempty"`
+
+	// Configs is a list of references to other 'config' resources in this list.
+	// A config resource has the kind ClusterConfigTemplate
+	//
+	// In a template, configs can be consumed as:
+	//   $(configs.<name>.config)$
+	//
+	// If there is only one image, it can be consumed as:
+	//   $(config)$
+	Configs []ResourceReference `json:"configs,omitempty"`
+
+}
+
 type ResourceReference struct {
 	Name     string `json:"name"`
 	Resource string `json:"resource"`
@@ -165,8 +198,7 @@ type TemplateOption struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Selector is a field query over a workload or deliverable resource.
-	Selector OptionSelector `json:"selector"`
+	Selectable `json:",inline"`
 }
 
 type OptionSelector struct {

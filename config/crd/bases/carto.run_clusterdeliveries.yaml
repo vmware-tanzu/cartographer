@@ -183,6 +183,42 @@ spec:
                             Options can be specified.
                           items:
                             properties:
+                              configs:
+                                description: "Configs is a list of references to other
+                                  'config' resources in this list. A config resource
+                                  has the kind ClusterConfigTemplate \n In a template,
+                                  configs can be consumed as: $(configs.<name>.config)$
+                                  \n If there is only one image, it can be consumed
+                                  as: $(config)$"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    resource:
+                                      type: string
+                                  required:
+                                  - name
+                                  - resource
+                                  type: object
+                                type: array
+                              images:
+                                description: "Images is a list of references to other
+                                  'image' resources in this list. An image resource
+                                  has the kind ClusterImageTemplate \n In a template,
+                                  images can be consumed as: $(images.<name>.image)$
+                                  \n If there is only one image, it can be consumed
+                                  as: $(image)$"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    resource:
+                                      type: string
+                                  required:
+                                  - name
+                                  - resource
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the template to apply
                                 minLength: 1
@@ -231,9 +267,27 @@ spec:
                                 required:
                                 - matchFields
                                 type: object
+                              sources:
+                                description: "Sources is a list of references to other
+                                  'source' resources in this list. A source resource
+                                  has the kind ClusterSourceTemplate \n In a template,
+                                  sources can be consumed as: $(sources.<name>.url)$
+                                  and $(sources.<name>.revision)$ \n If there is only
+                                  one source, it can be consumed as: $(source.url)$
+                                  and $(source.revision)$"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    resource:
+                                      type: string
+                                  required:
+                                  - name
+                                  - resource
+                                  type: object
+                                type: array
                             required:
                             - name
-                            - selector
                             type: object
                           minItems: 2
                           type: array

@@ -70,13 +70,26 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
+	var matchedOption *v1alpha1.TemplateOption
 	var templateName string
 	var err error
+
+	matchingResourceLevel, err := r.matchSelectable(resource.Selectable, outputs, supplyChainName)
+	if !matchingResourceLevel {
+		log.V(logger.DEBUG).Info("unselected resource", "resource", resource)
+		return nil, nil, nil, nil
+	}
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	if len(resource.TemplateRef.Options) > 0 {
-		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
+		matchedOption, err = r.findMatchingTemplateName(resource, supplyChainName, outputs)
 		if err != nil {
 			return nil, nil, nil, err
 		}
+		templateName = matchedOption.Name
 	} else {
 		templateName = resource.TemplateRef.Name
 	}
@@ -108,7 +121,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		"carto.run/cluster-template-name": template.GetName(),
 	}
 
-	inputs := outputs.GenerateInputs(resource)
+	inputs := outputs.GenerateInputs(resource, matchedOption)
 	workloadTemplatingContext := map[string]interface{}{
 		"workload": r.workload,
 		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
@@ -166,48 +179,69 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	return template, stampedObject, output, nil
 }
 
-func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
-	var templateName string
-	var matchingOptions []string
+func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (*v1alpha1.TemplateOption, error) {
+	var matchingOptions []v1alpha1.TemplateOption
 
 	for _, option := range resource.TemplateRef.Options {
-		matchedAllFields := true
-		for _, field := range option.Selector.MatchFields {
-			wkContext := map[string]interface{}{
-				"spec":     r.workload.Spec,
-				"metadata": r.workload.ObjectMeta,
-			}
-			matched, err := selector.Matches(field, wkContext)
-			if err != nil {
-				if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
-					return "", ResolveTemplateOptionError{
-						Err:             err,
-						SupplyChainName: supplyChainName,
-						Resource:        resource,
-						OptionName:      option.Name,
-						Key:             field.Key,
-					}
-				}
-			}
-			if !matched {
-				matchedAllFields = false
-				break
-			}
+		matched, err := r.matchSelectable(option.Selectable, outputs,supplyChainName)
+		if err != nil {
+			return nil, err
 		}
-		if matchedAllFields {
-			matchingOptions = append(matchingOptions, option.Name)
+		if matched {
+			matchingOptions = append(matchingOptions, option)
 		}
 	}
 
-	if len(matchingOptions) != 1 {
-		return "", TemplateOptionsMatchError{
+	if len(matchingOptions) < 1 {
+		return nil, TemplateOptionsMatchError{
 			SupplyChainName: supplyChainName,
 			Resource:        resource,
-			OptionNames:     matchingOptions,
+			OptionNames:     []string{},
 		}
-	} else {
-		templateName = matchingOptions[0]
 	}
 
-	return templateName, nil
+	return &matchingOptions[0], nil
+
 }
+
+func (r *resourceRealizer) matchSelectable(selectable v1alpha1.Selectable, outputs Outputs, supplyChainName string) (bool, error) {
+	for _, input := range selectable.Sources {
+		if !outputs.HasOutput(input.Resource) {
+			return false, nil
+		}
+	}
+
+	for _, input := range selectable.Configs {
+		if !outputs.HasOutput(input.Resource) {
+			return false, nil
+		}
+	}
+
+	for _, input := range selectable.Images {
+		if !outputs.HasOutput(input.Resource) {
+			return false, nil
+		}
+	}
+
+	for _, field := range selectable.Selector.MatchFields {
+		wkContext := map[string]interface{}{
+			"workload": r.workload,
+		}
+		matched, err := selector.Matches(field, wkContext)
+		if err != nil {
+			if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
+				return false, ResolveSelectorError{
+					Err:             err,
+					SupplyChainName: supplyChainName,
+					Key:             field.Key,
+				}
+			}
+		}
+		if !matched {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
