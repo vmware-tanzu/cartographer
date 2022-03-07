@@ -35,10 +35,6 @@ submit_release_to_github() {
   gh release create $version \
     --draft \
     --notes-file $RELEASE_NOTES_FILE \
-    ./release/package/package.yaml \
-    ./release/package/package-install.yaml \
-    ./release/package/package-metadata.yaml \
-    ./release/bundle.tar \
     ./release/cartographer.yaml
 }
 
