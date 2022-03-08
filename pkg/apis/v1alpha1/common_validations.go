@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/jsonpath"
 	"reflect"
 	"strings"
@@ -87,4 +88,27 @@ func validPath(path string, validPaths map[string]bool, validPrefixes []string) 
 	}
 
 	return false
+}
+
+func validateSelectors(selectors Selectors, validPaths map[string]bool, validPrefixes []string) error {
+	var err error
+
+	labelSelector := &metav1.LabelSelector{
+		MatchLabels:      selectors.Selector,
+		MatchExpressions: selectors.SelectorMatchExpressions,
+	}
+
+	_, err = metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return fmt.Errorf("selectorMatchExpressions or selectors are not valid: %w", err)
+	}
+
+	if len(selectors.SelectorMatchFields) != 0 {
+		err = validateFieldSelectorRequirements(selectors.SelectorMatchFields, validPaths, validPrefixes)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

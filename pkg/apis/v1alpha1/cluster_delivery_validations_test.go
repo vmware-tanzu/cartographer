@@ -630,7 +630,7 @@ var _ = Describe("Delivery Validation", func() {
 		Context("A SelectorMatchFields", func() {
 			var delivery *v1alpha1.ClusterDelivery
 			BeforeEach(func() {
-				delivery = deliveryFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "whatever", Operator: "Exists"}})
+				delivery = deliveryFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "metadata.whatever", Operator: "Exists"}})
 			})
 
 			It("creates without error", func() {
@@ -647,6 +647,166 @@ var _ = Describe("Delivery Validation", func() {
 		})
 	})
 
+	Describe("selector validations", func() {
+		var (
+			delivery *v1alpha1.ClusterDelivery
+		)
+		BeforeEach(func() {
+			delivery = &v1alpha1.ClusterDelivery{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-name",
+				},
+				Spec: v1alpha1.DeliverySpec{
+					Resources: []v1alpha1.DeliveryResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Options: []v1alpha1.TemplateOption{
+									{
+										Name: "source-1",
+										Selector: v1alpha1.OptionSelector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpExists,
+												},
+											},
+										},
+									},
+									{
+										Name: "source-2",
+										Selector: v1alpha1.OptionSelector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpDoesNotExist,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("selector is selecting on SelectorMatchFields", func() {
+			Context("valid field selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.params",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+			})
+
+			Context("invalid json path in field selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.params[0].{{}}",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError("error validating clusterdelivery [some-name]: invalid jsonpath for key [spec.params[0].{{}}]: unrecognized character in action: U+007B '{'"))
+				})
+			})
+
+			Context("field selector is not in accepted list", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "foo",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError("error validating clusterdelivery [some-name]: requirement key [foo] is not a valid path"))
+				})
+			})
+		})
+
+		Context("selector is selecting on SelectorMatchExpressions", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "-my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selectorMatchExpressions or selectors are not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+		Context("selector is selecting on Selector", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						Selector: map[string]string{"my-label": "some-value"},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.Selectors = v1alpha1.Selectors{
+						Selector: map[string]string{"-my-label": "some-value"},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selectorMatchExpressions or selectors are not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+	})
 })
 
 var _ = Describe("DeliveryTemplateReference", func() {

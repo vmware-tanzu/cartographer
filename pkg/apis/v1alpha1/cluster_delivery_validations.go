@@ -25,6 +25,10 @@ func (c *ClusterDelivery) validateNewState() error {
 		return err
 	}
 
+	if err := validateSelectors(c.Spec.Selectors, ValidDeliverablePaths, ValidDeliverablePrefixes); err != nil {
+		return err
+	}
+
 	if err := c.validateResourceNamesUnique(); err != nil {
 		return err
 	}

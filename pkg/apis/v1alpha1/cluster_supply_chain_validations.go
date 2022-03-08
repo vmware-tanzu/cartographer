@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *ClusterSupplyChain) validateNewState() error {
@@ -30,7 +29,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 		return err
 	}
 
-	if err := validateSelectors(c.Spec.Selectors); err != nil {
+	if err := validateSelectors(c.Spec.Selectors, ValidWorkloadPaths, ValidWorkloadPrefixes); err != nil {
 		return err
 	}
 
@@ -129,29 +128,6 @@ func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference
 			)
 		}
 	}
-	return nil
-}
-
-func validateSelectors(selectors Selectors) error {
-	var err error
-
-	labelSelector := &metav1.LabelSelector{
-		MatchLabels:      selectors.Selector,
-		MatchExpressions: selectors.SelectorMatchExpressions,
-	}
-
-	_, err = metav1.LabelSelectorAsSelector(labelSelector)
-	if err != nil {
-		return fmt.Errorf("selectorMatchExpressions or selectors are not valid: %w", err)
-	}
-
-	if len(selectors.SelectorMatchFields) != 0 {
-		err = validateFieldSelectorRequirements(selectors.SelectorMatchFields, ValidWorkloadPaths, ValidWorkloadPrefixes)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
