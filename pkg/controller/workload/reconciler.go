@@ -313,7 +313,10 @@ func (r *Reconciler) cleanupOrphanedObjects(ctx context.Context, previousResourc
 		}
 		orphaned := true
 		for _, realizedResource := range realizedResources {
-			if realizedResource.StampedRef != nil && realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
+			if realizedResource.StampedRef == nil {
+				continue
+			}
+			if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
 				realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
 				realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
 				orphaned = false
