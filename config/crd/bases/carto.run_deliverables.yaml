@@ -85,9 +85,9 @@ spec:
               serviceAccountName:
                 description: "ServiceAccountName refers to the Service account with
                   permissions to create resources submitted by the supply chain. \n
-                  If not set, Cartographer will use serviceAccountName from supply
-                  chain. \n If that is also not set, Cartographer will use the default
-                  service account in the workload's namespace."
+                  If not set, Cartographer will use serviceAccountName from delivery.
+                  \n If that is also not set, Cartographer will use the default service
+                  account in the deliverable's namespace."
                 type: string
               source:
                 description: The location of the source code for the workload. Specify
