@@ -18,7 +18,7 @@ spec:
   # ServiceAccountName refers to the Service account with
   # permissions to create resources submitted by the supply chain.
   # If not set, Cartographer will use serviceAccountName from
-  # delivery.
+  # delivery. 
   # If that is also not set, Cartographer will use the default
   # service account in the deliverable's namespace.
   # +optional

@@ -97,15 +97,99 @@ spec:
         # Kind of the template to apply
         kind: <[ClusterSourceTemplate|ClusterImageTemplate|ClusterTemplate|ClusterConfigTemplate]>
 
-        # Name of the template to apply
+        # Name of the template to apply Only one of Name and
+        # Options can be specified.
+        # +optional
         name: <string>
 
-  # Specifies the label key-value pairs used to select workloads
-  # See:
+        # Options is a list of template names and Selectors. The
+        # templates must all be of type Kind. A template will be
+        # selected if the workload matches the specified selector.
+        # Only one template can be selected. Only one of Name and
+        # Options can be specified. Minimum number of items in
+        # list is two.
+        # +optional
+        options:
+          - # Name of the template to apply
+            name: <string>
+
+            # Selector is a field query over a workload or
+            # deliverable resource.
+            selector:
+
+              # MatchFields is a list of field selector
+              # requirements. The requirements are ANDed.
+              matchFields:
+                - # Key is the JSON path in the workload to match
+                  # against. e.g. for workload:
+                  # "workload.spec.source.git.url", e.g. for
+                  # deliverable: "deliverable.spec.source.git.url"
+                  key: <string>
+
+                  # Operator represents a key's relationship to a
+                  # set of values. Valid operators are In, NotIn,
+                  # Exists and DoesNotExist.
+                  operator: <[In|NotIn|Exists|DoesNotExist]>
+
+                  # Values is an array of string values. If the
+                  # operator is In or NotIn, the values array must
+                  # be non-empty. If the operator is Exists or
+                  # DoesNotExist, the values array must be empty.
+                  # +optional
+                  values:
+
+  # Specifies the label key-value pairs used to select owners See:
   # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  # +optional
   selector: {}
 
-  # ServiceAccountName refers to the Service account with
+  # Specifies the requirements used to select owners based on
+  # their labels See:
+  # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  # +optional
+  selectorMatchExpressions:
+    - # A label selector requirement is a selector that contains
+      # values, a key, and an operator that relates the key and
+      # values.
+      # +optional
+
+      # key is the label key that the selector applies to.
+      key: <string>
+
+      # operator represents a key's relationship to a set of
+      # values. Valid operators are In, NotIn, Exists and
+      # DoesNotExist.
+      operator: <string>
+
+      # values is an array of string values. If the operator is In
+      # or NotIn, the values array must be non-empty. If the
+      # operator is Exists or DoesNotExist, the values array must
+      # be empty. This array is replaced during a strategic merge
+      # patch.
+      # +optional
+      values:
+- # Specifies the requirements used to select owners based on
+  # their fields See:
+  # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  # +optional
+  selectorMatchFields:
+    - # Key is the JSON path in the workload to match against.
+      # e.g. for workload: "workload.spec.source.git.url", e.g.
+      # for deliverable: "deliverable.spec.source.git.url"
+      key: <string>
+
+      # Operator represents a key's relationship to a set of
+      # values. Valid operators are In, NotIn, Exists and
+      # DoesNotExist.
+      operator: <[In|NotIn|Exists|DoesNotExist]>
+
+      # Values is an array of string values. If the operator is In
+      # or NotIn, the values array must be non-empty. If the
+      # operator is Exists or DoesNotExist, the values array must
+      # be empty.
+      # +optional
+      values:
+- # ServiceAccountName refers to the Service account with
   # permissions to create resources submitted by the supply chain.
   # If not set, Cartographer will use serviceAccountName from
   # supply chain. 
