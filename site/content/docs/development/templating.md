@@ -67,7 +67,6 @@ Specifying inputs in a template:
 Given a supply chain where a resource has multiple sources and a config:
 
 ```yaml
-
 ---
 spec:
   resources:
@@ -102,7 +101,6 @@ If only one input of a given input-type is required, refer to it in the singular
 Given a supply chain where a resource has a single source and a single config:
 
 ```yaml
-
 ---
 spec:
   resources:
