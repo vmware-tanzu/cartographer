@@ -39,11 +39,6 @@ type Selectable interface {
 // against the selectors.
 func BestSelectorMatch(selectable Selectable, blueprints []SelectingObject) ([]SelectingObject, error) {
 
-	sc := &v1alpha1.ClusterSupplyChain{}
-
-	sc.GetSelectors()
-	sc.GetObjectKind()
-	sc.GetName()
 	if len(blueprints) == 0 {
 		return nil, nil
 	}
