@@ -29,6 +29,10 @@ func (c *ClusterSupplyChain) validateNewState() error {
 		return err
 	}
 
+	if err := validateSelectors(c.Spec.Selectors, ValidWorkloadPaths, ValidWorkloadPrefixes); err != nil {
+		return err
+	}
+
 	for _, resource := range c.Spec.Resources {
 		if _, ok := names[resource.Name]; ok {
 			return fmt.Errorf("duplicate resource name [%s] found", resource.Name)

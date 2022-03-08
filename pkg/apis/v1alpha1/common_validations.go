@@ -18,6 +18,9 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/jsonpath"
 )
 
 func validateResourceOptions(options []TemplateOption, validPaths map[string]bool, validPrefixes []string) error {
@@ -60,8 +63,18 @@ func validateFieldSelectorRequirements(reqs []FieldSelectorRequirement, validPat
 		if !validPath(req.Key, validPaths, validPrefixes) {
 			return fmt.Errorf("requirement key [%s] is not a valid path", req.Key)
 		}
+
+		if err := validJsonpath(req.Key); err != nil {
+			return fmt.Errorf("invalid jsonpath for key [%s]: %w", req.Key, err)
+		}
 	}
 	return nil
+}
+
+func validJsonpath(path string) error {
+	parser := jsonpath.New("")
+
+	return parser.Parse(path)
 }
 
 func validPath(path string, validPaths map[string]bool, validPrefixes []string) bool {
@@ -76,4 +89,35 @@ func validPath(path string, validPaths map[string]bool, validPrefixes []string) 
 	}
 
 	return false
+}
+
+func validateSelectors(selectors Selectors, validPaths map[string]bool, validPrefixes []string) error {
+	var err error
+
+	labelSelector := &metav1.LabelSelector{
+		MatchLabels: selectors.Selector,
+	}
+
+	_, err = metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return fmt.Errorf("selector is not valid: %w", err)
+	}
+
+	labelSelector = &metav1.LabelSelector{
+		MatchExpressions: selectors.SelectorMatchExpressions,
+	}
+
+	_, err = metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return fmt.Errorf("selectorMatchExpressions are not valid: %w", err)
+	}
+
+	if len(selectors.SelectorMatchFields) != 0 {
+		err = validateFieldSelectorRequirements(selectors.SelectorMatchFields, validPaths, validPrefixes)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

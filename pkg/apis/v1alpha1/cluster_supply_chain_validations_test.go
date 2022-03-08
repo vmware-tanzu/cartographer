@@ -451,7 +451,7 @@ var _ = Describe("Webhook Validation", func() {
 		Context("A SelectorMatchFields", func() {
 			var supplyChain *v1alpha1.ClusterSupplyChain
 			BeforeEach(func() {
-				supplyChain = supplyChainFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "whatever", Operator: "Exists"}})
+				supplyChain = supplyChainFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "metadata.whatever", Operator: "Exists"}})
 			})
 
 			It("creates without error", func() {
@@ -466,6 +466,167 @@ var _ = Describe("Webhook Validation", func() {
 				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
 			})
 		})
+	})
+
+	Describe("selector validations", func() {
+		var (
+			supplyChain *v1alpha1.ClusterSupplyChain
+		)
+		BeforeEach(func() {
+			supplyChain = &v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-name",
+				},
+				Spec: v1alpha1.SupplyChainSpec{
+					Resources: []v1alpha1.SupplyChainResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Options: []v1alpha1.TemplateOption{
+									{
+										Name: "source-1",
+										Selector: v1alpha1.OptionSelector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpExists,
+												},
+											},
+										},
+									},
+									{
+										Name: "source-2",
+										Selector: v1alpha1.OptionSelector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpDoesNotExist,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("selector is selecting on SelectorMatchFields", func() {
+			Context("valid field selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.env[0].something",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+			})
+
+			Context("invalid json path in field selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.env[0].{{}}",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError("error validating clustersupplychain [some-name]: invalid jsonpath for key [spec.env[0].{{}}]: unrecognized character in action: U+007B '{'"))
+				})
+			})
+
+			Context("field selector is not in accepted list", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "foo",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError("error validating clustersupplychain [some-name]: requirement key [foo] is not a valid path"))
+				})
+			})
+		})
+
+		Context("selector is selecting on SelectorMatchExpressions", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "-my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+		Context("selector is selecting on Selector", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						Selector: map[string]string{"my-label": "some-value"},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Selectors = v1alpha1.Selectors{
+						Selector: map[string]string{"-my-label": "some-value"},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
 	})
 
 	Context("supply chain with options", func() {
