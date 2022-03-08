@@ -96,10 +96,10 @@ type DeliverableSpec struct {
 	// ServiceAccountName refers to the Service account with permissions to create resources
 	// submitted by the supply chain.
 	//
-	// If not set, Cartographer will use serviceAccountName from supply chain.
+	// If not set, Cartographer will use serviceAccountName from delivery.
 	//
 	// If that is also not set, Cartographer will use the default service account in the
-	// workload's namespace.
+	// deliverable's namespace.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
