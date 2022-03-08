@@ -1,25 +1,28 @@
 # Installing Cartographer
 
 ## Prerequisites
+
 - Kubernetes cluster v1.19+
 - cert-manager, see [cert-manager Installation](https://cert-manager.io/docs/installation/)
 
 ## Install
+
 1. Create namespace
    ```bash
    kubectl create namespace cartographer-system
    ```
 2. Apply `cartographer.yaml`
+
    ```bash
    kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/download/v0.1.0/cartographer.yaml
    ```
 
    Resources in file `cartographer.yaml`:
-   
+
    ```console
    Namespace            Name                                  Kind
    (cluster)            cartographer-cluster-admin            ClusterRoleBinding
-   ^                    cartographer-controller-admin         ClusterRole 
+   ^                    cartographer-controller-admin         ClusterRole
    ^                    clusterconfigtemplates.carto.run      CustomResourceDefinition
    ^                    clusterdeliveries.carto.run           CustomResourceDefinition
    ^                    clusterdeploymenttemplates.carto.run  CustomResourceDefinition
@@ -33,7 +36,7 @@
    ^                    deliveryvalidator                     ValidatingWebhookConfiguration
    ^                    runnables.carto.run                   CustomResourceDefinition
    ^                    workloads.carto.run                   CustomResourceDefinition
-   
+
    cartographer-system  cartographer-controller               Deployment
    ^                    cartographer-controller               ServiceAccount
    ^                    cartographer-webhook                  Certificate
@@ -43,7 +46,8 @@
    ^                    selfsigned-issuer                     Issuer
    ```
 
-## Uninstall   
+## Uninstall
+
 1. Delete `cartographer.yaml`
    ```bash
    kubectl delete -f https://github.com/vmware-tanzu/cartographer/releases/download/v0.1.0/cartographer.yaml

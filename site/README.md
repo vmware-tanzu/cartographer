@@ -2,11 +2,12 @@
 
 ## Prerequisites
 
-* [Hugo](https://github.com/gohugoio/hugo)
-    * macOS: `brew install hugo`
-    * Windows: `choco install hugo-extended -confirm`
+- [Hugo](https://github.com/gohugoio/hugo)
+  - macOS: `brew install hugo`
+  - Windows: `choco install hugo-extended -confirm`
 
 ## Serve
+
 ```bash
 make serve
 ```
@@ -14,6 +15,7 @@ make serve
 Visit (http://localhost:1313)[http://localhost:1313]
 
 ## Generate a Release
+
 to create a release copy of `development` use
 
 ```bash
@@ -24,8 +26,8 @@ The new version should appear in the site and be the default.
 
 ## Generating CRD Documentation
 
-There is a tool, `hack/crd.rb` designed to autogenerate CRD documentation based off 
-the content of our Go doc-comments in `/cartographer/pkg/apis`.
+There is a tool, `hack/crd.rb` designed to autogenerate CRD documentation based off the content of our Go doc-comments
+in `/cartographer/pkg/apis`.
 
 To update CRD documentation:
 

@@ -130,6 +130,7 @@ lint: copyright
 	$(GCI_LINT) --local github.com/vmware-tanzu/cartographer --write $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
+	$(MAKE) -C site lint
 
 .PHONY: copyright
 copyright:
