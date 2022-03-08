@@ -2,9 +2,7 @@
 
 ## Overview
 
-Cartographer is an open-source Supply Chain Choreographer for Kubernetes. Cartographer provides a set of Kubernetes
-controllers and CRDs that allow a platform operator to create an application platform by specifying repeatable, reusable
-**code-to-production** blueprints.
+Cartographer is an open-source Supply Chain Choreographer for Kubernetes. Cartographer provides a set of Kubernetes controllers and CRDs that allow a platform operator to create an application platform by specifying repeatable, reusable **code-to-production** blueprints.
 
 Two kinds of blueprint work together to provide **code-to-production**, [Supply Chains](#clustersupplychain) and [Delivery](#clusterdelivery).
 
