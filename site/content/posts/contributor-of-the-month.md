@@ -18,8 +18,8 @@ Nevertheless, we would like to fill in the [extrinsic motivation](https://www.ro
 We plan to recognize contributors in three different categories:
 
 * Code contributor (merged PRs)
-* Content creator (tweets/blog posts/screencasts/presentations/podcast)
-* Project and community supporter (community meetings participation/Slack interactions)
+* Content creator (tweets/blog posts/screencasts/presentations/podcasts)
+* Community advocate (participation on community meetings/providing user feedback/creating or commenting Slack interactions,Github discussions or issues)
 
 Code contributions will be tracked using the `contributor shoutouter` program located in [this repo](https://github.com/vmware-tanzu/community-engagement/tree/main/shoutouter) while content and community support will be tracked by the Cartographer community team.
 
