@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"k8s.io/client-go/util/jsonpath"
 	"reflect"
 	"strings"
 )
@@ -60,8 +61,18 @@ func validateFieldSelectorRequirements(reqs []FieldSelectorRequirement, validPat
 		if !validPath(req.Key, validPaths, validPrefixes) {
 			return fmt.Errorf("requirement key [%s] is not a valid path", req.Key)
 		}
+
+		if err := validJsonpath(req.Key); err != nil {
+			return fmt.Errorf("invalid jsonpath for key [%s]: %w", req.Key, err)
+		}
 	}
 	return nil
+}
+
+func validJsonpath(path string) error {
+	parser := jsonpath.New("")
+
+	return parser.Parse(path)
 }
 
 func validPath(path string, validPaths map[string]bool, validPrefixes []string) bool {
