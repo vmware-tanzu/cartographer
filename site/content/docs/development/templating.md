@@ -3,12 +3,14 @@
 There are two options for templating in Cartographer, simple templates and ytt:
 
 ## Simple Templates
+
 Define simple templates in `spec.template` in [Templates](./reference/template)
 
-Simple templates provide string interpolation in a `$(...)$` tag with 
+Simple templates provide string interpolation in a `$(...)$` tag with
 [jsonpath](https://pkg.go.dev/k8s.io/client-go/util/jsonpath) syntax.
 
 ## ytt
+
 Define [ytt](https://carvel.dev/ytt/) templates in `spec.ytt` in [Templates](./reference/template)
 
 [ytt](https://carvel.dev/ytt/) is complete YAML aware templating language.
@@ -16,7 +18,9 @@ Define [ytt](https://carvel.dev/ytt/) templates in `spec.ytt` in [Templates](./r
 Use `ytt` when your templates contain complex logic, such as **conditionals** or **looping over collections**.
 
 ## Template Data
+
 Both options for templating are provided a data structure that contains:
+
 - owner resource (workload, deliverable)
 - inputs, that are specified in the blueprint for the template (sources, images, configs, deployments)
 - parameters
@@ -24,33 +28,37 @@ Both options for templating are provided a data structure that contains:
 Note: all `ytt` examples assume you have loaded the data module with `#@ load("@ytt:data", "data")`.
 
 ### Owner
+
 The entire owner resource is available for retrieving values. To use an owner value, use the format:
 
- - **Simple template**: `$(<workload|deliverable>.<field-name>.(...))$`
- - **ytt**: `#@ data.values.<workload|deliverable>.<field-name>.(...)`
+- **Simple template**: `$(<workload|deliverable>.<field-name>.(...))$`
+- **ytt**: `#@ data.values.<workload|deliverable>.<field-name>.(...)`
 
 #### Owner Examples
 
-| Simple template | ytt | 
-| ----------- | ----------- | 
-| `$(workload.metadata.name)$`| `#@ data.values.workload.metadata.name` | 
-| `$(deliverable.spec.source.url)$`| `#@ data.values.deliverable.spec.source.url` | 
+| Simple template                   | ytt                                          |
+| --------------------------------- | -------------------------------------------- |
+| `$(workload.metadata.name)$`      | `#@ data.values.workload.metadata.name`      |
+| `$(deliverable.spec.source.url)$` | `#@ data.values.deliverable.spec.source.url` |
 
 ### Inputs
+
 The template specifies the inputs required in the blueprint.
 
 You may specify a combination of one or more of these input types:
 
-| Input type | Accessor |  
-| ----------- | ----------- |
-| sources | `sources.<input-name>.url`, `sources.<input-name>.revision` |
-| images | `images.<input-name>` | 
-| configs | `configs.<input-name>` | 
-| deployments | `sources.<input-name>.url`, `sources.<input-name>.revision`  | 
+| Input type  | Accessor                                                    |
+| ----------- | ----------------------------------------------------------- |
+| sources     | `sources.<input-name>.url`, `sources.<input-name>.revision` |
+| images      | `images.<input-name>`                                       |
+| configs     | `configs.<input-name>`                                      |
+| deployments | `sources.<input-name>.url`, `sources.<input-name>.revision` |
 
-Where the `<input-name>` corresponds to the `spec.resources[].<sources|images|configs|deployments>[].name` expected in the blueprint.
+Where the `<input-name>` corresponds to the `spec.resources[].<sources|images|configs|deployments>[].name` expected in
+the blueprint.
 
 Specifying inputs in a template:
+
 - **Simple template**: `$(<sources|images|configs|deployments>.<input-name>(.<value>))$`
 - **ytt**: `#@ data.values.<sources|images|configs|deployments>.<input-name>(.<value>)`
 
@@ -59,7 +67,8 @@ Specifying inputs in a template:
 Given a supply chain where a resource has multiple sources and a config:
 
 ```yaml
-...
+
+---
 spec:
   resources:
     - name: my-template
@@ -75,14 +84,15 @@ spec:
 
 They could be used in the template as follows:
 
-| Simple template      | ytt |
-| ----------- | ----------- |
-| `$(sources.original.url)$`| `#@ data.values.sources.original.url` |
-| `$(sources.tested.revision)$`| `#@ data.values.sources.tested.revision` |
-| `$(configs.app-configuration)$`| `#@ data.values.configs.app-configuration` |
+| Simple template                 | ytt                                        |
+| ------------------------------- | ------------------------------------------ |
+| `$(sources.original.url)$`      | `#@ data.values.sources.original.url`      |
+| `$(sources.tested.revision)$`   | `#@ data.values.sources.tested.revision`   |
+| `$(configs.app-configuration)$` | `#@ data.values.configs.app-configuration` |
 
 #### Input Aliases
-If only one input of a given input-type is required, refer to it in the singular and omit the input-name. 
+
+If only one input of a given input-type is required, refer to it in the singular and omit the input-name.
 
 - **Simple template**: `$<sources|images|configs|deployments>(.<value>)$`
 - **ytt**: `#@ data.values.<sources|images|configs|deployments>(.<value>)`
@@ -92,7 +102,8 @@ If only one input of a given input-type is required, refer to it in the singular
 Given a supply chain where a resource has a single source and a single config:
 
 ```yaml
-...
+
+---
 spec:
   resources:
     - name: my-template
@@ -106,14 +117,14 @@ spec:
 
 They could be used in the template as follows:
 
-| Simple template      | ytt |
-| ----------- | ----------- |
-| `$(source.url)$`| `#@ data.values.source.url` |
-| `$(source.revision)$`| `#@ data.values.source.revision` |
-| `$(config)$`| `#@ data.values.config` |
-
+| Simple template       | ytt                              |
+| --------------------- | -------------------------------- |
+| `$(source.url)$`      | `#@ data.values.source.url`      |
+| `$(source.revision)$` | `#@ data.values.source.revision` |
+| `$(config)$`          | `#@ data.values.config`          |
 
 ### Parameters
+
 See [Parameter Hierarchy](architecture#parameter-hierarchy) for more information on the precedence of parameters for
 owner, blueprint and templates.
 
@@ -123,12 +134,15 @@ To use a parameter in the template, use the format:
 - **ytt**: `data.values.params.<param-name>`
 
 #### Parameter Example
-| Simple template      | ytt |
-| ----------- | ----------- |
-| `$(params.image_prefix)$`| `#@ data.values.params.image_prefix` |
+
+| Simple template           | ytt                                  |
+| ------------------------- | ------------------------------------ |
+| `$(params.image_prefix)$` | `#@ data.values.params.image_prefix` |
 
 ## Complete Examples
+
 ### Simple Template
+
 ```yaml
 apiVersion: carto.run/v1alpha1
 kind: ClusterImageTemplate
@@ -160,6 +174,7 @@ spec:
 ```
 
 ### ytt
+
 ```yaml
 ---
 apiVersion: carto.run/v1alpha1
@@ -169,12 +184,12 @@ metadata:
 spec:
   imagePath: .status.latestImage
   params:
-  - name: serviceAccount
-    default: default
-  - name: clusterBuilder
-    default: default
-  - name: registry
-    default: {}
+    - name: serviceAccount
+      default: default
+    - name: clusterBuilder
+      default: default
+    - name: registry
+      default: {}
   ytt: |
     #@ load("@ytt:data", "data")
 

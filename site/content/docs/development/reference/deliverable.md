@@ -11,7 +11,8 @@ Notes:
 
 1. labels serve as a way of indirectly selecting `ClusterDelivery`
 
-_ref: [pkg/apis/v1alpha1/deliverable.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/deliverable.go)_
+_ref:
+[pkg/apis/v1alpha1/deliverable.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/deliverable.go)_
 
 ## ClusterDelivery
 
@@ -30,5 +31,5 @@ the resources in the `ClusterDelivery`s `spec.resources`.
 
 {{< crd  carto.run_clusterdeliveries.yaml >}}
 
-_ref: [pkg/apis/v1alpha1/cluster_delivery.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_delivery.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_delivery.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_delivery.go)_

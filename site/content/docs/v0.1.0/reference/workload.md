@@ -12,7 +12,7 @@ metadata:
   labels:
     # label to be matched against a `ClusterSupplyChain`s label selector.
     #
-    app.tanzu.vmware.com/workload-type: web   # (1)
+    app.tanzu.vmware.com/workload-type: web # (1)
 
 spec:
   # service account with permissions to create resources submitted by the supply chain
@@ -44,7 +44,6 @@ spec:
       - name: CGO_ENABLED
         value: "0"
 
-
   # serviceClaims to be bound through service-bindings
   #
   serviceClaims:
@@ -54,10 +53,9 @@ spec:
         kind: RabbitMQ
         name: rabbit-broker
 
-
   # image with the app already built
   #
-  image: foo/docker-built@sha256:b4df00d      # (2)
+  image: foo/docker-built@sha256:b4df00d # (2)
 
   # environment variables to be passed to the main container
   # running the application.
@@ -65,7 +63,6 @@ spec:
   env:
     - name: SPRING_PROFILES_ACTIVE
       value: mysql
-
 
   # resource constraints for the main application.
   #
@@ -86,13 +83,13 @@ spec:
 
 Notes:
 
-1. labels serve as a way of indirectly selecting `ClusterSupplyChain` - `Workload`s without labels that match
-   a `ClusterSupplyChain`'s `spec.selector` won't be reconciled and will stay in an `Errored` state.
+1. labels serve as a way of indirectly selecting `ClusterSupplyChain` - `Workload`s without labels that match a
+   `ClusterSupplyChain`'s `spec.selector` won't be reconciled and will stay in an `Errored` state.
 2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the
    supplychain, but outside.
 
-_ref: [pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/workload.go)_
-
+_ref:
+[pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/workload.go)_
 
 ## ClusterSupplyChain
 
@@ -109,7 +106,6 @@ kind: ClusterSupplyChain
 metadata:
   name: supplychain
 spec:
-
   # specifies the label key-value pair to select workloads. (required, one one)
   #
   selector:
@@ -207,7 +203,7 @@ spec:
       #
       #   $(image)
       #
-      images: [ ]
+      images: []
 
       # (optional) set of resources that provide kubernetes configuration,
       # for instance, podTemplateSpecs.
@@ -219,7 +215,7 @@ spec:
       #
       #   $(config)
       #
-      configs: [ ]
+      configs: []
 
       # parameters to override the defaults from the templates.
       # resource parameters override any parameter of the same name set
@@ -248,5 +244,5 @@ spec:
           #
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_supply_chain.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_supply_chain.go)_
