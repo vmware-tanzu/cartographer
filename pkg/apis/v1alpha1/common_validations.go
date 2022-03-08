@@ -95,13 +95,21 @@ func validateSelectors(selectors Selectors, validPaths map[string]bool, validPre
 	var err error
 
 	labelSelector := &metav1.LabelSelector{
-		MatchLabels:      selectors.Selector,
+		MatchLabels: selectors.Selector,
+	}
+
+	_, err = metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return fmt.Errorf("selector is not valid: %w", err)
+	}
+
+	labelSelector = &metav1.LabelSelector{
 		MatchExpressions: selectors.SelectorMatchExpressions,
 	}
 
 	_, err = metav1.LabelSelectorAsSelector(labelSelector)
 	if err != nil {
-		return fmt.Errorf("selectorMatchExpressions or selectors are not valid: %w", err)
+		return fmt.Errorf("selectorMatchExpressions are not valid: %w", err)
 	}
 
 	if len(selectors.SelectorMatchFields) != 0 {

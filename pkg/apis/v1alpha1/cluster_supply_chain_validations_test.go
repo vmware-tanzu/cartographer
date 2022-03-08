@@ -596,7 +596,7 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("rejects with error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions or selectors are not valid: key: Invalid value: \"-my-label\"")))
+					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
 				})
 			})
 		})
@@ -622,7 +622,7 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("rejects with error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions or selectors are not valid: key: Invalid value: \"-my-label\"")))
+					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
 				})
 			})
 		})
