@@ -26,6 +26,8 @@ spec:
     kind: ClusterDeploymentTemplate
     listKind: ClusterDeploymentTemplateList
     plural: clusterdeploymenttemplates
+    shortNames:
+    - cdt
     singular: clusterdeploymenttemplate
   scope: Cluster
   versions:

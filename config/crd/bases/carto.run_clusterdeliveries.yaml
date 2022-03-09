@@ -26,6 +26,8 @@ spec:
     kind: ClusterDelivery
     listKind: ClusterDeliveryList
     plural: clusterdeliveries
+    shortNames:
+    - cd
     singular: clusterdelivery
   scope: Cluster
   versions:
