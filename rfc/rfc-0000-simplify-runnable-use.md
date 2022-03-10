@@ -1,6 +1,6 @@
 # Meta
 [meta]: #meta
-- Name: Simplify Runnable Use
+- Name: Simplify Runnable Usage
 - Start Date: 2022-03-08
 - Author(s): [waciumawanjohi](https://github.com/waciumawanjohi)
 - Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
