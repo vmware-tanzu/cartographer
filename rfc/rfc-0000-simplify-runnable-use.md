@@ -13,7 +13,8 @@
 Users will be able to create a Supply Chain Template and use a flag to 
 indicate that the object being stamped out is an immutable object. If they 
 do so, they will need to provide a success criteria. Given these inputs, 
-Cartographer will create a Runnable and ClusterRunTemplate for the user.
+Cartographer will create a Runnable for the user and ensure that an 
+appropriate ClusterRunTemplate exists.
 
 # Motivation
 [motivation]: #motivation
@@ -69,12 +70,12 @@ mutable and users will not be required to specify it. The field will be
 called `lifecycle`.
 
 When a template specifies `lifecyle:immutable`, rather than creating the object 
-templated in the supply chain template, Cartographer will create a 
-ClusterRunTemplate and a Runnable. The ClusterRunTemplate will template out 
-all of the fields that vary and the Runnable will provide all of these 
-fields as inputs. The ClusterRunTemplate will provide outputs that match the 
-outputs of the supply-chain template in question (ClusterSourceTemplate, 
-ClusterImageTemplate, etc).
+templated in the supply chain template, Cartographer will create a Runnable 
+and ensure that there is an appropriate ClusterRunTemplate. The 
+ClusterRunTemplate will template out all of the fields that vary and the 
+Runnable will provide all of these fields as inputs. The ClusterRunTemplate 
+will provide outputs that match the outputs of the supply-chain template in 
+question (ClusterSourceTemplate, ClusterImageTemplate, etc).
 
 ## Current example
 This is an example of what an app operator would need to do today to use 
@@ -178,8 +179,15 @@ spec:
 
 When Cartographer processes a template with the immutable flag, rather than 
 creating/updating the templated object it will create/update a Runnable and 
-a ClusterRunTemplate.
+ensure that a matching ClusterRunTemplate exists.
 
+What is meant by "ensure that a matching ClusterRunTemplate exists"? For any 
+given supply chain template (a cluster scoped object) there will only need 
+to be one ClusterRunTemplate. All of the N Runnables created by N workloads 
+will reference this one ClusterRunTemplate. Only if the supply chain 
+template is updated will this ClusterRunTemplate object need updating. 
+
+## Inputs
 The templated object will have two types of fields: hard-coded and templated.
 Hard coded fields can simply be copied directly into the ClusterRunTemplate. 
 Templated fields will be translated. Rather than reading from the specified 
@@ -214,24 +222,50 @@ spec:
       workload.spec.source.git.url: *some-value-from-workload.spec.source.git.url*
 ```
 
-The runnable and ClusterRunTemplate will be created with matching names and 
-a matching runTemplateRef. Assuming the example above and a workload with 
-the name `app`:
+## Names
+The runnable will be created with the same name assigned to the templated 
+object with the object kind appended.
+
+Why append the object kind? We can imagine a supply chain that had one 
+template to create a tekton pipelinerun and another to create a tekton 
+taskrun. The template authors would not worry about name collisions, as they 
+are stamping out different objects. But when they specify that these are 
+immutable objects they may be surprised to see that two objects of the same 
+type are created, which now can have a name collision. To comply with 
+kubernetes name restrictions, slashes in the name must become dashes.
+
+From the example above, assuming a workload with the name `app`:
 
 ```yaml
 ---
 kind: Runnable
 metadata:
-   name: app-linter
-spec:
-   runTemplateRef:
-      name: app-linter
+   name: app-linter-pipelinerun-tekton.dev-v1beta1
+```
+
+The ClusterRunTemplate will be created with the same name as the supply 
+chain template, with the supply chain template type appended (e.g. appending 
+"-image" for a ClusterImageTemplate with the immutable flag present)
+
+From the example above:
+
+```yaml
 ---
 kind: ClusterRunTemplate
 metadata:
-   name: app-linter
+   name: source-linter-source
 ```
 
+The Runnable will have a runTemplate ref that matches:
+```yaml
+---
+kind: Runnable
+spec:
+   runTemplateRef:
+      name: source-linter-source
+```
+
+## Outputs
 The ClusterRunTemplate will specify outputs that match the output paths on 
 the template. Given the example above:
 
@@ -250,6 +284,33 @@ the type of template. E.g. given a ClusterSourceTemplate with a
 always read the runnable's .status.outputs.url field and .status.outputs.
 revision field. Similarly for image, carto will read .status.outputs.image; 
 for config it will read .status.outputs.config.
+
+## Labels
+The Runnable will be created with all the requisite labels of an object 
+created from a supply chain template:
+
+```yaml
+kind: Runnable
+metadata:
+  labels:
+    carto.run/workload-name:
+    carto.run/workload-namespace:
+    carto.run/supply-chain-name:
+    carto.run/resource-name:
+    carto.run/template-kind:
+    carto.run/cluster-template-name:
+```
+
+The ClusterRunTemplate will be created only with labels referring to the 
+template:
+
+```yaml
+kind: ClusterRunTemplate
+metadata:
+  labels:
+    carto.run/template-kind:
+    carto.run/cluster-template-name:
+```
 
 # Migration
 [migration]: #migration
@@ -308,6 +369,15 @@ in the [Read Resources Only When In Success State RFC](https://github.com/vmware
 
 ## ClusterDeploymentTemplate
 Is there need for this behavior on ClusterDeploymentTemplates?
+
+## Warn on name collisions
+The process above ensures that there will be no name collisions between 
+any set of auto-generated ClusterRunTemplates. But it cannot protect against 
+a name collision with a ClusterRunTemplate that has been manually created by 
+some app operator. Cartographer should be able to use labels to determine if 
+a ClusterRunTemplate has been auto-generated. Should Carto warn/refuse to 
+overwrite a ClusterRunTemplate if it determines that it has not been 
+autogenerated?
 
 # Spec. Changes (OPTIONAL)
 [spec-changes]: #spec-changes
