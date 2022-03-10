@@ -155,10 +155,6 @@ When Cartographer reconciles an owner, each resource in the matching blueprint i
 
 ![Realize](../img/realize.jpg)
 
-### Complete Supply Chain and Delivery with GitOps
-
-![Gitops](../img/gitops.jpg)
-
 ## Blueprint Details
 
 ### ClusterSupplyChain
