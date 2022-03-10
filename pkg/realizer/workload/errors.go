@@ -44,12 +44,10 @@ type ResolveTemplateOptionError struct {
 	SupplyChainName string
 	Resource        *v1alpha1.SupplyChainResource
 	OptionName      string
-	Key             string
 }
 
 func (e ResolveTemplateOptionError) Error() string {
-	return fmt.Errorf("key [%s] is invalid in template option [%s] for resource [%s] in supply chain [%s]: %w",
-		e.Key,
+	return fmt.Errorf("error matching against template option [%s] for resource [%s] in supply chain [%s]: %w",
 		e.OptionName,
 		e.Resource.Name,
 		e.SupplyChainName,

@@ -400,6 +400,13 @@ var _ = Describe("Resource", func() {
 				url := "https://example.com"
 				branch := "main"
 				workload = v1alpha1.Workload{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:                       "my-workload",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Workload",
+						APIVersion: "v1alpha",
+					},
 					Spec: v1alpha1.WorkloadSpec{
 						Source: &v1alpha1.Source{
 							Git: &v1alpha1.GitSource{
@@ -425,7 +432,7 @@ var _ = Describe("Resource", func() {
 						Options: []v1alpha1.TemplateOption{
 							{
 								Name: "template-not-chosen",
-								Selector: v1alpha1.OptionSelector{
+								Selector: v1alpha1.Selector{
 									MatchFields: []v1alpha1.FieldSelectorRequirement{
 										{
 											Key:      "spec.source.image",
@@ -436,7 +443,7 @@ var _ = Describe("Resource", func() {
 							},
 							{
 								Name: "template-chosen",
-								Selector: v1alpha1.OptionSelector{
+								Selector: v1alpha1.Selector{
 									MatchFields: []v1alpha1.FieldSelectorRequirement{
 										{
 											Key:      "spec.source.git.url",
@@ -536,7 +543,8 @@ var _ = Describe("Resource", func() {
 					Expect(template).To(BeNil())
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(`key [spec.env[?(@.name=="some-name")].bad] is invalid in template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]: evaluate: failed to find results: bad is not found`))
+					Expect(err.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
+					Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[?(@.name=="some-name")].bad] operator [Exists] values [[]]: evaluate: failed to find results: bad is not found`))
 				})
 			})
 

@@ -25,8 +25,8 @@ import (
 
 func validateResourceOptions(options []TemplateOption, validPaths map[string]bool, validPrefixes []string) error {
 	for _, option := range options {
-		if err := validateFieldSelectorRequirements(option.Selector.MatchFields, validPaths, validPrefixes); err != nil {
-			return fmt.Errorf("error validating option [%s]: %w", option.Name, err)
+		if err := validateSelector(option.Selector, validPaths, validPrefixes); err != nil {
+			return fmt.Errorf("error validating option [%s] selector: %w", option.Name, err)
 		}
 	}
 
@@ -39,6 +39,41 @@ func validateResourceOptions(options []TemplateOption, validPaths map[string]boo
 					option2.Name,
 				)
 			}
+		}
+	}
+
+	return nil
+}
+
+func validateSelector(selector Selector, validPaths map[string]bool, validPrefixes []string) error {
+	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 && len(selector.MatchFields) == 0 {
+		return fmt.Errorf("at least one of matchLabels, matchExpressions or MatchFields must be specified")
+	}
+
+	var err error
+
+	labelSelector := &metav1.LabelSelector{
+		MatchLabels: selector.MatchLabels,
+	}
+
+	_, err = metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return fmt.Errorf("matchLabels are not valid: %w", err)
+	}
+
+	labelSelector = &metav1.LabelSelector{
+		MatchExpressions: selector.MatchExpressions,
+	}
+
+	_, err = metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil {
+		return fmt.Errorf("matchExpressions are not valid: %w", err)
+	}
+
+	if len(selector.MatchFields) != 0 {
+		err = validateFieldSelectorRequirements(selector.MatchFields, validPaths, validPrefixes)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -91,7 +126,7 @@ func validPath(path string, validPaths map[string]bool, validPrefixes []string) 
 	return false
 }
 
-func validateSelectors(selectors Selectors, validPaths map[string]bool, validPrefixes []string) error {
+func validateLegacySelector(selectors LegacySelector, validPaths map[string]bool, validPrefixes []string) error {
 	var err error
 
 	labelSelector := &metav1.LabelSelector{

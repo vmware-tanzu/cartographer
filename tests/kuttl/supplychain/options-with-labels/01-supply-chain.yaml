@@ -1,0 +1,35 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: responsible-ops---options-with-labels
+spec:
+  selector:
+    integration-test: "options-with-labels"
+  resources:
+    - name: source-provider
+      templateRef:
+        kind: ClusterSourceTemplate
+        options:
+          - name: git-template---options-with-labels
+            selector:
+              matchExpressions:
+                - { key: has-tests, operator: Exists }
+          - name: imgpkg-bundle-template---options-with-labels
+            selector:
+              matchFields:
+                - key: spec.source.image
+                  operator: Exists

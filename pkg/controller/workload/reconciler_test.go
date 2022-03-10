@@ -695,7 +695,6 @@ var _ = Describe("Reconciler", func() {
 						SupplyChainName: supplyChainName,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
 						OptionName:      "some-option",
-						Key:             "some-key",
 					}
 					rlzr.RealizeReturns(nil, resolveOptionErr)
 				})
@@ -716,7 +715,7 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-					Expect(out).To(Say(`"handled error":"key \[some-key\] is invalid in template option \[some-option\] for resource \[some-resource\] in supply chain \[some-supply-chain\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
+					Expect(out).To(Say(`"handled error":"error matching against template option \[some-option\] for resource \[some-resource\] in supply chain \[some-supply-chain\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 				})
 
 				It("does not track the template", func() {

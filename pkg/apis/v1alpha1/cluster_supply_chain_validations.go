@@ -29,7 +29,7 @@ func (c *ClusterSupplyChain) validateNewState() error {
 		return err
 	}
 
-	if err := validateSelectors(c.Spec.Selectors, ValidWorkloadPaths, ValidWorkloadPrefixes); err != nil {
+	if err := validateLegacySelector(c.Spec.LegacySelector, ValidWorkloadPaths, ValidWorkloadPrefixes); err != nil {
 		return err
 	}
 

@@ -64,7 +64,7 @@ type ClusterDelivery struct {
 }
 
 type DeliverySpec struct {
-	Selectors `json:",inline"`
+	LegacySelector `json:",inline"`
 
 	// Resources that are responsible for deploying and validating
 	// the deliverable
@@ -143,7 +143,7 @@ type DeliveryTemplateReference struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
 
-	// Options is a list of template names and Selectors. The templates must all be of type Kind.
+	// Options is a list of template names and Selector. The templates must all be of type Kind.
 	// A template will be selected if the deliverable matches the specified selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
@@ -183,8 +183,8 @@ func (c *ClusterDelivery) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterDelivery) GetSelectors() Selectors {
-	return c.Spec.Selectors
+func (c *ClusterDelivery) GetSelectors() LegacySelector {
+	return c.Spec.LegacySelector
 }
 
 func init() {
