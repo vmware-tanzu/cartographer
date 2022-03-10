@@ -275,7 +275,7 @@ directly manage the creation and reporting of objects
 # Prior Art
 [prior-art]: #prior-art
 
-Discuss prior art, both the good and bad.
+Runnable and ClusterRunTemplate are the prior art.
 
 # Unresolved Questions
 [unresolved-questions]: #unresolved-questions
@@ -312,7 +312,7 @@ Is there need for this behavior on ClusterDeploymentTemplates?
 # Spec. Changes (OPTIONAL)
 [spec-changes]: #spec-changes
 
-This RFC proposes adding a boolean field named `runnable` to the .spec of:
+This RFC proposes adding an enum field named `lifecycle` to the .spec of:
 - ClusterSourceTemplate
 - ClusterImageTemplate
 - ClusterConfigTemplate
