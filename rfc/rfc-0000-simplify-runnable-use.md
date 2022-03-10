@@ -63,11 +63,12 @@ their need.
 [what-it-is]: #what-it-is
 
 Supply Chain/Delivery templates will add a field that will indicate that the 
-object templated needs to be wrapped by runnable. This will be a boolean 
-field. The field will default to false and users will not be required to 
-specify it. The field will be called `runnable`.
+object templated needs to be wrapped by runnable. This will be an enum 
+field, with possible values `mutable` and `immutable`. The field will default to 
+mutable and users will not be required to specify it. The field will be 
+called `lifecycle`.
 
-When a template specifies `runnable:true`, rather than creating the object 
+When a template specifies `lifecyle:immutable`, rather than creating the object 
 templated in the supply chain template, Cartographer will create a 
 ClusterRunTemplate and a Runnable. The ClusterRunTemplate will template out 
 all of the fields that vary and the Runnable will provide all of these 
@@ -136,7 +137,7 @@ spec:
 ```
 
 ## Proposed example
-Under this proposal, users would only specify one object with a new runnable 
+Under this proposal, users would only specify one object with a new immutable 
 flag.
 
 ```yaml
@@ -169,13 +170,13 @@ spec:
                           storage: 256Mi
    urlPath: spec.params[?(@.name=="repository")].value    # <== Refers to path on the immutable object that will be created
    revisionPath: spec.params[?(@.name=="revision")].value
-   runnable: true                                         # <== Flag
+   lifecycle: immutable                                         # <== Flag
 ```
 
 # How it Works
 [how-it-works]: #how-it-works
 
-When Cartographer processes a template with the runnable flag, rather than 
+When Cartographer processes a template with the immutable flag, rather than 
 creating/updating the templated object it will create/update a Runnable and 
 a ClusterRunTemplate.
 
@@ -245,10 +246,10 @@ spec:
 
 When reading the runnable, Cartographer will look at the fields that match 
 the type of template. E.g. given a ClusterSourceTemplate with a 
-`runnable:true` field, Cartographer will always create a Runnable and always 
-read the runnable's .status.outputs.url field and .status.outputs.revision 
-field. Similarly for image, carto will read .status.outputs.image; for 
-config it will read .status.outputs.config.
+`lifecycle:immutable` field, Cartographer will always create a Runnable and 
+always read the runnable's .status.outputs.url field and .status.outputs.
+revision field. Similarly for image, carto will read .status.outputs.image; 
+for config it will read .status.outputs.config.
 
 # Migration
 [migration]: #migration
