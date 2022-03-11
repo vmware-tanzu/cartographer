@@ -1102,7 +1102,7 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selectors: v1alpha1.Selectors{
+							LegacySelector: v1alpha1.LegacySelector{
 								SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
 									{
 										Key:      "spec.env[asdfasdfadkf3",
@@ -1129,7 +1129,7 @@ spec:
 					}
 					_, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).To(MatchError(ContainSubstring("evaluating supply chain selectors against workload [myNS/workload-name] failed")))
-					Expect(err).To(MatchError(ContainSubstring("failed to evaluate all matched fields of [ClusterSupplyChain/supplychain-name]")))
+					Expect(err).To(MatchError(ContainSubstring("error handling selectors, selectorMatchExpressions or selectorMatchFields of [ClusterSupplyChain/supplychain-name]")))
 					Expect(err).To(MatchError(ContainSubstring("unable to match field requirement with key [spec.env[asdfasdfadkf3] operator [Exists] values [[]]")))
 				})
 			})
@@ -1142,7 +1142,7 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selectors: v1alpha1.Selectors{
+							LegacySelector: v1alpha1.LegacySelector{
 								Selector: map[string]string{"foo": "bar"},
 							},
 						},
@@ -1175,7 +1175,7 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selectors: v1alpha1.Selectors{
+							LegacySelector: v1alpha1.LegacySelector{
 								Selector: map[string]string{"foo": "bar"},
 							},
 						},
@@ -1186,7 +1186,7 @@ spec:
 							Name: "supplychain-name2",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selectors: v1alpha1.Selectors{
+							LegacySelector: v1alpha1.LegacySelector{
 								Selector: map[string]string{"foo": "baz"},
 							},
 						},

@@ -62,7 +62,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			},
 			Spec: v1alpha1.SupplyChainSpec{
 				Resources: []v1alpha1.SupplyChainResource{},
-				Selectors: v1alpha1.Selectors{
+				LegacySelector: v1alpha1.LegacySelector{
 					Selector: selector,
 				},
 			},

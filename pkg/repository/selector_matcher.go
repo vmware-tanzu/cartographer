@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -26,92 +25,53 @@ import (
 )
 
 type SelectingObject interface {
-	GetSelectors() v1alpha1.Selectors
+	GetSelectors() v1alpha1.LegacySelector
 	GetObjectKind() schema.ObjectKind
 	GetName() string
 }
 
-type Selectable interface {
-	GetLabels() map[string]string
+func legacySelectorToSelector(legacySelector v1alpha1.LegacySelector) v1alpha1.Selector {
+	return v1alpha1.Selector{
+		LabelSelector: metav1.LabelSelector{
+			MatchLabels:      legacySelector.Selector,
+			MatchExpressions: legacySelector.SelectorMatchExpressions,
+		},
+		MatchFields: legacySelector.SelectorMatchFields,
+	}
+}
+
+func selectingObjectsSelectors(selectingObjects []SelectingObject) []v1alpha1.Selector {
+	selectors := make([]v1alpha1.Selector, len(selectingObjects))
+	for idx, selectingObject := range selectingObjects {
+		selectors[idx] = legacySelectorToSelector(selectingObject.GetSelectors())
+	}
+	return selectors
 }
 
 // BestSelectorMatch attempts at finding the selectors that best match their selectors
 // against the selectors.
-func BestSelectorMatch(selectable Selectable, blueprints []SelectingObject) ([]SelectingObject, error) {
+func BestSelectorMatch(selectable selector.Selectable, selectingObjects []SelectingObject) ([]SelectingObject, error) {
+	bestMatchingSelectingObjectIndices, err := selector.BestSelectorMatchIndices(selectable, selectingObjectsSelectors(selectingObjects))
 
-	if len(blueprints) == 0 {
+	if err != nil {
+		target := selectingObjects[err.SelectorIndex()]
+		return nil, fmt.Errorf(
+			"error handling selectors, selectorMatchExpressions or selectorMatchFields of [%s/%s]: %w",
+			target.GetObjectKind().GroupVersionKind().Kind,
+			target.GetName(),
+			err,
+		)
+	}
+
+	numMatches := len(bestMatchingSelectingObjectIndices)
+
+	if numMatches == 0 {
 		return nil, nil
 	}
 
-	var matchingSelectors = map[int][]SelectingObject{}
-	var highWaterMark = 0
-
-	for _, target := range blueprints {
-		selectors := target.GetSelectors()
-
-		size := 0
-		labelSelector := &metav1.LabelSelector{
-			MatchLabels:      selectors.Selector,
-			MatchExpressions: selectors.SelectorMatchExpressions,
-		}
-
-		// -- Labels
-		sel, err := metav1.LabelSelectorAsSelector(labelSelector)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"selectorMatchExpressions or selectors of [%s/%s] are not valid: %w",
-				target.GetObjectKind().GroupVersionKind().Kind,
-				target.GetName(),
-				err,
-			)
-		}
-		if !sel.Matches(labels.Set(selectable.GetLabels())) {
-			continue // Bail early!
-		}
-
-		size += len(labelSelector.MatchLabels)
-		size += len(labelSelector.MatchExpressions)
-
-		// -- Fields
-		allFieldsMatched, err := matchesAllFields(selectable, selectors.SelectorMatchFields)
-		if err != nil {
-			// Todo: test in unit test
-			return nil, fmt.Errorf(
-				"failed to evaluate all matched fields of [%s/%s]: %w",
-				target.GetObjectKind().GroupVersionKind().Kind,
-				target.GetName(),
-				err,
-			)
-		}
-		if !allFieldsMatched {
-			continue // Bail early!
-		}
-		size += len(selectors.SelectorMatchFields)
-
-		// -- decision time
-		if size > 0 {
-			if matchingSelectors[size] == nil {
-				matchingSelectors[size] = []SelectingObject{}
-			}
-			if size > highWaterMark {
-				highWaterMark = size
-			}
-			matchingSelectors[size] = append(matchingSelectors[size], target)
-		}
+	matches := make([]SelectingObject, numMatches)
+	for idx, selectingObjectIdx := range bestMatchingSelectingObjectIndices {
+		matches[idx] = selectingObjects[selectingObjectIdx]
 	}
-
-	return matchingSelectors[highWaterMark], nil
-}
-
-func matchesAllFields(source Selectable, fields []v1alpha1.FieldSelectorRequirement) (bool, error) {
-	for _, requirement := range fields {
-		match, err := selector.Matches(requirement, source)
-		if err != nil {
-			return false, fmt.Errorf("unable to match field requirement with key [%s] operator [%s] values [%v]: %w", requirement.Key, requirement.Operator, requirement.Values, err)
-		}
-		if !match {
-			return false, nil
-		}
-	}
-	return true, nil
+	return matches, nil
 }

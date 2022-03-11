@@ -64,7 +64,7 @@ type ClusterSupplyChain struct {
 }
 
 type SupplyChainSpec struct {
-	Selectors `json:",inline"`
+	LegacySelector `json:",inline"`
 
 	// Resources that are responsible for bringing the application to a
 	// deliverable state.
@@ -148,7 +148,7 @@ type SupplyChainTemplateReference struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
 
-	// Options is a list of template names and Selectors. The templates must all be of type Kind.
+	// Options is a list of template names and Selector. The templates must all be of type Kind.
 	// A template will be selected if the workload matches the specified selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
@@ -187,8 +187,8 @@ func (c *ClusterSupplyChain) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterSupplyChain) GetSelectors() Selectors {
-	return c.Spec.Selectors
+func (c *ClusterSupplyChain) GetSelectors() LegacySelector {
+	return c.Spec.LegacySelector
 }
 
 func GetSelectorsFromObject(o client.Object) []string {

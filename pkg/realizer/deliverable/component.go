@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -162,47 +161,29 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 }
 
 func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryResource, deliveryName string) (string, error) {
-	var templateName string
-	var matchingOptions []string
+	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.deliverable, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
 
-	for _, option := range resource.TemplateRef.Options {
-		matchedAllFields := true
-		for _, field := range option.Selector.MatchFields {
-			dlContext := map[string]interface{}{
-				"spec":     r.deliverable.Spec,
-				"metadata": r.deliverable.ObjectMeta,
-			}
-			matched, err := selector.Matches(field, dlContext)
-			if err != nil {
-				if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
-					return "", ResolveTemplateOptionError{
-						Err:          err,
-						DeliveryName: deliveryName,
-						Resource:     resource,
-						OptionName:   option.Name,
-						Key:          field.Key,
-					}
-				}
-			}
-			if !matched {
-				matchedAllFields = false
-				break
-			}
-		}
-		if matchedAllFields {
-			matchingOptions = append(matchingOptions, option.Name)
+	if err != nil {
+		return "", ResolveTemplateOptionError{
+			Err:          err,
+			DeliveryName: deliveryName,
+			Resource:     resource,
+			OptionName:   resource.TemplateRef.Options[err.SelectorIndex()].Name,
 		}
 	}
 
-	if len(matchingOptions) != 1 {
+	if len(bestMatchingTemplateOptionsIndices) != 1 {
+		var optionNames []string
+		for _, optionIndex := range bestMatchingTemplateOptionsIndices {
+			optionNames = append(optionNames, resource.TemplateRef.Options[optionIndex].Name)
+		}
+
 		return "", TemplateOptionsMatchError{
 			DeliveryName: deliveryName,
 			Resource:     resource,
-			OptionNames:  matchingOptions,
+			OptionNames:  optionNames,
 		}
-	} else {
-		templateName = matchingOptions[0]
 	}
 
-	return templateName, nil
+	return resource.TemplateRef.Options[bestMatchingTemplateOptionsIndices[0]].Name, nil
 }
