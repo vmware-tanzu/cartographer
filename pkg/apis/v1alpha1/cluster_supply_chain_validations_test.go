@@ -891,6 +891,28 @@ var _ = Describe("Webhook Validation", func() {
 			})
 		})
 
+		Context("option has invalid label selector", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{ "not-valid-": "like-this-" }
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring(
+					`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(ContainSubstring(
+					`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
+			})
+
+			It("deletes without error", func() {
+				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("option points to key that is a valid prefix into an array", func() {
 			BeforeEach(func() {
 				supplyChain.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].value`

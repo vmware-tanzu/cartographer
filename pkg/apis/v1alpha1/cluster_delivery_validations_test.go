@@ -449,6 +449,28 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 
+		Context("option has invalid label selector", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{ "not-valid-": "like-this-" }
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring(
+					`error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(ContainSubstring(
+					`error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("option points to key that is a valid prefix into an array", func() {
 			BeforeEach(func() {
 				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.MatchFields[0].Key = `spec.params[?(@.name=="some-name")].value`
