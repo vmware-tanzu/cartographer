@@ -25,7 +25,7 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:path=clusterimagetemplates,scope=Cluster,shortName=cit
 
 type ClusterImageTemplate struct {
 	metav1.TypeMeta   `json:",inline"`

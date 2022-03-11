@@ -45,7 +45,7 @@ var ValidSupplyChainTemplates = []client.Object{
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:path=clustersupplychains,scope=Cluster,shortName=csc
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
@@ -190,7 +190,6 @@ func (c *ClusterSupplyChain) ValidateDelete() error {
 func (c *ClusterSupplyChain) GetSelectors() Selectors {
 	return c.Spec.Selectors
 }
-
 
 func GetSelectorsFromObject(o client.Object) []string {
 	var res []string

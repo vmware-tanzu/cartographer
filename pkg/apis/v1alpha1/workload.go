@@ -67,8 +67,8 @@ var ValidWorkloadPrefixes = []string{
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories="all"
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=workloads,shortName=wld,categories=all
 // +kubebuilder:printcolumn:name="Source",type="string",JSONPath=`.spec.source['git.url','image']`
 // +kubebuilder:printcolumn:name="SupplyChain",type="string",JSONPath=".status.supplyChainRef.name"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`

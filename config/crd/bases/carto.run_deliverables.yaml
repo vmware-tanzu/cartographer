@@ -28,6 +28,8 @@ spec:
     kind: Deliverable
     listKind: DeliverableList
     plural: deliverables
+    shortNames:
+    - dlv
     singular: deliverable
   scope: Namespaced
   versions:

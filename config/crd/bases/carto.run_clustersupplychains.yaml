@@ -26,6 +26,8 @@ spec:
     kind: ClusterSupplyChain
     listKind: ClusterSupplyChainList
     plural: clustersupplychains
+    shortNames:
+    - csc
     singular: clustersupplychain
   scope: Cluster
   versions:
