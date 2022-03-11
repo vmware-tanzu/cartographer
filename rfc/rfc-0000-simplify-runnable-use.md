@@ -65,7 +65,7 @@ their need.
 
 Supply Chain/Delivery templates will add a field that will indicate that the
 object templated needs to be wrapped by runnable. This will be an enum
-field, with possible values `mutable` and `immutable`. The field will default to
+field, with possible values `Mutable` and `Immutable`. The field will default to
 mutable and users will not be required to specify it. The field will be
 called `lifecycle`.
 
