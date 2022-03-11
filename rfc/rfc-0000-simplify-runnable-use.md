@@ -322,10 +322,12 @@ Runnables will be able to do so.
 # Drawbacks
 [drawbacks]: #drawbacks
 
-This RFC exchanges ease of usage for the app operator for complexity in the
+- This RFC exchanges ease of usage for the app operator for complexity in the
 controller. If we decide that app operators have no issue with creating
 ClusterRunTemplates and templating Runnables, there is no need to undertake
 this work.
+- With this RFC, the workload (supply-chain) controller would have a
+  dependency on the Runnable CRD.
 
 # Alternatives
 [alternatives]: #alternatives
