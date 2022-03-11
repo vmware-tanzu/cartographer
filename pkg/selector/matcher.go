@@ -50,8 +50,8 @@ func (e selectorMatchError) SelectorIndex() int {
 // `selectable` with the most specificity. Any error processing a selector includes the index of the
 // offending Selector.
 func BestSelectorMatchIndices(selectable Selectable, selectors []v1alpha1.Selector) ([]int, MatchError) {
-	var matchingSelectorIndicesByScore = map[int][]int{}
-	var highWaterMark = 0
+	var mostSpecificMatchingSelectors []int
+	var highWaterMark = 1
 
 	for idx, selector := range selectors {
 		matchScore := 0
@@ -85,13 +85,15 @@ func BestSelectorMatchIndices(selectable Selectable, selectors []v1alpha1.Select
 		matchScore += len(selector.MatchFields)
 
 		// -- decision time
-		if matchScore > 0 && matchScore >= highWaterMark {
+		if matchScore == highWaterMark {
+			mostSpecificMatchingSelectors = append(mostSpecificMatchingSelectors, idx)
+		} else if matchScore > highWaterMark {
 			highWaterMark = matchScore
-			matchingSelectorIndicesByScore[matchScore] = append(matchingSelectorIndicesByScore[matchScore], idx)
+			mostSpecificMatchingSelectors = []int{idx}
 		}
 	}
 
-	return matchingSelectorIndicesByScore[highWaterMark], nil
+	return mostSpecificMatchingSelectors, nil
 }
 
 func matchesAllFields(source interface{}, requirements []v1alpha1.FieldSelectorRequirement) (bool, error) {

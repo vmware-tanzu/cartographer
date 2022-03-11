@@ -30,7 +30,7 @@ type SelectingObject interface {
 	GetName() string
 }
 
-func LegacySelectorToSelector(legacySelector v1alpha1.LegacySelector) v1alpha1.Selector {
+func legacySelectorToSelector(legacySelector v1alpha1.LegacySelector) v1alpha1.Selector {
 	return v1alpha1.Selector{
 		LabelSelector: metav1.LabelSelector{
 			MatchLabels:      legacySelector.Selector,
@@ -43,7 +43,7 @@ func LegacySelectorToSelector(legacySelector v1alpha1.LegacySelector) v1alpha1.S
 func selectingObjectsSelectors(selectingObjects []SelectingObject) []v1alpha1.Selector {
 	selectors := make([]v1alpha1.Selector, len(selectingObjects))
 	for idx, selectingObject := range selectingObjects {
-		selectors[idx] = LegacySelectorToSelector(selectingObject.GetSelectors())
+		selectors[idx] = legacySelectorToSelector(selectingObject.GetSelectors())
 	}
 	return selectors
 }
