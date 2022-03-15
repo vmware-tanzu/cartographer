@@ -92,24 +92,14 @@ setup.
 git_writer:
   # the git commit message when the config definition is committed to the repo
   message: "Update app configuration"
-  # the git server, for example gitlab.com
-  server: github.com
-  # the project and repo name
-  repository: example/example.git
-  # private ssh key. Must match a public key on the git server
-  base64_encoded_ssh_key: a-key
-  # public key of the git server. Your ~/.ssh/known_hosts may have examples
-  base64_encoded_known_hosts: a-host
+  # the git server, project, and repo name
+  repository: github.com/example/example.git
   # the branch to which configuration will be pushed
   branch: main
   # username in the git server
   username: example
   # user email
   user_email: example@example.com
-  # port of the git server
-  port: ""
-  # ssh name for accessing the git server
-  ssh_user: git
 ```
 
 ### Deploying the files
@@ -195,41 +185,51 @@ spec:
   # context is avoided.
   ytt: |
     #@ load("@ytt:data", "data")
+    #@ load("@ytt:json", "json")
+    #@ load("@ytt:base64", "base64")
+
+    #@ def manifest():
+    manifest.yaml: #@ manifest_contents()
+    #@ end
+
+    #@ def manifest_contents():
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      labels:
+        #@ if hasattr(data.values.workload.metadata, "labels"):  # <=== an optional label for kapp controller
+                                                                        is written if specified by the app dev
+        #@ if hasattr(data.values.workload.metadata.labels, "app.kubernetes.io/part-of"):
+        app.kubernetes.io/part-of: #@ data.values.workload.metadata.labels["app.kubernetes.io/part-of"]
+        #@ end
+        #@ end
+        carto.run/workload-name: #@ data.values.workload.metadata.name
+        app.kubernetes.io/component: run
+    spec:
+      template:
+        metadata:
+          annotations:
+            autoscaling.knative.dev/minScale: '1'
+        spec:
+          containers:
+            - name: workload
+              image: #@ data.values.image
+              securityContext:
+                runAsUser: 1000
+          imagePullSecrets:
+            - name: registry-credentials
+    #@ end
+
+    ---
     apiVersion: v1
-    kind: ConfigMap # <=== a configmap is templated
+    kind: ConfigMap
     metadata:
       name: #@ data.values.workload.metadata.name # <=== The same templating context is available
                                                          with info about the workload, params and artifacts
                                                          created earlier by the supply chain
     data:
-      #@yaml/text-templated-strings
-      manifest: |
-        apiVersion: serving.knative.dev/v1
-        kind: Service # <=== in the configmap.data field, a Service object is configured
-        metadata:
-          name: (@= data.values.workload.metadata.name @)
-          labels:
-            (@- if hasattr(data.values.workload.metadata, "labels"): @) # <=== an optional label for kapp controller
-                                                                               is written if specified by the app dev
-            (@- if hasattr(data.values.workload.metadata.labels, "app.kubernetes.io/part-of"): @)
-            app.kubernetes.io/part-of: (@= data.values.workload.metadata.labels["app.kubernetes.io/part-of"] @)
-            (@ end -@)
-            (@ end -@)
-            carto.run/workload-name: (@= data.values.workload.metadata.name @)
-            app.kubernetes.io/component: run
-        spec:
-          template:
-            metadata:
-              annotations:
-                autoscaling.knative.dev/minScale: "1"
-            spec:
-              containers:
-                - name: workload
-                  image: (@= data.values.image @)
-                  securityContext:
-                    runAsUser: 1000
-              imagePullSecrets:
-                - name: registry-credentials
+      manifest: #@ base64.encode(json.encode(manifest()))
 ```
 
 ### Writing the configuration to git
@@ -246,140 +246,135 @@ metadata:
   name: git-writer
 spec:
   params:
-    - name: git_writer_username
-      default: example            # <=== specified as `default` this value can be overwritten by the workload
-                                  #      if specified as `value`, it cannot be overwritten
-    - name: git_writer_user_email
-      default: example@example.com
-    - name: git_writer_commit_message
-      default: "Update app configuration"
-    - name: git_writer_ssh_user
-      default: git
-    - name: git_writer_server
-      default: github.com
-    - name: git_writer_port
-      default: ""
-    - name: git_writer_repository
-      default: example/example.git
-    - name: git_writer_branch
+    - name: git_repository
+      default: github.com/example/example.git    # <=== specified as `default` this value can be overwritten by the workload
+                                                 #      if specified as `value`, it cannot be overwritten
+    - name: git_branch
       default: main
-    - name: git_writer_skip_host_checking
-      default: false
-    - name: git_writer_ssh_variant
-      default: ssh
+    - name: git_user_name
+      default: example            
+    - name: git_user_email
+      default: example@example.com
+    - name: git_commit_message
+      default: "Update app configuration"
   template:
     apiVersion: carto.run/v1alpha1
     kind: Runnable # <=== the cluster template creates a runnable
     metadata:
       name: $(workload.metadata.name)$-git-writer
     spec:
+      serviceAccountName: default
       runTemplateRef:
-        name: git-writer # <=== the cluster run template that specifies the object to be created
+        name: tekton-taskrun # <=== the cluster run template that specifies the object to be created
 
       inputs: # <=== these inputs are passed to the cluster run template
-        input_config_map_name: $(workload.metadata.name)$
-        input_config_map_field: manifest.yaml # <=== the filename that will be read by the delivery specified here
-
-        git_username: $(params.git_writer_username)$
-        git_user_email: $(params.git_writer_user_email)$
-        commit_message: $(params.git_writer_commit_message)$
-        git_ssh_user: $(params.git_writer_ssh_user)$
-        git_server: $(params.git_writer_server)$
-        git_server_port: $(params.git_writer_port)$
-        git_repository: $(params.git_writer_repository)$
-        branch: $(params.git_writer_branch)$
-        skip_host_checking: $(params.git_writer_skip_host_checking)$
-        git_ssh_variant: $(params.git_writer_ssh_variant)$
-        data: $(config)$ # <=== here is the data, the config yaml
+        serviceAccount: default
+        taskRef:
+          kind: ClusterTask
+          name: git-writer
+        params:
+          - name: git_repository
+            value: $(params.git_repository)$
+          - name: git_branch
+            value: $(params.git_branch)$
+          - name: git_user_name
+            value: $(params.git_user_name)$
+          - name: git_user_email
+            value: $(params.git_user_email)$
+          - name: git_commit_message
+            value: $(params.git_commit_message)$
+          - name: git_files
+            value: $(config)$  # <=== here is the data, the config yaml
 ```
 
 The cluster run template creates a tekton taskrun. All tekton taskruns
-provide values to a tekton task. For simplicity sake, the example uses
-the [git-cli task defined in the tekton catalog](https://github.com/tektoncd/catalog/tree/main/task/git-cli/0.2).
-
-As documented in the tekton catalog, this task expects a number of parameters
-and workspaces to be defined in the taskrun.
-
-One workspace is a secret object with credentials for the git operations:
+provide values to a tekton task. Here we see the tekton cluster task that 
+the taskrun is using.
 
 ```yaml
-#@ load("@ytt:data", "data")
-
----
-apiVersion: v1
-kind: Secret
+apiVersion: tekton.dev/v1beta1
+kind: ClusterTask
 metadata:
-  name: git-ssh-secret
-data:
-  id_rsa: abc123 # <=== see https://github.com/tektoncd/catalog/tree/main/task/git-cli/0.2#using-ssh-credentials
-  known_hosts: xyz456
+  name: git-writer
+spec:
+  description: |-
+    A task that writes a given set of files (provided as a json base64-encoded)
+    to git repository under a specific directory (`./config`).
+  params:
+    - name: git_repository
+      description: The repository path
+      type: string
+    - name: git_branch
+      description: The git branch to read and write
+      type: string
+      default: "main"
+    - name: git_user_email
+      description: User email address
+      type: string
+      default: "example@example.com"
+    - name: git_user_name
+      description: User name
+      type: string
+      default: "Example"
+    - name: git_commit_message
+      description: Message for the git commit
+      type: string
+      default: "New Commit"
+    - name: git_files
+      type: string
+      description: >
+        Base64-encoded json map of files to write to registry, for example -
+        eyAiUkVBRE1FLm1kIjogIiMgUmVhZG1lIiB9
+  steps:
+    - name: git-clone-and-push
+      image: paketobuildpacks/build:base
+      securityContext:
+        runAsUser: 0
+      workingDir: /root
+      script: |
+        #!/usr/bin/env bash
+
+        set -o errexit
+        set -o xtrace
+
+        git clone $(params.git_repository) ./repo
+        cd repo
+
+        git checkout -b $(params.git_branch) || git checkout $(params.git_branch)
+        git pull --rebase origin $(params.git_branch) || true
+
+        git config user.email $(params.git_user_email)
+        git config user.name $(params.git_user_name)
+
+        mkdir -p config && rm -rf config/*
+        cd config
+
+        echo '$(params.git_files)' | base64 --decode > files.json
+        eval "$(cat files.json | jq -r 'to_entries | .[] | @sh "mkdir -p $(dirname \(.key)) && echo \(.value | tojson) > \(.key) && git add \(.key)"')"
+
+        git commit -m "$(params.git_commit_message)"
+        git push origin $(params.git_branch)
 ```
 
 Here we see the cluster run template which creates taskruns that fulfill
-the `git-cli` task contract.
+the `git-writer` task contract.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
 kind: ClusterRunTemplate
 metadata:
-  name: git-writer
+  name: tekton-taskrun
 spec:
   template:
     apiVersion: tekton.dev/v1beta1
     kind: TaskRun
     metadata:
       generateName: $(runnable.metadata.name)$-
+      labels: $(runnable.metadata.labels)$
     spec:
-      taskRef:
-        name: git-cli
-      workspaces:
-        - name: source
-          emptyDir: { }
-        - name: input
-          emptyDir: { }
-        - name: ssh-directory
-          secret:
-            secretName: git-ssh-secret # <=== the secret created above
-      params:
-        - name: GIT_USER_NAME
-          value: $(runnable.spec.inputs.git_username)$
-        - name: GIT_USER_EMAIL
-          value: $(runnable.spec.inputs.git_user_email)$
-        - name: USER_HOME
-          value: /root
-        - name: GIT_SCRIPT # <=== the git script below creates a commit in the repo
-                           #      with the contents of the earlier configmap
-          value: |
-            export COMMIT_MESSAGE="$(runnable.spec.inputs.commit_message)$"
-            export BRANCH="$(runnable.spec.inputs.branch)$"
-            if [[ -n "$(runnable.spec.inputs.skip_host_checking)$" && "$(runnable.spec.inputs.skip_host_checking)$" = true ]]
-            then
-              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-            fi
-            if [[ -n "$(runnable.spec.inputs.git_ssh_variant)$" ]]
-            then
-              export GIT_SSH_VARIANT="$(runnable.spec.inputs.git_ssh_variant)$"
-            fi
-            git init
-            if [[ -n "$(runnable.spec.inputs.git_server_port)$" ]]; then
-              git remote add origin $(runnable.spec.inputs.git_ssh_user)$@$(runnable.spec.inputs.git_server)$:$(runnable.spec.inputs.git_server_port)$/$(runnable.spec.inputs.git_repository)$
-            else
-              git remote add origin $(runnable.spec.inputs.git_ssh_user)$@$(runnable.spec.inputs.git_server)$:$(runnable.spec.inputs.git_repository)$
-            fi
-            # TODO remove the fetch and branch
-            git fetch
-            git branch
-            git pull origin "`git remote show origin | grep "HEAD branch" | sed 's/.*: //'`"
-            git pull origin "$BRANCH" || git branch "$BRANCH"
-            git checkout "$BRANCH"
-            export CONFIG_MAP_FIELD=$(runnable.spec.inputs.input_config_map_field)$
-            export DATA="$(runnable.spec.inputs.data)$" # <===
-                                                        #      the data (the config yaml) is written to the
-                                                        #      specified file
-            echo "$DATA" | tee "$CONFIG_MAP_FIELD"      # <===
-            git add .
-            git commit --allow-empty -m "$COMMIT_MESSAGE"
-            git push --set-upstream origin "$BRANCH"
+      serviceAccountName: $(runnable.spec.inputs.serviceAccount)$
+      taskRef: $(runnable.spec.inputs.taskRef)$
+      params: $(runnable.spec.inputs.params)$
 ```
 
 ### Including the templates in the supply chain
