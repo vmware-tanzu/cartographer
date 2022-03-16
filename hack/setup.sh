@@ -61,6 +61,10 @@ main() {
                         install_cartographer
                         ;;
 
+                cartographer-latest)
+                        install_cartographer_latest_release
+                        ;;
+
                 example-dependencies)
                         install_git_serve
                         install_source_controller
@@ -123,6 +127,11 @@ install_cartographer() {
                         -f-
 }
 
+install_cartographer_latest_release() {
+        log "installing latest published cartographer release"
+        kapp deploy -a cartographer --yes -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+}
+
 show_usage_help() {
         echo "usage: $0 <command...>"
         cat <<-COMMANDS
@@ -132,6 +141,7 @@ show_usage_help() {
 
 	- cartographer 		build a release of cartographer and install it in the
 			cluster
+	- cartographer-latest install the latest published release of cartographer
 
 	- example-dependencies 	installs dependencies used throughout examples
 	- example 		install the example and runs a minimal test on it
