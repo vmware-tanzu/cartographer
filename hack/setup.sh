@@ -24,6 +24,7 @@ readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
+readonly RELEASE_YAML_PATH=${RELEASE_YAML_PATH:-"./release/cartographer.yaml"}
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
 
@@ -63,6 +64,10 @@ main() {
 
                 cartographer-latest)
                         install_cartographer_latest_release
+                        ;;
+
+                pre-built-cartographer)
+                        install_pre_built_cartographer_release
                         ;;
 
                 example-dependencies)
@@ -130,6 +135,11 @@ install_cartographer() {
 install_cartographer_latest_release() {
         log "installing latest published cartographer release"
         kapp deploy -a cartographer --yes -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml
+}
+
+install_pre_built_cartographer_release() {
+        log "installing pre built cartographer release"
+        kapp deploy -a cartographer --yes -f "$RELEASE_YAML_PATH"
 }
 
 show_usage_help() {
