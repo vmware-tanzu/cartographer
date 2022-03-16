@@ -25,7 +25,7 @@ The dependencies are formed by specifying which resource(s) are used as inputs.
 
 Blueprints consist of:
 
-- A **selector** to match owners
+- A **selector** to match owners, see [selectors](#selectors)
 - **Parameters** to pass to all resources
 - **Resources**:
   - A **templateRef** pointing to the template for the resource, see [templateRef](#templateref)
@@ -70,12 +70,8 @@ templateRef:
             operator: Exists
 ```
 
-The selector currently only supports `matchFields`. `matchFields` is a list of template selector requirements. Valid
-operators are `In`, `NotIn`, `Exists`, and `DoesNotExist`. The values set must be non-empty in the case of In and NotIn.
-All the requirements are ANDed together -- they must all be satisfied in order to match.
-
-This process is similar to
-[set-based requirements in Kubernetes resources](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+The selector specifies the requirements which must match against the Owner (workload|deliverable) for the option to be
+chosen. See [selectors](#selectors).
 
 ### Templates
 
@@ -174,17 +170,46 @@ templates which pauses the continuous deploy. ) [comment]: <> (TODO - more on lo
 
 ### Selectors
 
-An owner's labels will determine which blueprint will select for it. The controller will do a "best match" on a
-blueprint's `spec.selector` with an owner's labels.
+Selectors specify a set of requirements that _must all_ match against an owner.
 
-A "best match" follows the rules:
+They build upon
+[set-based requirements in Kubernetes resources](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements),
+by adding `matchFields`, which permits the same operators and values as `matchExpressions` against a json path `key`
+which is evaluated on the owner. For example:
 
-1. If all labels are fully contained in the selector, reconcile the owner with that blueprint.
-2. If not all labels match, we choose the blueprint with the most matched labels.
-3. If two blueprints match all labels, the blueprint with the more concise match (less non-matching labels) is selected.
+```yaml
+selector:
+  matchLabels:
+    workload-type: web
+  matchExpressions:
+    - key: group
+      operator: In
+      values: ["internal", "public-facing"]
+  matchFields:
+    - key: workload.spec.source.git
+      operator: Exists
+```
 
-Note: Despite the rules, the controller can still return more than one match. If more than one match is returned, no
-blueprint will reconcile for the owner.
+All requirements must match for the selector to select for the owner. Furthermore, when considered against multiple,
+other objects with selectors, the selector with the most specificity wins. If multiple selectors match with equal
+specificity, the handling depends on context.
+
+They are currently employed by:
+
+1. Blueprints, [in legacy form](#blueprint-selector-legacy) - to determine if the blueprint will select for the owner;
+2. options in a [templateRef](#templateRef) - to determine if the template option will select for the owner.
+
+In both these cases, multiple matching objects is invalid - in the former, no blueprint will reconcile for the owner. In
+the latter, no template will be stamped out, and the details of the offending resource reported in the owner's status.
+
+#### Blueprint selector legacy
+
+In order to maintain backwards-compatibility with the existing schema, blueprints must currently supply selector
+requirements directly in their top-level properties `selector`, `selectorMatchExpressions` and `selectorMatchFields`
+(for `matchLabels`, `matchExpressions`, and `matchFields`, respectively).
+
+In a future schema revision, blueprints' `selector` property will become a Selector, as described above, and the
+`selectorMatchExpressions` and `selectorMatchFields` removed.
 
 ## Parameter Hierarchy
 

@@ -102,7 +102,7 @@ spec:
         # +optional
         name: <string>
 
-        # Options is a list of template names and Selectors. The
+        # Options is a list of template names and Selector. The
         # templates must all be of type Kind. A template will be
         # selected if the workload matches the specified selector.
         # Only one template can be selected. Only one of Name and
@@ -113,12 +113,40 @@ spec:
           - # Name of the template to apply
             name: <string>
 
-            # Selector is a field query over a workload or
-            # deliverable resource.
+            # Selector is a criteria to match against  a workload
+            # or deliverable resource.
             selector:
+
+              # matchExpressions is a list of label selector
+              # requirements. The requirements are ANDed.
+              # +optional
+              matchExpressions:
+                - # A label selector requirement is a selector
+                  # that contains values, a key, and an operator
+                  # that relates the key and values.
+                  # +optional
+
+                  # key is the label key that the selector applies
+                  # to.
+                  key: <string>
+
+                  # operator represents a key's relationship to a
+                  # set of values. Valid operators are In, NotIn,
+                  # Exists and DoesNotExist.
+                  operator: <string>
+
+                  # values is an array of string values. If the
+                  # operator is In or NotIn, the values array must
+                  # be non-empty. If the operator is Exists or
+                  # DoesNotExist, the values array must be empty.
+                  # This array is replaced during a strategic
+                  # merge patch.
+                  # +optional
+                  values: [ <string> ]
 
               # MatchFields is a list of field selector
               # requirements. The requirements are ANDed.
+              # +optional
               matchFields:
                 - # Key is the JSON path in the workload to match
                   # against. e.g. for workload:
@@ -136,7 +164,16 @@ spec:
                   # be non-empty. If the operator is Exists or
                   # DoesNotExist, the values array must be empty.
                   # +optional
-                  values:
+                  values: [ <string> ]
+
+              # matchLabels is a map of {key,value} pairs. A
+              # single {key,value} in the matchLabels map is
+              # equivalent to an element of matchExpressions,
+              # whose key field is "key", the operator is "In",
+              # and the values array contains only "value". The
+              # requirements are ANDed.
+              # +optional
+              matchLabels: {}
 
   # Specifies the label key-value pairs used to select owners See:
   # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
@@ -167,8 +204,9 @@ spec:
       # be empty. This array is replaced during a strategic merge
       # patch.
       # +optional
-      values:
-- # Specifies the requirements used to select owners based on
+      values: [ <string> ]
+
+  # Specifies the requirements used to select owners based on
   # their fields See:
   # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
   # +optional
@@ -188,8 +226,9 @@ spec:
       # operator is Exists or DoesNotExist, the values array must
       # be empty.
       # +optional
-      values:
-- # ServiceAccountName refers to the Service account with
+      values: [ <string> ]
+
+  # ServiceAccountName refers to the Service account with
   # permissions to create resources submitted by the supply chain.
   # If not set, Cartographer will use serviceAccountName from
   # supply chain. 
