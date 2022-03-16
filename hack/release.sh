@@ -28,7 +28,7 @@ readonly YTT_VERSION=0.39.0
 readonly YTT_CHECKSUM=7a472b8c62bfec5c12586bb39065beda42c6fe43cf24271275e4dbc0a04acb8b
 
 main() {
-        readonly RELEASE_VERSION="v0.0.0-dev"
+        readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
         readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
 
         show_vars
@@ -72,7 +72,8 @@ download_ytt_to_kodata() {
 
 generate_release() {
         mkdir -p ./release
-        ytt --ignore-unknown-comments -f ./config |
+        ytt --ignore-unknown-comments -f ./config \
+                --data-value version=$RELEASE_VERSION |
                 KO_DOCKER_REPO=$REGISTRY ko resolve -B -f- > \
                         ./release/cartographer.yaml
 }

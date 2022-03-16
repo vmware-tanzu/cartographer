@@ -14,8 +14,11 @@
 
 name: validation
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
 
       - name: set up Go
         uses: actions/setup-go@v2
-        with: {go-version: '^1.17.1'}
+        with: {go-version: '^1.17'}
 
       - name: check copyright header
         run: |-
