@@ -473,6 +473,8 @@ setup_source_to_gitops() {
           --data-value registry.password=admin \
           --data-value workload_name="$test_name" \
           --data-value image_prefix="$REGISTRY/example-$test_name-" \
+          --data-value source_repo.url="https://github.com/kontinue/hello-world" \
+          --data-value source_repo.branch="main" \
           --data-value git_repository="$GITOPS_REPO" \
           --data-value git_branch="$GITOPS_BRANCH" \
           --data-value git_user_name="gitops-user" \

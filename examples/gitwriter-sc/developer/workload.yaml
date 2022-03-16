@@ -25,9 +25,9 @@ spec:
   serviceAccountName: #@ data.values.service_account_name
   source:
     git:
-      url: https://github.com/kontinue/hello-world
+      url: #@ data.values.source_repo.url
       ref:
-        branch: main
+        branch: #@ data.values.source_repo.branch
   build:
     env:
       - name: CGO_ENABLED

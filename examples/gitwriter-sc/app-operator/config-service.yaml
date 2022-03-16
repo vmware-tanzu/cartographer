@@ -21,14 +21,15 @@ spec:
 
   ytt: |
     #@ load("@ytt:data", "data")
+    #@ load("@ytt:yaml", "yaml")
     #@ load("@ytt:json", "json")
     #@ load("@ytt:base64", "base64")
     
     #@ def manifest():
-    manifest.yaml: #@ manifest_contents()
+    manifest.yaml: #@ yaml.encode(service()) + "---\n" + yaml.encode(config())
     #@ end
     
-    #@ def manifest_contents():
+    #@ def service():
     apiVersion: serving.knative.dev/v1
     kind: Service
     metadata:
@@ -56,6 +57,29 @@ spec:
             - name: registry-credentials
     #@ end
     
+    #@ def config():
+    apiVersion: kapp.k14s.io/v1alpha1
+    kind: Config
+    rebaseRules:
+      - path:
+          - metadata
+          - annotations
+          - serving.knative.dev/creator
+        type: copy
+        sources: [new, existing]
+        resourceMatchers: &matchers
+          - apiVersionKindMatcher:
+              apiVersion: serving.knative.dev/v1
+              kind: Service
+      - path:
+          - metadata
+          - annotations
+          - serving.knative.dev/lastModifier
+        type: copy
+        sources: [new, existing]
+        resourceMatchers: *matchers
+    #@ end
+
     ---
     apiVersion: v1
     kind: ConfigMap
