@@ -16,60 +16,16 @@ name: release
 
 on:
   push:
-    branches: [main]
+    tags:
+      - 'v*'
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with: { fetch-depth: 0 }
-
-      - name: set up Go
-        uses: actions/setup-go@v2
-        with: { go-version: '^1.17' }
-
-      - name: check copyright header
-        run: |-
-          make copyright
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
-
-      - name: check all generables were regenerated and commited
-        run: |-
-          make gen-manifests gen-objects test-gen-manifests test-gen-objects generate
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
-
-      - name: lint
-        run: |-
-          make lint
-          [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
-
-      - name: setup base dependencies
-        run: |-
-          sudo apt update && sudo apt install -y curl tar
-          ./hack/ci/install-binaries.sh ko kubebuilder kuttl tree
-
-      - name: setup carvel tooling binaries
-        uses: vmware-tanzu/carvel-setup-action@v1
-
-      - name: run tests
-        env:
-          KUBEBUILDER_ASSETS: /usr/local/bin
-          LOG_LEVEL: "debug"
-          CI: true
-        run: make test
-
-      - name: run e2e example
-        run: ./hack/setup.sh cluster cartographer example-dependencies example
-
   release:
-    needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
-      RELEASE_VERSION: "v0.0.0-dev"
+      RELEASE_VERSION: ${{github.ref_name}}
     steps:
       - name: checkout
         uses: actions/checkout@v3
