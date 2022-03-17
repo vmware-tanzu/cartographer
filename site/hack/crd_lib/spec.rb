@@ -163,13 +163,18 @@ class Spec
     end
 
     class ArrayNode
-      attr_reader :name, :items, :description
+      attr_reader :name, :items, :description, :scalar_item_type
 
       def initialize(node_hash, name = "", required = false)
         @name = name
         @description = node_hash["description"]
         @required = required
-        @items = ItemsNode.new(node_hash.dig("items"))
+
+        if node_hash["items"]["type"] == "object"
+          @items = ItemsNode.new(node_hash.dig("items"))
+        else
+          @scalar_item_type = node_hash["items"]["type"]
+        end
       end
 
       def required?
@@ -178,8 +183,12 @@ class Spec
 
       def to_y(writer)
         writer.comment(description, !required?)
-        writer.puts "#{name}:"
-        writer.indent { @items.to_y(writer) }
+        if @items
+          writer.puts "#{name}:"
+          writer.indent { @items.to_y(writer) }
+        elsif @scalar_item_type
+          writer.puts "#{name}: [ <#{scalar_item_type}> ]"
+        end
       end
     end
 
