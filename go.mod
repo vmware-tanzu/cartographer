@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
-	github.com/go-logr/logr v1.2.2
+	github.com/go-logr/logr v1.2.3
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
