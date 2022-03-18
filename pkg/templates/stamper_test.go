@@ -97,26 +97,50 @@ var _ = Describe("Stamper", func() {
 					Expect(stamped.GetNamespace()).To(Equal("owner-ns"))
 				})
 			})
+
 			Context("template does specify a namespace", func() {
 				var template v1alpha1.TemplateSpec
-				BeforeEach(func() {
-					template = v1alpha1.TemplateSpec{
-						Template: &runtime.RawExtension{
-							Raw: []byte(`{
+
+				Context("it is different than the owner namespace", func() {
+					BeforeEach(func() {
+						template = v1alpha1.TemplateSpec{
+							Template: &runtime.RawExtension{
+								Raw: []byte(`{
 								"kind": "Silly",
 								"apiVersion": "silly.io/v1",
 								"metadata": { "namespace": "template-ns" }
 							}`),
-						},
-					}
+							},
+						}
+					})
+
+					It("returns an error", func() {
+						_, err := stamper.Stamp(context.TODO(), template)
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
+					})
 				})
 
-				It("does not change the namespace", func() {
-					stamped, err := stamper.Stamp(context.TODO(), template)
+				Context("it is same as owner namespace", func() {
+					BeforeEach(func() {
+						template = v1alpha1.TemplateSpec{
+							Template: &runtime.RawExtension{
+								Raw: []byte(`{
+								"kind": "Silly",
+								"apiVersion": "silly.io/v1",
+								"metadata": { "namespace": "owner-ns" }
+							}`),
+							},
+						}
+					})
 
-					Expect(err).NotTo(HaveOccurred())
-					Expect(stamped.GetNamespace()).To(Equal("template-ns"))
+					It("does not error", func() {
+						stamped, err := stamper.Stamp(context.TODO(), template)
 
+						Expect(err).NotTo(HaveOccurred())
+						Expect(stamped.GetNamespace()).To(Equal("owner-ns"))
+					})
 				})
 			})
 		})

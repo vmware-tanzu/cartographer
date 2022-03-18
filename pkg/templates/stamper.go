@@ -149,12 +149,10 @@ func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateS
 		return nil, err
 	}
 
-	// option 1
-	if stampedObject.GetNamespace() != "" {
-		// BLOW UP
+	if stampedObject.GetNamespace() != "" && stampedObject.GetNamespace() != s.Owner.GetNamespace() {
+		return nil, fmt.Errorf("cannot set namespace in resource template")
 	}
 
-	//  option 2
 	stampedObject.SetNamespace(s.Owner.GetNamespace())
 
 	apiVersion, kind := s.Owner.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()

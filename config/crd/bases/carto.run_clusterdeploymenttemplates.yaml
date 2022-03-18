@@ -136,7 +136,9 @@ spec:
                   Resource or Custom Resource which is applied to the server each
                   time the blueprint is applied. Templates support simple value interpolation
                   using the $()$ marker format. For more information, see: https://cartographer.sh/docs/latest/templating/
-                  You cannot define both Template and Ytt at the same time.'
+                  You cannot define both Template and Ytt at the same time. You cannot
+                  define the namespace for the resource. The resource will be created
+                  in the owner namespace.'
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               ytt:
@@ -145,7 +147,9 @@ spec:
                   server each time the blueprint is applied. Templates support simple
                   value interpolation using the $()$ marker format. For more information,
                   see: https://cartographer.sh/docs/latest/templating/ You cannot
-                  define both Template and Ytt at the same time.'
+                  define both Template and Ytt at the same time. You cannot define
+                  the namespace for the resource. The resource will be created in
+                  the owner namespace.'
                 type: string
             type: object
         required:
