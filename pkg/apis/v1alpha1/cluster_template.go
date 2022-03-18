@@ -47,8 +47,9 @@ type TemplateSpec struct {
 	// interpolation using the $()$ marker format. For more
 	// information, see: https://cartographer.sh/docs/latest/templating/
 	// You cannot define both Template and Ytt at the same time.
-	// You cannot define the namespace for the resource. The resource will
-	// be created in the owner namespace.
+	// You should not define the namespace for the resource - it will automatically
+	// be created in the owner namespace. If the namespace is specified and is not
+	// the owner namespace, the resource will fail to be created.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template *runtime.RawExtension `json:"template,omitempty"`
 
@@ -58,8 +59,9 @@ type TemplateSpec struct {
 	// interpolation using the $()$ marker format. For more
 	// information, see: https://cartographer.sh/docs/latest/templating/
 	// You cannot define both Template and Ytt at the same time.
-	// You cannot define the namespace for the resource. The resource will
-	// be created in the owner namespace.
+	// You should not define the namespace for the resource - it will automatically
+	// be created in the owner namespace. If the namespace is specified and is not
+	// the owner namespace, the resource will fail to be created.
 	Ytt string `json:"ytt,omitempty"`
 
 	// Additional parameters.
