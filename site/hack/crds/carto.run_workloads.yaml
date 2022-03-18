@@ -34,5 +34,3 @@ fields:
       resources:
         hideChildDescriptions: true
         maxDepth: 1
-  status:
-    hide: true

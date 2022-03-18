@@ -22,5 +22,4 @@ fields:
     hideDescription: true
   spec:
     hideDescription: true
-  status:
-    hide: true
+
