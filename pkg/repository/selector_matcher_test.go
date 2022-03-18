@@ -23,20 +23,21 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
 )
 
 var _ = Describe("BestSelectorMatch", func() {
 
 	type testcase struct {
-		selectable        repository.Selectable
-		selectors         []repository.Selector
-		expectedSelectors []repository.Selector
+		selectable        selector.Selectable
+		selectingObjects  []repository.SelectingObject
+		expectedSelectors []repository.SelectingObject
 	}
 
 	DescribeTable("cases",
 		func(tc testcase) {
 			actual, _ := repository.BestSelectorMatch(
-				tc.selectable, tc.selectors,
+				tc.selectable, tc.selectingObjects,
 			)
 
 			if tc.expectedSelectors == nil {
@@ -46,8 +47,6 @@ var _ = Describe("BestSelectorMatch", func() {
 
 			Expect(actual).To(Equal(tc.expectedSelectors))
 		},
-
-		// ---------- Label Selectors
 
 		Entry("empty selectors", testcase{
 			selectable: selectable{
@@ -61,19 +60,20 @@ var _ = Describe("BestSelectorMatch", func() {
 					"type": "web",
 				},
 			},
-			selectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"my": "label",
 					},
-					fields: fields{
+					nil,
+					fields{
 						v1alpha1.FieldSelectorRequirement{
 							Key:      "Spec.libertyGibbet",
 							Operator: "Exists",
 							Values:   nil,
 						},
 					},
-				},
+				),
 			},
 			expectedSelectors: nil,
 		}),
@@ -84,21 +84,23 @@ var _ = Describe("BestSelectorMatch", func() {
 					"type": "web",
 					"test": "tekton",
 				}},
-			selectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
-			expectedSelectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			expectedSelectors: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
 		}),
 
@@ -107,14 +109,15 @@ var _ = Describe("BestSelectorMatch", func() {
 				labels: labels2.Set{
 					"type": "web",
 				}},
-			selectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
 			expectedSelectors: nil,
 		}),
@@ -125,37 +128,41 @@ var _ = Describe("BestSelectorMatch", func() {
 					"type": "web",
 					"test": "tekton",
 				}},
-			selectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "webvalue",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{ // ! this
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type": "mobile",
 						"test": "mobilevalue",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
-			expectedSelectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			expectedSelectors: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
 		}),
 
@@ -167,49 +174,54 @@ var _ = Describe("BestSelectorMatch", func() {
 					"scan":  "security",
 					"input": "image",
 				}},
-			selectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "atype",
 						"test": "tekton",
 						"scan": "ascan",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{ // ! this
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 						"scan": "security",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{ // ! this
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type":  "web",
 						"test":  "tekton",
 						"input": "image",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
-			expectedSelectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			expectedSelectors: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 						"scan": "security",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type":  "web",
 						"test":  "tekton",
 						"input": "image",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
 		}),
 
@@ -220,47 +232,48 @@ var _ = Describe("BestSelectorMatch", func() {
 					"test": "tekton",
 					"scan": "security",
 				}},
-			selectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "atype",
 						"test": "tekton",
 						"scan": "ascan",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{ // ! this
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 						"scan": "security",
 					},
-					fields: fields{},
-				},
-				&selector{
-					labels: labels2.Set{
+					nil,
+					nil,
+				),
+				newSelectingObject(
+					labels2.Set{
 						"type":  "web",
 						"test":  "tekton",
 						"scan":  "security",
 						"input": "image",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
-			expectedSelectors: []repository.Selector{
-				&selector{
-					labels: labels2.Set{
+			expectedSelectors: []repository.SelectingObject{
+				newSelectingObject(
+					labels2.Set{
 						"type": "web",
 						"test": "tekton",
 						"scan": "security",
 					},
-					fields: fields{},
-				},
+					nil,
+					nil,
+				),
 			},
 		}),
-
-		// ---------- Field Selectors
-		// TODO: Comprehensive testing!? Eesh?
 
 		Entry("match selectors with many fields in selectors", testcase{
 			selectable: selectable{
@@ -269,88 +282,83 @@ var _ = Describe("BestSelectorMatch", func() {
 					Age:   4,
 				},
 			},
-			selectors: []repository.Selector{
-				&selector{
-					fields: fields{
+			selectingObjects: []repository.SelectingObject{
+				newSelectingObject(
+					nil,
+					nil,
+					fields{
 						{
 							Key:      "Spec.Color",
 							Operator: "NotIn",
 							Values:   []string{"green", "blue"},
 						},
 					},
-				},
+				),
 			},
-			expectedSelectors: []repository.Selector{
-				&selector{
-					fields: fields{
+			expectedSelectors: []repository.SelectingObject{
+				newSelectingObject(
+					nil,
+					nil,
+					fields{
 						{
 							Key:      "Spec.Color",
 							Operator: "NotIn",
 							Values:   []string{"green", "blue"},
 						},
 					},
-				},
+				),
 			},
 		}),
-
-		// TODO: Error cases and handling with field context
 	)
 
 	Describe("malformed selectors", func() {
 		Context("label selector invalid", func() {
-			var sel []repository.Selector
+			var sel []repository.SelectingObject
 			BeforeEach(func() {
-				sel = []repository.Selector{
-					&selector{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Test",
-							APIVersion: "testv1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-selector",
-						},
-						labels: labels2.Set{
+				sel = []repository.SelectingObject{
+					newSelectingObjectWithID(
+						"my-selector",
+						"Special",
+						labels2.Set{
 							"fred-": "derf-",
 						},
-					},
+						nil,
+						nil,
+					),
 				}
 			})
 
 			It("returns an error", func() {
 				_, err := repository.BestSelectorMatch(selectable{}, sel)
-				Expect(err).To(MatchError(ContainSubstring("selectorMatchExpressions or selectors of [Test/my-selector] are not valid")))
+				Expect(err).To(MatchError(ContainSubstring("error handling selectors, selectorMatchExpressions or selectorMatchFields of [Special/my-selector]")))
+				Expect(err).To(MatchError(ContainSubstring("selector labels or matchExpressions are not valid")))
 				Expect(err).To(MatchError(ContainSubstring("key: Invalid value")))
 			})
 		})
 
 		Context("expression selector invalid", func() {
-			var sel []repository.Selector
+			var sel []repository.SelectingObject
 			BeforeEach(func() {
-				sel = []repository.Selector{
-					&selector{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Test",
-							APIVersion: "testv1",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-selector",
-						},
-						labels: nil,
-						expressions: []metav1.LabelSelectorRequirement{
+				sel = []repository.SelectingObject{
+					newSelectingObjectWithID(
+						"my-selector",
+						"Special",
+						nil,
+						[]metav1.LabelSelectorRequirement{
 							{
 								Key:      "fred",
 								Operator: "Matchingest",
 								Values:   nil,
 							},
 						},
-						fields: nil,
-					},
+						nil,
+					),
 				}
 			})
 
 			It("returns an error", func() {
 				_, err := repository.BestSelectorMatch(selectable{}, sel)
-				Expect(err).To(MatchError(ContainSubstring("selectorMatchExpressions or selectors of [Test/my-selector] are not valid")))
+				Expect(err).To(MatchError(ContainSubstring("error handling selectors, selectorMatchExpressions or selectorMatchFields of [Special/my-selector]")))
 				// TODO: 'pod' - Hmmmmm - perhaps we shouldn't be using v1 code?
 				Expect(err).To(MatchError(ContainSubstring("\"Matchingest\" is not a valid pod selector operator")))
 			})
@@ -374,22 +382,33 @@ func (o selectable) GetLabels() map[string]string {
 	return o.labels
 }
 
-type selector struct {
+type selectingObject struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
-	labels      labels2.Set
-	expressions []metav1.LabelSelectorRequirement
-	fields
+	v1alpha1.LegacySelector
 }
 
-func (b *selector) GetMatchExpressions() []metav1.LabelSelectorRequirement {
-	return b.expressions
+func newSelectingObject(labels labels2.Set, expressions []metav1.LabelSelectorRequirement, fields []v1alpha1.FieldSelectorRequirement) *selectingObject {
+	return newSelectingObjectWithID("testSelectingObject", "Test", labels, expressions, fields)
 }
 
-func (b *selector) GetMatchFields() []v1alpha1.FieldSelectorRequirement {
-	return b.fields
+func newSelectingObjectWithID(name, kind string, labels labels2.Set, expressions []metav1.LabelSelectorRequirement, fields []v1alpha1.FieldSelectorRequirement) *selectingObject {
+	return &selectingObject{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       kind,
+			APIVersion: "testv1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		LegacySelector: v1alpha1.LegacySelector{
+			Selector:                 labels,
+			SelectorMatchExpressions: expressions,
+			SelectorMatchFields:      fields,
+		},
+	}
 }
 
-func (b *selector) GetMatchLabels() labels2.Set {
-	return b.labels
+func (b *selectingObject) GetSelectors() v1alpha1.LegacySelector {
+	return b.LegacySelector
 }

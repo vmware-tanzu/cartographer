@@ -3,9 +3,10 @@ module github.com/vmware-tanzu/cartographer/hack/tools
 go 1.17
 
 require (
+	github.com/daixiang0/gci v0.3.1-0.20220208004058-76d765e3ab48
 	github.com/golangci/golangci-lint v1.44.2
 	github.com/google/addlicense v1.0.0
-	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
+	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
 	github.com/onsi/ginkgo v1.16.5
 	sigs.k8s.io/controller-tools v0.8.0
 )
@@ -32,7 +33,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/charithe/durationcheck v0.0.9 // indirect
 	github.com/chavacava/garif v0.0.0-20210405164556-e8a0a408d6af // indirect
-	github.com/daixiang0/gci v0.3.1-0.20220208004058-76d765e3ab48 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/esimonov/ifshort v1.0.4 // indirect
@@ -156,12 +156,12 @@ require (
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yeya24/promlinter v0.1.1-0.20210918184747-d757024714a1 // indirect
 	gitlab.com/bosi/decorder v0.2.1 // indirect
-	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220111092808-5a964db01320 // indirect
+	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.9 // indirect
+	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

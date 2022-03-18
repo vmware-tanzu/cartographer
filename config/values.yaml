@@ -12,13 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#@ load("@ytt:data", "data")
-
+#@data/values
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: git-ssh-secret
-data:
-  id_rsa: #@ data.values.git_writer.base64_encoded_ssh_key
-  known_hosts: #@ data.values.git_writer.base64_encoded_known_hosts
+version: v0.0.0-dev

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#@ load("@ytt:data", "data")
 ---
 apiVersion: v1
 kind: Namespace
@@ -36,6 +37,9 @@ kind: Deployment
 metadata:
   name: cartographer-controller
   namespace: cartographer-system
+  labels:
+    app.kubernetes.io/name: cartographer-controller
+    app.kubernetes.io/version: #@ data.values.version
 spec:
   selector:
     matchLabels:

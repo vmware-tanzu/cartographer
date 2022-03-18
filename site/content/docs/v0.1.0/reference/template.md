@@ -61,7 +61,8 @@ spec:
       ignore: ""
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_source_template.go)_
 
 ## ClusterImageTemplate
 
@@ -81,7 +82,7 @@ spec:
   # default set of parameters. see ClusterSourceTemplate for more
   # information. (optional)
   #
-  params: [ ]
+  params: []
 
   # jsonpath expression to instruct where in the object templated out container
   # image information can be found. (required)
@@ -107,7 +108,8 @@ spec:
           url: $(sources.provider.url)$
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ## ClusterConfigTemplate
 
@@ -126,13 +128,13 @@ metadata:
 spec:
   # default parameters. see ClusterSourceTemplate for more info. (optional)
   #
-  params: [ ]
+  params: []
 
   # jsonpath expression to instruct where in the object templated out config
   # information can be found. (required)
   #
   configPath: .data
-  
+
   # how to template out the kubernetes object. (required)
   #
   template:
@@ -158,21 +160,20 @@ spec:
                     runAsUser: 1000
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
 
 ## ClusterDeploymentTemplate
 
 A `ClusterDeploymentTemplate` indicates how the delivery should configure the environment (namespace/cluster).
 
 The `ClusterDeploymentTemplate` consumes configuration from the `deployment` values provided by the `ClusterDelivery`.
-The
-`ClusterDeploymentTemplate` outputs these same values. The `ClusterDeploymentTemplate` is able to consume additional
+The `ClusterDeploymentTemplate` outputs these same values. The `ClusterDeploymentTemplate` is able to consume additional
 configuration from the `sources` provided by the `ClusterDelivery`.
 
 `ClusterDeploymentTemplate` must specify criteria to determine whether the templated object has successfully completed
-its role in configuring the environment. Once the criteria are met, the `ClusterDeploymentTemplate` will output
-the `deployment`
-values. The criteria may be specified in `spec.observedMatches` or in `spec.observedCompletion`.
+its role in configuring the environment. Once the criteria are met, the `ClusterDeploymentTemplate` will output the
+`deployment` values. The criteria may be specified in `spec.observedMatches` or in `spec.observedCompletion`.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -235,13 +236,13 @@ spec:
         - http:
             url: $(source.url)$
       template:
-        - ytt: { }
+        - ytt: {}
       deploy:
-        - kapp: { }
+        - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_deployment_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_deployment_template.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_deployment_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_deployment_template.go)_
 
 ## ClusterTemplate
 
@@ -259,7 +260,7 @@ metadata:
 spec:
   # default parameters. see ClusterSourceTemplate for more info. (optional)
   #
-  params: [ ]
+  params: []
 
   # how to template out the kubernetes object. (required)
   #
@@ -302,9 +303,10 @@ spec:
                           securityContext:
                             runAsUser: 1000
       template:
-        - ytt: { }
+        - ytt: {}
       deploy:
-        - kapp: { }
+        - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_template.go)_

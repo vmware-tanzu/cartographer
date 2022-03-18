@@ -165,14 +165,20 @@ type TemplateOption struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Selector is a field query over a workload or deliverable resource.
+	// Selector is a criteria to match against  a workload or deliverable resource.
 	Selector Selector `json:"selector"`
 }
 
+// Selector is the collection of selection fields used congruously to specify
+// the selection of a template Option. In a future API revision, it will also
+// be used to specify selection of a target Owner.
+// See: LegacySelector
 type Selector struct {
+	metav1.LabelSelector `json:",inline"`
+
 	// MatchFields is a list of field selector requirements. The requirements are ANDed.
-	// +kubebuilder:validation:MinItems=1
-	MatchFields []FieldSelectorRequirement `json:"matchFields"`
+	// +optional
+	MatchFields []FieldSelectorRequirement `json:"matchFields,omitempty"`
 }
 
 type FieldSelectorRequirement struct {
@@ -227,4 +233,32 @@ type Output struct {
 
 	// LastTransitionTime is a timestamp of the last time the value changed
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+}
+
+// LegacySelector is the collection of selection fields used congruously to specify
+// the selection of a target Owner. It is here to preserve compatibility with
+// Owners in v1alpha1, and will be replaced with Selector in a future release.
+type LegacySelector struct {
+	// Specifies the label key-value pairs used to select owners
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	Selector map[string]string `json:"selector,omitempty"`
+
+	// Specifies the requirements used to select owners based on their labels
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	SelectorMatchExpressions []metav1.LabelSelectorRequirement `json:"selectorMatchExpressions,omitempty"`
+
+	// Specifies the requirements used to select owners based on their fields
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	SelectorMatchFields []FieldSelectorRequirement `json:"selectorMatchFields,omitempty"`
+}
+
+func TemplateOptionSelectors(templateOptions []TemplateOption) []Selector {
+	selectors := make([]Selector, len(templateOptions))
+	for idx, templateOption := range templateOptions {
+		selectors[idx] = templateOption.Selector
+	}
+	return selectors
 }

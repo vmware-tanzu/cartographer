@@ -21,14 +21,8 @@ registry:
   server: https://index.docker.io/v1/
   username: a-username-of-mine
   password: a-very-hard-to-guess-password
-git_writer:
-  message: "Update app configuration"
-  ssh_user: git
-  server: github.com
-  repository: example/example.git
-  base64_encoded_ssh_key: a-key
-  base64_encoded_known_hosts: a-host
-  branch: main
-  username: example
-  user_email: example@example.com
-  port: ""
+git_repository: https://github.com/example/example.git
+git_branch: main
+git_user_name: example
+git_user_email: example@example.com
+git_commit_message: "Update app configuration"

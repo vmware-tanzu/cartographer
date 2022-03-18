@@ -26,6 +26,8 @@ spec:
     kind: ClusterConfigTemplate
     listKind: ClusterConfigTemplateList
     plural: clusterconfigtemplates
+    shortNames:
+    - cct
     singular: clusterconfigtemplate
   scope: Cluster
   versions:

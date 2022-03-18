@@ -2,6 +2,7 @@ CONTROLLER_GEN ?= go run -modfile hack/tools/go.mod sigs.k8s.io/controller-tools
 ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
 GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
+GCI_LINT ?= go run -modfile hack/tools/go.mod github.com/daixiang0/gci
 
 ifndef ($LOG_LEVEL)
 	# set a default LOG_LEVEL whenever we run the controller
@@ -126,8 +127,10 @@ coverage:
 
 .PHONY: lint
 lint: copyright
+	$(GCI_LINT) --local github.com/vmware-tanzu/cartographer --write $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
+	$(MAKE) -C site lint
 
 .PHONY: copyright
 copyright:

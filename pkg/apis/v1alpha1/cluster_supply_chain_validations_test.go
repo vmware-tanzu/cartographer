@@ -56,7 +56,9 @@ var _ = Describe("Webhook Validation", func() {
 							},
 						},
 					},
-					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					LegacySelector: v1alpha1.LegacySelector{
+						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+					},
 					Params: []v1alpha1.BlueprintParam{
 						{
 							Name:  "some-param",
@@ -270,7 +272,9 @@ var _ = Describe("Webhook Validation", func() {
 								},
 							},
 						},
-						Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+						LegacySelector: v1alpha1.LegacySelector{
+							Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+						},
 					},
 				}
 			})
@@ -356,9 +360,11 @@ var _ = Describe("Webhook Validation", func() {
 							},
 						},
 					},
-					Selector:                 selector,
-					SelectorMatchExpressions: expressions,
-					SelectorMatchFields:      fields,
+					LegacySelector: v1alpha1.LegacySelector{
+						Selector:                 selector,
+						SelectorMatchExpressions: expressions,
+						SelectorMatchFields:      fields,
+					},
 				},
 			}
 		}
@@ -445,7 +451,7 @@ var _ = Describe("Webhook Validation", func() {
 		Context("A SelectorMatchFields", func() {
 			var supplyChain *v1alpha1.ClusterSupplyChain
 			BeforeEach(func() {
-				supplyChain = supplyChainFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "whatever", Operator: "Exists"}})
+				supplyChain = supplyChainFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "metadata.whatever", Operator: "Exists"}})
 			})
 
 			It("creates without error", func() {
@@ -462,6 +468,167 @@ var _ = Describe("Webhook Validation", func() {
 		})
 	})
 
+	Describe("selector validations", func() {
+		var (
+			supplyChain *v1alpha1.ClusterSupplyChain
+		)
+		BeforeEach(func() {
+			supplyChain = &v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-name",
+				},
+				Spec: v1alpha1.SupplyChainSpec{
+					Resources: []v1alpha1.SupplyChainResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Options: []v1alpha1.TemplateOption{
+									{
+										Name: "source-1",
+										Selector: v1alpha1.Selector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpExists,
+												},
+											},
+										},
+									},
+									{
+										Name: "source-2",
+										Selector: v1alpha1.Selector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpDoesNotExist,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("selector is selecting on SelectorMatchFields", func() {
+			Context("valid field selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.env[0].something",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+			})
+
+			Context("invalid json path in field selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.env[0].{{}}",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError("error validating clustersupplychain [some-name]: invalid jsonpath for key [spec.env[0].{{}}]: unrecognized character in action: U+007B '{'"))
+				})
+			})
+
+			Context("field selector is not in accepted list", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "foo",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError("error validating clustersupplychain [some-name]: requirement key [foo] is not a valid path"))
+				})
+			})
+		})
+
+		Context("selector is selecting on SelectorMatchExpressions", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "-my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+		Context("selector is selecting on Selector", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						Selector: map[string]string{"my-label": "some-value"},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.LegacySelector = v1alpha1.LegacySelector{
+						Selector: map[string]string{"-my-label": "some-value"},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+	})
+
 	Context("supply chain with options", func() {
 		var (
 			supplyChain    *v1alpha1.ClusterSupplyChain
@@ -474,7 +641,9 @@ var _ = Describe("Webhook Validation", func() {
 					Name: "responsible-ops---default-params",
 				},
 				Spec: v1alpha1.SupplyChainSpec{
-					Selector: map[string]string{"foo": "bar"},
+					LegacySelector: v1alpha1.LegacySelector{
+						Selector: map[string]string{"foo": "bar"},
+					},
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
@@ -586,13 +755,13 @@ var _ = Describe("Webhook Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateCreate()).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [Exists]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [Exists]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
@@ -612,13 +781,13 @@ var _ = Describe("Webhook Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateCreate()).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [DoesNotExist]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [DoesNotExist]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
@@ -636,13 +805,13 @@ var _ = Describe("Webhook Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateCreate()).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [In]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [In]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
@@ -660,13 +829,13 @@ var _ = Describe("Webhook Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateCreate()).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [NotIn]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [NotIn]",
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
@@ -707,14 +876,36 @@ var _ = Describe("Webhook Validation", func() {
 
 			It("on create, it rejects the Resource", func() {
 				Expect(supplyChain.ValidateCreate()).To(MatchError(
-					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [spec.does.not.exist] is not a valid path",
+					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
 				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
-					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [spec.does.not.exist] is not a valid path",
+					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
+			})
+
+			It("deletes without error", func() {
+				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("option has invalid label selector", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{ "not-valid-": "like-this-" }
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring(
+					`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(ContainSubstring(
+					`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
 			})
 
 			It("deletes without error", func() {

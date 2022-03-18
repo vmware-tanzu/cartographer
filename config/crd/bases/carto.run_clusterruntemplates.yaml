@@ -26,6 +26,8 @@ spec:
     kind: ClusterRunTemplate
     listKind: ClusterRunTemplateList
     plural: clusterruntemplates
+    shortNames:
+    - crt
     singular: clusterruntemplate
   scope: Cluster
   versions:

@@ -1102,10 +1102,12 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
-								{
-									Key:      "spec.env[asdfasdfadkf3",
-									Operator: "Exists",
+							LegacySelector: v1alpha1.LegacySelector{
+								SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+									{
+										Key:      "spec.env[asdfasdfadkf3",
+										Operator: "Exists",
+									},
 								},
 							},
 						},
@@ -1127,7 +1129,7 @@ spec:
 					}
 					_, err := repo.GetSupplyChainsForWorkload(ctx, workload)
 					Expect(err).To(MatchError(ContainSubstring("evaluating supply chain selectors against workload [myNS/workload-name] failed")))
-					Expect(err).To(MatchError(ContainSubstring("failed to evaluate all matched fields of [ClusterSupplyChain/supplychain-name]")))
+					Expect(err).To(MatchError(ContainSubstring("error handling selectors, selectorMatchExpressions or selectorMatchFields of [ClusterSupplyChain/supplychain-name]")))
 					Expect(err).To(MatchError(ContainSubstring("unable to match field requirement with key [spec.env[asdfasdfadkf3] operator [Exists] values [[]]")))
 				})
 			})
@@ -1140,7 +1142,9 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selector: map[string]string{"foo": "bar"},
+							LegacySelector: v1alpha1.LegacySelector{
+								Selector: map[string]string{"foo": "bar"},
+							},
 						},
 					}
 					clientObjects = []client.Object{supplyChain}
@@ -1171,7 +1175,9 @@ spec:
 							Name: "supplychain-name",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selector: map[string]string{"foo": "bar"},
+							LegacySelector: v1alpha1.LegacySelector{
+								Selector: map[string]string{"foo": "bar"},
+							},
 						},
 					}
 					supplyChain2 := &v1alpha1.ClusterSupplyChain{
@@ -1180,7 +1186,9 @@ spec:
 							Name: "supplychain-name2",
 						},
 						Spec: v1alpha1.SupplyChainSpec{
-							Selector: map[string]string{"foo": "baz"},
+							LegacySelector: v1alpha1.LegacySelector{
+								Selector: map[string]string{"foo": "baz"},
+							},
 						},
 					}
 					clientObjects = []client.Object{supplyChain, supplyChain2}

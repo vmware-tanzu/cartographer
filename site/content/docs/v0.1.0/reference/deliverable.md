@@ -13,7 +13,7 @@ metadata:
   labels:
     # label to be matched against a `ClusterDelivery`s label selector.
     #
-    app.tanzu.vmware.com/deliverable-type: web---deliverable   # (1)
+    app.tanzu.vmware.com/deliverable-type: web---deliverable # (1)
 
 spec:
   source:
@@ -35,7 +35,7 @@ spec:
     subPath: app-1
 
   # any other parameters that don't fit the ones already typed.
-  params: [ ]
+  params: []
 
   # service account with requisite permissions to create objects specified in the delivery
   serviceAccountName: super-secure-service-account
@@ -45,7 +45,8 @@ Notes:
 
 1. labels serve as a way of indirectly selecting `ClusterDelivery`
 
-_ref: [pkg/apis/v1alpha1/deliverable.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/deliverable.go)_
+_ref:
+[pkg/apis/v1alpha1/deliverable.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/deliverable.go)_
 
 ## ClusterDelivery
 
@@ -68,14 +69,13 @@ kind: ClusterDelivery
 metadata:
   name: supplychain
 spec:
-
   # specifies the label key-value pair to select deliverables. (required)
   #
   selector:
     app.tanzu.vmware.com/deliverable-type: web---deliverable
 
   # see specification of params in supply-chain
-  params: [ ]
+  params: []
 
   # set of resources that will take care of bringing the application to a
   # deliverable state. (required, at least 1)
@@ -139,8 +139,8 @@ spec:
           name: addtnl
 
       # see specification for params in supply chain resources
-      params: [ ]
+      params: []
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_delivery.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_delivery.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_delivery.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_delivery.go)_

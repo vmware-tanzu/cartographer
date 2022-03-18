@@ -47,7 +47,7 @@ func main() {
 	cmd := cmd.Command{
 		Port:    port,
 		CertDir: certDir,
-		Logger:  zap.New(zap.UseDevMode(devMode), loggerOpt),
+		Logger:  zap.New(loggerOpt, zap.UseDevMode(devMode)),
 	}
 
 	if err = cmd.Execute(ctrl.SetupSignalHandler()); err != nil {

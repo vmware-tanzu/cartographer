@@ -28,8 +28,8 @@ ClusterRunTemplate differs from supply chain templates in many aspects:
 
 - Templated object metadata.name should not be set. differently from ClusterSupplyChain, a Runnable has the semantics of
   creating new objects on change, rather than patching. This means that on every input set change, a new name must be
-  derived. To be sure that a name can always be generated,
-  `metadata.generateName` should be set rather than `metadata.name`.
+  derived. To be sure that a name can always be generated, `metadata.generateName` should be set rather than
+  `metadata.name`.
 
 Similarly to other templates, ClusterRunTemplate has a `template` field where data is taken (in this case, from Runnable
 and selected objects via `runnable.spec.selector`) and via `$()$` allows one to interpolate such data to form a final

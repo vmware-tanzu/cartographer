@@ -26,6 +26,8 @@ spec:
     kind: ClusterTemplate
     listKind: ClusterTemplateList
     plural: clustertemplates
+    shortNames:
+    - ct
     singular: clustertemplate
   scope: Cluster
   versions:

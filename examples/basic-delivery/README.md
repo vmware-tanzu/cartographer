@@ -91,16 +91,10 @@ a kubernetes object written to it. (e.g. use the same values used in the [gitwri
 # configuration necessary for pushing the config to a git repository.
 #
 git_writer:
-  # the git server, for example gitlab.com
-  server: github.com
-  # the project and repo name
-  repository: example/example
+  # the git server, project, and repo name
+  repository: github.com/example/example.git
   # the branch to which configuration was pushed
   branch: main
-  # private ssh key. Must match a public key on the git server
-  base64_encoded_ssh_key: a-key
-  # public key of the git server. Your ~/.ssh/known_hosts may have examples
-  base64_encoded_known_hosts: a-host
 ```
 
 Further update [values.yaml](./values.yaml) with information about the registry that holds the image used in the
@@ -236,8 +230,8 @@ spec:
       interval: 1m0s
       url: $(deliverable.spec.source.git.url)$
       ref: $(deliverable.spec.source.git.ref)$
-      secretRef:
-        name: gitops-ssh-secret
+      gitImplementation: libgit2
+      ignore: ""
 ```
 
 The new state of the repo is then passed to the ClusterDeploymentTemplate. This object is responsible

@@ -20,26 +20,16 @@ metadata:
   name: git-writer
 spec:
   params:
-    - name: git_writer_username
-      default: #@ data.values.git_writer.username
-    - name: git_writer_user_email
-      default: #@ data.values.git_writer.user_email
-    - name: git_writer_commit_message
-      default: #@ data.values.git_writer.message
-    - name: git_writer_ssh_user
-      default: #@ data.values.git_writer.ssh_user
-    - name: git_writer_server
-      default: #@ data.values.git_writer.server
-    - name: git_writer_port
-      default: #@ data.values.git_writer.port
-    - name: git_writer_repository
-      default: #@ data.values.git_writer.repository
-    - name: git_writer_branch
-      default: #@ data.values.git_writer.branch
-    - name: git_writer_skip_host_checking
-      default: false
-    - name: git_writer_ssh_variant
-      default: ssh
+    - name: git_repository
+      default: #@ data.values.git_repository
+    - name: git_branch
+      default: #@ data.values.git_branch
+    - name: git_user_name
+      default: #@ data.values.git_user_name
+    - name: git_user_email
+      default: #@ data.values.git_user_email
+    - name: git_commit_message
+      default: #@ data.values.git_commit_message
   template:
     apiVersion: carto.run/v1alpha1
     kind: Runnable
@@ -48,20 +38,23 @@ spec:
     spec:
       serviceAccountName: #@ data.values.service_account_name
       runTemplateRef:
-        name: git-writer
+        name: tekton-taskrun
 
       inputs:
-        input_config_map_name: $(workload.metadata.name)$
-        input_config_map_field: manifest.yaml
-
-        git_username: $(params.git_writer_username)$
-        git_user_email: $(params.git_writer_user_email)$
-        commit_message: $(params.git_writer_commit_message)$
-        git_ssh_user: $(params.git_writer_ssh_user)$
-        git_server: $(params.git_writer_server)$
-        git_server_port: $(params.git_writer_port)$
-        git_repository: $(params.git_writer_repository)$
-        branch: $(params.git_writer_branch)$
-        skip_host_checking: $(params.git_writer_skip_host_checking)$
-        git_ssh_variant: $(params.git_writer_ssh_variant)$
-        data: $(config)$
+        serviceAccount: #@ data.values.service_account_name
+        taskRef:
+          kind: ClusterTask
+          name: git-writer
+        params:
+          - name: git_repository
+            value: $(params.git_repository)$
+          - name: git_branch
+            value: $(params.git_branch)$
+          - name: git_user_name
+            value: $(params.git_user_name)$
+          - name: git_user_email
+            value: $(params.git_user_email)$
+          - name: git_commit_message
+            value: $(params.git_commit_message)$
+          - name: git_files
+            value: $(config)$

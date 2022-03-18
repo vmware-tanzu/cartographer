@@ -39,7 +39,9 @@ var _ = Describe("SupplyChainValidation", func() {
 			},
 			Spec: v1alpha1.SupplyChainSpec{
 				Resources: []v1alpha1.SupplyChainResource{},
-				Selector:  map[string]string{"integration-test": "workload-no-supply-chain"},
+				LegacySelector: v1alpha1.LegacySelector{
+					Selector: map[string]string{"integration-test": "workload-no-supply-chain"},
+				},
 			},
 		}
 	}
@@ -107,7 +109,7 @@ var _ = Describe("SupplyChainValidation", func() {
 									Selector: v1alpha1.Selector{
 										MatchFields: []v1alpha1.FieldSelectorRequirement{
 											{
-												Key:      "workload.spec.source.git.url",
+												Key:      "spec.source.git.url",
 												Operator: v1alpha1.FieldSelectorOpExists,
 											},
 										},
@@ -121,7 +123,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			It("Rejects the supply chain", func() {
 				err = c.Create(ctx, supplyChain)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(`ClusterSupplyChain.carto.run "responsible-ops---default-params" is invalid: spec.resources.templateRef.options.selector.matchFields: Invalid value: "null"`))
+				Expect(err.Error()).To(ContainSubstring(`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [git-template---default-params] selector: at least one of matchLabels, matchExpressions or MatchFields must be specified`))
 			})
 		})
 	})

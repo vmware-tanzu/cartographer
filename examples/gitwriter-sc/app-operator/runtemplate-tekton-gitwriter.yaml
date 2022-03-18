@@ -13,62 +13,18 @@
 # limitations under the License.
 
 ---
-
 apiVersion: carto.run/v1alpha1
 kind: ClusterRunTemplate
 metadata:
-  name: git-writer
+  name: tekton-taskrun
 spec:
   template:
     apiVersion: tekton.dev/v1beta1
     kind: TaskRun
     metadata:
       generateName: $(runnable.metadata.name)$-
+      labels: $(runnable.metadata.labels)$
     spec:
-      taskRef:
-        name: git-cli
-      workspaces:
-        - name: source
-          emptyDir: { }
-        - name: input
-          emptyDir: { }
-        - name: ssh-directory
-          secret:
-            secretName: git-ssh-secret
-      params:
-        - name: GIT_USER_NAME
-          value: $(runnable.spec.inputs.git_username)$
-        - name: GIT_USER_EMAIL
-          value: $(runnable.spec.inputs.git_user_email)$
-        - name: USER_HOME
-          value: /root
-        - name: GIT_SCRIPT
-          value: |
-            export COMMIT_MESSAGE="$(runnable.spec.inputs.commit_message)$"
-            export BRANCH="$(runnable.spec.inputs.branch)$"
-            if [[ -n "$(runnable.spec.inputs.skip_host_checking)$" && "$(runnable.spec.inputs.skip_host_checking)$" = true ]]
-            then
-              export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-            fi
-            if [[ -n "$(runnable.spec.inputs.git_ssh_variant)$" ]]
-            then
-              export GIT_SSH_VARIANT="$(runnable.spec.inputs.git_ssh_variant)$"
-            fi
-            git init
-            if [[ -n "$(runnable.spec.inputs.git_server_port)$" ]]; then
-              git remote add origin $(runnable.spec.inputs.git_ssh_user)$@$(runnable.spec.inputs.git_server)$:$(runnable.spec.inputs.git_server_port)$/$(runnable.spec.inputs.git_repository)$
-            else
-              git remote add origin $(runnable.spec.inputs.git_ssh_user)$@$(runnable.spec.inputs.git_server)$:$(runnable.spec.inputs.git_repository)$
-            fi
-            # TODO remove the fetch and branch
-            git fetch
-            git branch
-            git pull origin "`git remote show origin | grep "HEAD branch" | sed 's/.*: //'`"
-            git pull origin "$BRANCH" || git branch "$BRANCH"
-            git checkout "$BRANCH"
-            export CONFIG_MAP_FIELD=$(runnable.spec.inputs.input_config_map_field)$
-            export DATA="$(runnable.spec.inputs.data)$"
-            echo "$DATA" | tee "$CONFIG_MAP_FIELD"
-            git add .
-            git commit --allow-empty -m "$COMMIT_MESSAGE"
-            git push --set-upstream origin "$BRANCH"
+      serviceAccountName: $(runnable.spec.inputs.serviceAccount)$
+      taskRef: $(runnable.spec.inputs.taskRef)$
+      params: $(runnable.spec.inputs.params)$
