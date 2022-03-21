@@ -22,7 +22,10 @@ readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
+# shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
+readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
 
+readonly RELEASE_VERSION="v0.0.0-dev"
 readonly TEST_NAME="gitwriter-sc"
 readonly GIT_SERVER="git-server.default.svc.cluster.local:80"
 readonly SOURCE_REPO="hello-world"
@@ -32,7 +35,8 @@ readonly CONFIG_BRANCH="main"
 readonly CONFIG_COMMIT_MESSAGE="Update config"
 
 main() {
-  ./hack/setup.sh cluster cartographer-latest example-dependencies
+  "$DIR/setup.sh" cluster example-dependencies
+  install_latest_released_cartographer
 
   port=$(available_port)
   setup_git_server "$port"
@@ -48,7 +52,7 @@ main() {
   test_gitops_to_app
 
   log "deploying cartographer from main"
-  ./hack/setup.sh cartographer
+  install_cartographer_from_current_commit
   verify_new_carto_deployed
 
   update_source "$source_dir" "$port"
@@ -56,19 +60,46 @@ main() {
   wait_for_knative_deployment_update
 }
 
+install_latest_released_cartographer() {
+  log "installing latest released cartographer"
+
+  ytt --ignore-unknown-comments \
+    -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
+    -f https://github.com/vmware-tanzu/cartographer/releases/latest/download/cartographer.yaml |
+    kapp deploy --yes -a cartographer -f-
+}
+
+install_cartographer_from_current_commit() {
+  log "building cartographer release and installing it"
+  env \
+    REGISTRY="$REGISTRY" \
+    RELEASE_VERSION="$RELEASE_VERSION" \
+    DOCKER_CONFIG="$DOCKER_CONFIG" \
+    "$DIR/release.sh"
+
+  ytt --ignore-unknown-comments \
+    --data-value registry="$REGISTRY" \
+    -f "$DIR/registry-auth" \
+    -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
+    -f release/cartographer.yaml |
+    kapp deploy --yes -a cartographer -f-
+}
+
 setup_git_server() {
   local port=$1
 
   log "setting up git server"
 
-  kubectl apply -f ./hack/git-server.yaml
+  kubectl apply -f "$DIR/git-server.yaml"
 
   until [[ $(kubectl get deployment git-server -o json | jq '.status.readyReplicas') == 1 ]]; do
     log "waiting for git-server deployment"
     sleep 10
   done
 
-  (kubectl port-forward service/git-server $port:80 &) >/dev/null
+  kubectl port-forward service/git-server $port:80 &
+  # shellcheck disable=SC2064
+  trap "kill $! || true" EXIT
   sleep 5
 }
 
@@ -125,7 +156,7 @@ test_source_to_gitops() {
 
   log "testing source to gitops"
 
-  SUCCESS=false
+  local success=false
 
   pushd "$config_dir"
     git clone "http://localhost:$port/$CONFIG_REPO.git"
@@ -133,14 +164,18 @@ test_source_to_gitops() {
       for sleep_duration in {20..1}; do
         git fetch --all --prune
 
-        git checkout "$CONFIG_BRANCH" >/dev/null 2>/dev/null || { echo "- waiting $sleep_duration seconds" && sleep "$sleep_duration" && continue; }
+        git checkout "$CONFIG_BRANCH" >/dev/null 2>/dev/null || {
+          echo "- waiting $sleep_duration seconds"
+          sleep "$sleep_duration"
+          continue
+        }
 
         git pull >/dev/null 2>/dev/null
         MOST_RECENT_GIT_MESSAGE="$(git log -1 --pretty=%B)"
 
         if [[ "$CONFIG_COMMIT_MESSAGE" = "$MOST_RECENT_GIT_MESSAGE" ]]; then
           log 'gitops worked! sweet'
-          SUCCESS=true
+          success=true
           break
         fi
 
@@ -150,7 +185,7 @@ test_source_to_gitops() {
     popd
   popd
 
-  if [[ "$SUCCESS" = true ]]; then
+  if [[ "$success" = true ]]; then
     return 0
   else
     log 'FAILED :('
@@ -195,7 +230,7 @@ test_gitops_to_app() {
 }
 
 verify_new_carto_deployed() {
-  until [[ $(kubectl -n cartographer-system get deployment cartographer-controller -o json | jq '.metadata.labels."app.kubernetes.io/version"') == '"v0.0.0-dev"' &&
+  until [[ $(kubectl -n cartographer-system get deployment cartographer-controller -o json | jq '.metadata.labels."app.kubernetes.io/version"') == \"$RELEASE_VERSION\" &&
     $(kubectl -n cartographer-system get deployment cartographer-controller -o json | jq '.status.availableReplicas') != 0 ]]; do
     log "waiting for new cartographer deployment"
     sleep 10
@@ -210,6 +245,8 @@ update_source(){
 
   pushd "$source_dir/$SOURCE_REPO"
     echo "meaningless change" >> README.md
+    git config user.email "gitops-user@example.com"
+    git config user.name "Gitops User"
     git add .
     git commit -m "Meaningless change"
     git push origin $SOURCE_BRANCH
@@ -222,14 +259,14 @@ wait_for_new_config_commit() {
   log "testing source to gitops part 2"
   log "waiting for new config commit"
 
-  SUCCESS=false
+  local success=false
 
   pushd "$config_dir/$CONFIG_REPO"
     for sleep_duration in {20..1}; do
       git pull
       if [[ $(git log --pretty=oneline | wc -l | tr -d ' ') == 2 ]]; then
         log "found new config commit! source to gitops part 2 worked!"
-        SUCCESS=true
+        success=true
         break
       fi
 
@@ -238,7 +275,7 @@ wait_for_new_config_commit() {
     done
   popd
 
-  if [[ "$SUCCESS" = true ]]; then
+  if [[ "$success" = true ]]; then
     return 0
   else
     log 'FAILED :('
