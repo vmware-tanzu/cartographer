@@ -26,3 +26,6 @@ git_branch: main
 git_user_name: example
 git_user_email: example@example.com
 git_commit_message: "Update app configuration"
+source_repo:
+  url: https://github.com/example/example.git
+  branch: main

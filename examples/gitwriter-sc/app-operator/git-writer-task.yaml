@@ -71,7 +71,7 @@ spec:
         cd config
 
         echo '$(params.git_files)' | base64 --decode > files.json
-        eval "$(cat files.json | jq -r 'to_entries | .[] | @sh "mkdir -p $(dirname \(.key)) && echo \(.value | tojson) > \(.key) && git add \(.key)"')"
+        eval "$(cat files.json | jq -r 'to_entries | .[] | @sh "mkdir -p $(dirname \(.key)) && echo \(.value) > \(.key) && git add \(.key)"')"
 
         git commit -m "$(params.git_commit_message)"
         git push origin $(params.git_branch)
