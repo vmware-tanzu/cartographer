@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#@ load("@ytt:data", "data")
+---
 apiVersion: carto.run/v1alpha1
 kind: ClusterDeploymentTemplate
 metadata:
@@ -32,7 +34,7 @@ spec:
     metadata:
       name: $(deliverable.metadata.name)$
     spec:
-      serviceAccountName: default
+      serviceAccountName: #@ data.values.service_account_name
       fetch:
         - http:
             url: $(deployment.url)$
