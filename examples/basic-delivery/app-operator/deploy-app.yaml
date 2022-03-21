@@ -34,7 +34,7 @@ spec:
     metadata:
       name: $(deliverable.metadata.name)$
     spec:
-      serviceAccountName: #@ data.values.service_account_name
+      serviceAccountName: $(deliverable.spec.serviceAccountName)$
       fetch:
         - http:
             url: $(deployment.url)$

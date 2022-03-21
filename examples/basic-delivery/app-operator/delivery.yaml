@@ -21,8 +21,6 @@ metadata:
 spec:
   selector:
     app.tanzu.vmware.com/workload-type: deliver
-  serviceAccountRef:
-    name: #@ data.values.service_account_name
     
   #
   #
