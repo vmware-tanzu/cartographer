@@ -32,7 +32,7 @@ spec:
     metadata:
       name: $(deliverable.metadata.name)$
     spec:
-      serviceAccountName: default
+      serviceAccountName: $(deliverable.spec.serviceAccountName)$
       fetch:
         - http:
             url: $(deployment.url)$

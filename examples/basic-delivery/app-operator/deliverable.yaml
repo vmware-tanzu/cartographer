@@ -21,6 +21,7 @@ metadata:
   labels:
     app.tanzu.vmware.com/workload-type: deliver
 spec:
+  serviceAccountName: #@ data.values.service_account_name
   source:
     git:
       url: #@ data.values.git_writer.repository

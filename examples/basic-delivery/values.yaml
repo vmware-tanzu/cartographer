@@ -17,3 +17,4 @@
 git_writer:
   repository: github.com/example/example.git
   branch: main
+service_account_name: default
