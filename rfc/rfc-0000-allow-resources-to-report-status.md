@@ -250,6 +250,8 @@ For `matchFields`, the spec is based off of `matchFields` in blueprint resource 
 
 Each template will now have a new field in the spec `resourceStatusRuleRef` where authors can specify the `ClusterResourceStatusRule` to use for that template. If no `ClusterResourceStatusRule` is defined, Cartographer will default to listing the resource as `Succeeded` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
 
+Templates will now also have a status with a `Ready` condition which will be `True` if the referenced `ClusterResourceStatusRule` exists (or if no rule is referenced), and `False` otherwise. Blueprints will now wait to report that they are `Ready` until their referenced templates are also `Ready`.
+
 Each owner will display a new condition in the status called `ResourcesSuceeded` which will only be updated to `True` when all resources in the blueprint have succeeded. Cartographer will not update the top level state of an owner to `Ready: True` until `ResourcesSucceeded` is `True`.
 
 # Migration
