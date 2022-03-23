@@ -25,7 +25,9 @@ Code contributions will be tracked using the `contributor shoutouter` program lo
 
 As a little token of appreciation, contributors will receive Cartographer branded, sustainable swag that we hope you find useful.
 
-Also, public shoutouts will be done at the first [Community Meeting](https://docs.google.com/document/d/1HwsjzxpsNI0l1sVAUia4A65lhrkfSF-_XfKoZUHI120/edit?usp=sharing) of the following month and on the [@OssCartographer](https://twitter.com/OssCartographer) Twitter account.
+Public shoutouts will be done at the first [Community Meeting](https://docs.google.com/document/d/1HwsjzxpsNI0l1sVAUia4A65lhrkfSF-_XfKoZUHI120/edit?usp=sharing) of the following month and on the [@OssCartographer](https://twitter.com/OssCartographer) Twitter account.
+
+The list of top contributors for each month will be published on [this wiki page](https://github.com/vmware-tanzu/cartographer/wiki/Contributors-of-the-month).
 
 ## Let's build together! 
 
