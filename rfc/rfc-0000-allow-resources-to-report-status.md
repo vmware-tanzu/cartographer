@@ -37,11 +37,11 @@ kind: ClusterResourceStatusRule
 metadata:
   name: ready-rule
 spec:
-  succeeded:
+  healthy:
     matchConditions:
       - type: Ready
         status: 'True'
-  failed:
+  unhealthy:
     matchConditions:
       - type: Ready
         status: 'False'
@@ -87,7 +87,7 @@ status:
         kind: ClusterSourceTemplate
         name: source
       stampedStatus:
-        status: 'Succeeded'
+        status: 'Healthy'
         conditions:
           - type: Ready
             status: 'True'
@@ -114,11 +114,11 @@ kind: ClusterResourceStatusRule
 metadata:
   name: kapp-rule
 spec:
-  succeeded:
+  healthy:
     matchConditions:
       - type: ReconcileSucceeded
         status: 'True'
-  failed:
+  unhealthy:
     matchFields:
       - key: 'status.conditions[?(@.type=="ReconcileFailed")].status'
         operator: 'In'
@@ -163,7 +163,7 @@ status:
         kind: ClusterTemplate
         name: deploy
       stampedStatus:
-        status: 'Failed'
+        status: 'Unhealthy'
         fields:
           - key: status.conditions['ReconcileFailed'].status
             value: True
@@ -177,11 +177,11 @@ kind: ClusterResourceStatusRule
 metadata:
   name: service-rule
 spec:
-  succeeded:
+  healthy:
     matchFields:
       - key: '.status.loadBalancer'
         operator: 'Exists'
-  failed:
+  unhealthy:
     matchFields:
       - key: '.status.loadBalancer'
         operator: 'DoesNotExist'
@@ -224,7 +224,7 @@ status:
         kind: ClusterTemplate
         name: servicer
       stampedStatus:
-        status: 'Succeeded'
+        status: 'Healthy'
         fields:
           - key: status.loadBalancer
             value: {}
@@ -234,30 +234,30 @@ status:
 [how-it-works]: #how-it-works
 
 A stamped resource can be in one of three states:
-1. 'Succeeded'
-2. 'Failed'
+1. 'Healthy'
+2. 'Unhealthy'
 3. 'Unknown'
 
 It is up to each template author to determine what "success" and "failure" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not be able to determine success or failure.
 
-A `ClusterResourceStatusRule` requires defining matchers for both the `Succeeded` state and the `Failed` state.
-The matchers in the `Succeeded` state are ANDed together, whereas the matchers in the `Failed` state are ORed. That is, a resource is considered to have `Succeeded` only if _all of_ the matchers are fulfilled, but is considered to have `Failed` if _any one of_ the matchers are fulfilled.
+A `ClusterResourceStatusRule` requires defining matchers for both the `Healthy` state and the `Unhealthy` state.
+The matchers in the `Healthy` state are ANDed together, whereas the matchers in the `Unhealthy` state are ORed. That is, a resource is considered to be `Healthy` only if _all of_ the matchers are fulfilled, but is considered to be `Unhealthy` if _any one of_ the matchers are fulfilled.
 
 The supported matchers are `matchConditions` and `matchFields`. Each is an array, and an author can define either or both of these matchers for a given state.
 
 For `matchConditions`, authors need only define the `type` and `status` of the condition for Cartographer to read. In the owner status, the full condition will be reflected (with the `reason`, `message`, etc.)
 For `matchFields`, the spec is based off of `matchFields` in blueprint resource options. Authors need to define the `key` and `operator`, and potentially the `values` (if the operator is `In` or `NotIn`). Authors can also optionally define a `messagePath`, which is a path in the resource where Cartographer can pull off a message to display in the owner status.
 
-Each template will now have a new field in the spec `resourceStatusRuleRef` where authors can specify the `ClusterResourceStatusRule` to use for that template. If no `ClusterResourceStatusRule` is defined, Cartographer will default to listing the resource as `Succeeded` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
+Each template will now have a new field in the spec `resourceStatusRuleRef` where authors can specify the `ClusterResourceStatusRule` to use for that template. If no `ClusterResourceStatusRule` is defined, Cartographer will default to listing the resource as `Healthy` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
 
 Templates will now also have a status with a `Ready` condition which will be `True` if the referenced `ClusterResourceStatusRule` exists (or if no rule is referenced), and `False` otherwise. Blueprints will now wait to report that they are `Ready` until their referenced templates are also `Ready`.
 
-Each owner will display a new condition in the status called `ResourcesSuceeded` which will only be updated to `True` when all resources in the blueprint have succeeded. Cartographer will not update the top level state of an owner to `Ready: True` until `ResourcesSucceeded` is `True`.
+Each owner will display a new condition in the status called `ResourcesSuceeded` which will only be updated to `True` when all resources in the blueprint be healthy. Cartographer will not update the top level state of an owner to `Ready: True` until `ResourcesHealthy` is `True`.
 
 # Migration
 [migration]: #migration
 
-Given that Cartographer will default to `Succeeded` once the resource is applied and outputs are read, this will not be a breaking change.
+Given that Cartographer will default to `Healthy` once the resource is applied and outputs are read, this will not be a breaking change.
 
 # Drawbacks
 [drawbacks]: #drawbacks
@@ -286,8 +286,8 @@ N/A
 # Unresolved Questions
 [unresolved-questions]: #unresolved-questions
 
-- Should the two states be `Succeeded` and `Failed`?
-- Is it right for Cartographer to default to `Succeeded`?
+- Should the two states be `Healthy` and `Unhealthy`?
+- Is it right for Cartographer to default to `Healthy`?
 
 # Spec. Changes
 [spec-changes]: #spec-changes
@@ -300,8 +300,7 @@ apiVersion: carto.run/v1alpha1
 kind: ClusterResourceStatusRule
 metadata: {}
 spec:
-
-  succeeded:
+  healthy:
     matchConditions:
       - type: <string>
         status: <string>
@@ -310,7 +309,7 @@ spec:
         operator: <[In|NotIn|Exists|DoesNotExist]>
         values: [ <string> ]
         messagePath: <string>
-  failed:
+  unhealthy:
     matchConditions:
       - type: <string>
         status: <string>
