@@ -139,5 +139,13 @@ func registerWebhooks(mgr manager.Manager) error {
 		return fmt.Errorf("failed to setup cluster template webhook: %w", err)
 	}
 
+	if err := (&v1alpha1.Workload{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup workload webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.Deliverable{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup deliverable webhook: %w", err)
+	}
+
 	return nil
 }

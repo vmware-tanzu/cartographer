@@ -187,3 +187,45 @@ webhooks:
     resources:
     - clustertemplates
   sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-carto-run-v1alpha1-deliverable
+  failurePolicy: Fail
+  name: deliverable-validator.cartographer.com
+  rules:
+  - apiGroups:
+    - carto.run
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - deliverables
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-carto-run-v1alpha1-workload
+  failurePolicy: Fail
+  name: workload-validator.cartographer.com
+  rules:
+  - apiGroups:
+    - carto.run
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - workloads
+  sideEffects: None

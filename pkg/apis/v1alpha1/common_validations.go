@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/util/jsonpath"
@@ -175,5 +176,26 @@ func (t *TemplateSpec) validate() error {
 			return fmt.Errorf("invalid template: template should not set metadata.namespace on the child object")
 		}
 	}
+	return nil
+}
+
+func validateName(metadata metav1.ObjectMeta) error {
+	if metadata.GetGenerateName() != "" {
+		msgs := validation.NameIsDNS1035Label(metadata.GetGenerateName(), true)
+		if len(msgs) > 0 {
+			return fmt.Errorf("generateName is not a DNS 1035 label prefix: %v", msgs)
+		}
+	}
+	if metadata.GetName() != "" {
+		msgs := validation.NameIsDNS1035Label(metadata.GetName(), false)
+		if len(msgs) > 0 {
+			return fmt.Errorf("name is not a DNS 1035 label: %v", msgs)
+		}
+	}
+
+	if metadata.GetGenerateName() == "" && metadata.GetName() == "" {
+		return fmt.Errorf("name or generateName is required")
+	}
+
 	return nil
 }
