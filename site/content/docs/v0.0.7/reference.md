@@ -1,23 +1,25 @@
 ---
 aliases:
-- /docs/v0.0.7/reference/gvk/
-- /docs/v0.0.7/reference/deliverable/
-- /docs/v0.0.7/reference/workload/
-- /docs/v0.0.7/reference/template/
-- /docs/v0.0.7/reference/runnable/
+  - /docs/v0.0.7/reference/gvk/
+  - /docs/v0.0.7/reference/deliverable/
+  - /docs/v0.0.7/reference/workload/
+  - /docs/v0.0.7/reference/template/
+  - /docs/v0.0.7/reference/runnable/
 ---
+
 # Spec Reference
 
 ## GVK
 
 ### Version
 
-All of the custom resources that Cartographer is working on are being written under `v1alpha1` to indicate that our first version of it is at the "alpha stability level", and that it's our first iteration on it.
+All of the custom resources that Cartographer is working on are being written under `v1alpha1` to indicate that our
+first version of it is at the "alpha stability level", and that it's our first iteration on it.
 
 See [versions in CustomResourceDefinitions].
 
-[versions in CustomResourceDefinitions]: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/
-
+[versions in customresourcedefinitions]:
+  https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/
 
 ### Group
 
@@ -49,7 +51,6 @@ and two that are namespace-scoped:
 
 `Workload` allows the developer to pass information about the app to be delivered through the supply chain.
 
-
 ```yaml
 apiVersion: carto.run/v1alpha1
 kind: Workload
@@ -58,7 +59,7 @@ metadata:
   labels:
     # label to be matched against a `ClusterSupplyChain`s label selector.
     #
-    app.tanzu.vmware.com/workload-type: web   # (1)
+    app.tanzu.vmware.com/workload-type: web # (1)
 
 spec:
   source:
@@ -76,20 +77,18 @@ spec:
     #
     image: harbor-repo.vmware.com/tanzu_desktop/golang-sample-source@sha256:e508a587
 
-
   # serviceClaims to be bound through service-bindings
   #
   serviceClaims:
     - name: broker
-      ref: 
+      ref:
         apiVersion: services.tanzu.vmware.com/v1alpha1
         kind: RabbitMQ
         name: rabbit-broker
 
-
   # image with the app already built
   #
-  image: foo/docker-built@sha256:b4df00d      # (2)
+  image: foo/docker-built@sha256:b4df00d # (2)
 
   # environment variables to be passed to the main container
   # running the application.
@@ -97,7 +96,6 @@ spec:
   env:
     - name: SPRING_PROFILES_ACTIVE
       value: mysql
-
 
   # resource constraints for the main application.
   #
@@ -120,19 +118,21 @@ spec:
 
 notes:
 
-1. labels serve as a way of indirectly selecting `ClusterSupplyChain` - `Workload`s without labels that match a `ClusterSupplyChain`'s `spec.selector` won't be reconciled and will stay in an `Errored` state.
+1. labels serve as a way of indirectly selecting `ClusterSupplyChain` - `Workload`s without labels that match a
+   `ClusterSupplyChain`'s `spec.selector` won't be reconciled and will stay in an `Errored` state.
 
-2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the supplychain, but outside. 
+2. `spec.image` is useful for enabling workflows that are not based on building the container image from within the
+   supplychain, but outside.
 
-_ref: [pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/workload.go)_
-
+_ref:
+[pkg/apis/v1alpha1/workload.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/workload.go)_
 
 ### ClusterSupplyChain
 
-With a `ClusterSupplyChain`, app operators describe which "shape of applications" they deal with (via `spec.selector`), and what series of resources are responsible for creating an artifact that delivers it (via `spec.resources`).
+With a `ClusterSupplyChain`, app operators describe which "shape of applications" they deal with (via `spec.selector`),
+and what series of resources are responsible for creating an artifact that delivers it (via `spec.resources`).
 
 Those `Workload`s that match `spec.selector` then go through the resources specified in `spec.resources`.
-
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -140,12 +140,10 @@ kind: ClusterSupplyChain
 metadata:
   name: supplychain
 spec:
-
   # specifies the label key-value pair to select workloads. (required, one one)
   #
   selector:
     app.tanzu.vmware.com/workload-type: web
-
 
   # set of resources that will take care of bringing the application to a
   # deliverable state. (required, at least 1)
@@ -169,8 +167,8 @@ spec:
 
       # a set of resources that provide source information, that is, url and
       # revision.
-      # 
-      # in a template, these can be consumed as: 
+      #
+      # in a template, these can be consumed as:
       #
       #    $(sources.<name>.url)$
       #    $(sources.<name>.revision)$
@@ -235,14 +233,13 @@ spec:
           value: openjdk
 ```
 
-
-_ref: [pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_supply_chain.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_supply_chain.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_supply_chain.go)_
 
 ### ClusterSourceTemplate
 
-`ClusterSourceTemplate` indicates how the supply chain could instantiate a provider of source code information (url and revision).
-
+`ClusterSourceTemplate` indicates how the supply chain could instantiate a provider of source code information (url and
+revision).
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -253,10 +250,10 @@ spec:
   # default set of parameters. (optional)
   #
   params:
-      # name of the parameter (required, unique in this list)
-      #
+    # name of the parameter (required, unique in this list)
+    #
     - name: git-implementation
-      # default value if not specified in the resource that references 
+      # default value if not specified in the resource that references
       # this templateClusterSupplyChain (required)
       #
       default: libgit2
@@ -266,7 +263,7 @@ spec:
   #
   urlPath: .status.artifact.url
 
-  # jsonpath expression to instruct where in the object templated out 
+  # jsonpath expression to instruct where in the object templated out
   # source code revision information can be found. (required)
   #
   revisionPath: .status.artifact.revision
@@ -296,13 +293,14 @@ spec:
       ignore: ""
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_source_template.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_source_template.go)_
 
 ### ClusterImageTemplate
 
-`ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container images, for instance, one that takes source code, builds a container image out of it and presents under its `.status` the reference to that produced image.
-
+`ClusterImageTemplate` instructs how the supply chain should instantiate an object responsible for supplying container
+images, for instance, one that takes source code, builds a container image out of it and presents under its `.status`
+the reference to that produced image.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -315,7 +313,7 @@ spec:
   #
   params: []
 
-  # jsonpath expression to instruct where in the object templated out container 
+  # jsonpath expression to instruct where in the object templated out container
   # image information can be found. (required)
   #
   imagePath: .status.latestImage
@@ -339,19 +337,22 @@ spec:
           url: $(sources.provider.url)$
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ### ClusterConfigTemplate
 
-Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations available to further resources in the chain.
+Instructs the supply chain how to instantiate a Kubernetes object that knows how to make Kubernetes configurations
+available to further resources in the chain.
 
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_config_template.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_config_template.go)_
 
 ### ClusterTemplate
 
-A ClusterTemplate instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to other objects in the chain, for instance, a resource that deploys a container image that has been built by other ancestor resources.
-
+A ClusterTemplate instructs the supply chain to instantiate a Kubernetes object that has no outputs to be supplied to
+other objects in the chain, for instance, a resource that deploys a container image that has been built by other
+ancestor resources.
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -409,10 +410,9 @@ spec:
         - kapp: {}
 ```
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/blob/v0.0.7/pkg/apis/v1alpha1/cluster_template.go)_
 
 ### Delivery
 
 This section is [pending work from issue #286](https://github.com/vmware-tanzu/cartographer/issues/286)
-
-

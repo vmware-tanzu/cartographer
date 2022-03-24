@@ -9,13 +9,20 @@ excerpt: "A monthly program to reward contributions"
 tags: ['community']
 ---
 
-Since October 2021, when the Cartographer project was made public, we have been very fortunate to count on individual contributors who have helped improve the codebase and docs while also telling the Cartographer story at conferences, in live streams and other forms of content. All of them have done this out of an intrinsic motivation, without expecting any reward or public recognition. We are forever grateful to them for this.
+Since October 2021, when the Cartographer project was made public, we have been very fortunate to count on individual
+contributors who have helped improve the codebase and docs while also telling the Cartographer story at conferences, in
+live streams and other forms of content. All of them have done this out of an intrinsic motivation, without expecting
+any reward or public recognition. We are forever grateful to them for this.
 
-Nevertheless, we would like to fill in the [extrinsic motivation](https://www.rochester.edu/emerging-leaders/understanding-intrinsic-and-extrinsic-motivation/#:~:text=Intrinsic%20motivation%20involves%20performing%20a,punishment%20or%20receiving%20a%20reward) void by rolling out a small initiative called **Contributor of the Month**
+Nevertheless, we would like to fill in the
+[extrinsic motivation](https://www.rochester.edu/emerging-leaders/understanding-intrinsic-and-extrinsic-motivation/#:~:text=Intrinsic%20motivation%20involves%20performing%20a,punishment%20or%20receiving%20a%20reward)
+void by rolling out a small initiative called **Contributor of the Month**
+
 
 **How does it work?**
 
 We plan to recognize contributors in three different categories:
+
 
 * Code contributor (merged PRs)
 * Content creator (tweets/blog posts/screencasts/presentations/podcasts)
@@ -37,7 +44,9 @@ Every contribution in every form will count, so make sure to check out the follo
 - [Contributing guide](https://github.com/vmware-tanzu/cartographer/blob/main/CONTRIBUTING.md)
 - [Getting started with Cartographer by using examples](https://github.com/vmware-tanzu/cartographer/tree/main/examples)
 
-## Join the Cartographer Community 
+
+## Join the Cartographer Community
+
 
 - Join [Slack channel](https://kubernetes.slack.com/archives/C02HKPSEKV1) in the Kubernetes workspace
 - Get updates on Twitter [@OssCartographer](https://twitter.com/OssCartographer)

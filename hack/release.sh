@@ -22,39 +22,33 @@ readonly ROOT
 
 readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
-readonly BUNDLE=${BUNDLE:-$REGISTRY/cartographer-bundle}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
 readonly YTT_VERSION=0.39.0
 readonly YTT_CHECKSUM=7a472b8c62bfec5c12586bb39065beda42c6fe43cf24271275e4dbc0a04acb8b
 
 main() {
-        readonly RELEASE_VERSION="v0.0.0-dev"
+        readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
         readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
 
         show_vars
         cd $ROOT
 
         download_ytt_to_kodata
-        create_imgpkg_bundle
-        create_carvel_packaging_objects
-
-        populate_release_directory
+        generate_release
         create_release_notes
 }
 
 show_vars() {
-        echo "Vars:
-
-	BUNDLE:	       		$BUNDLE
-	REGISTRY:		      $REGISTRY
-	RELEASE_DATE:		  $RELEASE_DATE
-	RELEASE_VERSION:	$RELEASE_VERSION
-	PREVIOUS_VERSION:	$PREVIOUS_VERSION
-	ROOT:	       		  $ROOT
-	SCRATCH:       		$SCRATCH
-	YTT_VERSION		    $YTT_VERSION
-	"
+        echo "
+        PREVIOUS_VERSION:       $PREVIOUS_VERSION
+        REGISTRY:               $REGISTRY
+        RELEASE_DATE:           $RELEASE_DATE
+        RELEASE_VERSION:        $RELEASE_VERSION
+        ROOT:                   $ROOT
+        SCRATCH:                $SCRATCH
+        YTT_VERSION:            $YTT_VERSION
+        "
 }
 
 download_ytt_to_kodata() {
@@ -76,70 +70,12 @@ download_ytt_to_kodata() {
         popd
 }
 
-# creates, in a scratch location, an imgpkg bundle following the convention that
-# is expected of bundles for Packages (see ref):
-#
-#
-# 	$scratch
-# 	├── bundle
-# 	│   ├── .imgpkg
-# 	│   │   └── images.yml			absolute image references to
-# 	│   │					images in this bundle
-# 	│   │
-# 	│   └── config
-# 	│       ├── cartographer.yaml		everything from the release
-# 	│       │
-# 	│       ├── objects/			extra objects to include in the
-# 	│       │				bundle to aid the installation
-# 	│       │
-# 	│       └── overlays/			overlays to tweak properties
-# 	│                       		from the release according to
-# 	│                       		packaging configuration
-# 	│
-# 	├── bundle.tar				tarball of the imgpkg bundle
-# 	│
-# 	│
-# 	└── bundle.lock.yaml			exact image reference to this
-# 						bundle
-#
-#
-# ref: https://carvel.dev/kapp-controller/docs/latest/packaging-artifact-formats/#package-contents-bundle
-#
-create_imgpkg_bundle() {
-        mkdir -p $SCRATCH/bundle/{.imgpkg,config}
-
-        cp -r ./packaging/{objects,overlays} $SCRATCH/bundle/config
-
-        ytt --ignore-unknown-comments -f ./config |
+generate_release() {
+        mkdir -p ./release
+        ytt --ignore-unknown-comments -f ./config \
+                --data-value version=$RELEASE_VERSION |
                 KO_DOCKER_REPO=$REGISTRY ko resolve -B -f- > \
-                        $SCRATCH/bundle/config/cartographer.yaml
-
-        kbld -f $SCRATCH/bundle/config/cartographer.yaml \
-                --imgpkg-lock-output $SCRATCH/bundle/.imgpkg/images.yml \
-                >/dev/null
-
-        imgpkg push -f $SCRATCH/bundle \
-                --bundle $BUNDLE \
-                --lock-output $SCRATCH/bundle.lock.yaml
-
-        imgpkg copy \
-                --bundle "$(image_from_lockfile $SCRATCH/bundle.lock.yaml)" \
-                --to-tar $SCRATCH/bundle.tar
-}
-
-create_carvel_packaging_objects() {
-        mkdir -p $SCRATCH/package
-
-        for package_fpath in ./packaging/package*.yaml; do
-                ytt --ignore-unknown-comments \
-                        -f ./packaging/values.yaml \
-                        -f $package_fpath \
-                        --data-value image="$(image_from_lockfile $SCRATCH/bundle.lock.yaml)" \
-                        --data-value releasedAt=$RELEASE_DATE \
-                        --data-value version=${RELEASE_VERSION#v} > \
-                        $SCRATCH/package/"$(basename $package_fpath)"
-        done
-
+                        ./release/cartographer.yaml
 }
 
 create_release_notes() {
@@ -150,35 +86,6 @@ create_release_notes() {
         assets_checksums=$(checksums ./release)
 
         release_body "$changeset" "$assets_checksums" "$PREVIOUS_VERSION" >./release/CHANGELOG.md
-}
-
-# generates the final release directory containing the files that are meant to
-# be used during installation.
-#
-#
-# 	release
-# 	│
-# 	├── package
-# 	│   └── package-install.yaml
-# 	│   └── package-metadata.yaml
-# 	│   └── package.yaml
-# 	│
-# 	├── cartographer.yaml
-# 	└── bundle.tar
-#
-populate_release_directory() {
-        rm -rf ./release
-        mkdir -p ./release/package
-
-        cp $SCRATCH/bundle.tar ./release
-        cp $SCRATCH/bundle/config/cartographer.yaml ./release
-        cp -r $SCRATCH/package ./release
-}
-
-image_from_lockfile() {
-        local lockfile=$1
-
-        awk -F"image: " '{if ($2) print $2;}' $lockfile
 }
 
 checksums() {

@@ -45,7 +45,7 @@ var ValidSupplyChainTemplates = []client.Object{
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:path=clustersupplychains,scope=Cluster,shortName=csc
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
@@ -64,13 +64,11 @@ type ClusterSupplyChain struct {
 }
 
 type SupplyChainSpec struct {
+	LegacySelector `json:",inline"`
+
 	// Resources that are responsible for bringing the application to a
 	// deliverable state.
 	Resources []SupplyChainResource `json:"resources"`
-
-	// Specifies the label key-value pairs used to select workloads
-	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
-	Selector map[string]string `json:"selector"`
 
 	// Additional parameters.
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
@@ -150,8 +148,8 @@ type SupplyChainTemplateReference struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
 
-	// Options is a list of template names and Selectors. The templates must all be of type Kind.
-	// A template will be selected if the workload matches the specified Selector.
+	// Options is a list of template names and Selector. The templates must all be of type Kind.
+	// A template will be selected if the workload matches the specified selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
 	// Minimum number of items in list is two.
@@ -189,8 +187,8 @@ func (c *ClusterSupplyChain) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterSupplyChain) GetSelector() map[string]string {
-	return c.Spec.Selector
+func (c *ClusterSupplyChain) GetSelectors() LegacySelector {
+	return c.Spec.LegacySelector
 }
 
 func GetSelectorsFromObject(o client.Object) []string {

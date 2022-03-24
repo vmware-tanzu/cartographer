@@ -67,8 +67,8 @@ var ValidWorkloadPrefixes = []string{
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories="all"
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=workloads,shortName=wld,categories=all
 // +kubebuilder:printcolumn:name="Source",type="string",JSONPath=`.spec.source['git.url','image']`
 // +kubebuilder:printcolumn:name="SupplyChain",type="string",JSONPath=".status.supplyChainRef.name"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`
@@ -158,6 +158,10 @@ type WorkloadStatus struct {
 
 	// SupplyChainRef is the Supply Chain resource that was used when this status was set.
 	SupplyChainRef ObjectReference `json:"supplyChainRef,omitempty"`
+
+	// Resources contain references to the objects created by the Supply Chain and the templates used to create them.
+	// It also contains Inputs and Outputs that were passed between the templates as the Supply Chain was processed.
+	Resources []RealizedResource `json:"resources,omitempty"`
 }
 
 // +kubebuilder:object:root=true

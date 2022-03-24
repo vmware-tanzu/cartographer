@@ -12,29 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: "3"
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: test-git-template-options-with-labels-delivery
+spec:
+  value:
+    foo: fizz
 
-networks:
-  gitea:
-    external: false
-
-services:
-  server:
-    image: gitea/gitea:1.15.7
-    container_name: gitea
-    environment:
-      - USER_UID=1000
-      - USER_GID=1000
-    restart: always
-    networks:
-      - gitea
-    volumes:
-      - ./gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    ports:
-      - "3000:3000"
-      - "222:22"
-
-volumes:
-  gitea_data: {}
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: DeliveryReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: Ready
+      status: "True"
+      reason: Ready
+  deliveryRef:
+    name: responsible-ops---options-with-labels-delivery
+    kind: ClusterDelivery

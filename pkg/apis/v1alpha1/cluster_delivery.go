@@ -40,11 +40,12 @@ var ValidDeliveryTemplates = []client.Object{
 	&ClusterSourceTemplate{},
 	&ClusterDeploymentTemplate{},
 	&ClusterTemplate{},
+	&ClusterConfigTemplate{},
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:path=clusterdeliveries,scope=Cluster,shortName=cd
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=`.status.conditions[?(@.type=='Ready')].reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
@@ -63,13 +64,11 @@ type ClusterDelivery struct {
 }
 
 type DeliverySpec struct {
+	LegacySelector `json:",inline"`
+
 	// Resources that are responsible for deploying and validating
 	// the deliverable
 	Resources []DeliveryResource `json:"resources"`
-
-	// Specifies the label key-value pairs used to select deliverables
-	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
-	Selector map[string]string `json:"selector"`
 
 	// Additional parameters.
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
@@ -138,14 +137,14 @@ type DeliveryResource struct {
 
 type DeliveryTemplateReference struct {
 	// Kind of the template to apply
-	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate
+	// +kubebuilder:validation:Enum=ClusterSourceTemplate;ClusterDeploymentTemplate;ClusterTemplate;ClusterConfigTemplate
 	Kind string `json:"kind"`
 	// Name of the template to apply
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
 
-	// Options is a list of template names and Selectors. The templates must all be of type Kind.
-	// A template will be selected if the deliverable matches the specified Selector.
+	// Options is a list of template names and Selector. The templates must all be of type Kind.
+	// A template will be selected if the deliverable matches the specified selector.
 	// Only one template can be selected.
 	// Only one of Name and Options can be specified.
 	// +kubebuilder:validation:MinItems=2
@@ -184,8 +183,8 @@ func (c *ClusterDelivery) ValidateDelete() error {
 	return nil
 }
 
-func (c *ClusterDelivery) GetSelector() map[string]string {
-	return c.Spec.Selector
+func (c *ClusterDelivery) GetSelectors() LegacySelector {
+	return c.Spec.LegacySelector
 }
 
 func init() {

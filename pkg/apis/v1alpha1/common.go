@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -164,14 +165,20 @@ type TemplateOption struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Selector is a field query over a workload or deliverable resource.
+	// Selector is a criteria to match against  a workload or deliverable resource.
 	Selector Selector `json:"selector"`
 }
 
+// Selector is the collection of selection fields used congruously to specify
+// the selection of a template Option. In a future API revision, it will also
+// be used to specify selection of a target Owner.
+// See: LegacySelector
 type Selector struct {
+	metav1.LabelSelector `json:",inline"`
+
 	// MatchFields is a list of field selector requirements. The requirements are ANDed.
-	// +kubebuilder:validation:MinItems=1
-	MatchFields []FieldSelectorRequirement `json:"matchFields"`
+	// +optional
+	MatchFields []FieldSelectorRequirement `json:"matchFields,omitempty"`
 }
 
 type FieldSelectorRequirement struct {
@@ -190,4 +197,68 @@ type FieldSelectorRequirement struct {
 	// the values array must be non-empty. If the operator is Exists or DoesNotExist,
 	// the values array must be empty.
 	Values []string `json:"values,omitempty"`
+}
+
+type RealizedResource struct {
+	// Name is the name of the resource in the blueprint
+	Name string `json:"name"`
+
+	// StampedRef is a reference to the object that was created by the resource
+	StampedRef *corev1.ObjectReference `json:"stampedRef,omitempty"`
+
+	// TemplateRef is a reference to the template used to create the object in StampedRef
+	TemplateRef *corev1.ObjectReference `json:"templateRef,omitempty"`
+
+	// Inputs are references to resources that were used to template the object in StampedRef
+	Inputs []Input `json:"inputs,omitempty"`
+
+	// Outputs are values from the object in StampedRef that can be consumed by other resources
+	Outputs []Output `json:"outputs,omitempty"`
+}
+
+type Input struct {
+	// Name is the name of the resource in the blueprint whose output the resource consumes as an input
+	Name string `json:"name"`
+}
+
+type Output struct {
+	// Name is the output type generated from the resource [url, revision, image or config]
+	Name string `json:"name"`
+
+	// Preview is a preview of the value of the output
+	Preview string `json:"preview"`
+
+	// Digest is a sha256 of the full value of the output
+	Digest string `json:"digest"`
+
+	// LastTransitionTime is a timestamp of the last time the value changed
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+}
+
+// LegacySelector is the collection of selection fields used congruously to specify
+// the selection of a target Owner. It is here to preserve compatibility with
+// Owners in v1alpha1, and will be replaced with Selector in a future release.
+type LegacySelector struct {
+	// Specifies the label key-value pairs used to select owners
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	Selector map[string]string `json:"selector,omitempty"`
+
+	// Specifies the requirements used to select owners based on their labels
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	SelectorMatchExpressions []metav1.LabelSelectorRequirement `json:"selectorMatchExpressions,omitempty"`
+
+	// Specifies the requirements used to select owners based on their fields
+	// See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+	// +optional
+	SelectorMatchFields []FieldSelectorRequirement `json:"selectorMatchFields,omitempty"`
+}
+
+func TemplateOptionSelectors(templateOptions []TemplateOption) []Selector {
+	selectors := make([]Selector, len(templateOptions))
+	for idx, templateOption := range templateOptions {
+		selectors[idx] = templateOption.Selector
+	}
+	return selectors
 }

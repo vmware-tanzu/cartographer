@@ -11,7 +11,8 @@ The supply chain may make these values available to other resources.
 
 {{< crd  carto.run_clustersourcetemplates.yaml >}}
 
-_ref: [pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_source_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_source_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_source_template.go)_
 
 ## ClusterImageTemplate
 
@@ -24,7 +25,8 @@ value available to other resources.
 
 {{< crd  carto.run_clusterimagetemplates.yaml >}}
 
-_ref: [pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_image_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_image_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_image_template.go)_
 
 ## ClusterConfigTemplate
 
@@ -37,26 +39,25 @@ this value available to other resources.
 
 {{< crd  carto.run_clusterconfigtemplates.yaml >}}
 
-_ref: [pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_config_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_config_template.go)_
 
 ## ClusterDeploymentTemplate
 
 A `ClusterDeploymentTemplate` indicates how the delivery should configure the environment (namespace/cluster).
 
 The `ClusterDeploymentTemplate` consumes configuration from the `deployment` values provided by the `ClusterDelivery`.
-The
-`ClusterDeploymentTemplate` outputs these same values. The `ClusterDeploymentTemplate` is able to consume additional
+The `ClusterDeploymentTemplate` outputs these same values. The `ClusterDeploymentTemplate` is able to consume additional
 configuration from the `sources` provided by the `ClusterDelivery`.
 
 `ClusterDeploymentTemplate` must specify criteria to determine whether the templated object has successfully completed
-its role in configuring the environment. Once the criteria are met, the `ClusterDeploymentTemplate` will output
-the `deployment`
-values. The criteria may be specified in `spec.observedMatches` or in `spec.observedCompletion`.
+its role in configuring the environment. Once the criteria are met, the `ClusterDeploymentTemplate` will output the
+`deployment` values. The criteria may be specified in `spec.observedMatches` or in `spec.observedCompletion`.
 
 {{< crd  carto.run_clusterdeploymenttemplates.yaml >}}
 
-_ref: [pkg/apis/v1alpha1/cluster_deployment_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_deployment_template.go)_
-
+_ref:
+[pkg/apis/v1alpha1/cluster_deployment_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_deployment_template.go)_
 
 ## ClusterTemplate
 
@@ -68,4 +69,5 @@ The `ClusterTemplate` does not emit values to the supply chain.
 
 {{< crd  carto.run_clustertemplates.yaml >}}
 
-_ref: [pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_template.go)_
+_ref:
+[pkg/apis/v1alpha1/cluster_template.go](https://github.com/vmware-tanzu/cartographer/tree/main/pkg/apis/v1alpha1/cluster_template.go)_

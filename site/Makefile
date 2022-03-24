@@ -11,3 +11,11 @@ release:
 .PHONY: gen-crd-reference
 gen-crd-reference:
 	./hack/crds.rb
+
+.PHONY: dev-dependencies
+dev-dependencies:
+	yarn install
+
+.PHONY: lint
+lint: dev-dependencies
+	yarn lint

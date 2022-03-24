@@ -128,8 +128,7 @@ var _ = Describe("Resource", func() {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "example-config-map",
-						Namespace: "some-namespace",
+						Name: "example-config-map",
 					},
 					Data: map[string]string{
 						"player_current_lives": `$(source.url)$`,
@@ -177,7 +176,6 @@ var _ = Describe("Resource", func() {
 				metadataValues, ok := metadata.(map[string]interface{})
 				Expect(ok).To(BeTrue())
 				Expect(metadataValues["name"]).To(Equal("example-config-map"))
-				Expect(metadataValues["namespace"]).To(Equal("some-namespace"))
 				Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
 					map[string]interface{}{
 						"apiVersion":         "",
@@ -284,8 +282,7 @@ var _ = Describe("Resource", func() {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "example-config-map",
-						Namespace: "some-namespace",
+						Name: "example-config-map",
 					},
 					Data: map[string]string{
 						"player_current_lives": "9",
@@ -349,8 +346,7 @@ var _ = Describe("Resource", func() {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "example-config-map",
-						Namespace: "some-namespace",
+						Name: "example-config-map",
 					},
 					Data: map[string]string{
 						"player_current_lives": `$(sources.source-provider.url)$`,
@@ -392,6 +388,58 @@ var _ = Describe("Resource", func() {
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.ApplyStampedObjectError"))
+			})
+		})
+
+		When("resource template has namespace specified", func() {
+			BeforeEach(func() {
+				configMap := &corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "example-config-map",
+						Namespace: "some-namespace",
+					},
+					Data: map[string]string{
+						"player_current_lives": "9",
+						"some_other_info":      "10",
+					},
+				}
+
+				dbytes, err := json.Marshal(configMap)
+				Expect(err).ToNot(HaveOccurred())
+
+				templateAPI := &v1alpha1.ClusterSourceTemplate{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterSourceTemplate",
+						APIVersion: "carto.run/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "source-template-1",
+						Namespace: "some-namespace",
+					},
+					Spec: v1alpha1.SourceTemplateSpec{
+						TemplateSpec: v1alpha1.TemplateSpec{
+							Template: &runtime.RawExtension{Raw: dbytes},
+						},
+						URLPath: "data.does-not-exist",
+					},
+				}
+
+				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
+			})
+
+			It("returns RetrieveOutputError", func() {
+				template, _, _, err := r.Do(ctx, &resource, deliveryName, outputs)
+
+				Expect(template.GetName()).To(Equal("source-template-1"))
+				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.StampError"))
 			})
 		})
 	})

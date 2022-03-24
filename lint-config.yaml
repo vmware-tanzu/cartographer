@@ -14,12 +14,9 @@
 
 linters:
   enable:
-    - gci
     - govet
 
 linters-settings:
-  gci:
-    local-prefixes: github.com/vmware-tanzu/cartographer
   govet:
     disable:
       - composites

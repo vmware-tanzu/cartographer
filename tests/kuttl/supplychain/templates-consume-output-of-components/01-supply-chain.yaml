@@ -47,7 +47,7 @@ spec:
         - resource: built-image-provider
           name: solo-image-provider
 
-    - name: config
+    - name: config-2
       templateRef:
         kind: ClusterTemplate
         name: example-config---consume-output-of-resources-2

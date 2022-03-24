@@ -28,6 +28,8 @@ spec:
     kind: Deliverable
     listKind: DeliverableList
     plural: deliverables
+    shortNames:
+    - dlv
     singular: deliverable
   scope: Namespaced
   versions:
@@ -85,9 +87,9 @@ spec:
               serviceAccountName:
                 description: "ServiceAccountName refers to the Service account with
                   permissions to create resources submitted by the supply chain. \n
-                  If not set, Cartographer will use serviceAccountName from supply
-                  chain. \n If that is also not set, Cartographer will use the default
-                  service account in the workload's namespace."
+                  If not set, Cartographer will use serviceAccountName from delivery.
+                  \n If that is also not set, Cartographer will use the default service
+                  account in the deliverable's namespace."
                 type: string
               source:
                 description: The location of the source code for the workload. Specify
@@ -211,6 +213,138 @@ spec:
                   of the spec that resulted in the current `status`.
                 format: int64
                 type: integer
+              resources:
+                description: Resources contain references to the objects created by
+                  the Delivery and the templates used to create them. It also contains
+                  Inputs and Outputs that were passed between the templates as the
+                  Delivery was processed.
+                items:
+                  properties:
+                    inputs:
+                      description: Inputs are references to resources that were used
+                        to template the object in StampedRef
+                      items:
+                        properties:
+                          name:
+                            description: Name is the name of the resource in the blueprint
+                              whose output the resource consumes as an input
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                    name:
+                      description: Name is the name of the resource in the blueprint
+                      type: string
+                    outputs:
+                      description: Outputs are values from the object in StampedRef
+                        that can be consumed by other resources
+                      items:
+                        properties:
+                          digest:
+                            description: Digest is a sha256 of the full value of the
+                              output
+                            type: string
+                          lastTransitionTime:
+                            description: LastTransitionTime is a timestamp of the
+                              last time the value changed
+                            format: date-time
+                            type: string
+                          name:
+                            description: Name is the output type generated from the
+                              resource [url, revision, image or config]
+                            type: string
+                          preview:
+                            description: Preview is a preview of the value of the
+                              output
+                            type: string
+                        required:
+                        - digest
+                        - lastTransitionTime
+                        - name
+                        - preview
+                        type: object
+                      type: array
+                    stampedRef:
+                      description: StampedRef is a reference to the object that was
+                        created by the resource
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        fieldPath:
+                          description: 'If referring to a piece of an object instead
+                            of an entire object, this string should contain a valid
+                            JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                            For example, if the object reference is to a container
+                            within a pod, this would take on a value like: "spec.containers{name}"
+                            (where "name" refers to the name of the container that
+                            triggered the event) or if no container name is specified
+                            "spec.containers[2]" (container with index 2 in this pod).
+                            This syntax is chosen only to have some well-defined way
+                            of referencing a part of an object. TODO: this design
+                            is not final and this field is subject to change in the
+                            future.'
+                          type: string
+                        kind:
+                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                        namespace:
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                          type: string
+                        resourceVersion:
+                          description: 'Specific resourceVersion to which this reference
+                            is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                          type: string
+                        uid:
+                          description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                          type: string
+                      type: object
+                    templateRef:
+                      description: TemplateRef is a reference to the template used
+                        to create the object in StampedRef
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        fieldPath:
+                          description: 'If referring to a piece of an object instead
+                            of an entire object, this string should contain a valid
+                            JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                            For example, if the object reference is to a container
+                            within a pod, this would take on a value like: "spec.containers{name}"
+                            (where "name" refers to the name of the container that
+                            triggered the event) or if no container name is specified
+                            "spec.containers[2]" (container with index 2 in this pod).
+                            This syntax is chosen only to have some well-defined way
+                            of referencing a part of an object. TODO: this design
+                            is not final and this field is subject to change in the
+                            future.'
+                          type: string
+                        kind:
+                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                        namespace:
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                          type: string
+                        resourceVersion:
+                          description: 'Specific resourceVersion to which this reference
+                            is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                          type: string
+                        uid:
+                          description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                          type: string
+                      type: object
+                  required:
+                  - name
+                  type: object
+                type: array
             type: object
         required:
         - metadata

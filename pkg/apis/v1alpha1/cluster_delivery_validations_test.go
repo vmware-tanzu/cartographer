@@ -41,6 +41,10 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
+					LegacySelector: v1alpha1.LegacySelector{
+						Selector: map[string]string{"requires": "at-least-one"},
+					},
+
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -195,6 +199,9 @@ var _ = Describe("Delivery Validation", func() {
 					Namespace: "default",
 				},
 				Spec: v1alpha1.DeliverySpec{
+					LegacySelector: v1alpha1.LegacySelector{
+						Selector: map[string]string{"one-selector-of-any-kind": "is-needed"},
+					},
 					Resources: []v1alpha1.DeliveryResource{
 						{
 							Name: "source-provider",
@@ -306,13 +313,13 @@ var _ = Describe("Delivery Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(delivery.ValidateCreate()).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [Exists]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [Exists]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
@@ -332,13 +339,13 @@ var _ = Describe("Delivery Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(delivery.ValidateCreate()).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [DoesNotExist]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: cannot specify values with operator [DoesNotExist]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
@@ -356,13 +363,13 @@ var _ = Describe("Delivery Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(delivery.ValidateCreate()).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [In]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [In]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
@@ -380,13 +387,13 @@ var _ = Describe("Delivery Validation", func() {
 
 				It("on create, it rejects the Resource", func() {
 					Expect(delivery.ValidateCreate()).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [NotIn]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
 					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: must specify values with operator [NotIn]",
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
@@ -427,14 +434,36 @@ var _ = Describe("Delivery Validation", func() {
 
 			It("on create, it rejects the Resource", func() {
 				Expect(delivery.ValidateCreate()).To(MatchError(
-					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [spec.does.not.exist] is not a valid path",
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
 				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
-					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1]: requirement key [spec.does.not.exist] is not a valid path",
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("option has invalid label selector", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{ "not-valid-": "like-this-" }
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring(
+					`error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(ContainSubstring(
+					`error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
+				)))
 			})
 
 			It("deletes without error", func() {
@@ -506,16 +535,311 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 	})
+
+	Describe("OneOf Selector, SelectorMatchExpressions, or SelectorMatchFields", func() {
+		var deliveryFactory = func(selector map[string]string, expressions []metav1.LabelSelectorRequirement, fields []v1alpha1.FieldSelectorRequirement) *v1alpha1.ClusterDelivery {
+			return &v1alpha1.ClusterDelivery{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "delivery-resource",
+					Namespace: "default",
+				},
+				Spec: v1alpha1.DeliverySpec{
+					LegacySelector: v1alpha1.LegacySelector{
+						Selector:                 selector,
+						SelectorMatchExpressions: expressions,
+						SelectorMatchFields:      fields,
+					},
+					Resources: []v1alpha1.DeliveryResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "source-template",
+							},
+						},
+						{
+							Name: "other-source-provider",
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Name: "source-template",
+							},
+						},
+					},
+				},
+			}
+
+		}
+		Context("No selection", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(nil, nil, nil)
+			})
+
+			It("on create, returns an error", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("on update, returns an error", func() {
+				Expect(delivery.ValidateUpdate(nil)).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("Empty selection", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(map[string]string{}, []metav1.LabelSelectorRequirement{}, []v1alpha1.FieldSelectorRequirement{})
+			})
+
+			It("on create, returns an error", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("on update, returns an error", func() {
+				Expect(delivery.ValidateUpdate(nil)).To(MatchError(
+					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("A Selector", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(map[string]string{"foo": "bar"}, nil, nil)
+			})
+
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("on update, returns an error", func() {
+				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("A SelectorMatchExpression", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(nil, []metav1.LabelSelectorRequirement{{Key: "whatever", Operator: "Exists"}}, nil)
+			})
+
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+		Context("A SelectorMatchFields", func() {
+			var delivery *v1alpha1.ClusterDelivery
+			BeforeEach(func() {
+				delivery = deliveryFactory(nil, nil, []v1alpha1.FieldSelectorRequirement{{Key: "metadata.whatever", Operator: "Exists"}})
+			})
+
+			It("creates without error", func() {
+				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+			})
+
+			It("updates without error", func() {
+				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("selector validations", func() {
+		var (
+			delivery *v1alpha1.ClusterDelivery
+		)
+		BeforeEach(func() {
+			delivery = &v1alpha1.ClusterDelivery{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-name",
+				},
+				Spec: v1alpha1.DeliverySpec{
+					Resources: []v1alpha1.DeliveryResource{
+						{
+							Name: "source-provider",
+							TemplateRef: v1alpha1.DeliveryTemplateReference{
+								Kind: "ClusterSourceTemplate",
+								Options: []v1alpha1.TemplateOption{
+									{
+										Name: "source-1",
+										Selector: v1alpha1.Selector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpExists,
+												},
+											},
+										},
+									},
+									{
+										Name: "source-2",
+										Selector: v1alpha1.Selector{
+											MatchFields: []v1alpha1.FieldSelectorRequirement{
+												{
+													Key:      "spec.source.git.url",
+													Operator: v1alpha1.FieldSelectorOpDoesNotExist,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("selector is selecting on SelectorMatchFields", func() {
+			Context("valid field selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.params",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+			})
+
+			Context("invalid json path in field selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "spec.params[0].{{}}",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError("error validating clusterdelivery [some-name]: invalid jsonpath for key [spec.params[0].{{}}]: unrecognized character in action: U+007B '{'"))
+				})
+			})
+
+			Context("field selector is not in accepted list", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchFields: []v1alpha1.FieldSelectorRequirement{
+							{
+								Key:      "foo",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+				It("rejects with an error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError("error validating clusterdelivery [some-name]: requirement key [foo] is not a valid path"))
+				})
+			})
+		})
+
+		Context("selector is selecting on SelectorMatchExpressions", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						SelectorMatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "-my-label",
+								Operator: "Exists",
+							},
+						},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+		Context("selector is selecting on Selector", func() {
+			Context("there is a valid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						Selector: map[string]string{"my-label": "some-value"},
+					}
+				})
+
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("there is an invalid selector", func() {
+				BeforeEach(func() {
+					delivery.Spec.LegacySelector = v1alpha1.LegacySelector{
+						Selector: map[string]string{"-my-label": "some-value"},
+					}
+				})
+
+				It("rejects with error", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
+				})
+			})
+		})
+
+	})
 })
 
 var _ = Describe("DeliveryTemplateReference", func() {
 	It("has valid references", func() {
-		Expect(v1alpha1.ValidDeliveryTemplates).To(HaveLen(3))
+		Expect(v1alpha1.ValidDeliveryTemplates).To(HaveLen(4))
 
 		Expect(v1alpha1.ValidDeliveryTemplates).To(ContainElements(
 			&v1alpha1.ClusterSourceTemplate{},
 			&v1alpha1.ClusterDeploymentTemplate{},
 			&v1alpha1.ClusterTemplate{},
+			&v1alpha1.ClusterConfigTemplate{},
 		))
 	})
 

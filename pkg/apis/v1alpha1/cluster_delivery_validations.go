@@ -17,7 +17,15 @@ package v1alpha1
 import "fmt"
 
 func (c *ClusterDelivery) validateNewState() error {
+	if len(c.Spec.Selector) == 0 && len(c.Spec.SelectorMatchExpressions) == 0 && len(c.Spec.SelectorMatchFields) == 0 {
+		return fmt.Errorf("at least one selector, selectorMatchExpression, selectorMatchField must be specified")
+	}
+
 	if err := c.validateParams(); err != nil {
+		return err
+	}
+
+	if err := validateLegacySelector(c.Spec.LegacySelector, ValidDeliverablePaths, ValidDeliverablePrefixes); err != nil {
 		return err
 	}
 

@@ -26,6 +26,8 @@ spec:
     kind: Runnable
     listKind: RunnableList
     plural: runnables
+    shortNames:
+    - run
     singular: runnable
   scope: Namespaced
   versions:

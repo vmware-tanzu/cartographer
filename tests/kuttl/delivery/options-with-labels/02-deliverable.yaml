@@ -12,13 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#@ load("@ytt:data", "data")
-
----
-apiVersion: v1
-kind: Secret
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
 metadata:
-  name: gitops-ssh-secret
-data:
-  identity: #@ data.values.git_writer.base64_encoded_ssh_key
-  known_hosts: #@ data.values.git_writer.base64_encoded_known_hosts
+  name: petclinic
+  labels:
+    integration-test: "options-with-labels-delivery"
+    stamp-of-approval: "why-hello-there"
+spec:
+  serviceAccountName: my-service-account
+  params:
+    - name: waciuma-com/quality
+      value: beta
+    - name: waciuma-com/java-version
+      value: 11
+
+  source:
+    git:
+      url: https://github.com/spring-projects/spring-petclinic.git
+      ref:
+        branch: main

@@ -149,9 +149,11 @@ func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateS
 		return nil, err
 	}
 
-	if stampedObject.GetNamespace() == "" {
-		stampedObject.SetNamespace(s.Owner.GetNamespace())
+	if stampedObject.GetNamespace() != "" && stampedObject.GetNamespace() != s.Owner.GetNamespace() {
+		return nil, fmt.Errorf("cannot set namespace in resource template")
 	}
+
+	stampedObject.SetNamespace(s.Owner.GetNamespace())
 
 	apiVersion, kind := s.Owner.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
 	stampedObject.SetOwnerReferences([]metav1.OwnerReference{

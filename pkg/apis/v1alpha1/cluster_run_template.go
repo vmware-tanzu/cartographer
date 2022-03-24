@@ -29,7 +29,7 @@ import (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:path=clusterruntemplates, scope=Cluster, shortName=crt
 
 type ClusterRunTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -46,6 +46,9 @@ type RunTemplateSpec struct {
 	// the blueprint is applied. Templates support simple value
 	// interpolation using the $()$ marker format. For more
 	// information, see: https://cartographer.sh/docs/latest/templating/
+	// You should not define the namespace for the resource - it will automatically
+	// be created in the owner namespace. If the namespace is specified and is not
+	// the owner namespace, the resource will fail to be created.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
 

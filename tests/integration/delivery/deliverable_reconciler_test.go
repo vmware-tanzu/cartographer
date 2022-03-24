@@ -128,7 +128,9 @@ var _ = Describe("DeliverableReconciler", func() {
 			},
 			Spec: v1alpha1.DeliverySpec{
 				Resources: []v1alpha1.DeliveryResource{},
-				Selector:  selector,
+				LegacySelector: v1alpha1.LegacySelector{
+					Selector: selector,
+				},
 			},
 		}
 	}
@@ -459,6 +461,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							return err
 						}).Should(HaveOccurred())
 					})
+
 					It("the deliverable has an unknown Ready condition", func() {
 						deliverable := &v1alpha1.Deliverable{}
 

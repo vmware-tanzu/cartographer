@@ -61,7 +61,7 @@ var ValidDeliverablePrefixes = []string{
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=all
+// +kubebuilder:resource:path=deliverables,categories=all,shortName=dlv
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Source",type="string",JSONPath=`.spec.source['git.url','image']`
 // +kubebuilder:printcolumn:name="Delivery",type="string",JSONPath=".status.deliveryRef.name"
@@ -96,10 +96,10 @@ type DeliverableSpec struct {
 	// ServiceAccountName refers to the Service account with permissions to create resources
 	// submitted by the supply chain.
 	//
-	// If not set, Cartographer will use serviceAccountName from supply chain.
+	// If not set, Cartographer will use serviceAccountName from delivery.
 	//
 	// If that is also not set, Cartographer will use the default service account in the
-	// workload's namespace.
+	// deliverable's namespace.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
@@ -109,6 +109,10 @@ type DeliverableStatus struct {
 
 	// DeliveryRef is the Delivery resource that was used when this status was set.
 	DeliveryRef ObjectReference `json:"deliveryRef,omitempty"`
+
+	// Resources contain references to the objects created by the Delivery and the templates used to create them.
+	// It also contains Inputs and Outputs that were passed between the templates as the Delivery was processed.
+	Resources []RealizedResource `json:"resources,omitempty"`
 }
 
 // +kubebuilder:object:root=true

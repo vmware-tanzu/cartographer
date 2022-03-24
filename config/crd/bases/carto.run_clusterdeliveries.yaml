@@ -26,6 +26,8 @@ spec:
     kind: ClusterDelivery
     listKind: ClusterDeliveryList
     plural: clusterdeliveries
+    shortNames:
+    - cd
     singular: clusterdelivery
   scope: Cluster
   versions:
@@ -169,15 +171,16 @@ spec:
                           - ClusterSourceTemplate
                           - ClusterDeploymentTemplate
                           - ClusterTemplate
+                          - ClusterConfigTemplate
                           type: string
                         name:
                           description: Name of the template to apply
                           minLength: 1
                           type: string
                         options:
-                          description: Options is a list of template names and Selectors.
+                          description: Options is a list of template names and Selector.
                             The templates must all be of type Kind. A template will
-                            be selected if the deliverable matches the specified Selector.
+                            be selected if the deliverable matches the specified selector.
                             Only one template can be selected. Only one of Name and
                             Options can be specified.
                           items:
@@ -187,9 +190,42 @@ spec:
                                 minLength: 1
                                 type: string
                               selector:
-                                description: Selector is a field query over a workload
-                                  or deliverable resource.
+                                description: Selector is a criteria to match against  a
+                                  workload or deliverable resource.
                                 properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
                                   matchFields:
                                     description: MatchFields is a list of field selector
                                       requirements. The requirements are ANDed.
@@ -225,10 +261,17 @@ spec:
                                       - key
                                       - operator
                                       type: object
-                                    minItems: 1
                                     type: array
-                                required:
-                                - matchFields
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
                                 type: object
                             required:
                             - name
@@ -247,9 +290,71 @@ spec:
               selector:
                 additionalProperties:
                   type: string
-                description: 'Specifies the label key-value pairs used to select deliverables
+                description: 'Specifies the label key-value pairs used to select owners
                   See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
                 type: object
+              selectorMatchExpressions:
+                description: 'Specifies the requirements used to select owners based
+                  on their labels See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
+                items:
+                  description: A label selector requirement is a selector that contains
+                    values, a key, and an operator that relates the key and values.
+                  properties:
+                    key:
+                      description: key is the label key that the selector applies
+                        to.
+                      type: string
+                    operator:
+                      description: operator represents a key's relationship to a set
+                        of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                      type: string
+                    values:
+                      description: values is an array of string values. If the operator
+                        is In or NotIn, the values array must be non-empty. If the
+                        operator is Exists or DoesNotExist, the values array must
+                        be empty. This array is replaced during a strategic merge
+                        patch.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - key
+                  - operator
+                  type: object
+                type: array
+              selectorMatchFields:
+                description: 'Specifies the requirements used to select owners based
+                  on their fields See: https://cartographer.sh/docs/v0.1.0/architecture/#selectors'
+                items:
+                  properties:
+                    key:
+                      description: 'Key is the JSON path in the workload to match
+                        against. e.g. for workload: "workload.spec.source.git.url",
+                        e.g. for deliverable: "deliverable.spec.source.git.url"'
+                      minLength: 1
+                      type: string
+                    operator:
+                      description: Operator represents a key's relationship to a set
+                        of values. Valid operators are In, NotIn, Exists and DoesNotExist.
+                      enum:
+                      - In
+                      - NotIn
+                      - Exists
+                      - DoesNotExist
+                      type: string
+                    values:
+                      description: Values is an array of string values. If the operator
+                        is In or NotIn, the values array must be non-empty. If the
+                        operator is Exists or DoesNotExist, the values array must
+                        be empty.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - key
+                  - operator
+                  type: object
+                type: array
               serviceAccountRef:
                 description: "ServiceAccountName refers to the Service account with
                   permissions to create resources submitted by the supply chain. \n
@@ -269,7 +374,6 @@ spec:
                 type: object
             required:
             - resources
-            - selector
             type: object
           status:
             description: 'Status conforms to the Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
