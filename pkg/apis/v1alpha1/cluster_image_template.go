@@ -47,6 +47,8 @@ type ImageTemplateSpec struct {
 	ImagePath string `json:"imagePath"`
 }
 
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterimagetemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterimagetemplates,verbs=create;update,versions=v1alpha1,name=image-template-validator.cartographer.com
+
 var _ webhook.Validator = &ClusterImageTemplate{}
 
 func (c *ClusterImageTemplate) ValidateCreate() error {

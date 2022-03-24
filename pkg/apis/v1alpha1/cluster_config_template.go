@@ -47,6 +47,8 @@ type ConfigTemplateSpec struct {
 	ConfigPath string `json:"configPath"`
 }
 
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterconfigtemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterconfigtemplates,verbs=create;update,versions=v1alpha1,name=config-template-validator.cartographer.com
+
 var _ webhook.Validator = &ClusterConfigTemplate{}
 
 func (c *ClusterConfigTemplate) ValidateCreate() error {
