@@ -20,8 +20,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -45,22 +43,6 @@ type ImageTemplateSpec struct {
 	// RFC-0016 https://github.com/vmware-tanzu/cartographer/blob/main/rfc/rfc-0016-validate-template-outputs.md
 	// ImagePath is specified in jsonpath format, eg: .status.artifact.image_digest
 	ImagePath string `json:"imagePath"`
-}
-
-// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterimagetemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterimagetemplates,verbs=create;update,versions=v1alpha1,name=image-template-validator.cartographer.com
-
-var _ webhook.Validator = &ClusterImageTemplate{}
-
-func (c *ClusterImageTemplate) ValidateCreate() error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterImageTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterImageTemplate) ValidateDelete() error {
-	return nil
 }
 
 // +kubebuilder:object:root=true

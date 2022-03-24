@@ -14,7 +14,37 @@
 
 package v1alpha1
 
-import "fmt"
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+)
+
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterdelivery,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterdeliveries,verbs=create;update,versions=v1alpha1,name=delivery-validator.cartographer.com
+
+var _ webhook.Validator = &ClusterDelivery{}
+
+func (c *ClusterDelivery) ValidateCreate() error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterDelivery) ValidateDelete() error {
+	return nil
+}
 
 func (c *ClusterDelivery) validateNewState() error {
 	if len(c.Spec.Selector) == 0 && len(c.Spec.SelectorMatchExpressions) == 0 && len(c.Spec.SelectorMatchFields) == 0 {
@@ -130,4 +160,10 @@ func validateDeliveryTemplateRef(ref DeliveryTemplateReference) error {
 		return err
 	}
 	return nil
+}
+
+func (c *ClusterDelivery) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(c).
+		Complete()
 }

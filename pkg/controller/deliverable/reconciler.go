@@ -29,13 +29,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/mapper"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -91,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for delivery")
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for delivery [%s]: %w", delivery.Name, err)))
 	}
 
@@ -116,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, controller.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery, deliverable.Status.Resources)
@@ -125,13 +131,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		switch typedErr := err.(type) {
 		case realizer.GetTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 			if !kerrors.IsForbidden(typedErr.Err) {
-				err = controller.NewUnhandledError(err)
+				err = cerrors.NewUnhandledError(err)
 			}
 		case realizer.RetrieveOutputError:
 			switch typedErr.Err.(type) {
@@ -152,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
 		if log.V(logger.DEBUG).Enabled() {
@@ -183,7 +189,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object",
 				"object", resource.StampedRef)
-			err = controller.NewUnhandledError(trackingError)
+			err = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object",
 				"object", resource.StampedRef)
@@ -210,7 +216,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1
 	}
 
 	if err != nil {
-		if controller.IsUnhandledError(err) {
+		if cerrors.IsUnhandledError(err) {
 			log.Error(err, "unhandled error reconciling deliverable")
 			return ctrl.Result{}, err
 		}
@@ -327,7 +333,7 @@ func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverabl
 	deliveries, err := r.Repo.GetDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
 		log.Error(err, "failed to get deliveries for deliverable")
-		return nil, controller.NewUnhandledError(fmt.Errorf("failed to get deliveries for deliverable [%s/%s]: %w",
+		return nil, cerrors.NewUnhandledError(fmt.Errorf("failed to get deliveries for deliverable [%s/%s]: %w",
 			deliverable.Namespace, deliverable.Name, err))
 	}
 
@@ -375,4 +381,59 @@ func getServiceAccountNameAndNamespace(deliverable *v1alpha1.Deliverable, delive
 	}
 
 	return serviceAccountName, serviceAccountNS
+}
+
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Repo = repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),
+	)
+
+	r.ConditionManagerBuilder = conditions.NewConditionManager
+	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
+	r.Realizer = realizer.NewRealizer()
+	r.DependencyTracker = dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		mgr.GetLogger().WithName("tracker-deliverable"),
+	)
+
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.Deliverable{})
+
+	m := mapper.Mapper{
+		Client:  mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("deliverable"),
+		Tracker: r.DependencyTracker,
+	}
+
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterDelivery{}:  m.ClusterDeliveryToDeliverableRequests,
+		&corev1.ServiceAccount{}:     m.ServiceAccountToDeliverableRequests,
+		&rbacv1.Role{}:               m.RoleToDeliverableRequests,
+		&rbacv1.RoleBinding{}:        m.RoleBindingToDeliverableRequests,
+		&rbacv1.ClusterRole{}:        m.ClusterRoleToDeliverableRequests,
+		&rbacv1.ClusterRoleBinding{}: m.ClusterRoleBindingToDeliverableRequests,
+	}
+
+	for kindType, mapFunc := range watches {
+		builder = builder.Watches(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		)
+	}
+
+	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		builder = builder.Watches(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, r.DependencyTracker, mgr.GetScheme()),
+		)
+	}
+
+	controller, err := builder.Build(r)
+	if err != nil {
+		return fmt.Errorf("failed to build controller for deliverable: %w", err)
+	}
+	r.StampedTracker = &external.ObjectTracker{Controller: controller}
+
+	return nil
 }

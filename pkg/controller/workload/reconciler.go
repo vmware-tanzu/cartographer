@@ -29,13 +29,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/mapper"
+	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
@@ -90,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
 		)
 	}
@@ -118,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, controller.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
@@ -128,13 +134,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		switch typedErr := err.(type) {
 		case realizer.GetTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		case realizer.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 			if !kerrors.IsForbidden(typedErr.Err) {
-				err = controller.NewUnhandledError(err)
+				err = cerrors.NewUnhandledError(err)
 			}
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
@@ -144,7 +150,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
 		if log.V(logger.DEBUG).Enabled() {
@@ -175,7 +181,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object",
 				"object", resource.StampedRef)
-			err = controller.NewUnhandledError(trackingError)
+			err = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object",
 				"object", resource.StampedRef)
@@ -201,7 +207,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alp
 	}
 
 	if err != nil {
-		if controller.IsUnhandledError(err) {
+		if cerrors.IsUnhandledError(err) {
 			log.Error(err, "unhandled error reconciling workload")
 			return ctrl.Result{}, err
 		}
@@ -237,7 +243,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	supplyChains, err := r.Repo.GetSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
 		log.Error(err, "failed to get supply chains for workload")
-		return nil, controller.NewUnhandledError(fmt.Errorf("failed to get supply chains for workload [%s/%s]: %w",
+		return nil, cerrors.NewUnhandledError(fmt.Errorf("failed to get supply chains for workload [%s/%s]: %w",
 			workload.Namespace, workload.Name, err))
 	}
 
@@ -367,4 +373,62 @@ func getServiceAccountNameAndNamespace(workload *v1alpha1.Workload, supplyChain 
 	}
 
 	return serviceAccountName, serviceAccountNS
+}
+
+// TODO: kubebuilder:rbac
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Repo = repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
+	)
+	r.ConditionManagerBuilder = conditions.NewConditionManager
+	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(
+		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
+		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
+	)
+	r.Realizer = realizer.NewRealizer()
+	r.DependencyTracker = dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		mgr.GetLogger().WithName("tracker-workload"),
+	)
+
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.Workload{})
+
+	m := mapper.Mapper{
+		Client:  mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("workload"),
+		Tracker: r.DependencyTracker,
+	}
+
+	watches := map[client.Object]handler.MapFunc{
+		&v1alpha1.ClusterSupplyChain{}: m.ClusterSupplyChainToWorkloadRequests,
+		&corev1.ServiceAccount{}:       m.ServiceAccountToWorkloadRequests,
+		&rbacv1.Role{}:                 m.RoleToWorkloadRequests,
+		&rbacv1.RoleBinding{}:          m.RoleBindingToWorkloadRequests,
+		&rbacv1.ClusterRole{}:          m.ClusterRoleToWorkloadRequests,
+		&rbacv1.ClusterRoleBinding{}:   m.ClusterRoleBindingToWorkloadRequests,
+	}
+
+	for kindType, mapFunc := range watches {
+		builder = builder.Watches(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		)
+	}
+
+	for _, template := range v1alpha1.ValidSupplyChainTemplates {
+		builder = builder.Watches(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, r.DependencyTracker, mgr.GetScheme()),
+		)
+	}
+
+	controller, err := builder.Build(r)
+	if err != nil {
+		return fmt.Errorf("failed to build controller for workload: %w", err)
+	}
+	r.StampedTracker = &external.ObjectTracker{Controller: controller}
+
+	return nil
 }

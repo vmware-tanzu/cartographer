@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
+
+const DefaultResyncTime = 10 * time.Hour
 
 func GetObjectGVK(obj metav1.Object, scheme *runtime.Scheme) (schema.GroupVersionKind, error) {
 	ro, ok := obj.(runtime.Object)

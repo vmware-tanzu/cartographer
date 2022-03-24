@@ -28,18 +28,24 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type Reconciler struct {
@@ -96,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	runnableClient, discoveryClient, err := r.ClientBuilder(secret, true)
 	if err != nil {
 		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, controller.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), discoveryClient)
@@ -105,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		switch typedErr := err.(type) {
 		case realizer.GetRunTemplateError:
 			r.conditionManager.AddPositive(RunTemplateMissingCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		case realizer.ResolveSelectorError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
 		case realizer.StampError:
@@ -113,16 +119,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		case realizer.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
 			if !kerrors.IsForbidden(typedErr.Err) {
-				err = controller.NewUnhandledError(err)
+				err = cerrors.NewUnhandledError(err)
 			}
 		case realizer.ListCreatedObjectsError:
 			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		case realizer.RetrieveOutputError:
 			r.conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.Error()))
 		default:
 			r.conditionManager.AddPositive(UnknownErrorCondition(typedErr))
-			err = controller.NewUnhandledError(err)
+			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
 		log.V(logger.DEBUG).Info("realized object", "object", stampedObject)
@@ -134,7 +140,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object", "object", stampedObject)
-			err = controller.NewUnhandledError(trackingError)
+			err = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object", "object", stampedObject)
 		}
@@ -158,7 +164,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alp
 	}
 
 	if err != nil {
-		if controller.IsUnhandledError(err) {
+		if cerrors.IsUnhandledError(err) {
 			log.Error(err, "unhandled error reconciling runnable")
 			return ctrl.Result{}, err
 		}
@@ -200,4 +206,56 @@ func (r *Reconciler) trackDependencies(runnable *v1alpha1.Runnable, serviceAccou
 		Namespace: runnable.Namespace,
 		Name:      runnable.Name,
 	})
+}
+
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Repo = repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
+	)
+
+	r.Realizer = realizer.NewRealizer()
+	r.RunnableCache = repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache"))
+	r.RepositoryBuilder = repository.NewRepository
+	r.ClientBuilder = realizerclient.NewClientBuilder(mgr.GetConfig())
+	r.ConditionManagerBuilder = conditions.NewConditionManager
+	r.DependencyTracker = dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		mgr.GetLogger().WithName("tracker-runnable"),
+	)
+
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.Runnable{}).
+		Watches(&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
+			enqueuer.EnqueueTracked(&v1alpha1.ClusterRunTemplate{}, r.DependencyTracker, mgr.GetScheme()),
+		)
+
+	m := mapper.Mapper{
+		Client:  mgr.GetClient(),
+		Logger:  mgr.GetLogger().WithName("runnable"),
+		Tracker: r.DependencyTracker,
+	}
+
+	watches := map[client.Object]handler.MapFunc{
+		&corev1.ServiceAccount{}:     m.ServiceAccountToRunnableRequests,
+		&rbacv1.Role{}:               m.RoleToRunnableRequests,
+		&rbacv1.RoleBinding{}:        m.RoleBindingToRunnableRequests,
+		&rbacv1.ClusterRole{}:        m.ClusterRoleToRunnableRequests,
+		&rbacv1.ClusterRoleBinding{}: m.ClusterRoleBindingToRunnableRequests,
+	}
+
+	for kindType, mapFunc := range watches {
+		builder = builder.Watches(
+			&source.Kind{Type: kindType},
+			handler.EnqueueRequestsFromMapFunc(mapFunc),
+		)
+	}
+
+	controller, err := builder.Build(r)
+	if err != nil {
+		return fmt.Errorf("failed to build controller for runnable: %w", err)
+	}
+	r.StampedTracker = &external.ObjectTracker{Controller: controller}
+
+	return nil
 }

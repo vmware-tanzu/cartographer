@@ -12,16 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registrar_test
+package utils
 
 import (
-	"testing"
+	"fmt"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-func TestRegistrar(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registrar Suite")
+func AddToScheme(scheme *runtime.Scheme) error {
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("client go add to scheme: %w", err)
+	}
+
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("cartographer v1alpha1 add to scheme: %w", err)
+	}
+
+	return nil
 }
