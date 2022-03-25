@@ -55,7 +55,13 @@ var _ = Describe("Supply Chain selection for workloads", func() {
 			metadata:
 			  name: my-template
 			spec:
-				template: {}
+			  template:
+                apiVersion: v1
+                kind: ConfigMap
+                metadata:
+                  name: my-config-map
+                data:
+                  foo: "bar"
 		`))
 
 	})
