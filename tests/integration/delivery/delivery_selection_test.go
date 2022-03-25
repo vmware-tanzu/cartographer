@@ -58,7 +58,13 @@ var _ = Describe("Delivery selection for deliverables", func() {
 			metadata:
 			  name: my-template
 			spec:
-				template: {}
+			  template:
+                apiVersion: v1
+                kind: ConfigMap
+                metadata:
+                  name: my-config-map
+                data:
+                  foo: "bar"
 		`))
 
 	})

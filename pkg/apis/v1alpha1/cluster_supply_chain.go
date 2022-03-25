@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -166,6 +167,10 @@ type ClusterSupplyChainList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterSupplyChain `json:"items"`
 }
+
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clustersupplychain,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clustersupplychains,verbs=create;update,versions=v1alpha1,name=supply-chain-validator.cartographer.com
+
+var _ webhook.Validator = &ClusterSupplyChain{}
 
 func (c *ClusterSupplyChain) ValidateCreate() error {
 	err := c.validateNewState()

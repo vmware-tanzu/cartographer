@@ -133,7 +133,13 @@ var _ = Describe("SupplyChainReconciler", func() {
 				metadata:
 				  name: my-terminal-template
 				spec:
-					template: {}
+			      template:
+                    apiVersion: v1
+                    kind: ConfigMap
+                    metadata:
+                      name: my-config-map
+                    data:
+                      foo: "bar"
 				`)
 
 				sourceTemplate := &unstructured.Unstructured{}

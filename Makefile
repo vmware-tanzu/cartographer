@@ -35,11 +35,20 @@ config/crd/bases/*.yaml &: $(crd_sources)
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
+config/webhook/manifests.yaml: $(crd_sources)
+	$(CONTROLLER_GEN) \
+		webhook \
+		paths=./pkg/apis/v1alpha1 \
+		output:webhook:dir=config/webhook
+	$(ADDLICENSE) \
+		-f ./hack/boilerplate.go.txt \
+		config/webhook/manifests.yaml
+
 .PHONY: gen-objects
 gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
 
 .PHONY: gen-manifests
-gen-manifests: config/crd/bases/*.yaml
+gen-manifests: config/crd/bases/*.yaml config/webhook/manifests.yaml
 
 test_crd_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(wildcard tests/resources/*.go))
 

@@ -52,6 +52,8 @@ type SourceTemplateSpec struct {
 	RevisionPath string `json:"revisionPath"`
 }
 
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clustersourcetemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clustersourcetemplates,verbs=create;update,versions=v1alpha1,name=source-template-validator.cartographer.com
+
 var _ webhook.Validator = &ClusterSourceTemplate{}
 
 func (c *ClusterSourceTemplate) ValidateCreate() error {

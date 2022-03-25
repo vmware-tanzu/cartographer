@@ -91,6 +91,8 @@ type ClusterDeploymentTemplateList struct {
 	Items           []ClusterDeploymentTemplate `json:"items"`
 }
 
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterdeploymenttemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterdeploymenttemplates,verbs=create;update,versions=v1alpha1,name=deployment-template-validator.cartographer.com
+
 var _ webhook.Validator = &ClusterSourceTemplate{}
 
 func (c *ClusterDeploymentTemplate) ValidateCreate() error {
