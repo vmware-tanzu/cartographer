@@ -274,7 +274,7 @@ Why should we *not* do this?
   - The `ClusterResourceStatusRule` could instead be inlined in the templates.
     - Separating these rules in a separate CRD allows for re-usability of those rules.
   - We could also not require the templates to specify the `ClusterResourceStatusRule` and instead have those rules automatically select templates based on the `kind` and `apiVersion` of the resource they are stamping out.
-    - This could be a bit confusing because of ytt. A template could end up stamping out different types of resources and so Cartographer would only be able to inform users which `ClusterResourceStatusRule` is used for a given template after an owner is applied, and it could then be reflected in the owner status.
+    - This could be a bit confusing because the type of the stamped resource may be templated as well. Therefore, a template could end up stamping out different types of resources and so Cartographer would only be able to inform users which `ClusterResourceStatusRule` is used for a given template after an owner is applied, and it could then be reflected in the owner status.
 - What is the impact of not doing this?
   - Users/UI creators will have to have in depth knowledge of the underlying resources to determine the health of the owner.
 
@@ -292,7 +292,21 @@ N/A
 # Spec. Changes
 [spec-changes]: #spec-changes
 - All templates will now have an optional `resourceStatusRuleRef` which will take a `name`. In the future, it could also take a type and namespace if we introduce namespace-scoped resourceStatusRules.
-- Owner `status.resources` will now have `stampedStatus` on each resource.
+- Owner `status.resources` will now have `stampedStatus` on each resource:
+```yaml
+status:
+  resources:
+    - name: resource1
+      ...
+      stampedStatus:
+        status: <[Healthy|Unhealthy|Unknown]>
+        conditions:
+          - <metav1.Condition>
+        fields:
+          - key: <string>
+            value: <string>
+            message: <string>, omitempty
+```
 - A new CRD, `ClusterResourceStatusRule` will be created with the following spec:
 ```yaml
 ---
