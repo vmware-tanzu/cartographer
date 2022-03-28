@@ -1,6 +1,6 @@
 module github.com/vmware-tanzu/cartographer/hack/tools
 
-go 1.17
+go 1.18
 
 require (
 	github.com/daixiang0/gci v0.3.3

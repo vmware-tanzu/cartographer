@@ -7,7 +7,7 @@ The Cartographer project team welcomes contributions from the community. If you 
 ## Development Dependencies
 
 - [`ctlptl`]: for deploying local changes to a local registry
-- [`go`]: for compiling the controllers as well as other dependencies - 1.17+
+- [`go`]: for compiling the controllers as well as other dependencies - 1.18+
 - [`kapp`]: for managing groups of kubernetes objects in a cluster (like our CRDs etc)
 - [`kbld`]: for resolving image references to absolute ones
 - [`kind`]: to run a local cluster
