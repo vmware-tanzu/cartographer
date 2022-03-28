@@ -13,7 +13,7 @@
     "@openapi-contrib/openapi-schema-to-json-schema": "^3.1.1",
     "@sveltejs/vite-plugin-svelte": "^1.0.0-next.30",
     "@types/json-schema": "^7.0.0",
-    "autoprefixer": "^10.4.2",
+    "autoprefixer": "^10.4.4",
     "js-base64": "^3.7.2",
     "jsonc-parser": "^3.0.0",
     "mermaid": "^8.14.0",
