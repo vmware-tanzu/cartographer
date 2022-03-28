@@ -20,8 +20,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -50,22 +48,6 @@ type SourceTemplateSpec struct {
 	// represents the output of the Template.
 	// RevisionPath is specified in jsonpath format, eg: .status.artifact.revision
 	RevisionPath string `json:"revisionPath"`
-}
-
-// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clustersourcetemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clustersourcetemplates,verbs=create;update,versions=v1alpha1,name=source-template-validator.cartographer.com
-
-var _ webhook.Validator = &ClusterSourceTemplate{}
-
-func (c *ClusterSourceTemplate) ValidateCreate() error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterSourceTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterSourceTemplate) ValidateDelete() error {
-	return nil
 }
 
 // +kubebuilder:object:root=true

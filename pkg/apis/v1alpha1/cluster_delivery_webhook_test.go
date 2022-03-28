@@ -451,7 +451,7 @@ var _ = Describe("Delivery Validation", func() {
 
 		Context("option has invalid label selector", func() {
 			BeforeEach(func() {
-				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{ "not-valid-": "like-this-" }
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{"not-valid-": "like-this-"}
 			})
 
 			It("on create, it rejects the Resource", func() {

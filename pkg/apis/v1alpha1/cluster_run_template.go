@@ -19,14 +19,8 @@
 package v1alpha1
 
 import (
-	"errors"
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/json"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -78,33 +72,4 @@ func init() {
 		&ClusterRunTemplate{},
 		&ClusterRunTemplateList{},
 	)
-}
-
-// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterruntemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterruntemplates,verbs=create;update,versions=v1alpha1,name=run-template-validator.cartographer.com
-
-var _ webhook.Validator = &ClusterRunTemplate{}
-
-func (c *ClusterRunTemplate) ValidateCreate() error {
-	return c.Spec.validate()
-}
-
-func (c *ClusterRunTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.validate()
-}
-
-func (c *ClusterRunTemplate) ValidateDelete() error {
-	return nil
-}
-
-func (t *RunTemplateSpec) validate() error {
-	obj := unstructured.Unstructured{}
-	if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
-		return fmt.Errorf("invalid template: failed to parse object metadata: %w", err)
-	}
-
-	if obj.GetNamespace() != metav1.NamespaceNone {
-		return errors.New("invalid template: template should not set metadata.namespace on the child object")
-	}
-
-	return nil
 }

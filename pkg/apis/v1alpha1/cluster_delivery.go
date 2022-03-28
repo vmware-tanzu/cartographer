@@ -19,12 +19,8 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -162,26 +158,6 @@ type ClusterDeliveryList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterDelivery `json:"items"`
-}
-
-// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterdelivery,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterdeliveries,verbs=create;update,versions=v1alpha1,name=delivery-validator.cartographer.com
-
-var _ webhook.Validator = &ClusterDelivery{}
-
-func (c *ClusterDelivery) ValidateCreate() error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
-	}
-	return nil
 }
 
 func (c *ClusterDelivery) ValidateDelete() error {
