@@ -16,7 +16,35 @@ package v1alpha1
 
 import (
 	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
+
+// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clustersupplychain,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clustersupplychains,verbs=create;update,versions=v1alpha1,name=supply-chain-validator.cartographer.com
+
+var _ webhook.Validator = &ClusterSupplyChain{}
+
+func (c *ClusterSupplyChain) ValidateCreate() error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
+	err := c.validateNewState()
+	if err != nil {
+		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+	}
+	return nil
+}
+
+func (c *ClusterSupplyChain) ValidateDelete() error {
+	return nil
+}
 
 func (c *ClusterSupplyChain) validateNewState() error {
 	names := make(map[string]bool)
@@ -157,4 +185,10 @@ func (c *ClusterSupplyChain) getResourceByName(name string) *SupplyChainResource
 	}
 
 	return nil
+}
+
+func (c *ClusterSupplyChain) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(c).
+		Complete()
 }

@@ -19,11 +19,7 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -89,41 +85,6 @@ type ClusterDeploymentTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterDeploymentTemplate `json:"items"`
-}
-
-var _ webhook.Validator = &ClusterSourceTemplate{}
-
-func (c *ClusterDeploymentTemplate) ValidateCreate() error {
-	return c.validate()
-}
-
-func (c *ClusterDeploymentTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.validate()
-}
-
-func (c *ClusterDeploymentTemplate) ValidateDelete() error {
-	return nil
-}
-
-func (c *ClusterDeploymentTemplate) validate() error {
-	err := c.Spec.TemplateSpec.validate()
-	if err != nil {
-		return err
-	}
-
-	if c.bothConditionsSet() || c.neitherConditionSet() {
-		return fmt.Errorf("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion")
-	}
-
-	return nil
-}
-
-func (c *ClusterDeploymentTemplate) bothConditionsSet() bool {
-	return c.Spec.ObservedMatches != nil && c.Spec.ObservedCompletion != nil
-}
-
-func (c *ClusterDeploymentTemplate) neitherConditionSet() bool {
-	return c.Spec.ObservedMatches == nil && c.Spec.ObservedCompletion == nil
 }
 
 func init() {

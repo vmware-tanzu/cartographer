@@ -23,12 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type Reconciler struct {
@@ -73,7 +76,7 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 			if err != nil {
 				log.Error(err, "failed to get delivery cluster template", "template",
 					fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
-				return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+				return cerrors.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
 			}
 
 			if !found {
@@ -85,7 +88,7 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 				if err != nil {
 					log.Error(err, "failed to get delivery cluster template", "template",
 						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
-					return controller.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+					return cerrors.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
 				}
 
 				if !found {
@@ -142,7 +145,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alp
 	}
 
 	if err != nil {
-		if controller.IsUnhandledError(err) {
+		if cerrors.IsUnhandledError(err) {
 			log.Error(err, "unhandled error reconciling delivery")
 			return ctrl.Result{}, err
 		}
@@ -150,4 +153,28 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alp
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Repo = repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("delivery-repo-cache")),
+	)
+
+	r.DependencyTracker = dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		mgr.GetLogger().WithName("tracker-delivery"),
+	)
+
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.ClusterDelivery{})
+
+	for _, template := range v1alpha1.ValidDeliveryTemplates {
+		builder = builder.Watches(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, r.DependencyTracker, mgr.GetScheme()),
+		)
+	}
+
+	return builder.Complete(r)
 }

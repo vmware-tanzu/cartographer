@@ -110,60 +110,6 @@ var _ = Describe("ClusterSupplyChain", func() {
 			Expect(jsonValue).To(ContainSubstring("omitempty"))
 		})
 	})
-	Describe("GetSelectorsFromObject", func() {
-		var expectedSelectors, actualSelectors []string
-		Context("when object is a supply chain", func() {
-			var sc *v1alpha1.ClusterSupplyChain
-
-			BeforeEach(func() {
-				sc = &v1alpha1.ClusterSupplyChain{Spec: v1alpha1.SupplyChainSpec{}}
-			})
-			Context("given a supply chain with 0 selectors", func() {
-				BeforeEach(func() {
-					actualSelectors = v1alpha1.GetSelectorsFromObject(sc)
-				})
-				It("returns an empty list", func() {
-					expectedSelectors = []string{}
-					Expect(actualSelectors).To(ConsistOf(expectedSelectors))
-				})
-			})
-			Context("given a supply chain with 1 selector", func() {
-				BeforeEach(func() {
-					sc.Spec.Selector = map[string]string{"some-key": "some-val"}
-					actualSelectors = v1alpha1.GetSelectorsFromObject(sc)
-				})
-
-				It("returns a list with only the string concatenation of the key-value", func() {
-					expectedSelectors = []string{"some-key: some-val"}
-					Expect(actualSelectors).To(ConsistOf(expectedSelectors))
-				})
-			})
-			Context("given a supply chain with many selectors", func() {
-				BeforeEach(func() {
-					sc.Spec.Selector = map[string]string{
-						"some-key":    "some-val",
-						"another-key": "another-val",
-					}
-					actualSelectors = v1alpha1.GetSelectorsFromObject(sc)
-				})
-
-				It("returns a list with string concatenations of each key-value", func() {
-					expectedSelectors = []string{"some-key: some-val", "another-key: another-val"}
-					Expect(actualSelectors).To(ConsistOf(expectedSelectors))
-				})
-			})
-		})
-
-		Context("when object is not a supply chain", func() {
-			BeforeEach(func() {
-				actualSelectors = v1alpha1.GetSelectorsFromObject(&v1alpha1.Workload{})
-			})
-			It("returns an empty list", func() {
-				expectedSelectors = []string{}
-				Expect(actualSelectors).To(ConsistOf(expectedSelectors))
-			})
-		})
-	})
 
 	Describe("SupplyChainTemplateReference", func() {
 		It("has four valid references", func() {

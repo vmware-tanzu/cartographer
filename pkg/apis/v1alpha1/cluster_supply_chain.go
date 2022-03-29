@@ -19,10 +19,7 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -167,42 +164,8 @@ type ClusterSupplyChainList struct {
 	Items           []ClusterSupplyChain `json:"items"`
 }
 
-func (c *ClusterSupplyChain) ValidateCreate() error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterSupplyChain) ValidateDelete() error {
-	return nil
-}
-
 func (c *ClusterSupplyChain) GetSelectors() LegacySelector {
 	return c.Spec.LegacySelector
-}
-
-func GetSelectorsFromObject(o client.Object) []string {
-	var res []string
-	res = []string{}
-
-	sc, ok := o.(*ClusterSupplyChain)
-	if ok {
-		for key, value := range sc.Spec.Selector {
-			res = append(res, fmt.Sprintf("%s: %s", key, value))
-		}
-	}
-
-	return res
 }
 
 func init() {

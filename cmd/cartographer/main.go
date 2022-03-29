@@ -44,13 +44,13 @@ func main() {
 		panic(err)
 	}
 
-	cmd := cmd.Command{
+	c := cmd.Command{
 		Port:    port,
 		CertDir: certDir,
 		Logger:  zap.New(loggerOpt, zap.UseDevMode(devMode)),
 	}
 
-	if err = cmd.Execute(ctrl.SetupSignalHandler()); err != nil {
+	if err = c.Execute(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
 	}
 }

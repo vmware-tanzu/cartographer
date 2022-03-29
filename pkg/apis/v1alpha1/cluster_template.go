@@ -19,13 +19,8 @@
 package v1alpha1
 
 import (
-	"errors"
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/json"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -68,39 +63,6 @@ type TemplateSpec struct {
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
 	// +optional
 	Params TemplateParams `json:"params,omitempty"`
-}
-
-var _ webhook.Validator = &ClusterTemplate{}
-
-func (c *ClusterTemplate) ValidateCreate() error {
-	return c.Spec.validate()
-}
-
-func (c *ClusterTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.validate()
-}
-
-func (c *ClusterTemplate) ValidateDelete() error {
-	return nil
-}
-
-func (t *TemplateSpec) validate() error {
-	if t.Template == nil && t.Ytt == "" {
-		return fmt.Errorf("invalid template: must specify one of template or ytt, found neither")
-	}
-	if t.Template != nil && t.Ytt != "" {
-		return fmt.Errorf("invalid template: must specify one of template or ytt, found both")
-	}
-	if t.Template != nil {
-		obj := metav1.PartialObjectMetadata{}
-		if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
-			return fmt.Errorf("invalid template: failed to parse object metadata: %w", err)
-		}
-		if obj.Namespace != metav1.NamespaceNone {
-			return errors.New("invalid template: template should not set metadata.namespace on the child object")
-		}
-	}
-	return nil
 }
 
 // +kubebuilder:object:root=true

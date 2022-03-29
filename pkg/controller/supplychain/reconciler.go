@@ -23,12 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/controller"
+	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type Timer interface {
@@ -85,7 +88,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 	}
 
 	if err != nil {
-		if controller.IsUnhandledError(err) {
+		if cerrors.IsUnhandledError(err) {
 			log.Error(err, "unhandled error reconciling supply chain")
 			return ctrl.Result{}, err
 		}
@@ -105,7 +108,7 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 			if err != nil {
 				log.Error(err, "failed to get cluster template", "template",
 					fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
-				return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
+				return cerrors.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
 			}
 
 			if !found {
@@ -117,7 +120,7 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 				if err != nil {
 					log.Error(err, "failed to get cluster template", "template",
 						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
-					return controller.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
+					return cerrors.NewUnhandledError(fmt.Errorf("failed to get cluster template: %w", err))
 				}
 
 				if !found {
@@ -156,4 +159,29 @@ func (r *Reconciler) validateResource(ctx context.Context, supplyChain *v1alpha1
 	})
 
 	return template != nil, nil
+}
+
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Repo = repository.NewRepository(
+		mgr.GetClient(),
+		repository.NewCache(mgr.GetLogger().WithName("supply-chain-repo-cache")),
+	)
+
+	r.ConditionManagerBuilder = conditions.NewConditionManager
+	r.DependencyTracker = dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		mgr.GetLogger().WithName("tracker-supply-chain"),
+	)
+
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.ClusterSupplyChain{})
+
+	for _, template := range v1alpha1.ValidSupplyChainTemplates {
+		builder = builder.Watches(
+			&source.Kind{Type: template},
+			enqueuer.EnqueueTracked(template, r.DependencyTracker, mgr.GetScheme()),
+		)
+	}
+
+	return builder.Complete(r)
 }

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Copyright 2021 VMware
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,29 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+#@ load("@ytt:overlay", "overlay")
 
-ROOT=$(cd "$(dirname $0)/.." && pwd)
-readonly ROOT
+#@overlay/match by=overlay.subset({"kind": "ValidatingWebhookConfiguration"})
 
-readonly RELEASE_NOTES_FILE=${RELEASE_NOTES:-$ROOT/release/CHANGELOG.md}
-readonly ASSETS_DIR=${ASSETS_DIR:-$ROOT/release}
-readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
+---
+metadata:
+  #@overlay/match missing_ok=True
+  annotations:
+    cert-manager.io/inject-ca-from: cartographer-system/cartographer-webhook
 
-main() {
-  cd $ROOT
-  submit_release_to_github $RELEASE_VERSION
-}
-
-submit_release_to_github() {
-  local version=$1
-
-  gh release create $version \
-    --draft \
-    --notes-file $RELEASE_NOTES_FILE \
-    ./release/cartographer.yaml
-}
-
-main "$@"
+webhooks:
+  #@overlay/match by=overlay.all, expects="1+"
+  -
+    clientConfig:
+      service:
+        name: cartographer-webhook
+        namespace: cartographer-system
+    rules:
+      #@overlay/match by=overlay.all, expects="1+"
+      -
+        #@overlay/match missing_ok=True
+        scope: Cluster
