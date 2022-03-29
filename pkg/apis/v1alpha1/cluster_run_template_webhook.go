@@ -30,20 +30,31 @@ import (
 var _ webhook.Validator = &ClusterRunTemplate{}
 
 func (c *ClusterRunTemplate) ValidateCreate() error {
-	return c.Spec.validate()
+	if err := c.validate(); err != nil {
+		return fmt.Errorf("error validating clusterruntemplate [%s]: %w", c.Name, err)
+	}
+	return nil
 }
 
 func (c *ClusterRunTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.validate()
+	if err := c.validate(); err != nil {
+		return fmt.Errorf("error validating clusterruntemplate [%s]: %w", c.Name, err)
+	}
+	return nil
 }
 
 func (c *ClusterRunTemplate) ValidateDelete() error {
 	return nil
 }
 
-func (t *RunTemplateSpec) validate() error {
+func (c *ClusterRunTemplate) validate() error {
+	err := validateName(c.ObjectMeta)
+	if err != nil {
+		return err
+	}
+
 	obj := unstructured.Unstructured{}
-	if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
+	if err := json.Unmarshal(c.Spec.Template.Raw, &obj); err != nil {
 		return fmt.Errorf("invalid template: failed to parse object: %w", err)
 	}
 

@@ -54,7 +54,7 @@ var _ = Describe("DeliverableValidation", func() {
 		It("Rejects the deliverable", func() {
 			err := c.Create(ctx, deliverable)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring("deliverable name is not a DNS 1035 label")))
+			Expect(err).To(MatchError(ContainSubstring("name is not a DNS 1035 label")))
 		})
 	})
 

@@ -147,5 +147,9 @@ func registerWebhooks(mgr manager.Manager) error {
 		return fmt.Errorf("failed to setup deliverable webhook: %w", err)
 	}
 
+	if err := (&v1alpha1.Runnable{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup runnable webhook: %w", err)
+	}
+
 	return nil
 }

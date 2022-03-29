@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supplychain_test
+package runnable_test
 
 import (
 	"context"
@@ -24,17 +24,26 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-var _ = Describe("WorkloadValidation", func() {
+var _ = Describe("RunnableValidation", func() {
 	var (
 		ctx      context.Context
-		workload *v1alpha1.Workload
+		runnable *v1alpha1.Runnable
 	)
 
-	var NamedWorkload = func(name string) *v1alpha1.Workload {
-		return &v1alpha1.Workload{
+	var NamedRunnable = func(name string) *v1alpha1.Runnable {
+		return &v1alpha1.Runnable{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: "default",
+			},
+			Spec: v1alpha1.RunnableSpec{
+				RunTemplateRef: v1alpha1.TemplateReference{
+					Name: "run-template-name",
+				},
+				RetentionPolicy: v1alpha1.RetentionPolicy{
+					MaxFailedRuns:     1,
+					MaxSuccessfulRuns: 1,
+				},
 			},
 		}
 	}
@@ -44,26 +53,26 @@ var _ = Describe("WorkloadValidation", func() {
 	})
 
 	AfterEach(func() {
-		_ = c.Delete(ctx, workload)
+		_ = c.Delete(ctx, runnable)
 	})
 
-	Context("Workload with bad name", func() {
+	Context("Runnable with bad name", func() {
 		BeforeEach(func() {
-			workload = NamedWorkload("java-web-app-2.6")
+			runnable = NamedRunnable("java-web-app-2.6")
 		})
-		It("Rejects the workload", func() {
-			err := c.Create(ctx, workload)
+		It("Rejects the runnable", func() {
+			err := c.Create(ctx, runnable)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("name is not a DNS 1035 label")))
 		})
 	})
 
-	Context("Workload with okay name", func() {
+	Context("Runnable with okay name", func() {
 		BeforeEach(func() {
-			workload = NamedWorkload("java-web-app-2-6")
+			runnable = NamedRunnable("java-web-app-2-6")
 		})
-		It("Accepts the workload", func() {
-			err := c.Create(ctx, workload)
+		It("Accepts the runnable", func() {
+			err := c.Create(ctx, runnable)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

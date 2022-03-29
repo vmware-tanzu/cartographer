@@ -21,54 +21,54 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-var _ = Describe("Workload Webhook Validation", func() {
-	var workload *v1alpha1.Workload
+var _ = Describe("Runnable Webhook Validation", func() {
+	var runnable *v1alpha1.Runnable
 	BeforeEach(func() {
-		workload = &v1alpha1.Workload{}
+		runnable = &v1alpha1.Runnable{}
 	})
 
-	Context("Workload has a name", func() {
+	Context("Runnable has a name", func() {
 		Context("the name is bad", func() {
 			BeforeEach(func() {
-				workload.Name = "java-web-app-2.6"
+				runnable.Name = "java-web-app-2.6"
 			})
-			It("rejects the workload", func() {
-				Expect(workload.ValidateCreate()).To(MatchError(ContainSubstring("name is not a DNS 1035 label")))
+			It("rejects the runnable", func() {
+				Expect(runnable.ValidateCreate()).To(MatchError(ContainSubstring("name is not a DNS 1035 label")))
 			})
 		})
 		Context("the name is good", func() {
 			BeforeEach(func() {
-				workload.Name = "java-web-app-2-6"
+				runnable.Name = "java-web-app-2-6"
 			})
-			It("accepts the workload", func() {
-				Expect(workload.ValidateCreate()).NotTo(HaveOccurred())
+			It("accepts the runnable", func() {
+				Expect(runnable.ValidateCreate()).NotTo(HaveOccurred())
 			})
 		})
 
 	})
 
-	Context("Workload has a generateName", func() {
+	Context("Runnable has a generateName", func() {
 		Context("the generateName is bad", func() {
 			BeforeEach(func() {
-				workload.GenerateName = "java-web-app-2.6"
+				runnable.GenerateName = "java-web-app-2.6"
 			})
-			It("rejects the workload", func() {
-				Expect(workload.ValidateCreate()).To(MatchError(ContainSubstring("generateName is not a DNS 1035 label prefix")))
+			It("rejects the runnable", func() {
+				Expect(runnable.ValidateCreate()).To(MatchError(ContainSubstring("generateName is not a DNS 1035 label prefix")))
 			})
 		})
 		Context("the generateName is good", func() {
 			BeforeEach(func() {
-				workload.GenerateName = "java-web-app-2-6"
+				runnable.GenerateName = "java-web-app-2-6"
 			})
-			It("accepts the workload", func() {
-				Expect(workload.ValidateCreate()).NotTo(HaveOccurred())
+			It("accepts the runnable", func() {
+				Expect(runnable.ValidateCreate()).NotTo(HaveOccurred())
 			})
 		})
 	})
 
-	Context("Workload does not have a name or a generateName", func() {
-		It("rejects the workload", func() {
-			Expect(workload.ValidateCreate()).To(MatchError(ContainSubstring("name or generateName is required")))
+	Context("Runnable does not have a name or a generateName", func() {
+		It("rejects the runnable", func() {
+			Expect(runnable.ValidateCreate()).To(MatchError(ContainSubstring("name or generateName is required")))
 		})
 	})
 })

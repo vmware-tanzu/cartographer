@@ -33,7 +33,7 @@ var _ = Describe("Deliverable Webhook Validation", func() {
 				deliverable.Name = "java-web-app-2.6"
 			})
 			It("rejects the deliverable", func() {
-				Expect(deliverable.ValidateCreate()).To(MatchError(ContainSubstring("deliverable name is not a DNS 1035 label")))
+				Expect(deliverable.ValidateCreate()).To(MatchError(ContainSubstring("name is not a DNS 1035 label")))
 			})
 		})
 		Context("the name is good", func() {
@@ -53,7 +53,7 @@ var _ = Describe("Deliverable Webhook Validation", func() {
 				deliverable.GenerateName = "java-web-app-2.6"
 			})
 			It("rejects the deliverable", func() {
-				Expect(deliverable.ValidateCreate()).To(MatchError(ContainSubstring("deliverable generateName is not a DNS 1035 label prefix")))
+				Expect(deliverable.ValidateCreate()).To(MatchError(ContainSubstring("generateName is not a DNS 1035 label prefix")))
 			})
 		})
 		Context("the generateName is good", func() {

@@ -85,14 +85,14 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("returns an error", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
+						To(MatchError("error validating clustertemplate [some-template]: invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
 
 			Context("template missing", func() {
 				It("succeeds", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
+						To(MatchError("error validating clustertemplate [some-template]: invalid template: must specify one of template or ytt, found neither"))
 				})
 			})
 
@@ -117,7 +117,7 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("succeeds", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid template: must specify one of template or ytt, found both"))
+						To(MatchError("error validating clustertemplate [some-template]: invalid template: must specify one of template or ytt, found both"))
 				})
 			})
 		})
@@ -167,14 +167,14 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("returns an error", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
+						To(MatchError("error validating clustertemplate [some-template]: invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
 
 			Context("template missing", func() {
 				It("succeeds", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
+						To(MatchError("error validating clustertemplate [some-template]: invalid template: must specify one of template or ytt, found neither"))
 				})
 			})
 
@@ -199,7 +199,7 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("succeeds", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid template: must specify one of template or ytt, found both"))
+						To(MatchError("error validating clustertemplate [some-template]: invalid template: must specify one of template or ytt, found both"))
 				})
 			})
 		})
