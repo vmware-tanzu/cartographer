@@ -114,7 +114,7 @@ var _ = Describe("Realize", func() {
 		})
 
 		It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
-			realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
+			realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil, nil)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
@@ -149,7 +149,7 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 			resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-			realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil)
+			realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, nil, nil)
 			Expect(err).To(MatchError("realizing is hard"))
 			Expect(realizedResources).To(HaveLen(2))
 
@@ -329,7 +329,7 @@ var _ = Describe("Realize", func() {
 			}
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, obj, oldOutput2, nil)
 
-			realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, previousResources)
+			realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, previousResources, nil)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(len(realizedResources[0].Outputs)).To(Equal(2))
@@ -369,7 +369,7 @@ var _ = Describe("Realize", func() {
 			})
 
 			It("the status uses the previous resource for resource 1 and resource 2", func() {
-				realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, previousResources)
+				realizedResources, err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, previousResources, nil)
 				Expect(err).To(MatchError("im in a bad state"))
 				Expect(realizedResources).To(HaveLen(3))
 

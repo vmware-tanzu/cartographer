@@ -102,12 +102,15 @@ func registerWorkloadController(mgr manager.Manager) error {
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
 	)
 
+	recorder := mgr.GetEventRecorderFor("workload-controller")
+
 	reconciler := &workload.Reconciler{
 		Repo:                    repo,
 		ConditionManagerBuilder: conditions.NewConditionManager,
 		ResourceRealizerBuilder: realizerworkload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache"))),
-		Realizer:                realizerworkload.NewRealizer(),
+		Realizer:                realizerworkload.NewRealizer(recorder),
 		DependencyTracker:       dependency.NewDependencyTracker(2*defaultResyncTime, mgr.GetLogger().WithName("tracker-workload")),
+		EventRecorder:           recorder,
 	}
 
 	ctrl, err := pkgcontroller.New("workload", mgr, pkgcontroller.Options{

@@ -30,7 +30,7 @@ type FakeRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRealizer, arg3 *v1alpha1.ClusterSupplyChain, arg4 []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func (fake *FakeRealizer) Realize(ctx context.Context, resourceRealizer workload.ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource, workload *v1alpha1.Workload) ([]v1alpha1.RealizedResource, error) {
 	var arg4Copy []v1alpha1.RealizedResource
 	if arg4 != nil {
 		arg4Copy = make([]v1alpha1.RealizedResource, len(arg4))

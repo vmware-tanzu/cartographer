@@ -54,6 +54,7 @@ type Repository interface {
 	GetScheme() *runtime.Scheme
 	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
 	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
+	//EmitEvent(ctx context.Context, eventType string) error
 }
 
 type RepositoryBuilder func(client client.Client, repoCache RepoCache) Repository
@@ -62,6 +63,15 @@ type repository struct {
 	rc RepoCache
 	cl client.Client
 }
+//
+//func (r *repository) EmitEvent(ctx context.Context, event v1.Event) error {
+//
+//	if err := r.cl.Create(ctx, obj); err != nil {
+//		return fmt.Errorf("create event: %w", err)
+//	}
+//
+//	return nil
+//}
 
 func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	return &repository{

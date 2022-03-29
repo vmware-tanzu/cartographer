@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
@@ -32,16 +33,20 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource, workload *v1alpha1.Workload) ([]v1alpha1.RealizedResource, error)
 }
 
-type realizer struct{}
-
-func NewRealizer() Realizer {
-	return &realizer{}
+type realizer struct{
+	EventRecorder record.EventRecorder
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func NewRealizer(eventRecorder record.EventRecorder) Realizer {
+	return &realizer{
+		EventRecorder: eventRecorder,
+	}
+}
+
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource, workload *v1alpha1.Workload) ([]v1alpha1.RealizedResource, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
@@ -54,6 +59,15 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
 
 		if stampedObject != nil {
+			r.EventRecorder.Eventf(
+				workload,
+				"Normal",
+				"Stamped",
+				"stamped resource [gvk: %s, name: %s, namespace: %s]",
+				stampedObject.GetObjectKind().GroupVersionKind().String(),
+				stampedObject.GetName(),
+				stampedObject.GetNamespace(),
+			)
 			log.V(logger.DEBUG).Info("realized resource as object",
 				"object", stampedObject)
 		}

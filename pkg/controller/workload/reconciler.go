@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -51,6 +52,7 @@ type Reconciler struct {
 	conditionManager        conditions.ConditionManager
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
+	EventRecorder           record.EventRecorder
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -95,6 +97,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 	}
 
+	if workload.Status.SupplyChainRef.Kind != supplyChainGVK.Kind || workload.Status.SupplyChainRef.Name != supplyChain.Name {
+		r.EventRecorder.Eventf(
+			workload,
+			"Normal",
+			"ChangedSelectedSupplyChain",
+			"selected ClusterSupplyChain was [kind: %s, name: %s], now it is [kind: %s, name: %s]",
+			workload.Status.SupplyChainRef.Kind,
+			supplyChainGVK.Kind,
+			workload.Status.SupplyChainRef.Name,
+			supplyChain.Name,
+		)
+	}
+
 	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
 	workload.Status.SupplyChainRef.Name = supplyChain.Name
 
@@ -122,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources, workload)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
