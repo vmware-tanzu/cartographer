@@ -1,0 +1,89 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterBlueprint
+metadata:
+  name:
+spec:
+  # optional
+  selector:
+
+  resources:
+    - name: first-resource
+      # mutually exclusive
+      inputs:
+        - resource: zero-resource
+          output: zoo
+          name: zoo-resource-name
+      inline:
+        template:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: example-first-configmap
+          data:
+            player_initial_lives: "three"
+            player_loves: "gaming"
+
+        outputs:
+          - name: foo
+            valuePath: .status.url
+
+    - name: second-resource
+      options:
+        - name: another-blueprint
+        - name: diff-blueprint
+      inputs:
+        - resource: first-resource
+          output: foo
+          name: a-new-resource-name
+        - resource: zero-resource
+          output: zoo
+          name: a-new-resource-name
+
+    - name: third-resource
+      blueprintName: another-another-blueprint
+      inputs:
+        - resource: first-resource
+          output: foo
+          name: a-new-resource-name
+        - resource: second-resource
+          output: bar
+          name: another-new-name
+
+  outputs:
+    - name: baz
+      valuePath: resources[first-resource].outputs[foo]
+    - name: fizz
+      valuePath: resources[second-resource].outputs[bar]
+
+
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterBlueprint
+metadata:
+  name:
+spec:
+  # optional
+  selector:
+
+  # mutually exclusive
+  resources:
+    - name: source-provider-first
+      templateRef:
+        kind: ClusterBlueprint
+        options:
+          - name: example-first---consume-output-of-resources
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-first-configmap
+    data:
+      player_initial_lives: "three"
+      player_loves: "gaming"
+  ytt: jijkljdjl
+
+  outputs:
+    - name: url
+      valuePath: .status.url
