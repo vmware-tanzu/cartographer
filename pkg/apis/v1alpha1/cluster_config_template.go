@@ -20,8 +20,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -45,22 +43,6 @@ type ConfigTemplateSpec struct {
 	// components of the deployable image.
 	// ConfigPath is specified in jsonpath format, eg: .data
 	ConfigPath string `json:"configPath"`
-}
-
-// +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterconfigtemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterconfigtemplates,verbs=create;update,versions=v1alpha1,name=config-template-validator.cartographer.com
-
-var _ webhook.Validator = &ClusterConfigTemplate{}
-
-func (c *ClusterConfigTemplate) ValidateCreate() error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterConfigTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterConfigTemplate) ValidateDelete() error {
-	return nil
 }
 
 // +kubebuilder:object:root=true

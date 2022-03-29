@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registrar_test
+package mapper_test
 
 import (
 	"context"
@@ -30,25 +30,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/registrar"
-	"github.com/vmware-tanzu/cartographer/pkg/registrar/registrarfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/mapper"
+	"github.com/vmware-tanzu/cartographer/pkg/mapper/mapperfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 )
 
 var _ = Describe("MapFunctions", func() {
 	var (
-		m           *registrar.Mapper
-		fakeLogger  *registrarfakes.FakeLogger
-		fakeClient  *registrarfakes.FakeClient
+		m           *mapper.Mapper
+		fakeLogger  *mapperfakes.FakeLogger
+		fakeClient  *mapperfakes.FakeClient
 		fakeTracker *dependencyfakes.FakeDependencyTracker
 	)
 
 	BeforeEach(func() {
-		fakeLogger = &registrarfakes.FakeLogger{}
-		fakeClient = &registrarfakes.FakeClient{}
+		fakeLogger = &mapperfakes.FakeLogger{}
+		fakeClient = &mapperfakes.FakeClient{}
 		fakeTracker = &dependencyfakes.FakeDependencyTracker{}
 
-		m = &registrar.Mapper{
+		m = &mapper.Mapper{
 			Client:  fakeClient,
 			Logger:  fakeLogger,
 			Tracker: fakeTracker,

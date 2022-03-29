@@ -15,11 +15,13 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/util/jsonpath"
 )
 
@@ -154,5 +156,24 @@ func validateLegacySelector(selectors LegacySelector, validPaths map[string]bool
 		}
 	}
 
+	return nil
+}
+
+func (t *TemplateSpec) validate() error {
+	if t.Template == nil && t.Ytt == "" {
+		return fmt.Errorf("invalid template: must specify one of template or ytt, found neither")
+	}
+	if t.Template != nil && t.Ytt != "" {
+		return fmt.Errorf("invalid template: must specify one of template or ytt, found both")
+	}
+	if t.Template != nil {
+		obj := unstructured.Unstructured{}
+		if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
+			return fmt.Errorf("invalid template: failed to parse object: %w", err)
+		}
+		if obj.GetNamespace() != metav1.NamespaceNone {
+			return fmt.Errorf("invalid template: template should not set metadata.namespace on the child object")
+		}
+	}
 	return nil
 }

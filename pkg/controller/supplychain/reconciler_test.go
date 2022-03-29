@@ -33,9 +33,9 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
-	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -92,7 +92,7 @@ var _ = Describe("Reconciler", func() {
 		repo.GetSupplyChainReturns(sc, nil)
 
 		scheme := runtime.NewScheme()
-		err := registrar.AddToScheme(scheme)
+		err := utils.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 

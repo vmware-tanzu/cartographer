@@ -360,7 +360,7 @@ var _ = Describe("Deliveries", func() {
 				metadata:
 				  name: my-terminal-template
 				spec:
-				  template:
+                  template:
                     apiVersion: v1
                     kind: ConfigMap
                     metadata:

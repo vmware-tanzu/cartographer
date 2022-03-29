@@ -41,12 +41,12 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/registrar"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -88,7 +88,7 @@ var _ = Describe("Reconciler", func() {
 
 		repo = &repositoryfakes.FakeRepository{}
 		scheme := runtime.NewScheme()
-		err := registrar.AddToScheme(scheme)
+		err := utils.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
