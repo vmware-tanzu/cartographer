@@ -23,7 +23,7 @@
     "path-browserify": "^1.0.0",
     "postcss": "^8.4.12",
     "postcss-load-config": "^3.1.1",
-    "prettier": "2.0.5",
+    "prettier": "2.6.1",
     "svelte": "^3.44.0",
     "svelte-copy-to-clipboard": "^0.2.5",
     "svelte-preprocess": "^4.10.4",
