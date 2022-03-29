@@ -56,24 +56,24 @@
   dependencies:
     fast-deep-equal "^3.1.3"
 
-"@rollup/pluginutils@^4.1.2":
-  version "4.1.2"
-  resolved "https://registry.yarnpkg.com/@rollup/pluginutils/-/pluginutils-4.1.2.tgz#ed5821c15e5e05e32816f5fb9ec607cdf5a75751"
-  integrity sha512-ROn4qvkxP9SyPeHaf7uQC/GPFY6L/OWy9+bd9AwcjOAWQwxRscoEyAUD8qCY5o5iL4jqQwoLk2kaTKJPb/HwzQ==
+"@rollup/pluginutils@^4.2.0":
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/@rollup/pluginutils/-/pluginutils-4.2.0.tgz#a14bbd058fdbba0a5647143b16ed0d86fb60bd08"
+  integrity sha512-2WUyJNRkyH5p487pGnn4tWAsxhEFKN/pT8CMgHshd5H+IXkOnKvKZwsz5ZWz+YCXkleZRAU5kwbfgF8CPfDRqA==
   dependencies:
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
-"@sveltejs/vite-plugin-svelte@^1.0.0-next.30":
-  version "1.0.0-next.36"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.36.tgz#c515f6216dcb8797722dade17b64244d799ad667"
-  integrity sha512-X7lTiioTGC3ri5M299fxc2dimuKU7f22zTXcmD+NrF+fO9/b7YNfLeQQwWV7Tvv9REysMlR4G2HQF6+lY62p/Q==
+"@sveltejs/vite-plugin-svelte@^1.0.0-next.40":
+  version "1.0.0-next.40"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.0-next.40.tgz#8f39cd5fa5400697bef1cefe112e77f08b90c23e"
+  integrity sha512-DtXF01fYGEJkbC7GntU/7jaq9M1SwyyNCkbDA+cfQSXRpm3H7zbu0M80wSQBSpntdd+hgSdxKCxv4GgX6/zI6w==
   dependencies:
-    "@rollup/pluginutils" "^4.1.2"
+    "@rollup/pluginutils" "^4.2.0"
     debug "^4.3.3"
     kleur "^4.1.4"
-    magic-string "^0.25.7"
-    svelte-hmr "^0.14.9"
+    magic-string "^0.26.1"
+    svelte-hmr "^0.14.11"
 
 "@types/json-schema@^7.0.0":
   version "7.0.9"
@@ -1252,6 +1252,13 @@ magic-string@^0.25.7:
   dependencies:
     sourcemap-codec "^1.4.4"
 
+magic-string@^0.26.1:
+  version "0.26.1"
+  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.26.1.tgz#ba9b651354fa9512474199acecf9c6dbe93f97fd"
+  integrity sha512-ndThHmvgtieXe8J/VGPjG+Apu7v7ItcD5mhEIvOscWjPF/ccOiLxHaSuCAS2G+3x4GKsAbT8u7zdyamupui8Tg==
+  dependencies:
+    sourcemap-codec "^1.4.8"
+
 merge2@^1.3.0:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/merge2/-/merge2-1.4.1.tgz#4368892f885e907455a6fd7dc55c0c9d404990ae"
@@ -1552,7 +1559,7 @@ source-map-js@^1.0.2:
   resolved "https://registry.yarnpkg.com/source-map-js/-/source-map-js-1.0.2.tgz#adbc361d9c62df380125e7f161f71c826f1e490c"
   integrity sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==
 
-sourcemap-codec@^1.3.0, sourcemap-codec@^1.4.4:
+sourcemap-codec@^1.3.0, sourcemap-codec@^1.4.4, sourcemap-codec@^1.4.8:
   version "1.4.8"
   resolved "https://registry.yarnpkg.com/sourcemap-codec/-/sourcemap-codec-1.4.8.tgz#ea804bd94857402e6992d05a38ef1ae35a9ab4c4"
   integrity sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==
@@ -1593,10 +1600,10 @@ svelte-copy-to-clipboard@^0.2.5:
   resolved "https://registry.yarnpkg.com/svelte-copy-to-clipboard/-/svelte-copy-to-clipboard-0.2.5.tgz#4fd5c89a6415b7f6a4e153a9896b50b2dee12611"
   integrity sha512-EAULxib4pRa59nyz25dDKITgSAVkrNVojRZVCSO8MIFd5GJljghJaCTIe/7R+O3GxKYIwJ3XHDNoY1hfjJeyEg==
 
-svelte-hmr@^0.14.9:
-  version "0.14.9"
-  resolved "https://registry.yarnpkg.com/svelte-hmr/-/svelte-hmr-0.14.9.tgz#35f277efc789e1a6230185717347cddb2f8e9833"
-  integrity sha512-bKE9+4qb4sAnA+TKHiYurUl970rjA0XmlP9TEP7K/ncyWz3m81kA4HOgmlZK/7irGK7gzZlaPDI3cmf8fp/+tg==
+svelte-hmr@^0.14.11:
+  version "0.14.11"
+  resolved "https://registry.yarnpkg.com/svelte-hmr/-/svelte-hmr-0.14.11.tgz#63d532dc9c2c849ab708592f034765fa2502e568"
+  integrity sha512-R9CVfX6DXxW1Kn45Jtmx+yUe+sPhrbYSUp7TkzbW0jI5fVPn6lsNG9NEs5dFg5qRhFNAoVdRw5qQDLALNKhwbQ==
 
 svelte-preprocess@^4.10.1:
   version "4.10.3"
