@@ -26,26 +26,11 @@ The RFC proposes modifying the existing templates to allow template authors to i
 # What it is
 [what-it-is]: #what-it-is
 
-This RFC proposes creating a new CRD, `ClusterResourceStatusRule`. Template authors use this CRD to define the conditions or fields on a stamped resource that determine whether the resource is succeeding or failing. The template author then references this `ClusterResourceStatusRule` from their template.
+This RFC proposes adding a field to the spec of all templates, `healthyConditionRule`. Template authors use field to define the conditions or fields on a stamped resource that determine whether the resource is succeeding or failing.
 
 Cartographer will attempt to read the specified conditions and/or fields and reflect this state on the owner status. If Cartographer cannot determine success or failure, it will show the state as unknown.
 
 ```yaml
----
-apiVersion: carto.run/v1alpha1
-kind: ClusterResourceStatusRule
-metadata:
-  name: ready-rule
-spec:
-  healthy:
-    matchConditions:
-      - type: Ready
-        status: 'True'
-  unhealthy:
-    matchConditions:
-      - type: Ready
-        status: 'False'
-
 ---
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
@@ -55,179 +40,130 @@ spec:
   urlPath: .status.artifact.url
   revisionPath: .status.artifact.revision
 
-  resourceStatusRef:
-    name: ready-rule
+  healthyConditionRule:
+    singleConditionType: Ready
 
   template:
     apiVersion: source.toolkit.fluxcd.io/v1beta1
     kind: GitRepository
-    metadata:
-      name: $(workload.metadata.name)$
-    spec:
-      ...
-    
+
 ---
 apiVersion: carto.run/v1alpha1
 kind: Workload
-metadata:
-  ...
-spec:
-  ...
 status:
-  conditions:
-    ...
   resources:
     - name: source-provider
-      outputs:
-        ...
-      stampedRef:
-        ...
-      templateRef:
-        apiVersion: carto.run/v1alpha1
-        kind: ClusterSourceTemplate
-        name: source
-      stampedStatus:
-        status: 'Healthy'
-        conditions:
-          - type: Ready
-            status: 'True'
-            message: 'Fetched revision: main/...'
-            reason: GitOperationSucceeded
-            lastTransitionTime: "2022-03-23T13:08:22Z"
+      conditions:
+        - type: Healthy
+          status: 'True'
+          message: 'Fetched revision: main/...'
+          reason: ReadyCondition
+          lastTransitionTime: "2022-03-23T13:08:22Z"
     - name: source-provider-2
-      outputs:
-        ...
-      stampedRef:
-        ...
-      templateRef:
-        apiVersion: carto.run/v1alpha1
-        kind: ClusterSourceTemplate
-        name: source
-      stampedStatus:
-        status: 'Unknown'
+      conditions:
+        - type: Healthy
+          status: 'Unknown'
 ```
 
 ```yaml
----
-apiVersion: carto.run/v1alpha1
-kind: ClusterResourceStatusRule
-metadata:
-  name: kapp-rule
-spec:
-  healthy:
-    matchConditions:
-      - type: ReconcileSucceeded
-        status: 'True'
-  unhealthy:
-    matchFields:
-      - key: 'status.conditions[?(@.type=="ReconcileFailed")].status'
-        operator: 'In'
-        values: ['True']
-        messagePath: '.status.usefulErrorMessage'
-
 ---
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
   name: deploy
 spec:
-  resourceStatusRef:
-    name: kapp-rule
+  healthyConditionRule:
+    multiMatch:
+      healthy:
+        matchConditions:
+          - type: ReconcileSucceeded
+            status: 'True'
+      unhealthy:
+        matchFields:
+          - key: 'status.conditions[?(@.type=="ReconcileFailed")].status'
+            operator: 'In'
+            values: ['True']
+            messagePath: '.status.usefulErrorMessage'
 
   template:
     apiVersion: kappctrl.k14s.io/v1alpha1
     kind: App
-    metadata:
-      name: $(workload.metadata.name)$
-    spec:
-      ...
 
 ---
 apiVersion: carto.run/v1alpha1
 kind: Workload
-metadata:
-  ...
-spec:
-  ...
 status:
-  conditions:
-    ...
   resources:
     - name: deployer
-      outputs:
-        ...
-      stampedRef:
-        ...
-      templateRef:
-        apiVersion: carto.run/v1alpha1
-        kind: ClusterTemplate
-        name: deploy
-      stampedStatus:
-        status: 'Unhealthy'
-        fields:
-          - key: status.conditions['ReconcileFailed'].status
-            value: True
-            message: "Some kapp useful error message"
+      conditions:
+        - type: Healthy
+          status: 'False'
+          message: "status.conditions['ReconcileFailed'].status: True: Some kapp useful error message"
+          reason: MatchedField
+          lastTransitionTime: "2022-03-23T13:08:22Z"
 ```
 
 ```yaml
----
-apiVersion: carto.run/v1alpha1
-kind: ClusterResourceStatusRule
-metadata:
-  name: service-rule
-spec:
-  healthy:
-    matchFields:
-      - key: '.status.loadBalancer'
-        operator: 'Exists'
-  unhealthy:
-    matchFields:
-      - key: '.status.loadBalancer'
-        operator: 'DoesNotExist'
-
 ---
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
   name: servicer
 spec:
-  resourceStatusRef:
-    name: service-rule
+  healthyConditionRule:
+    multiMatch:
+      healthy:
+        matchFields:
+          - key: '.status.loadBalancer'
+            operator: 'Exists'
+      unhealthy:
+        matchFields:
+          - key: '.status.loadBalancer'
+            operator: 'DoesNotExist'
 
   template:
     apiVersion: v1
     kind: Service
-    metadata:
-      name: $(workload.metadata.name)$
-    spec:
-      ...
 
 ---
 apiVersion: carto.run/v1alpha1
 kind: Workload
-metadata:
-  ...
-spec:
-  ...
 status:
-  conditions:
-    ...
   resources:
     - name: service-creator
-      outputs:
-        ...
-      stampedRef:
-        ...
-      templateRef:
-        apiVersion: carto.run/v1alpha1
-        kind: ClusterTemplate
-        name: servicer
-      stampedStatus:
-        status: 'Healthy'
-        fields:
-          - key: status.loadBalancer
-            value: {}
+      conditions:
+        - type: Healthy
+          status: 'True'
+          message: "status.loadBalancer: {}"
+          reason: MatchedField
+          lastTransitionTime: "2022-03-23T13:08:22Z"
+```
+
+```yaml
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: configmap-creator
+spec:
+  healthyConditionRule:
+    alwaysHealthy: {}
+    
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+status:
+  resources:
+    - name: configmap-creator
+      conditions:
+        - type: Healthy
+          status: 'True'
+          reason: AlwaysHealthy
+          lastTransitionTime: "2022-03-23T13:08:22Z"
 ```
 
 # How it Works
@@ -238,21 +174,35 @@ A stamped resource can be in one of three states:
 2. 'Unhealthy'
 3. 'Unknown'
 
-It is up to each template author to determine what "success" and "failure" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not be able to determine success or failure.
+It is up to each template author to determine what "healthy" and "unhealthy" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not been able to determine healthy or unhealthy.
 
-A `ClusterResourceStatusRule` requires defining matchers for both the `Healthy` state and the `Unhealthy` state.
-The matchers in the `Healthy` state are ANDed together, whereas the matchers in the `Unhealthy` state are ORed. That is, a resource is considered to be `Healthy` only if _all of_ the matchers are fulfilled, but is considered to be `Unhealthy` if _any one of_ the matchers are fulfilled.
+Each template will now have a new field in the spec `healthyConditionRule` where authors can specify one of three ways to determine the health of the underlying resource for that template. If no `healthyConditionRule` is defined, Cartographer will default to listing the resource as `Healthy` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
 
-The supported matchers are `matchConditions` and `matchFields`. Each is an array, and an author can define either or both of these matchers for a given state.
+The `healthyConditionRule` requires defining one of three fields:
+1. `alwaysHealthy: {}`
+    * If defined, the resource will always be listed as healthy.
+2. `singleConditionType: <condition type>`
+    * If defined, the health of the resource will be determined by the single condition specified
+      * e.g. if it is set to `singleConditionType: Ready`, the resource will be 'Healthy' if `Ready: True` and 'Unhealthy' if `Ready: False`. Otherwise, it will be 'Unknown'.
+3. `multiMatch`
+    * If defined, matchers for both the 'Healthy' state and the 'Unhealthy' state must be defined.
+    * The matchers in the 'Healthy' state are ANDed together, whereas the matchers in the 'Unhealthy' state are ORed.
+      * That is, a resource is considered to be 'Healthy' only if _all of_ the matchers are fulfilled, but is considered to be 'Unhealthy' if _any one of_ the matchers are fulfilled.
+    * The supported matchers are `matchConditions` and `matchFields`. Each is an array, and an author can define either or both of these matchers for a given state.
+    * For `matchConditions`, authors need only define the `type` and `status` of the condition for Cartographer to read. In the owner status, the full condition will be reflected (with the `reason`, `message`, etc.)
+    * For `matchFields`, the spec is based off of `matchFields` in blueprint resource options. Authors need to define the `key` and `operator`, and potentially the `values` (if the operator is `In` or `NotIn`). Authors can also optionally define a `messagePath`, which is a path in the resource where Cartographer can pull off a message to display in the owner status.
+    
+Each owner's status.resources will now include a `conditions` field. To make room for future extensibility, this will be an array of conditions, though this RFC only defines one condition to be included here. The condition will be of `type` 'Healthy' and will report a `status` of 'True', 'False', or 'Unknown'. The condition will also have a `reason` which will be based off the `healthyConditionRule` as follows:
+    
+* If `alwaysHealthy: {}`, `reason: AlwaysHealthy`.
+* If `singleConditionType: X`, `reason: XCondition`.
+* If `multiMatch: ...`, `reason: (MatchedCondition|MatchedField)`.
 
-For `matchConditions`, authors need only define the `type` and `status` of the condition for Cartographer to read. In the owner status, the full condition will be reflected (with the `reason`, `message`, etc.)
-For `matchFields`, the spec is based off of `matchFields` in blueprint resource options. Authors need to define the `key` and `operator`, and potentially the `values` (if the operator is `In` or `NotIn`). Authors can also optionally define a `messagePath`, which is a path in the resource where Cartographer can pull off a message to display in the owner status.
+If the `healthyConditionRule` is not `alwaysHealthy`, the condition will also have a message. For `singleConditionType`, the message will be propagated from the specified condition. For `multiMatch`, the message will specify the value of the matched condition or field, and then display the message of the matched condition or the message at the path specified in `matchFields`.
 
-Each template will now have a new field in the spec `resourceStatusRuleRef` where authors can specify the `ClusterResourceStatusRule` to use for that template. If no `ClusterResourceStatusRule` is defined, Cartographer will default to listing the resource as `Healthy` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
+In the case of `multiMatch`, if there is more than one matching condition or field that caused the resource to enter it's current state, the first one read will be propagated by Cartographer.
 
-Templates will now also have a status with a `Ready` condition which will be `True` if the referenced `ClusterResourceStatusRule` exists (or if no rule is referenced), and `False` otherwise. Blueprints will now wait to report that they are `Ready` until their referenced templates are also `Ready`.
-
-Each owner will display a new condition in the status called `ResourcesSuceeded` which will only be updated to `True` when all resources in the blueprint be healthy. Cartographer will not update the top level state of an owner to `Ready: True` until `ResourcesHealthy` is `True`.
+Each owner will display a new condition in the status called `ResourcesHealthy` which will only be updated to `True` when all resources in the blueprint are healthy. Cartographer will not update the top level state of an owner to `Ready: True` until `ResourcesHealthy` is `True`.
 
 # Migration
 [migration]: #migration
@@ -263,7 +213,6 @@ Given that Cartographer will default to `Healthy` once the resource is applied a
 [drawbacks]: #drawbacks
 
 Why should we *not* do this?
-- The owner status will potentially grow significantly, based on how many matchers are in a `ClusterResourceStatusRule`.
 - We only allow for reflecting three states, though this design allows for creating more states in the future.
 - This design does not allow authors to define the states themselves.
 
@@ -271,10 +220,11 @@ Why should we *not* do this?
 [alternatives]: #alternatives
 
 - What other designs have been considered?
-  - The `ClusterResourceStatusRule` could instead be inlined in the templates.
-    - Separating these rules in a separate CRD allows for re-usability of those rules.
-  - We could also not require the templates to specify the `ClusterResourceStatusRule` and instead have those rules automatically select templates based on the `kind` and `apiVersion` of the resource they are stamping out.
-    - This could be a bit confusing because the type of the stamped resource may be templated as well. Therefore, a template could end up stamping out different types of resources and so Cartographer would only be able to inform users which `ClusterResourceStatusRule` is used for a given template after an owner is applied, and it could then be reflected in the owner status.
+  - We could create a separate CRD to define the healthy condition rules and reference them from the templates or have them select templates based on the underlying resource type.
+    - Separating these rules in a separate CRD would force us to start reconciling templates to see if there is an associated healthy condition rule CR. 
+    - This would also force template authors to ship the healthy condition CR along with each of their templates.
+    - If CR selected templates, this could be a bit confusing because the type of the stamped resource may be templated as well. Therefore, a template could end up stamping out different types of resources and so Cartographer would only be able to inform users which healthy condition rule is used for a given template after an owner is applied, and it could then be reflected in the owner status.
+      - It would also mean that templates stamping out the same underlying type would not be able to define different healthy rules, if they desired to.
 - What is the impact of not doing this?
   - Users/UI creators will have to have in depth knowledge of the underlying resources to determine the health of the owner.
 
@@ -288,48 +238,57 @@ N/A
 
 - Should the two states be `Healthy` and `Unhealthy`?
 - Is it right for Cartographer to default to `Healthy`?
+- Should the owner condition `ResourcesHealthy` have any possible `reason`s other than `HealthyConditionRule`?
 
 # Spec. Changes
 [spec-changes]: #spec-changes
-- All templates will now have an optional `resourceStatusRuleRef` which will take a `name`. In the future, it could also take a type and namespace if we introduce namespace-scoped resourceStatusRules.
-- Owner `status.resources` will now have `stampedStatus` on each resource:
+- All templates will now have an optional `healthyConditionRule` which will take one of three fields:
 ```yaml
+apiVersion: carto.run/v1alpha1
+kind: Cluster[Config|Deployment|Image|Source]Template
+spec:
+  # validation:MinProperties:1
+  # validation:MaxProperties:1
+  healthyConditionRule:
+    alwaysHealthy: {}
+    singleConditionType: <string>
+    multiMatch:
+      healthy:
+        matchConditions:
+          - type: <string>
+            status: <string>
+        matchFields:
+          - key: <string>
+            operator: <[In|NotIn|Exists|DoesNotExist]>
+            values: [ <string> ]
+            messagePath: <string>
+      unhealthy:
+        matchConditions:
+          - type: <string>
+            status: <string>
+        matchFields:
+          - key: <string>
+            operator: <[In|NotIn|Exists|DoesNotExist]>
+            values: [ <string> ]
+            messagePath: <string>
+```
+- Owner will have a new condition of type `ResourcesHealthy`. Additionally, `status.resources` will now have `conditions` on each resource with a `Healthy` condition:
+```yaml
+apiVersion: carto.run/v1alpha1
+kind:  [Workload|Deliverable]
 status:
+  conditions:
+    - type: ResourcesHealthy
+      status: <[True|False|Unknown]>
+      reason: HealthyConditionRule
+      message: <string>
+      lastTransitionTime: metav1.Time 
   resources:
     - name: resource1
-      ...
-      stampedStatus:
-        status: <[Healthy|Unhealthy|Unknown]>
-        conditions:
-          - <metav1.Condition>
-        fields:
-          - key: <string>
-            value: <string>
-            message: <string>, omitempty
-```
-- A new CRD, `ClusterResourceStatusRule` will be created with the following spec:
-```yaml
----
-apiVersion: carto.run/v1alpha1
-kind: ClusterResourceStatusRule
-metadata: {}
-spec:
-  healthy:
-    matchConditions:
-      - type: <string>
-        status: <string>
-    matchFields:
-      - key: <string>
-        operator: <[In|NotIn|Exists|DoesNotExist]>
-        values: [ <string> ]
-        messagePath: <string>
-  unhealthy:
-    matchConditions:
-      - type: <string>
-        status: <string>
-    matchFields:
-      - key: <string>
-        operator: <[In|NotIn|Exists|DoesNotExist]>
-        values: [ <string> ]
-        messagePath: <string>
+      conditions:
+        - type: Healthy
+          status: <[True|False|Unknown]>
+          reason: <[AlwaysHealthy|<ConditionType>Condition|MatchedCondition|MatchedField]>
+          message: <string>
+          lastTransitionTime: metav1.Time
 ```
