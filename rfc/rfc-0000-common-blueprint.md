@@ -10,17 +10,121 @@
 # Summary
 [summary]: #summary
 
-One paragraph explanation of the feature.
+This RFC proposes collapsing all current "Blueprints" and templates (not including `ClusterRunTemplate`) into a single CRD, `ClusterBlueprint`.
+As part of this, the RFC proposes that outputs be specified by template authors and remove the typed outputs that exist today (url, revision, image, config).
+Additionally, the `ClusterBlueprint` will take an optional selector so that operators can decide whether the blueprint should be resolved directly against an Owner or only as part of a larger Blueprint.
+
 
 # Motivation
 [motivation]: #motivation
 
 - Why should we do this?
+
+  - Today we have seven CRDs that are needed to create a supply chain and delivery. To simplify the data model for users, we can
+collapse all seven CRDs into one CRD. Additionally, whereas today the overhead to start reconciling templates would be adding five identical
+reconcilers, this would enable us to have one reconciler for all blueprints and more easily add meaningful data to their statuses.
+
 - What use cases does it support?
+
+  - This would allow for snippets and users to specify any output they want.
+
 - What is the expected outcome?
+
+  - Simplified onboarding and user experience.
 
 # What it is
 [what-it-is]: #what-it-is
+
+We have two options that we are presenting, but the goal is to agree on one before fleshing out the complete details of the RFC.
+
+Option 1
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterBlueprint
+metadata:
+  name:
+spec:
+  # optional
+  selector:
+
+  resources:
+    - name: first-resource
+      inputs:
+        - resource: zero-resource
+          output: zoo
+          name: zoo-resource-name
+      inline:
+        # mutually exclusive - template, ytt
+        template: {}
+        ytt: {}
+
+        outputs:
+          - name: foo
+            valuePath: .status.url
+
+    - name: second-resource
+      # mutually exclusive - blueprintName, options
+      options:
+        - name: another-blueprint
+        - name: diff-blueprint
+      inputs:
+        - resource: first-resource
+          output: foo
+          name: a-new-resource-name
+        - resource: zero-resource
+          output: zoo
+          name: a-new-resource-name
+
+    - name: third-resource
+      # mutually exclusive - blueprintName, options
+      blueprintName: another-another-blueprint
+      inputs:
+        - resource: first-resource
+          output: foo
+          name: a-new-resource-name
+        - resource: second-resource
+          output: bar
+          name: another-new-name
+
+  outputs:
+    - name: baz
+      valuePath: resources[first-resource].outputs[foo]
+    - name: fizz
+      valuePath: resources[second-resource].outputs[bar]
+```
+
+Option 2
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterBlueprint
+metadata:
+  name:
+spec:
+  # optional
+  selector:
+
+  # mutually exclusive - resources, template, ytt (i.e. a blueprint is either a template or a supply chain)
+  resources:
+    - name: first-resource
+      # mutually exclusive - blueprintName, options
+      blueprintName: another-blueprint
+    - name: second-resource
+      # mutually exclusive - blueprintName, options
+      options:
+        - name: another-another-blueprint
+      inputs:
+        - resource: first-resource
+          output: foo
+          name: a-new-resource-name
+
+  template: {}
+
+  ytt: {}
+
+  outputs:
+    - name: url
+      valuePath: .status.url
+```
 
 This provides a high level overview of the feature.
 
@@ -49,6 +153,16 @@ Why should we *not* do this?
 [alternatives]: #alternatives
 
 - What other designs have been considered?
+  - Typed outputs
+    ```yaml
+    outputs:
+      urlPath: <string>
+      revisionPath: <string>
+      configPath: <string>
+      imagePath: <string>
+    ```
+  - Typed blueprints (`ClusterSourceBlueprint`, `ClusterImageBlueprint`, etc.)
+
 - Why is this proposal the best?
 - What is the impact of not doing this?
 
