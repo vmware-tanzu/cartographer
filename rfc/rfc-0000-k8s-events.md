@@ -103,7 +103,7 @@ The cartographer controller could emit the following events:
 | ResourceDoesNotExist | `<resource name>` could not be applied because `<group>.<kind>/<name>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
 | ResourceDoesNotExist | `<resource name>` could not be applied because `<group>.<kind>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Blueprint |
 | ResourceApplied | `<resource name>` was applied as `<group>.<kind>/<name>` | a resource needed to be created/updated | Owner |
-| ResourceKindChanged | `<resource name>` was `<old group>.<old kind>`, now `<new group>.<new kind>` | YTT selection for a template kind changed | Owner |
+| ResourceKindChanged | `<resource name>` was `<old group>.<old kind>`, now `<new group>.<new kind>` | YTT selection for a template GVK changed, or templated values in GVK changed | Owner |
 | ResourceOutputChanged | `<resource name>` found a new output in `<group>.<kind>/<name>` | a resource produced a new output | Owner |
 | ResourceHealthyStatusChanged | `<resource name>` found a new status in `<group>.<kind>/<name>` | a resource produced a new healthy status | Owner |
 | SupplyChainChanged | supply chain changed from `<old supply chain name>` to `<new supply chain name>` | Workload selected for a new or different supply chain. Note: `none` is a possible name. | Owner |
