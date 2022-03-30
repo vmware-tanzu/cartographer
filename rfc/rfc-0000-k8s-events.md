@@ -139,16 +139,17 @@ THis RFC only adds to the API, there are no breaking changes that require migrat
 Very little, this is the right thing to be doing.
 
 * Making API calls to emit events will slow processing down, and increase API consumption.
-* In code we either end up passing more contextual information to the code-sites that event's originate from, or we
-  create a better abstraction than controller-runtimes event recorder to keep value passing to a minimum.
+* In code we either end up passing more contextual information to the code-sites that events originate from, or we
+  create a better abstraction than controller-runtimes event recorder to keep value passing to a minimum. For example
+  an `InvolvedEvent` function that curries the `Workload`, `Delivery`, `SupplyChain` or `Deliverable` as the involved object.
 
 # Alternatives
 
 [alternatives]: #alternatives
 
 - What other designs have been considered?
-  - Long tail historic information in the `workload.status` etc. This would be very obnoxious and require some GC over
-    time, whereas events are built for this.
+  - Long tail historic information in the `workload.status` etc. This would be obnoxious for users and require some GC over
+    time, whereas events are built for this purpose.
 - Why is this proposal the best?
   - This is what events are for. It's idiomatic and well supported
 - What is the impact of not doing this?
