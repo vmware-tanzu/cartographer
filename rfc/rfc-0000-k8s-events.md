@@ -107,7 +107,7 @@ The cartographer controller could emit the following events:
 | ResourceOutputChanged | `<resource name>` found a new output in `<group>.<kind>/<name>` | a resource produced a new output | Owner |
 | ResourceHealthyStatusChanged | `<resource name>` found a new status in `<group>.<kind>/<name>` | a resource produced a new healthy status | Owner |
 | SupplyChainChanged | supply chain changed from `<old supply chain name>` to `<new supply chain name>` | Workload selected for a new or different supply chain. Note: `none` is a possible name. | Owner |
-| WorkloadSelected | supply chain matched a workload | A workload was selected for. This makes the count a useful metric | Blueprint |
+| WorkloadSelected | supply chain matched a workload | A workload was selected for (really, this is when the supplyChainRef changes). This makes the count a useful metric | Blueprint |
 
 * Cache misses? (Not sure about this, we'll miss if the controller restarts or with HA Elections (future concern))
 
