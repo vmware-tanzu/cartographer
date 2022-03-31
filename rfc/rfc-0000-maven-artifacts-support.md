@@ -10,7 +10,7 @@
 # Summary
 [summary]: #summary
 
-Modify `owner.spec.source` to allow for specifying a JAR file.
+Modify `owner.spec.source` to allow for specifying a Maven and Artifactory repository.
 
 # Motivation
 [motivation]: #motivation
