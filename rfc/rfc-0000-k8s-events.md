@@ -92,18 +92,18 @@ The cartographer controller could emit the following events:
 
 | Reason | Message Format | Description | involvedObject |
 | --- | --- | --- | --- |
-| ResourceExternalSpecChange | an external actor changed the spec of `<group>.<kind>/<name>` | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Owner |
-| ResourceExternalSpecChange | an external actor changed the spec of resource: `<resource name>` for object `<group>.<kind>` | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Blueprint |
-| ResourceGetError | `<resource name>` could not retrieve `<group>.<kind>/<name>` due to error: `<error message>` | Loading a resource is failing due to a client.get issue (missing is not an error) | Owner |
-| ResourceGetError | `<resource name>` could not retrieve `<group>.<kind>` due to error: `<error message>` | Loading a resources is failing due to a client.get issue (missing is not an error) - this could be spammy | Blueprint |
-| ResourceGarbageCollected | `<group>.<kind>/<name>` is no longer referenced | This owner has selected a different template, either by supply chain selection or templating, and this object is no longer needed | Owner |
-| ImmutableResourceGarbageCollected | `<n> * <group>.<kind>` historical objects deleted due to garbage collection policy | This runnable's GC policy has caused `n` objects to be removed | Runnable |
-| ResourceInvalid | `<resource name>` could not be applied as `<group>.<kind>/<name>` due to API server error `<error message>` | This object was (probably) malformed. | Owner |
-| ResourceInvalid | `<resource name>` could not be applied as `<group>.<kind>` due to API server error `<error message>` | This object was (probably) malformed. This lets operators know their templates might have issues | Blueprint |
-| ResourceDoesNotExist | `<resource name>` could not be applied because `<group>.<kind>/<name>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
-| ResourceDoesNotExist | `<resource name>` could not be applied because `<group>.<kind>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Blueprint |
-| ResourceApplied | `<resource name>` was applied as `<group>.<kind>/<name>` | a resource needed to be created/updated | Owner |
-| ResourceKindChanged | `<resource name>` was `<old group>.<old kind>`, now `<new group>.<new kind>` | YTT selection for a template GVK changed, or templated values in GVK changed | Owner |
+| StampedObjectExternalSpecChange | an external actor changed the spec of `<group>.<kind>/<name>` | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Owner |
+| StampedObjectExternalSpecChange | an external actor changed the spec of resource: `<resource name>` for object `<group>.<kind>` | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Blueprint |
+| StampedObjectGetError | `<resource name>` could not retrieve `<group>.<kind>/<name>` due to error: `<error message>` | Loading a resource is failing due to a client.get issue (missing is not an error) | Owner |
+| StampedObjectObjectGetError | `<resource name>` could not retrieve `<group>.<kind>` due to error: `<error message>` | Loading a resources is failing due to a client.get issue (missing is not an error) - this could be spammy | Blueprint |
+| StampedObjectGarbageCollected | `<group>.<kind>/<name>` is no longer referenced | This owner has selected a different template, either by supply chain selection or templating, and this object is no longer needed | Owner |
+| ImmutableStampedObjectGarbageCollected | `<n> * <group>.<kind>` historical objects deleted due to garbage collection policy | This runnable's GC policy has caused `n` objects to be removed | Runnable |
+| StampedObjectInvalid | `<resource name>` could not be applied as `<group>.<kind>/<name>` due to API server error `<error message>` | This object was (probably) malformed. | Owner |
+| StampedObjectInvalid | `<resource name>` could not be applied as `<group>.<kind>` due to API server error `<error message>` | This object was (probably) malformed. This lets operators know their templates might have issues | Blueprint |
+| StampedObjectKindNotFound | `<resource name>` could not be applied because `<group>.<kind>/<name>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
+| StampedObjectKindNotFound | `<resource name>` could not be applied because `<group>.<kind>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Blueprint |
+| StampedObjectApplied | `<resource name>` was applied as `<group>.<kind>/<name>` | a stamped object needed to be created/updated | Owner |
+| StampedObjectKindChanged | `<resource name>` was `<old group>.<old kind>`, now `<new group>.<new kind>` | YTT selection for a template GVK changed, or templated values in GVK changed | Owner |
 | ResourceOutputChanged | `<resource name>` found a new output in `<group>.<kind>/<name>` | a resource produced a new output | Owner |
 | ResourceHealthyStatusChanged | `<resource name>` found a new status in `<group>.<kind>/<name>` | a resource produced a new healthy status | Owner |
 | SupplyChainChanged | supply chain changed from `<old supply chain name>` to `<new supply chain name>` | Workload selected for a new or different supply chain. Note: `none` is a possible name. | Owner |
@@ -113,6 +113,11 @@ The cartographer controller could emit the following events:
 
 **Note:** Blueprint event `messages` are usually designed to aggregate on the resource kind, not the individual
 resource (we omit `<resource name>`)
+
+**Note:** On naming, we're tring to start with the location in the object diagram (first diagram) that represents the
+change. `stamped object` is not well known to users, but we need to rectify that, or use a clearer term to describe "the
+resource on etcd", which would normally be "Resource". Unfortunately we've overloaded resource to mean the collective
+concept of a template, a configuration, it's submission to the API and it's resulting changes from external events.
 
 There are a lot of event's here, and more could exist, but we should review these during the RFC review process. I hope
 we can prune the list and make it `as meaningful as is necessary, and no more`
@@ -141,20 +146,21 @@ Very little, this is the right thing to be doing.
 * Making API calls to emit events will slow processing down, and increase API consumption.
 * In code we either end up passing more contextual information to the code-sites that events originate from, or we
   create a better abstraction than controller-runtimes event recorder to keep value passing to a minimum. For example
-  an `InvolvedEvent` function that curries the `Workload`, `Delivery`, `SupplyChain` or `Deliverable` as the involved object.
+  an `InvolvedEvent` function that curries the `Workload`, `Delivery`, `SupplyChain` or `Deliverable` as the involved
+  object.
 
 # Alternatives
 
 [alternatives]: #alternatives
 
 - What other designs have been considered?
-  - Long tail historic information in the `workload.status` etc. This would be obnoxious for users and require some GC over
-    time, whereas events are built for this purpose.
+    - Long tail historic information in the `workload.status` etc. This would be obnoxious for users and require some GC
+      over time, whereas events are built for this purpose.
 - Why is this proposal the best?
-  - This is what events are for. It's idiomatic and well supported
+    - This is what events are for. It's idiomatic and well supported
 - What is the impact of not doing this?
-  - Leaving users without temporal event information, making them understand resources intimately, when the side effects
-    are all the user really cares about.
+    - Leaving users without temporal event information, making them understand resources intimately, when the side
+      effects are all the user really cares about.
 
 # Prior Art
 
