@@ -16,15 +16,18 @@ Modify `owner.spec.source` to allow for specifying a JAR file.
 [motivation]: #motivation
 
 - Why should we do this?
-  - Today we support workloads being built from git and image source. Many developers in the field also need support for JARs.
+  - Today we support workloads being built from git and image source. Many developers in the field also need support
+    Maven and Artifactory repositories hosting their JAR and WAR files.
 - What use cases does it support?
-  - Maven
+  - Maven and Artifactory repositories
 - What is the expected outcome?
   - To enable more types of workloads.
 
 # What it is
 [what-it-is]: #what-it-is
-We need to modify the Owner specs to create an unambiguous way for specifying a JAR file. There are two proposed options, the goal is to get community buy-in on a solution before ratifying and the RFC will then be modified to suggest the agreed upon spec.
+We need to modify the Owner specs to create an unambiguous way for specifying a JAR file. There are two proposed
+options, the goal is to get community buy-in on a solution before ratifying and the RFC will then be modified to suggest
+the agreed upon spec.
 
 This option allows for the developer to know what is necessary for a maven workload by examining the spec.
 ```yaml
@@ -35,7 +38,7 @@ metadata:
 spec:
   source:
       maven: 
-        url: https://my-artifactory/my-projects/my-app.jar
+        url: https://maven.pkg.jetbrains.space/mycompany/p/projectkey/my-maven-repo
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -43,16 +46,14 @@ kind: ClusterSupplyChain
 metadata:
   name: my-supply-chain
 spec:
+  selectorMatchFields:
+    - key: spec.maven.url
+      operator: Exists
   resources:
     - name: source-provider
       templateRef:
+        name: source-template
         kind: ClusterSourceTemplate
-        options:
-          - name: source-template
-            selector:
-              matchFields:
-                - key: spec.maven.url
-                  operator: Exists
 ```
 
 This option allows us to support many artifacts, but the platform operator would have to communicate to the developer what parameter to use. 
@@ -66,7 +67,7 @@ spec:
     - name: source-type
       value: maven
   source:
-      url: https://my-artifactory/my-projects/my-app.jar
+      url: https://maven.pkg.jetbrains.space/mycompany/p/projectkey/my-maven-repo
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -74,18 +75,16 @@ kind: ClusterSupplyChain
 metadata:
   name: my-supply-chain
 spec:
+  selectorMatchFields:
+    - key: spec.params[?(@.name=="source-type")].value
+      operator: In
+      values:
+        - "maven"
   resources:
     - name: source-provider
       templateRef:
+        name: source-template
         kind: ClusterSourceTemplate
-        options:
-          - name: source-template
-            selector:
-              matchFields:
-                - key: spec.params[?(@.name=="source-type")].value
-                  operator: In
-                  values:
-                    - "maven"
 ```
 
 # How it Works
@@ -109,38 +108,9 @@ Why should we *not* do this?
 [alternatives]: #alternatives
 
 - What other designs have been considered?
-  
-  This option would allow all of the logic to be put on the operator. Wildcards are currently not supported today.
-  ```yaml
-    apiVersion: carto.run/v1alpha1
-    kind: Workload
-    metadata:
-      name: my-workload
-    spec:
-      source:
-        url: https://my-artifactory/my-projects/my-app.jar
-    
-    ---
-    apiVersion: carto.run/v1alpha1
-    kind: ClusterSupplyChain
-    metadata:
-      name: my-supply-chain
-    spec:
-      selector:
-        integration-test: "options-with-values"
-      resources:
-        - name: source-provider
-          templateRef:
-            kind: ClusterSourceTemplate
-            options:
-              - name: source-template
-                selector:
-                  matchFields:
-                    - key: spec.source.url
-                      operator: In
-                      values:
-                        - "*.jar"
-  ```
+  - We did consider using options to select a template for a generic spec.source.url, however
+    we don't believe matchFields will be able to distinguish between different repository types.
+    That information tends to be hidden inside the particular protocol of the repository and not the URL.
 
 - Why is this proposal the best?
 - What is the impact of not doing this?
@@ -152,7 +122,7 @@ Discuss prior art, both the good and bad.
 
 # Unresolved Questions
 [unresolved-questions]: #unresolved-questions
-- Do we need any additional information from the Owner besides the url of the JAR?
+- Do we need any additional information from the Owner besides the url of the Artifact?
 
 # Spec. Changes (OPTIONAL)
 [spec-changes]: #spec-changes
