@@ -13,12 +13,10 @@ layout: common
 
 ## Presentations
 
-
-* CNCF Live webinar covering Supply Chain choreography with Cartographer       {{< yt id="YowcLPRYh7o" start="5" >}}
-* Tanzu Tuesdays episode introducing choreography (including demos) {{< yt id="Qr-DO0E9R1Y" start="1129" >}} 
-* Cartographer featured on Thank Goodness its Kubernetes (TGIK) {{< yt id="TJPGn0-hpPY" start="738" >}} 
-* Tanzu Code (live coding) episode on Cartographer {{< yt id="694soIproYE" start="5010" >}}
- 
+- CNCF Live webinar covering Supply Chain choreography with Cartographer {{< yt id="YowcLPRYh7o" start="5" >}}
+- Tanzu Tuesdays episode introducing choreography (including demos) {{< yt id="Qr-DO0E9R1Y" start="1129" >}}
+- Cartographer featured on Thank Goodness its Kubernetes (TGIK) {{< yt id="TJPGn0-hpPY" start="738" >}}
+- Tanzu Code (live coding) episode on Cartographer {{< yt id="694soIproYE" start="5010" >}}
 
 ## Community Meetings Playlist
 
