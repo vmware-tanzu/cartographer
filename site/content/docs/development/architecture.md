@@ -163,9 +163,6 @@ A ClusterSupplyChain blueprint continuously integrates and builds your app.
 
 A ClusterDelivery blueprint continuously deploys and validates Kubernetes configuration to a cluster.
 
-[comment]: <> (Not implemented yet) [comment]: <> (A ClusterDelivery has the ability to lock &#40;and unlock&#41;
-templates which pauses the continuous deploy. ) [comment]: <> (TODO - more on locking)
-
 ![ClusterDelivery](../img/delivery.jpg)
 
 ### Selectors
