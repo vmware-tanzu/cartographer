@@ -85,7 +85,7 @@ for workloads in 2 500 1250 1500; do
   export CARTO_BENCH_N_SUPPLY_CHAINS=5
   export CARTO_BENCH_N_WORKLOADS="$workloads"
   export CARTO_BENCH_N_RUNNABLES="$workloads"
-  go run github.com/onsi/ginkgo/ginkgo -r . | tee bench_"$workloads"_workloads_w_runnables_1_run.txt
+  go run -modfile ../hack/tools/go.mod github.com/onsi/ginkgo/ginkgo -r . | tee bench_"$workloads"_workloads_w_runnables_1_run.txt
 done
 
 export CARTO_BENCH_N_RUNNABLE_RUNS=3
@@ -93,7 +93,7 @@ for workloads in 10 50 100 250; do
   reset_cartographer_controller
   export CARTO_BENCH_N_WORKLOADS="$workloads"
   export CARTO_BENCH_N_RUNNABLES="$workloads"
-  go run github.com/onsi/ginkgo/ginkgo -r . | tee bench_"$workloads"_workloads_w_runnables_3_runs.txt
+  go run -modfile ../hack/tools/go.mod github.com/onsi/ginkgo/ginkgo -r . | tee bench_"$workloads"_workloads_w_runnables_3_runs.txt
 done
 
 export CARTO_BENCH_N_WORKLOADS=5
@@ -102,7 +102,7 @@ for runnables in 5 25 50; do
       reset_cartographer_controller
       export CARTO_BENCH_N_RUNNABLES="$runnables"
       export CARTO_BENCH_N_RUNNABLE_RUNS="$runs"
-      go run github.com/onsi/ginkgo/ginkgo -r . | tee bench_"$runnables"_runnables_with_"$runs"_runs.txt
+      go run -modfile ../hack/tools/go.mod github.com/onsi/ginkgo/ginkgo -r . | tee bench_"$runnables"_runnables_with_"$runs"_runs.txt
   done
 done
 
