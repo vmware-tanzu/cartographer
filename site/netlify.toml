@@ -33,4 +33,4 @@ HUGO_ENABLEGITINFO = "true"
   from = "/docs/:version/*"
   to = "/docs/:version"
   status = 307
-  force = true
+  force = false
