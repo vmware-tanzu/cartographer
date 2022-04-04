@@ -1,0 +1,58 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata: {}
+spec:
+
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+  # +optional
+  params:
+    - # DefaultValue of the parameter. Causes the parameter to be
+      # optional; If the Owner or Template does not specify this
+      # parameter, this value is used.
+      default: <any>
+
+      # Name of a parameter the template accepts from the
+      # Blueprint or Owner.
+      name: <string>
+
+  # RevisionPath is a path into the templated object's data that
+  # contains a revision. The revision, along with the URL,
+  # represents the output of the Template. RevisionPath is
+  # specified in jsonpath format, eg: .status.artifact.revision
+  revisionPath: <string>
+
+  # Template defines a resource template for a Kubernetes Resource
+  # or Custom Resource which is applied to the server each time
+  # the blueprint is applied. Templates support simple value
+  # interpolation using the $()$ marker format. For more
+  # information, see:
+  # https://cartographer.sh/docs/latest/templating/ You cannot
+  # define both Template and Ytt at the same time. You should not
+  # define the namespace for the resource - it will automatically
+  # be created in the owner namespace. If the namespace is
+  # specified and is not the owner namespace, the resource will
+  # fail to be created.
+  # +optional
+  template: {}
+
+  # URLPath is a path into the templated object's data that
+  # contains a URL. The URL, along with the revision, represents
+  # the output of the Template. URLPath is specified in jsonpath
+  # format, eg: .status.artifact.url
+  urlPath: <string>
+
+  # Ytt defines a resource template written in `ytt` for a
+  # Kubernetes Resource or Custom Resource which is applied to the
+  # server each time the blueprint is applied. Templates support
+  # simple value interpolation using the $()$ marker format. For
+  # more information, see:
+  # https://cartographer.sh/docs/latest/templating/ You cannot
+  # define both Template and Ytt at the same time. You should not
+  # define the namespace for the resource - it will automatically
+  # be created in the owner namespace. If the namespace is
+  # specified and is not the owner namespace, the resource will
+  # fail to be created.
+  # +optional
+  ytt: <string>

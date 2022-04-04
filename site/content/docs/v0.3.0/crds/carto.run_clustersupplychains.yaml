@@ -1,0 +1,246 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata: {}
+spec:
+
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+  # +optional
+  params:
+    - # DefaultValue of the parameter. Causes the parameter to be
+      # optional; If the Owner does not specify this parameter,
+      # this value is used.
+      # +optional
+      default: <any>
+
+      # Name of the parameter. Should match a template parameter
+      # name.
+      name: <string>
+
+      # Value of the parameter. If specified, owner properties are
+      # ignored.
+      # +optional
+      value: <any>
+
+  # Resources that are responsible for bringing the application to
+  # a deliverable state.
+  resources:
+    - # Configs is a list of references to other 'config'
+      # resources in this list. A config resource has the kind
+      # ClusterConfigTemplate 
+      # In a template, configs can be consumed as:
+      # $(configs.<name>.config)$ 
+      # If there is only one image, it can be consumed as:
+      # $(config)$
+      # +optional
+      configs:
+        - name: <string>
+          resource: <string>
+
+      # Images is a list of references to other 'image' resources
+      # in this list. An image resource has the kind
+      # ClusterImageTemplate 
+      # In a template, images can be consumed as:
+      # $(images.<name>.image)$ 
+      # If there is only one image, it can be consumed as:
+      # $(image)$
+      # +optional
+      images:
+        - name: <string>
+          resource: <string>
+
+      # Name of the resource. Used as a reference for inputs, as
+      # well as being the name presented in workload statuses to
+      # identify this resource.
+      name: <string>
+
+      # Params are a list of parameters to provide to the template
+      # in TemplateRef Template params do not have to be specified
+      # here, unless you want to force a particular value, or add
+      # a default value. 
+      # Parameters are consumed in a template with the syntax:
+      # $(params.<name>)$
+      # +optional
+      params:
+        - # DefaultValue of the parameter. Causes the parameter to
+          # be optional; If the Owner does not specify this
+          # parameter, this value is used.
+          # +optional
+          default: <any>
+
+          # Name of the parameter. Should match a template
+          # parameter name.
+          name: <string>
+
+          # Value of the parameter. If specified, owner properties
+          # are ignored.
+          # +optional
+          value: <any>
+
+      # Sources is a list of references to other 'source'
+      # resources in this list. A source resource has the kind
+      # ClusterSourceTemplate 
+      # In a template, sources can be consumed as:
+      # $(sources.<name>.url)$ and $(sources.<name>.revision)$ 
+      # If there is only one source, it can be consumed as:
+      # $(source.url)$ and $(source.revision)$
+      # +optional
+      sources:
+        - name: <string>
+          resource: <string>
+
+      # TemplateRef identifies the template used to produce this
+      # resource
+      templateRef:
+
+        # Kind of the template to apply
+        kind: <[ClusterSourceTemplate|ClusterImageTemplate|ClusterTemplate|ClusterConfigTemplate]>
+
+        # Name of the template to apply Only one of Name and
+        # Options can be specified.
+        # +optional
+        name: <string>
+
+        # Options is a list of template names and Selector. The
+        # templates must all be of type Kind. A template will be
+        # selected if the workload matches the specified selector.
+        # Only one template can be selected. Only one of Name and
+        # Options can be specified. Minimum number of items in
+        # list is two.
+        # +optional
+        options:
+          - # Name of the template to apply
+            name: <string>
+
+            # Selector is a criteria to match against  a workload
+            # or deliverable resource.
+            selector:
+
+              # matchExpressions is a list of label selector
+              # requirements. The requirements are ANDed.
+              # +optional
+              matchExpressions:
+                - # A label selector requirement is a selector
+                  # that contains values, a key, and an operator
+                  # that relates the key and values.
+                  # +optional
+
+                  # key is the label key that the selector applies
+                  # to.
+                  key: <string>
+
+                  # operator represents a key's relationship to a
+                  # set of values. Valid operators are In, NotIn,
+                  # Exists and DoesNotExist.
+                  operator: <string>
+
+                  # values is an array of string values. If the
+                  # operator is In or NotIn, the values array must
+                  # be non-empty. If the operator is Exists or
+                  # DoesNotExist, the values array must be empty.
+                  # This array is replaced during a strategic
+                  # merge patch.
+                  # +optional
+                  values: [ <string> ]
+
+              # MatchFields is a list of field selector
+              # requirements. The requirements are ANDed.
+              # +optional
+              matchFields:
+                - # Key is the JSON path in the workload to match
+                  # against. e.g. for workload:
+                  # "workload.spec.source.git.url", e.g. for
+                  # deliverable: "deliverable.spec.source.git.url"
+                  key: <string>
+
+                  # Operator represents a key's relationship to a
+                  # set of values. Valid operators are In, NotIn,
+                  # Exists and DoesNotExist.
+                  operator: <[In|NotIn|Exists|DoesNotExist]>
+
+                  # Values is an array of string values. If the
+                  # operator is In or NotIn, the values array must
+                  # be non-empty. If the operator is Exists or
+                  # DoesNotExist, the values array must be empty.
+                  # +optional
+                  values: [ <string> ]
+
+              # matchLabels is a map of {key,value} pairs. A
+              # single {key,value} in the matchLabels map is
+              # equivalent to an element of matchExpressions,
+              # whose key field is "key", the operator is "In",
+              # and the values array contains only "value". The
+              # requirements are ANDed.
+              # +optional
+              matchLabels: {}
+
+  # Specifies the label key-value pairs used to select owners See:
+  # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  # +optional
+  selector: {}
+
+  # Specifies the requirements used to select owners based on
+  # their labels See:
+  # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  # +optional
+  selectorMatchExpressions:
+    - # A label selector requirement is a selector that contains
+      # values, a key, and an operator that relates the key and
+      # values.
+      # +optional
+
+      # key is the label key that the selector applies to.
+      key: <string>
+
+      # operator represents a key's relationship to a set of
+      # values. Valid operators are In, NotIn, Exists and
+      # DoesNotExist.
+      operator: <string>
+
+      # values is an array of string values. If the operator is In
+      # or NotIn, the values array must be non-empty. If the
+      # operator is Exists or DoesNotExist, the values array must
+      # be empty. This array is replaced during a strategic merge
+      # patch.
+      # +optional
+      values: [ <string> ]
+
+  # Specifies the requirements used to select owners based on
+  # their fields See:
+  # https://cartographer.sh/docs/v0.1.0/architecture/#selectors
+  # +optional
+  selectorMatchFields:
+    - # Key is the JSON path in the workload to match against.
+      # e.g. for workload: "workload.spec.source.git.url", e.g.
+      # for deliverable: "deliverable.spec.source.git.url"
+      key: <string>
+
+      # Operator represents a key's relationship to a set of
+      # values. Valid operators are In, NotIn, Exists and
+      # DoesNotExist.
+      operator: <[In|NotIn|Exists|DoesNotExist]>
+
+      # Values is an array of string values. If the operator is In
+      # or NotIn, the values array must be non-empty. If the
+      # operator is Exists or DoesNotExist, the values array must
+      # be empty.
+      # +optional
+      values: [ <string> ]
+
+  # ServiceAccountName refers to the Service account with
+  # permissions to create resources submitted by the supply chain.
+  # If not set, Cartographer will use serviceAccountName from
+  # supply chain. 
+  # If that is also not set, Cartographer will use the default
+  # service account in the workload's namespace.
+  # +optional
+  serviceAccountRef:
+
+    # Name of the service account being referred to
+    name: <string>
+
+    # Namespace of the service account being referred to if
+    # omitted, the Owner's namespace is used.
+    # +optional
+    namespace: <string>

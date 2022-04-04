@@ -1,0 +1,265 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata: {}
+spec:
+
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+  # +optional
+  params:
+    - # Name of the parameter. Should match a blueprint or
+      # template parameter name.
+      name: <string>
+
+      # Value of the parameter.
+      value: <any>
+
+  # ServiceAccountName refers to the Service account with
+  # permissions to create resources submitted by the supply chain.
+  # If not set, Cartographer will use serviceAccountName from
+  # delivery. 
+  # If that is also not set, Cartographer will use the default
+  # service account in the deliverable's namespace.
+  # +optional
+  serviceAccountName: <string>
+
+  # The location of the source code for the workload. Specify one
+  # of `spec.source` or `spec.image`
+  # +optional
+  source:
+
+    # Source code location in a git repository.
+    # +optional
+    git:
+      ref:
+        branch: <string>
+        commit: <string>
+        tag: <string>
+      url: <string>
+
+    # OCI Image in a repository, containing the source code to be
+    # used throughout the supply chain.
+    # +optional
+    image: <string>
+
+    # Subpath inside the Git repository or Image to treat as the
+    # root of the application. Defaults to the root if left empty.
+    # +optional
+    subPath: <string>
+
+# Status conforms to the Kubernetes conventions:
+# https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+# +optional
+status:
+
+  # Conditions describing this resource's reconcile state. The top
+  # level condition is of type `Ready`, and follows these
+  # Kubernetes conventions:
+  # https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+  # +optional
+  conditions:
+    - # Condition contains details for one aspect of the current
+      # state of this API Resource. --- This struct is intended
+      # for direct use as an array at the field path
+      # .status.conditions.  For example, type FooStatus struct{
+      # // Represents the observations of a foo's current state.
+      # // Known .status.conditions.type are: "Available",
+      # "Progressing", and "Degraded" // +patchMergeKey=type //
+      # +patchStrategy=merge // +listType=map // +listMapKey=type
+      # Conditions []metav1.Condition `json:"conditions,omitempty"
+      # patchStrategy:"merge" patchMergeKey:"type"
+      # protobuf:"bytes,1,rep,name=conditions"` 
+      # // other fields }
+      # +optional
+
+      # lastTransitionTime is the last time the condition
+      # transitioned from one status to another. This should be
+      # when the underlying condition changed.  If that is not
+      # known, then using the time when the API field changed is
+      # acceptable.
+      lastTransitionTime: <string>
+
+      # message is a human readable message indicating details
+      # about the transition. This may be an empty string.
+      message: <string>
+
+      # observedGeneration represents the .metadata.generation
+      # that the condition was set based upon. For instance, if
+      # .metadata.generation is currently 12, but the
+      # .status.conditions[x].observedGeneration is 9, the
+      # condition is out of date with respect to the current state
+      # of the instance.
+      # +optional
+      observedGeneration: <integer>
+
+      # reason contains a programmatic identifier indicating the
+      # reason for the condition's last transition. Producers of
+      # specific condition types may define expected values and
+      # meanings for this field, and whether the values are
+      # considered a guaranteed API. The value should be a
+      # CamelCase string. This field may not be empty.
+      reason: <string>
+
+      # status of the condition, one of True, False, Unknown.
+      status: <[True|False|Unknown]>
+
+      # type of condition in CamelCase or in
+      # foo.example.com/CamelCase. --- Many .condition.type values
+      # are consistent across resources like Available, but
+      # because arbitrary conditions can be useful (see
+      # .node.status.conditions), the ability to deconflict is
+      # important. The regex it matches is
+      # (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+      type: <string>
+
+  # DeliveryRef is the Delivery resource that was used when this
+  # status was set.
+  # +optional
+  deliveryRef:
+    apiVersion: <string>
+    kind: <string>
+    name: <string>
+    namespace: <string>
+
+  # ObservedGeneration refers to the metadata.Generation of the
+  # spec that resulted in the current `status`.
+  # +optional
+  observedGeneration: <integer>
+
+  # Resources contain references to the objects created by the
+  # Delivery and the templates used to create them. It also
+  # contains Inputs and Outputs that were passed between the
+  # templates as the Delivery was processed.
+  # +optional
+  resources:
+    - # Inputs are references to resources that were used to
+      # template the object in StampedRef
+      # +optional
+      inputs:
+        - # Name is the name of the resource in the blueprint
+          # whose output the resource consumes as an input
+          name: <string>
+
+      # Name is the name of the resource in the blueprint
+      name: <string>
+
+      # Outputs are values from the object in StampedRef that can
+      # be consumed by other resources
+      # +optional
+      outputs:
+        - # Digest is a sha256 of the full value of the output
+          digest: <string>
+
+          # LastTransitionTime is a timestamp of the last time the
+          # value changed
+          lastTransitionTime: <string>
+
+          # Name is the output type generated from the resource
+          # [url, revision, image or config]
+          name: <string>
+
+          # Preview is a preview of the value of the output
+          preview: <string>
+
+      # StampedRef is a reference to the object that was created
+      # by the resource
+      # +optional
+      stampedRef:
+
+        # API version of the referent.
+        # +optional
+        apiVersion: <string>
+
+        # If referring to a piece of an object instead of an
+        # entire object, this string should contain a valid
+        # JSON/Go field access statement, such as
+        # desiredState.manifest.containers[2]. For example, if the
+        # object reference is to a container within a pod, this
+        # would take on a value like: "spec.containers{name}"
+        # (where "name" refers to the name of the container that
+        # triggered the event) or if no container name is
+        # specified "spec.containers[2]" (container with index 2
+        # in this pod). This syntax is chosen only to have some
+        # well-defined way of referencing a part of an object.
+        # TODO: this design is not final and this field is subject
+        # to change in the future.
+        # +optional
+        fieldPath: <string>
+
+        # Kind of the referent. More info:
+        # https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+        # +optional
+        kind: <string>
+
+        # Name of the referent. More info:
+        # https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+        # +optional
+        name: <string>
+
+        # Namespace of the referent. More info:
+        # https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+        # +optional
+        namespace: <string>
+
+        # Specific resourceVersion to which this reference is
+        # made, if any. More info:
+        # https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+        # +optional
+        resourceVersion: <string>
+
+        # UID of the referent. More info:
+        # https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+        # +optional
+        uid: <string>
+
+      # TemplateRef is a reference to the template used to create
+      # the object in StampedRef
+      # +optional
+      templateRef:
+
+        # API version of the referent.
+        # +optional
+        apiVersion: <string>
+
+        # If referring to a piece of an object instead of an
+        # entire object, this string should contain a valid
+        # JSON/Go field access statement, such as
+        # desiredState.manifest.containers[2]. For example, if the
+        # object reference is to a container within a pod, this
+        # would take on a value like: "spec.containers{name}"
+        # (where "name" refers to the name of the container that
+        # triggered the event) or if no container name is
+        # specified "spec.containers[2]" (container with index 2
+        # in this pod). This syntax is chosen only to have some
+        # well-defined way of referencing a part of an object.
+        # TODO: this design is not final and this field is subject
+        # to change in the future.
+        # +optional
+        fieldPath: <string>
+
+        # Kind of the referent. More info:
+        # https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+        # +optional
+        kind: <string>
+
+        # Name of the referent. More info:
+        # https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+        # +optional
+        name: <string>
+
+        # Namespace of the referent. More info:
+        # https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+        # +optional
+        namespace: <string>
+
+        # Specific resourceVersion to which this reference is
+        # made, if any. More info:
+        # https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+        # +optional
+        resourceVersion: <string>
+
+        # UID of the referent. More info:
+        # https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+        # +optional
+        uid: <string>

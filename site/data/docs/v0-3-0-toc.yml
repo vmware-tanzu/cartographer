@@ -1,0 +1,70 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+toc:
+  - title: Introduction
+    subfolderitems:
+      - page: About
+        url: /
+      - page: Architecture
+        url: /architecture
+      - page: Authentication
+        url: /authentication
+      - page: Install
+        url: /install
+      - page: Templating
+        url: /templating
+  - title: CR Reference
+    subfolderitems:
+      - page: GVK
+        url: /reference/gvk
+      - page: Workload & Supply Chain
+        url: /reference/workload
+      - page: Deliverable & Delivery
+        url: /reference/deliverable
+      - page: Templates
+        url: /reference/template
+      - page: Runnable
+        url: /reference/runnable
+  - title: Tutorials
+    subfolderitems:
+      - page: First Supply Chain
+        url: /tutorials/first-supply-chain
+      - page: Using Params
+        url: /tutorials/using-params
+      - page: Extending a Supply Chain
+        url: /tutorials/extending-a-supply-chain
+      - page: Runnable
+        url: /tutorials/runnable
+      - page: Runnable in a Supply Chain
+        url: /tutorials/runnable-in-a-supply-chain
+  - title: Examples
+    subfolderitems:
+      - page: Multi-Cluster
+        url: /multi-cluster
+      - page: Examples
+        url: /examples
+  - title: Support
+    subfolderitems:
+      - page: Troubleshooting
+        url: /troubleshooting
+  - title: Runnable
+    subfolderitems:
+      - page: Architecture
+        url: /runnable/architecture
+  - title: Documentation Style Guide
+    subfolderitems:
+      - page: Style Guide
+        url: /style-guide
+

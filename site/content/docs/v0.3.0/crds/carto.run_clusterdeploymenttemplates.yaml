@@ -1,0 +1,99 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeploymentTemplate
+metadata: {}
+spec:
+
+  # ObservedCompletion describe the criteria for determining that
+  # the templated object completed configuration of environment.
+  # These criteria assert completion when metadata.Generation and
+  # status.ObservedGeneration match, AND success or failure
+  # criteria match. Cannot specify both ObservedMatches and
+  # ObservedCompletion.
+  # +optional
+  observedCompletion:
+
+    # FailedCondition, when matched, indicates that the input did
+    # not deploy successfully.
+    # +optional
+    failed:
+
+      # Key is a jsonPath expression pointing to the field to
+      # inspect on the templated object, eg:
+      # 'status.conditions[?(@.type=="Succeeded")].status'
+      key: <string>
+
+      # Value is the expected value that, when matching the key's
+      # actual value, makes this condition true.
+      value: <string>
+
+    # SucceededCondition, when matched, indicates that the input
+    # was successfully deployed.
+    succeeded:
+
+      # Key is a jsonPath expression pointing to the field to
+      # inspect on the templated object, eg:
+      # 'status.conditions[?(@.type=="Succeeded")].status'
+      key: <string>
+
+      # Value is the expected value that, when matching the key's
+      # actual value, makes this condition true.
+      value: <string>
+
+  # ObservedMatches describe the criteria for determining that the
+  # templated object completed configuration of environment. These
+  # criteria assert completion when an output (usually a field in
+  # .status) matches an input (usually a field in .spec) Cannot
+  # specify both ObservedMatches and ObservedCompletion.
+  # +optional
+  observedMatches:
+    - # Input is a jsonPath to a value that is fulfilled before
+      # the templated object is reconciled. Usually a value in the
+      # .spec of the object
+      input: <string>
+
+      # Output is a jsonPath to a value that is fulfilled after
+      # the templated object is reconciled. Usually a value in the
+      # .status of the object
+      output: <string>
+
+  # Additional parameters. See:
+  # https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
+  # +optional
+  params:
+    - # DefaultValue of the parameter. Causes the parameter to be
+      # optional; If the Owner or Template does not specify this
+      # parameter, this value is used.
+      default: <any>
+
+      # Name of a parameter the template accepts from the
+      # Blueprint or Owner.
+      name: <string>
+
+  # Template defines a resource template for a Kubernetes Resource
+  # or Custom Resource which is applied to the server each time
+  # the blueprint is applied. Templates support simple value
+  # interpolation using the $()$ marker format. For more
+  # information, see:
+  # https://cartographer.sh/docs/latest/templating/ You cannot
+  # define both Template and Ytt at the same time. You should not
+  # define the namespace for the resource - it will automatically
+  # be created in the owner namespace. If the namespace is
+  # specified and is not the owner namespace, the resource will
+  # fail to be created.
+  # +optional
+  template: {}
+
+  # Ytt defines a resource template written in `ytt` for a
+  # Kubernetes Resource or Custom Resource which is applied to the
+  # server each time the blueprint is applied. Templates support
+  # simple value interpolation using the $()$ marker format. For
+  # more information, see:
+  # https://cartographer.sh/docs/latest/templating/ You cannot
+  # define both Template and Ytt at the same time. You should not
+  # define the namespace for the resource - it will automatically
+  # be created in the owner namespace. If the namespace is
+  # specified and is not the owner namespace, the resource will
+  # fail to be created.
+  # +optional
+  ytt: <string>
