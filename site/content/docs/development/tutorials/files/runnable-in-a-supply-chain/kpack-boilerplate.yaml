@@ -1,0 +1,43 @@
+---
+apiVersion: kpack.io/v1alpha1
+kind: ClusterStore
+metadata:
+  name: default
+spec:
+  sources:
+    - image: gcr.io/paketo-buildpacks/java
+    - image: gcr.io/paketo-buildpacks/go
+
+---
+apiVersion: kpack.io/v1alpha1
+kind: ClusterStack
+metadata:
+  name: base
+spec:
+  id: "io.buildpacks.stacks.bionic"
+  buildImage:
+    image: "paketobuildpacks/build:base-cnb"
+  runImage:
+    image: "paketobuildpacks/run:base-cnb"
+
+---
+apiVersion: kpack.io/v1alpha2
+kind: ClusterBuilder
+metadata:
+  name: my-builder
+spec:
+  serviceAccountRef:
+    name: expected-service-account
+    namespace: default
+  tag: "0.0.0.0:5000/go-java-builder" # <=== Change to proper image registry
+  stack:
+    name: base
+    kind: ClusterStack
+  store:
+    name: default
+    kind: ClusterStore
+  order:
+    - group:
+        - id: paketo-buildpacks/java
+    - group:
+        - id: paketo-buildpacks/go

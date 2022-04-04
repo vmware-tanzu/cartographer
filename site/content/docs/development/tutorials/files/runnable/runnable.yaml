@@ -1,0 +1,12 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Runnable
+metadata:
+  name: linter
+spec:
+  runTemplateRef:
+    name: md-linting-pipelinerun
+  inputs:
+    repository: https://github.com/waciumawanjohi/demo-hello-world
+    revision: main
+  serviceAccountName: pipeline-run-management-sa
