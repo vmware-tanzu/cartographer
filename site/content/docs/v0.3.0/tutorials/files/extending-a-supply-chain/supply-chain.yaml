@@ -1,0 +1,25 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: source-code-supply-chain
+spec:
+  selector:
+    workload-type: source-code
+
+  resources:
+    - name: build-image
+      templateRef:
+        kind: ClusterImageTemplate
+        name: image-builder
+    - name: deploy
+      templateRef:
+        kind: ClusterTemplate
+        name: app-deploy-from-sc-image
+      images:
+        - resource: build-image
+          name: built-image
+
+  serviceAccountRef:
+    name: cartographer-from-source-sa
+    namespace: default

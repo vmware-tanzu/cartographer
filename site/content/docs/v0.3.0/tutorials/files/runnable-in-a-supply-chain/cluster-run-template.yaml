@@ -1,0 +1,31 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterRunTemplate
+metadata:
+  name: md-linting-pipelinerun
+spec:
+  template:
+    apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: $(runnable.metadata.name)$-pipeline-run-
+    spec:
+      pipelineRef:
+        name: linter-pipeline
+      params:
+        - name: repository
+          value: $(runnable.spec.inputs.repository)$
+        - name: revision
+          value: $(runnable.spec.inputs.revision)$
+      workspaces:
+        - name: shared-workspace
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 256Mi
+  outputs:
+    url: spec.params[?(@.name=="repository")].value
+    revision: spec.params[?(@.name=="revision")].value

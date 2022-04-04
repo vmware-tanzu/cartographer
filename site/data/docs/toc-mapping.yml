@@ -16,6 +16,7 @@
 # (TOC). You'll want to use this after any revamps to information architecture, to ensure
 # that the navigation for older versions still work.
 development: development-toc
+v0.3.0: v0-3-0-toc
 v0.2.0: v0-2-0-toc
 v0.1.0: v0-1-0-toc
 v0.0.7: v0-0-7-toc

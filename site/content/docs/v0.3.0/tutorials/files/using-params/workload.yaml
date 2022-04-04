@@ -1,0 +1,13 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: hello-again
+  labels:
+    workload-type: pre-built
+spec:
+  image: 0.0.0.0:5000/hello-world # <=== Change this to some proper registry and image
+  serviceAccountName: cartographer-pre-built-sa
+  params:
+    - name: image-pull-sa-name
+      value: unconventionally-named-service-account

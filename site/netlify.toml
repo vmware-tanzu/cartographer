@@ -28,3 +28,9 @@ HUGO_VERSION = "0.89.4"
 
 [context.next.environment]
 HUGO_ENABLEGITINFO = "true"
+
+[[redirects]]
+  from = "/docs/:version/*"
+  to = "/docs/:version"
+  status = 307
+  force = false
