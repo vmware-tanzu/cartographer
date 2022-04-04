@@ -24,11 +24,10 @@ Exception: Use future or past tense if it is required to convey the correct mean
 
 {{< table caption="Do and Don't - Use active voice" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-|You can explore the API using a browser.|The API can be explored using a browser.| |The YAML file specifies the replica
-count.|The replica count is specified in the YAML file.|
+| Do                                         | Don't                                            |
+| ------------------------------------------ | ------------------------------------------------ |
+| You can explore the API using a browser.   | The API can be explored using a browser.         |
+| The YAML file specifies the replica count. | The replica count is specified in the YAML file. |
 
 {{< /table >}}
 
@@ -40,11 +39,11 @@ Use simple and direct language. Avoid using unnecessary phrases, such as saying 
 
 {{< table caption="Do and Don't - Use simple and direct language" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-|To create a ReplicaSet, ...|In order to create a ReplicaSet, ...| |See the configuration file.|Please see the
-configuration file.| |View the Pods.|With this next command, we'll view the Pods.|
+| Do                          | Don't                                        |
+| --------------------------- | -------------------------------------------- |
+| To create a ReplicaSet, ... | In order to create a ReplicaSet, ...         |
+| See the configuration file. | Please see the configuration file.           |
+| View the Pods.              | With this next command, we'll view the Pods. |
 
 {{< /table >}}
 
@@ -52,11 +51,12 @@ configuration file.| |View the Pods.|With this next command, we'll view the Pods
 
 {{< table caption="Do and Don't - Addressing the reader" >}}
 
-| Do  | Don't |
-| --- | ----- |
+| Do                                      | Don't                                   |
+| --------------------------------------- | --------------------------------------- |
+| You can create a Deployment by ...      | We'll create a Deployment by ...        |
+| In the preceding output, you can see... | In the preceding output, we can see ... |
 
-|You can create a Deployment by ...|We'll create a Deployment by ...| |In the preceding output, you can see...|In the
-preceding output, we can see ...| {{< /table >}}
+{{< /table >}}
 
 ### Avoid Latin phrases
 
@@ -67,8 +67,7 @@ Prefer English terms over Latin abbreviations.
 | Do               | Don't     |
 | ---------------- | --------- |
 | For example, ... | e.g., ... |
-
-|That is, ...|i.e., ...|
+| That is, ...     | i.e., ... |
 
 {{< /table >}}
 
@@ -83,13 +82,11 @@ describing.
 
 {{< table caption="Do and Don't - Avoid using we" >}}
 
-| Do                                        | Don't                        |
-| ----------------------------------------- | ---------------------------- |
-| Version 1.4 includes ...                  | In version 1.4,              |
-| we have added ...                         |
-| Kubernetes provides a new feature for ... | We provide a new feature ... |
-
-|This page teaches you how to use Pods.|In this page, we are going to learn about Pods.|
+| Do                                        | Don't                                           |
+| ----------------------------------------- | ----------------------------------------------- |
+| Version 1.4 includes ...                  | In version 1.4, we have added ...               |
+| Kubernetes provides a new feature for ... | We provide a new feature ...                    |
+| This page teaches you how to use Pods.    | In this page, we are going to learn about Pods. |
 
 {{< /table >}}
 
@@ -101,8 +98,7 @@ Many readers speak English as a second language. Avoid jargon and idioms to help
 
 | Do                    | Don't                  |
 | --------------------- | ---------------------- |
-| Internally, ...       | Under the hood,        |
-| ...                   |
+| Internally, ...       | Under the hood, ...    |
 | Create a new cluster. | Turn up a new cluster. |
 
 {{< /table >}}
@@ -117,11 +113,12 @@ few months.
 
 {{< table caption="Do and Don't - Avoid statements that will soon be out of date" >}}
 
-| Do  | Don't |
-| --- | ----- |
+| Do                                  | Don't                                   |
+| ----------------------------------- | --------------------------------------- |
+| In version 1.4, ...                 | In the current version, ...             |
+| The Federation feature provides ... | The new Federation feature provides ... |
 
-|In version 1.4, ...|In the current version, ...| |The Federation feature provides ...|The new Federation feature
-provides ...| {{< /table >}}
+{{< /table >}}
 
 ### Language
 
@@ -140,12 +137,13 @@ Refer to API objects without saying "object," unless omitting "object" leads to 
 
 {{< table caption="Do and Don't - Do and Don't - API objects" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-|The Pod has two containers.|The pod has two containers.| |The Deployment is responsible for ...|The Deployment object
-is responsible for ...| |A PodList is a list of Pods.|A Pod List is a list of pods.| |The two ContainerPorts ...|The two
-ContainerPort objects ...| |The two ContainerStateTerminated objects ...|The two ContainerStateTerminateds ...|
+| Do                                           | Don't                                        |
+| -------------------------------------------- | -------------------------------------------- |
+| The Pod has two containers.                  | The pod has two containers.                  |
+| The Deployment is responsible for ...        | The Deployment object is responsible for ... |
+| A PodList is a list of Pods.                 | A Pod List is a list of pods.                |
+| The two ContainerPorts ...                   | The two ContainerPort objects ...            |
+| The two ContainerStateTerminated objects ... | The two ContainerStateTerminateds ...        |
 
 {{< /table >}}
 
@@ -155,7 +153,7 @@ Use angle brackets for placeholders. Tell the reader what a placeholder represen
 
 1.  Display information about a Pod:
 
-        kubectl describe pod <pod-name> -n <namespace>
+         kubectl describe pod <pod-name> -n <namespace>
 
     If the pod is in the default namespace, you can omit the '-n' parameter.
 
@@ -174,28 +172,33 @@ Use angle brackets for placeholders. Tell the reader what a placeholder represen
 
 {{< table caption="Do and Don't - Use italics for new terms" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-|A _cluster_ is a set of nodes ...|A "cluster" is a set of nodes ...| |These components form the _control plane_.|These
-components form the **control plane**.|
+| Do                                         | Don't                                        |
+| ------------------------------------------ | -------------------------------------------- |
+| A _cluster_ is a set of nodes ...          | A "cluster" is a set of nodes ...            |
+| These components form the _control plane_. | These components form the **control plane**. |
 
 {{< /table >}}
 
 ### Use code style for filenames, directories, paths, object field names and namespaces
 
 {{< table caption="Do and Don't - Use code style for filenames, directories, paths, object field names and namespaces" >}}
-|Do|Don't| |--- |--- | |Open the `envars.yaml` file.|Open the envars.yaml file.| |Go to the `/docs/tutorials`
-directory.|Go to the /docs/tutorials directory.| |Open the `/_data/concepts.yaml` file.|Open the /\_data/concepts.yaml
-file.|
+
+| Do                                     | Don't                                |
+| -------------------------------------- | ------------------------------------ |
+| Open the `envars.yaml` file.           | Open the envars.yaml file.           |
+| Go to the `/docs/tutorials` directory. | Go to the /docs/tutorials directory. |
+| Open the `/_data/concepts.yaml` file.  | Open the /\_data/concepts.yaml file. |
 
 {{< /table >}}
 
 ### Use punctuation inside quotes
 
 {{< table caption="Do and Don't - Use code style for filenames, directories, paths, object field names and namespaces" >}}
-|Do|Don't| |--- |--- | |events are recorded with an associated "stage."|events are recorded with an associated "stage".|
-|The copy is called a "fork."|The copy is called a "fork".|
+
+| Do                                              | Don't                                           |
+| ----------------------------------------------- | ----------------------------------------------- |
+| events are recorded with an associated "stage." | events are recorded with an associated "stage". |
+| The copy is called a "fork."                    | The copy is called a "fork".                    |
 
 {{< /table >}}
 
@@ -214,17 +217,14 @@ For inline code in an HTML document, use the `<code>` tag. In a Markdown documen
 
 {{< table caption="Do and Don't - Use code style for filenames, directories, paths, object field names and namespaces" >}}
 
-| Do                                               | Don't                                            |
-| ------------------------------------------------ | ------------------------------------------------ |
-| The `kubectl run` command creates a Deployment.  | The "kubectl run" command creates a Deployment.  |
-| For declarative management, use `kubectl apply`. | For declarative management, use "kubectl apply". |
-
-|Use single backticks to enclose inline code. For example, `var example = true`.|Use two asterisks (`**`) or an
-underscore (`_`) to enclose inline code. For example, **var example = true**.| |Use triple backticks (\`\`\`) before and
-after a multi-line block of code for fenced code blocks.|Use multi-line blocks of code to create diagrams, flowcharts,
-or other illustrations.| |Use meaningful variable names that have a context.|Use variable names such as 'foo','bar', and
-'baz' that are not meaningful and lack context.| |Remove trailing spaces in the code.|Add trailing spaces in the code,
-where these are important, because a screen reader will read out the spaces as well.|
+| Do                                                                                                | Don't                                                                                                                 |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| The `kubectl run` command creates a Deployment.                                                   | The "kubectl run" command creates a Deployment.                                                                       |
+| For declarative management, use `kubectl apply`.                                                  | For declarative management, use "kubectl apply".                                                                      |
+| Use single backticks to enclose inline code. For example, `var example = true`.                   | Use two asterisks (`**`) or an underscore (`_`) to enclose inline code. For example, **var example = true**.          |
+| Use triple backticks (\`\`\`) before and after a multi-line block of code for fenced code blocks. | Use multi-line blocks of code to create diagrams, flowcharts, or other illustrations.                                 |
+| Use meaningful variable names that have a context.                                                | Use variable names such as 'foo','bar', and 'baz' that are not meaningful and lack context.                           |
+| Remove trailing spaces in the code.                                                               | Add trailing spaces in the code, where these are important, because a screen reader will read out the spaces as well. |
 
 {{< /table >}}
 
@@ -232,12 +232,10 @@ where these are important, because a screen reader will read out the spaces as w
 
 {{< table caption="Do and Don't - Starting a sentence with a component tool or component name" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-| |The `kubeadm` tool bootstraps and provisions machines in a cluster.|`kubeadm` tool bootstraps and provisions machines
-in a cluster.| |The kube-scheduler is the default scheduler for Kubernetes.|kube-scheduler is the default scheduler for
-Kubernetes.|
+| Do                                                                  | Don't                                                           |
+| ------------------------------------------------------------------- | --------------------------------------------------------------- |
+| The `kubeadm` tool bootstraps and provisions machines in a cluster. | `kubeadm` tool bootstraps and provisions machines in a cluster. |
+| The kube-scheduler is the default scheduler for Kubernetes.         | kube-scheduler is the default scheduler for Kubernetes.         |
 
 {{< /table >}}
 
@@ -247,12 +245,11 @@ For field values of type string or integer, use normal style without quotation m
 
 {{< table caption="Do and Don't - Use normal style for string and integer field values" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-|Set the value of `imagePullPolicy` to `Always`.|Set the value of `imagePullPolicy` to "Always".| |Set the value of
-`image` to `nginx:1.16`.|Set the value of `image` to nginx:1.16.| |Set the value of the `replicas` field to `2`.|Set the
-value of the `replicas` field to 2.|
+| Do                                              | Don't                                           |
+| ----------------------------------------------- | ----------------------------------------------- |
+| Set the value of `imagePullPolicy` to `Always`. | Set the value of `imagePullPolicy` to "Always". |
+| Set the value of `image` to `nginx:1.16`.       | Set the value of `image` to nginx:1.16.         |
+| Set the value of the `replicas` field to `2`.   | Set the value of the `replicas` field to 2.     |
 
 {{< /table >}}
 
@@ -262,10 +259,9 @@ value of the `replicas` field to 2.|
 
 {{< table caption="Do and Don't - Don't include the command prompt" >}}
 
-| Do               | Don't |
-| ---------------- | ----- |
-| kubectl get pods | $     |
-| kubectl get pods |
+| Do               | Don't              |
+| ---------------- | ------------------ |
+| kubectl get pods | $ kubectl get pods |
 
 {{< /table >}}
 
@@ -290,20 +286,17 @@ A list of Cartographer-specific terms and words to be used consistently across t
 
 {{< table caption="Cartographer word list" >}}
 
-| Trem                 | Usage                                                    |
-| -------------------- | -------------------------------------------------------- |
-| Kubernetes           | Kubernetes should always be                              |
-| capitalized.         |
-| Docker               | Docker should always be capitalized.                     |
-| Cartographer         | Cartographer should always be capitalized.               |
-| VMware               | VMware should always be correctly capitalized.           |
-| On-premises          | On-premises or on-prem rather than on-premise or         |
-| other variations.    |
-| Backup               | Backup rather than back up, back-up or other variations. |
-| Plugin               | Plugin rather than plug-in                               |
-| or other variations. |
-| Allowlist            | Use allowlist instead of whitelist.                      |
-| Denylist             | Use denylist instead of blacklist.                       |
+| Trem         | Usage                                                              |
+| ------------ | ------------------------------------------------------------------ |
+| Kubernetes   | Kubernetes should always be capitalized.                           |
+| Docker       | Docker should always be capitalized.                               |
+| Cartographer | Cartographer should always be capitalized.                         |
+| VMware       | VMware should always be correctly capitalized.                     |
+| On-premises  | On-premises or on-prem rather than on-premise or other variations. |
+| Backup       | Backup rather than back up, back-up or other variations.           |
+| Plugin       | Plugin rather than plug-in or other variations.                    |
+| Allowlist    | Use allowlist instead of whitelist.                                |
+| Denylist     | Use denylist instead of blacklist.                                 |
 
 {{< /table >}}
 
@@ -341,15 +334,10 @@ page structure helps all readers to easily navigate the page or filter topics of
 
 {{< table caption="Do and Don't - Links" >}}
 
-| Do  | Don't |
-| --- | ----- |
-
-|Write hyperlinks that give you context for the content they link to. For example: Certain ports are open on your
-machines. See [check required ports](#check-required-ports) for more details.|Use ambiguous terms such as “click here”.
-For example: Certain ports are open on your machines. See [here](#check-required-ports) for more details.| |Write
-Markdown-style links: `[link text](URL)`. For example:
-`[community meeting agenda](https://hackmd.io/Jq6F5zqZR7S80CeDWUklkA)` and the output is
-[community meeting agenda](https://hackmd.io/Jq6F5zqZR7S80CeDWUklkA).|Write HTML-style links: `Visit our tutorial!`|
+| Do                                                                                                                                                                                                                          | Don't                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Write hyperlinks that give you context for the content they link to. For example: Certain ports are open on your machines. See [check required ports](#check-required-ports) for more details.                              | Use ambiguous terms such as “click here”. For example: Certain ports are open on your machines. See [here](#check-required-ports) for more details. |
+| Write Markdown-style links: `[link text](URL)`. For example: `[community meeting agenda](https://hackmd.io/Jq6F5zqZR7S80CeDWUklkA)` and the output is [community meeting agenda](https://hackmd.io/Jq6F5zqZR7S80CeDWUklkA). | Write HTML-style links: `Visit our tutorial!`                                                                                                       |
 
 {{< /table >}}
 
@@ -390,10 +378,12 @@ If you need to create a table, create the table in markdown and use the table
 
 ```
 {{</* table caption="Configuration parameters" >}}
-Parameter | Description | Default
-:---------|:------------|:-------
-`timeout` | The timeout for requests | `30s`
-`logLevel` | The log level for log output | `INFO`
+
+| Parameter | Description | Default |
+|:---------|:------------|:------- |
+| `timeout` | The timeout for requests | `30s` |
+| `logLevel` | The log level for log output | `INFO` |
+
 {{< /table */>}}
 
 ```
