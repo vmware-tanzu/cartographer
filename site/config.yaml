@@ -72,8 +72,6 @@ params:
     - v0.3.0
     - v0.2.0
     - v0.1.0
-    - v0.0.7
-    - v0.0.6
 mediaTypes:
   "text/netlify":
     delimiter: ""
