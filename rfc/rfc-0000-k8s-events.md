@@ -109,8 +109,6 @@ The cartographer controller could emit the following events:
 | SupplyChainChanged | supply chain changed from `<old supply chain name>` to `<new supply chain name>` | Workload selected for a new or different supply chain. Note: `none` is a possible name. | Owner |
 | WorkloadSelected | supply chain matched a workload | A workload was selected for (really, this is when the supplyChainRef changes). This makes the count a useful metric | Blueprint |
 
-* Cache misses? (Not sure about this, we'll miss if the controller restarts or with HA Elections (future concern))
-
 **Note:** Blueprint event `messages` are usually designed to aggregate on the resource kind, not the individual
 resource (we omit `<resource name>`)
 
