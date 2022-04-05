@@ -140,6 +140,8 @@ release_body() {
 kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/download/<NEW_TAG>/cartographer.yaml
 ```
 
+[Prerequisites explained here](https://cartographer.sh/docs/v0.2.0/install/#prerequisites)
+
 # 🚨 Breaking Changes
 
 - <REPLACE_ME>
