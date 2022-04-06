@@ -14,14 +14,7 @@
 
 #@ load("@ytt:overlay", "overlay")
 
-#@ def not_matcher(marg):
-#@   def matcher(*args, **kwargs):
-#@     return not marg(*args, **kwargs)
-#@   end
-#@   return matcher
-#@ end
-
-#@overlay/match by=not_matcher(overlay.subset({"kind":"Namespace"})),expects="1+"
+#@overlay/match by=overlay.not_op(overlay.subset({"kind":"Namespace"})),expects="1+"
 ---
 metadata:
   #@overlay/match missing_ok=True
