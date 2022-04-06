@@ -287,15 +287,11 @@ setup_example_sc() {
                 -f "$DIR/../examples/shared" \
                 -f "$DIR/../examples/$test_name/values.yaml" \
                 --data-value registry.server="$REGISTRY" \
-                --data-value registry.username=admin \
-                --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-$test_name-")
         kapp deploy --yes -a "example-$test_name" \
             -f <(ytt --ignore-unknown-comments \
                 -f "$DIR/../examples/$test_name" \
                 --data-value registry.server="$REGISTRY" \
-                --data-value registry.username=admin \
-                --data-value registry.password=admin \
                 --data-value workload_name="$test_name" \
                 --data-value image_prefix="$REGISTRY/example-$test_name-")
 }
@@ -445,16 +441,12 @@ setup_source_to_gitops() {
           -f "$DIR/../examples/shared" \
           -f "$DIR/../examples/$test_name/values.yaml" \
           --data-value registry.server="$REGISTRY" \
-          --data-value registry.username=admin \
-          --data-value registry.password=admin \
           --data-value image_prefix="$REGISTRY/example-$test_name-")
 
       kapp deploy --yes -a "example-$test_name" \
         -f <(ytt --ignore-unknown-comments \
           -f "$DIR/../examples/$test_name" \
           --data-value registry.server="$REGISTRY" \
-          --data-value registry.username=admin \
-          --data-value registry.password=admin \
           --data-value workload_name="$test_name" \
           --data-value image_prefix="$REGISTRY/example-$test_name-" \
           --data-value source_repo.url="https://github.com/kontinue/hello-world" \
