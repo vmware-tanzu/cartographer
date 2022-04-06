@@ -28,7 +28,7 @@ The RFC proposes modifying the existing templates to allow template authors to i
 
 This RFC proposes adding a field to the spec of all templates, `healthyConditionRule`. Template authors use field to define the conditions or fields on a stamped resource that determine whether the resource is succeeding or failing.
 
-Cartographer will attempt to read the specified conditions and/or fields and reflect this state on the owner status. If Cartographer cannot determine success or failure, it will show the state as unknown.
+Cartographer will attempt to read the specified conditions and/or fields and reflect this state on the owner status. If Cartographer cannot determine health, it will show the status as unknown.
 
 ```yaml
 ---
