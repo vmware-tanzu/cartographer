@@ -170,9 +170,9 @@ status:
 [how-it-works]: #how-it-works
 
 A stamped resource can be in one of three states:
-1. 'Healthy'
-2. 'Unhealthy'
-3. 'Unknown'
+1. 'Healthy' (status `True`)
+2. 'Unhealthy' (status `False`)
+3. 'Unknown' (status `Unknown`)
 
 It is up to each template author to determine what "healthy" and "unhealthy" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not been able to determine health.
 
