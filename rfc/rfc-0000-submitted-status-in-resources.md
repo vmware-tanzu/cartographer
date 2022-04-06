@@ -3,7 +3,7 @@
 [meta]: #meta
 
 - Name: Include submitted condition in owner.status.resources.conditions
-- Start Date: 2022-4-1
+- Start Date: 2022-04-01
 - Author(s): [Rasheed Abdul-Aziz](https://github.com/squeedee) [Todd Ritchie](https://github.com/pivotal-todd-ritchie)
 - Status: Draft
 - RFC Pull Request: (leave blank)
