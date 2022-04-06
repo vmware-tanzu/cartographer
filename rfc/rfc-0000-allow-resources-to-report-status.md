@@ -16,20 +16,22 @@ The RFC proposes modifying the existing templates to allow template authors to i
 [motivation]: #motivation
 
 - Why should we do this?
-  - Currently, a blueprint has no knowledge of the current status of its underlying resources. This RFC proposes how resources can report (and categorize) this information strictly for informational purposes.
+  - Currently, a blueprint has no knowledge of the current status of the stamped resources. This RFC proposes how resources can report (and categorize) this information strictly for informational purposes.
 - What use cases does it support?
   - This feature will enable developers to learn about the progression through the blueprint by looking at the owner status alone. It will also surface information about the health of the underlying resources directly on the owner.
   - This will also enable integrations that may be looking to create a UI around Cartographer, allowing the UI to display the health of the blueprint without having to make an API call to k8s to retrieve the status of every resource, and without having to know how to define health for every stamped object type.
 - What is the expected outcome?
   - Users will have more insight into the progression of the blueprint and the health of each underlying resource.
+  - This is augmenting information exposed via resource tracing, and is not a solution for artifact tracing.
 
 # What it is
 [what-it-is]: #what-it-is
 
-This RFC proposes adding a field to the spec of all templates, `healthyConditionRule`. Template authors use field to define the conditions or fields on a stamped resource that determine whether the resource is healthy.
+This RFC proposes adding a field to the spec of all templates, `healthRule`. Template authors use field to define the conditions or fields on a stamped resource that determine whether the resource is healthy.
 
 Cartographer will attempt to read the specified conditions and/or fields and reflect this state on the owner status. If Cartographer cannot determine health, it will show the status as unknown.
 
+Single condition example (likely the most common use case):
 ```yaml
 ---
 apiVersion: carto.run/v1alpha1
@@ -40,7 +42,7 @@ spec:
   urlPath: .status.artifact.url
   revisionPath: .status.artifact.revision
 
-  healthyConditionRule:
+  healthRule:
     singleConditionType: Ready
 
   template:
@@ -65,6 +67,7 @@ status:
           status: 'Unknown'
 ```
 
+Multi match with both conditions and fields, plus `messagePath` in matchFields to allow for surfacing the most useful messages:
 ```yaml
 ---
 apiVersion: carto.run/v1alpha1
@@ -72,7 +75,7 @@ kind: ClusterTemplate
 metadata:
   name: deploy
 spec:
-  healthyConditionRule:
+  healthRule:
     multiMatch:
       healthy:
         matchConditions:
@@ -103,6 +106,7 @@ status:
           lastTransitionTime: "2022-03-23T13:08:22Z"
 ```
 
+Multi match with matchFields is important to support for resources like Services which have no conditions:
 ```yaml
 ---
 apiVersion: carto.run/v1alpha1
@@ -110,7 +114,7 @@ kind: ClusterTemplate
 metadata:
   name: servicer
 spec:
-  healthyConditionRule:
+  healthRule:
     multiMatch:
       healthy:
         matchFields:
@@ -139,6 +143,7 @@ status:
           lastTransitionTime: "2022-03-23T13:08:22Z"
 ```
 
+alwaysHealthy example for resources without status (like ConfigMaps):
 ```yaml
 ---
 apiVersion: carto.run/v1alpha1
@@ -146,7 +151,7 @@ kind: ClusterTemplate
 metadata:
   name: configmap-creator
 spec:
-  healthyConditionRule:
+  healthRule:
     alwaysHealthy: {}
     
   template:
@@ -176,9 +181,9 @@ A stamped resource can be in one of three states:
 
 It is up to each template author to determine what "healthy" and "unhealthy" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not been able to determine health.
 
-Each template will now have a new field in the spec `healthyConditionRule` where authors can specify one of three ways to determine the health of the underlying resource for that template. If no `healthyConditionRule` is defined, Cartographer will default to listing the resource as `Healthy` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
+Each template will now have a new field in the spec `healthRule` where authors can specify one of three ways to determine the health of the underlying resource for that template. If no `healthRule` is defined, Cartographer will default to listing the resource as `Healthy` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
 
-The `healthyConditionRule` requires defining one of three fields:
+The `healthRule` requires defining one of three fields:
 1. `alwaysHealthy: {}`
     * If defined, the resource will always be listed as healthy.
 2. `singleConditionType: <condition type>`
@@ -192,13 +197,13 @@ The `healthyConditionRule` requires defining one of three fields:
     * For `matchConditions`, authors need only define the `type` and `status` of the condition for Cartographer to read. In the owner status, the full condition will be reflected (with the `reason`, `message`, etc.)
     * For `matchFields`, the spec is based off of `matchFields` in blueprint resource options. Authors need to define the `key` and `operator`, and potentially the `values` (if the operator is `In` or `NotIn`). Authors can also optionally define a `messagePath`, which is a path in the resource where Cartographer can pull off a message to display in the owner status.
     
-Each owner's status.resources will now include a `conditions` field. To make room for future extensibility, this will be an array of conditions, though this RFC only defines one condition to be included here. The condition will be of `type` 'Healthy' and will report a `status` of 'True', 'False', or 'Unknown'. The condition will also have a `reason` which will be based off the `healthyConditionRule` as follows:
+Each owner's status.resources will now include a `conditions` field (of type []metav1.condition). To make room for future extensibility, this will be an array of conditions, though this RFC only defines one condition to be included here. The condition will be of `type` 'Healthy' and will report a `status` of 'True', 'False', or 'Unknown'. The condition will also have a `reason` which will be based off the `healthRule` as follows:
     
 * If `alwaysHealthy: {}`, `reason: AlwaysHealthy`.
 * If `singleConditionType: X`, `reason: XCondition`.
 * If `multiMatch: ...`, `reason: (MatchedCondition|MatchedField)`.
 
-If the `healthyConditionRule` is not `alwaysHealthy`, the condition will also have a message. For `singleConditionType`, the message will be propagated from the specified condition. For `multiMatch`, the message will specify the value of the matched condition or field, and then display the message of the matched condition or the message at the path specified in `matchFields`.
+If the `healthRule` is not `alwaysHealthy`, the condition will also have a message. For `singleConditionType`, the message will be propagated from the specified condition. For `multiMatch`, the message will specify the value of the matched condition or field, and then display the message of the matched condition or the message at the path specified in `matchFields`.
 
 In the case of `multiMatch`, if there is more than one matching condition or field that caused the resource to enter it's current state, the first one read will be propagated by Cartographer.
 
@@ -213,8 +218,9 @@ Given that Cartographer will default to `Healthy` once the resource is applied a
 [drawbacks]: #drawbacks
 
 Why should we *not* do this?
-- We only allow for reflecting three states, though this design allows for creating more states in the future.
-- This design does not allow authors to define the states themselves.
+- We only allow for reflecting one condition (`Healthy` as True/False/Unknown), though this design allows for addition conditions to the resources in the future.
+- This design does not allow authors to define the conditions themselves.
+  - This consistency is itself a positive, though, as the owner can reason about the state of the stamped resources.
 
 # Alternatives
 [alternatives]: #alternatives
@@ -236,20 +242,18 @@ N/A
 # Unresolved Questions
 [unresolved-questions]: #unresolved-questions
 
-- Should the two states be `Healthy` and `Unhealthy`?
 - Is it right for Cartographer to default to `Healthy`?
-- Should the owner condition `ResourcesHealthy` have any possible `reason`s other than `HealthyConditionRule`?
 
 # Spec. Changes
 [spec-changes]: #spec-changes
-- All templates will now have an optional `healthyConditionRule` which will take one of three fields:
+- All templates will now have an optional `healthRule` which will take one of three fields:
 ```yaml
 apiVersion: carto.run/v1alpha1
 kind: Cluster[Config|Deployment|Image|Source]Template
 spec:
   # validation:MinProperties:1
   # validation:MaxProperties:1
-  healthyConditionRule:
+  healthRule:
     alwaysHealthy: {}
     singleConditionType: <string>
     multiMatch:
