@@ -20,4 +20,4 @@ metadata:
   #@overlay/match missing_ok=True
   labels:
     #@overlay/match missing_ok=True
-    app.kubernetes.io/component: cartographer.carto.run
+    app.kubernetes.io/component: cartographer
