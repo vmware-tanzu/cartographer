@@ -174,7 +174,7 @@ A stamped resource can be in one of three states:
 2. 'Unhealthy'
 3. 'Unknown'
 
-It is up to each template author to determine what "healthy" and "unhealthy" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not been able to determine healthy or unhealthy.
+It is up to each template author to determine what "healthy" and "unhealthy" mean for the given resource the template is stamping out. "Unknown" strictly represents that Cartographer has not been able to determine health.
 
 Each template will now have a new field in the spec `healthyConditionRule` where authors can specify one of three ways to determine the health of the underlying resource for that template. If no `healthyConditionRule` is defined, Cartographer will default to listing the resource as `Healthy` once it has been successfully applied to the cluster and any relevant outputs have been read off the resource.
 
