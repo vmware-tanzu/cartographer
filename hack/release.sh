@@ -24,9 +24,6 @@ readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
-readonly YTT_VERSION=0.39.0
-readonly YTT_CHECKSUM=7a472b8c62bfec5c12586bb39065beda42c6fe43cf24271275e4dbc0a04acb8b
-
 main() {
         readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
         readonly PREVIOUS_VERSION=${PREVIOUS_VERSION:-$(git_previous_version $RELEASE_VERSION)}
@@ -34,7 +31,6 @@ main() {
         show_vars
         cd $ROOT
 
-        download_ytt_to_kodata
         generate_release
         create_release_notes
 }
@@ -47,27 +43,7 @@ show_vars() {
         RELEASE_VERSION:        $RELEASE_VERSION
         ROOT:                   $ROOT
         SCRATCH:                $SCRATCH
-        YTT_VERSION:            $YTT_VERSION
         "
-}
-
-download_ytt_to_kodata() {
-        local url=https://github.com/vmware-tanzu/carvel-ytt/releases/download/v${YTT_VERSION}/ytt-linux-amd64
-        local fname=ytt-linux-amd64
-
-        local dest
-        dest=$(realpath ./cmd/cartographer/kodata/$fname)
-
-        test -x $dest && echo "${YTT_CHECKSUM}  $dest" | sha256sum -c && {
-                echo "ytt already found in kodata."
-                return
-        }
-
-        pushd "$(mktemp -d)"
-        curl -sSOL $url
-        echo "${YTT_CHECKSUM}  $fname" | sha256sum -c
-        install -m 0755 $fname $dest
-        popd
 }
 
 generate_release() {

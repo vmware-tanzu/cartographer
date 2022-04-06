@@ -19,14 +19,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path"
-	"runtime"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/valyala/fasttemplate"
+	yttcmd "github.com/vmware-tanzu/carvel-ytt/pkg/cmd/template"
+	yttui "github.com/vmware-tanzu/carvel-ytt/pkg/cmd/ui"
+	yttfiles "github.com/vmware-tanzu/carvel-ytt/pkg/files"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -197,52 +195,53 @@ func (s *Stamper) applyTemplate(resourceTemplateJSON []byte) (*unstructured.Unst
 func (s *Stamper) applyYtt(ctx context.Context, template string) (*unstructured.Unstructured, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
-	// limit execution duration to protect against infinite loops or cpu wasting templates
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
-
-	ytt := "ytt"
-	// ko copies the content of the kodata directory into the container at a path referenced by $KO_DATA_PATH
-	if kodata, ok := os.LookupEnv("KO_DATA_PATH"); ok {
-		ytt = path.Join(kodata, fmt.Sprintf("ytt-%s-%s", runtime.GOOS, runtime.GOARCH))
-	}
-
-	args := []string{"-f", "-"}
-	stdin := bytes.NewReader([]byte(template))
-	stdout := bytes.NewBuffer([]byte{})
-	stderr := bytes.NewBuffer([]byte{})
+	yttOpts := yttcmd.NewOptions()
 
 	// inject each key of the template context as a ytt value
 	templateContext := map[string]interface{}{}
 	b, err := json.Marshal(s.TemplatingContext)
 	if err != nil {
-		// NOTE we can ignore subsequent json errors, if there's a issue with the data it will be caught here
+		// NOTE we can ignore subsequent json errors, if there's an issue with the data it will be caught here
 		return nil, fmt.Errorf("unable to marshal template context: %w", err)
 	}
-	_ = json.Unmarshal(b, &templateContext)
+	err = json.Unmarshal(b, &templateContext)
+	if err != nil {
+		// NOTE this should never error because we have already checked the error after json.Marshal
+		return nil, err
+	}
+
+	var dataValues []string
 	for k := range templateContext {
 		raw, _ := json.Marshal(templateContext[k])
-		args = append(args, "--data-value-yaml", fmt.Sprintf("%s=%s", k, raw))
+		dataValues = append(dataValues, fmt.Sprintf("%s=%s", k, raw))
 	}
 
-	cmd := exec.CommandContext(ctx, ytt, args...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	// equivalent to `--data-value-yaml`
+	yttOpts.DataValuesFlags.KVsFromYAML = dataValues
 
-	log.V(logger.DEBUG).Info("ytt call", "args", args, "input", template)
-	if err := cmd.Run(); err != nil {
-		msg := stderr.String()
-		if msg == "" {
-			return nil, fmt.Errorf("unable to apply ytt template: %w", err)
-		}
-		return nil, fmt.Errorf("unable to apply ytt template: %s", msg)
+	// TODO: how many steps should this be?????
+	// limit execution duration to protect against infinite loops or cpu wasting templates
+	yttOpts.MaxSteps = 1000
+
+	input := yttcmd.Input{
+		Files: []*yttfiles.File{yttfiles.MustNewFileFromSource(yttfiles.NewBytesSource("stdin.yml", []byte(template)))},
 	}
-	output := stdout.String()
-	log.V(logger.DEBUG).Info("ytt result", "output", output)
+	noopUI := yttui.NewCustomWriterTTY(false, bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}))
+
+	log.V(logger.DEBUG).Info("ytt call", "data values", dataValues, "input", template)
+	output := yttOpts.RunWithFiles(input, noopUI)
+	if output.Err != nil {
+		return nil, fmt.Errorf("unable to apply ytt template: %w", output.Err)
+	}
+
+	outputBytes, err := output.DocSet.AsBytes()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get output as bytes: %w", err)
+	}
+	log.V(logger.DEBUG).Info("ytt result", "output", string(outputBytes))
 
 	stampedObject := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal([]byte(output), stampedObject); err != nil {
+	if err := yaml.Unmarshal(outputBytes, stampedObject); err != nil {
 		// ytt should never return invalid yaml
 		return nil, err
 	}

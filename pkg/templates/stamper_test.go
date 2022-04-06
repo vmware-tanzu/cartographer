@@ -16,7 +16,6 @@ package templates_test
 
 import (
 	"context"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -265,19 +264,6 @@ key: ` + tmpl + `
 					Params: params,
 				}
 
-				if koDataPath != "" {
-					// set KO_DATA_PATH for this test, and then restore the previous value
-					previous, set := os.LookupEnv("KO_DATA_PATH")
-					defer func() {
-						if set {
-							os.Setenv("KO_DATA_PATH", previous)
-						} else {
-							os.Unsetenv("KO_DATA_PATH")
-						}
-					}()
-					os.Setenv("KO_DATA_PATH", koDataPath)
-				}
-
 				stamper := templates.StamperBuilder(owner, templatingContext, templates.Labels{})
 				stampedUnstructured, err := stamper.Stamp(context.TODO(), template)
 				if expectedErr != "" {
@@ -300,8 +286,6 @@ key: ` + tmpl + `
 				"#@ data.values.invalid", `""`, nil, "", "unable to apply ytt template:"),
 			Entry(`Invalid context`,
 				"#@ data.values.params['sub']", `"`, nil, "", "unable to marshal template context:"),
-			Entry(`Invalid ytt`,
-				"#@ data.values.params['sub']", `""`, nil, "/not/a/path/to/ytt", "unable to apply ytt template: fork/exec"),
 		)
 	})
 })
