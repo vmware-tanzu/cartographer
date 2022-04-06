@@ -35,7 +35,6 @@ readonly CERT_MANAGER_VERSION=1.5.3
 readonly KAPP_CONTROLLER_VERSION=0.32.0
 readonly KNATIVE_SERVING_VERSION=0.26.0
 readonly KPACK_VERSION=0.5.1
-readonly SECRETGEN_CONTROLLER_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.30.0
 readonly GIT_SERVE_VERSION=0.0.5
@@ -55,7 +54,6 @@ main() {
                         start_local_cluster
                         install_cert_manager
                         install_kapp_controller
-                        install_secretgen_controller
                         ;;
 
                 cartographer)
@@ -176,19 +174,6 @@ display_vars() {
 }
 
 start_registry() {
-        log "starting registry"
-
-        echo -e "\n\nregistry credentials:\n
-        username: admin
-        password: admin
-        "
-
-        env DOCKER_USERNAME=admin \
-                DOCKER_PASSWORD=admin \
-                DOCKER_REGISTRY="$REGISTRY" \
-                DOCKER_CONFIG="$DOCKER_CONFIG" \
-                "$DIR/docker-login.sh"
-
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
                 echo "registry already exists"
                 return
@@ -196,10 +181,6 @@ start_registry() {
 
         docker run \
                 --detach \
-                -v "$DIR/registry-auth:/auth" \
-                -e "REGISTRY_AUTH=htpasswd" \
-                -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
-                -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
                 --name "$REGISTRY_CONTAINER_NAME" \
                 --publish "${REGISTRY_PORT}":5000 \
                 registry:2
@@ -278,13 +259,6 @@ install_kapp_controller() {
                 -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
                 -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$KAPP_CONTROLLER_VERSION/release.yml |
                 kapp deploy --yes -a kapp-controller -f-
-}
-
-install_secretgen_controller() {
-        ytt --ignore-unknown-comments \
-                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
-                -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v$SECRETGEN_CONTROLLER_VERSION/release.yml |
-                kapp deploy --yes -a secretgen-controller -f-
 }
 
 install_knative_serving() {
