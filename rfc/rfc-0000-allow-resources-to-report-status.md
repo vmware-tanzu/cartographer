@@ -27,7 +27,7 @@ The RFC proposes modifying the existing templates to allow template authors to i
 # What it is
 [what-it-is]: #what-it-is
 
-This RFC proposes adding a field to the spec of all templates, `healthRule`. Template authors use field to define the conditions or fields on a stamped resource that determine whether the resource is healthy.
+This RFC proposes adding a field to the spec of all templates, `healthRule`. Template authors use the field to define the conditions or fields on a stamped resource that determine whether the resource is healthy.
 
 Cartographer will attempt to read the specified conditions and/or fields and reflect this state on the owner status. If Cartographer cannot determine health, it will show the status as unknown.
 
