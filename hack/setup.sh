@@ -173,6 +173,8 @@ display_vars() {
 }
 
 start_registry() {
+        log "starting registry"
+
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
                 echo "registry already exists"
                 return
