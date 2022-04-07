@@ -79,7 +79,6 @@ install_cartographer_from_current_commit() {
 
   ytt --ignore-unknown-comments \
     --data-value registry="$REGISTRY" \
-    -f "$DIR/registry-auth" \
     -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
     -f release/cartographer.yaml |
     kapp deploy --yes -a cartographer -f-

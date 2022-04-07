@@ -123,8 +123,7 @@ install_cartographer() {
                 ./hack/release.sh
 
         ytt --ignore-unknown-comments \
-                --data-value registry="$REGISTRY" \
-                -f ./hack/registry-auth |
+                --data-value registry="$REGISTRY" |
                 kapp deploy -a cartographer --yes \
                         -f ./release \
                         -f-
