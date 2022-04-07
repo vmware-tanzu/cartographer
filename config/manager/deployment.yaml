@@ -20,18 +20,6 @@ metadata:
   name: cartographer-system
 
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: private-registry-credentials
-  namespace: cartographer-system
-  annotations:
-    secretgen.carvel.dev/image-pull-secret: ""
-type: kubernetes.io/dockerconfigjson
-data:
-  .dockerconfigjson: e30K
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -51,8 +39,6 @@ spec:
         app: cartographer-controller
     spec:
       serviceAccount: cartographer-controller
-      imagePullSecrets:
-        - name: private-registry-credentials
       volumes:
         - name: cert
           secret:

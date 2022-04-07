@@ -38,7 +38,6 @@
    ^                    cartographer-webhook                  Certificate
    ^                    cartographer-webhook                  Secret
    ^                    cartographer-webhook                  Service
-   ^                    private-registry-credentials          Secret
    ^                    selfsigned-issuer                     Issuer
    ```
 
