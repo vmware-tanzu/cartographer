@@ -205,7 +205,7 @@ Each owner's status.resources will now include a `conditions` field (of type []m
 
 If the `healthRule` is `alwaysHealthy`, the condition message will be a blank string. If the `healthRule` is `singleConditionType`, the message will be propagated from the specified condition. For `multiMatch`, the message will specify the value of the matched condition or field, and then display the message of the matched condition or the message at the path specified in `matchFields`.
 
-In the case of `multiMatch`, if there is more than one matching condition or field that caused the resource to enter it's current state, the first one read will be propagated by Cartographer.
+In the case of `multiMatch`, if there is more than one matching condition or field that caused the resource to enter it's current state, the first one read will be propagated by Cartographer. If no matches have been fulfilled yet and the status is `Unknown`, the reason will be `NoMatchesFulfilled`.
 
 Each owner will display a new condition in the status called `ResourcesHealthy` which will only be updated to `True` when all resources in the blueprint are healthy. Cartographer will not update the top level state of an owner to `Ready: True` until `ResourcesHealthy` is `True`.
 
