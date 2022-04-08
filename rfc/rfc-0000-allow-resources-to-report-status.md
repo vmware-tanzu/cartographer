@@ -203,7 +203,7 @@ Each owner's status.resources will now include a `conditions` field (of type []m
 * If `singleConditionType: X`, `reason: XCondition`.
 * If `multiMatch: ...`, `reason: (MatchedCondition|MatchedField)`.
 
-If the `healthRule` is not `alwaysHealthy`, the condition will also have a message. For `singleConditionType`, the message will be propagated from the specified condition. For `multiMatch`, the message will specify the value of the matched condition or field, and then display the message of the matched condition or the message at the path specified in `matchFields`.
+If the `healthRule` is `alwaysHealthy`, the condition message will be a blank string. If the `healthRule` is `singleConditionType`, the message will be propagated from the specified condition. For `multiMatch`, the message will specify the value of the matched condition or field, and then display the message of the matched condition or the message at the path specified in `matchFields`.
 
 In the case of `multiMatch`, if there is more than one matching condition or field that caused the resource to enter it's current state, the first one read will be propagated by Cartographer.
 
