@@ -18,7 +18,7 @@ The RFC proposes modifying the existing templates to allow template authors to i
 - Why should we do this?
   - Currently, a blueprint has no knowledge of the current status of the stamped resources. This RFC proposes how resources can report (and categorize) this information strictly for informational purposes.
 - What use cases does it support?
-  - This feature will enable developers to learn about the progression through the blueprint by looking at the owner status alone. It will also surface information about the health of the underlying resources directly on the owner.
+  - This feature will surface information about the health of the underlying resources directly on the owner.
   - This will also enable integrations that may be looking to create a UI around Cartographer, allowing the UI to display the health of the blueprint without having to make an API call to k8s to retrieve the status of every resource, and without having to know how to define health for every stamped object type.
 - What is the expected outcome?
   - Users will have more insight into the progression of the blueprint and the health of each underlying resource.
