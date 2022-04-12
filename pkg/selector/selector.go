@@ -21,12 +21,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
-
 func Matches(req v1alpha1.FieldSelectorRequirement, context interface{}) (bool, error) {
 	evaluator := eval.EvaluatorBuilder()
 	actualValue, err := evaluator.EvaluateJsonPath(req.Key, context)
 	if err != nil {
-		return false, err
+		if _, ok := err.(eval.JsonPathDoesNotExistError); !ok || req.Operator != v1alpha1.FieldSelectorOpDoesNotExist {
+			return false, err
+		}
 	}
 
 	switch req.Operator {

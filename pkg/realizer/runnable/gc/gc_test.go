@@ -101,7 +101,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 		_, deletedObject1 := repo.DeleteArgsForCall(0)
 		Expect(deletedObject1).To(Equal(successfulRunnableStampedObjectToBeDeleted))
 
-		Expect(out).To(Say("failed evaluating jsonpath to determine runnable stamped object success.*ThingWithoutSucceededCondition.*status is not found"))
+		Expect(out).To(Say(`"error":"jsonpath returned empty list: status.conditions\[\?\(\@.type==\\"Succeeded\\"\)\].status"`))
 	})
 
 	Context("when runnable stamped objects outside the retention policy are processed", func() {

@@ -69,7 +69,7 @@ var _ = Describe("JsonPath", func() {
 
 	Context("when find fails", func() {
 		BeforeEach(func() {
-			path = `{.bye}`
+			path = `{.hello[1]}`
 		})
 
 		ItReturnsAHelpfulError("find results: ")

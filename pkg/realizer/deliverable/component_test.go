@@ -321,7 +321,7 @@ var _ = Describe("Resource", func() {
 				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
+				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.RetrieveOutputError"))
 			})
 		})
