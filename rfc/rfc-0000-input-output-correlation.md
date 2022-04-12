@@ -60,7 +60,7 @@ from a security perspective, and the outcomes of this behavior are explored in d
 
 [what-it-is]: #what-it-is
 
-New fields are added to templates which allow template authors to specify correlation rules using `observedMatches`,
+New fields are added to templates which allow template authors to specify correlation rules using `correlationRules`,
 which informs Cartographer of how to compare the resource's output (published in the owner's status) with its inputs
 (based on where the input values were substituted into the resource stamped bt template). Where the output does not
 expose useful matching information, it is possible to match against the resource's `spec` instead, with some caveats.
@@ -68,7 +68,7 @@ expose useful matching information, it is possible to match against the resource
 Template authors are thought to be the ideal target, as they are likely to have the most intimate knowledge of the
 resource that their templates stamp out.
 
-Example matching inputs against outputs with the `observedMatches` field:
+Example matching inputs against outputs with the `correlationRules` field:
 
 ```yaml
 apiVersion: carto.run/v1alpha1
@@ -84,7 +84,7 @@ spec:
     spec:
       scanUrl: "$(sources.source.url)$"
       sourceRevision: "$(sources.source.url)$"
-observedMatches:
+correlationRules:
   - input: "$(sources.source.url)"              #evaluated against inputs in template context
     output: "$(status.outputs.url)"             #evaluated against resource status
   - input: "$(sources.source.revision)"         #evaluated against inputs in template context
@@ -95,7 +95,7 @@ observedMatches:
 
 [how-it-works]: #how-it-works
 
-When Cartographer processes a resource, the jsonpath expressions in each `observedMatches` `input` and `output` fields
+When Cartographer processes a resource, the jsonpath expressions in each `correlationRules` `input` and `output` fields
 are evaluated and compared. If they are all equal, then the output is considered to be correlated with the input(s).
 
 When output cannot be correlated to input, Cartographer will not propagate the output forward. Doing so ensures we can
@@ -120,7 +120,7 @@ spec:
     spec:
       sourceUrl: "$(sources.source.url)$"
       sourceRevision: "$(sources.source.url)$"
-observedMatches:
+correlationRules:
   - input: "$(sources.source.url)"              #evaluated against inputs in template context
     output: "$(spec.sourceUrl)"                 #evaluated against resource spec
   - input: "$(sources.source.revision)"         #evaluated against inputs in template context
@@ -204,7 +204,7 @@ spec:
       name: ...
     spec:
       ...
-observedMatches:
+correlationRules:
   - input: "$(sources.source.url)"              #evaluated against inputs in template context
     output: "$(status.outputs.url)"             #evaluated against resource
   - input: "$(sources.source.revision)"         #evaluated against inputs in template context
