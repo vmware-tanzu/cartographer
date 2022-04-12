@@ -103,6 +103,9 @@ always correlate outputs with inputs on subsequent resources, and also mitigates
 as described
 in [Draft RFC Read Resources Only When In Success State](https://github.com/vmware-tanzu/cartographer/pull/556).
 
+In the absence of `correlationRules` Cartographer will continue to propagate outputs without attempting to correlate
+inputs to preserve existing functionality.
+
 For cases where the output does not contain necessary information to match against inputs, one may instead match against
 the spec of the resource:
 
@@ -127,7 +130,7 @@ correlationRules:
     output: "$(spec.sourceRevision)"            #evaluated against resource spec
 ```
 
-Since the spec of the resource may change independently of the output, when the `outputMatches` makes any assertion
+Since the spec of the resource may change independently of the output, when the `correlationRules` makes any assertion
 against the `spec`, Cartographer must also ensure that the current output is a result of processing the current spec by
 making additional assertions:
 
@@ -148,9 +151,10 @@ current spec completely. That is, it must have reached either a Healthy or Unhea
 
 [migration]: #migration
 
-All templates must have `outputMatches` added to them.
+Templates will continue to work as they do today, but `correlationRules` must be added if input-output correlation is
+desired for the resources they will stamp out.
 
-Any template which requires `outputMatches` against the resource spec must also be configured to identify success,
+Any template containing `correlationRules` against the resource spec must also be configured to identify success,
 failure and unknown states - which map to Healthy, Unhealthy and Unknown if the mechanism to be relied upon is
 [Allow Resources to Report Status](https://github.com/vmware-tanzu/cartographer/pull/738).
 
@@ -164,8 +168,8 @@ Making assertions against resources which require matching against the spec intr
 * Resources must implement `observedGeneration` pattern;
 * It must be possible to determine if the resources are still processing (Unknown state, as per
   [Allow Resources to Report Status](https://github.com/vmware-tanzu/cartographer/pull/738)).
-* Great responsibility is placed on template authors to write correct `observedMatch` and health determination rules, as
-  they can otherwise be misleading, and cause propagation of artifacts which are not truly correlated, or worse:
+* Great responsibility is placed on template authors to write correct `correlationRules` and health determination rules,
+  as they can otherwise be misleading, and cause propagation of artifacts which are not truly correlated, or worse:
   unwanted artifacts.
 
 # Prior Art
@@ -180,15 +184,17 @@ Making assertions against resources which require matching against the spec intr
 
 [unresolved-questions]: #unresolved-questions
 
-It is unclear how to solve for resources which require matching against their spec, but do not conform to the
-`observedGeneration` pattern. The same can be said for resources which do not expose sufficient detail to write proper
-health determination rules.
+Ultimately, artifact tracing will require being able to correlate inputs with outputs for all resources stamped out for
+a blueprint owner.
+
+If a resource does not behave in such a way that the above mechanics can be applied meaningfully, then the resource
+cannot be used if artifact tracing is desired.
 
 # Spec. Changes
 
 [spec-changes]: #spec-changes
 
-All templates will now have a mandatory `observedMatch` field, which must be an array containing at least one element
+All templates will now have an optional `correlationRules` field, which must be an array containing at least one element
 identifying a pair of jsonpath expressions, representing details which must be matched against an input and an output.
 
 ```yaml
