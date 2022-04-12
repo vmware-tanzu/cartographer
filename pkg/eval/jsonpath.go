@@ -49,11 +49,11 @@ func (e Evaluator) EvaluateJsonPath(path string, obj interface{}) (interface{}, 
 	}
 
 	if len(interfaceList) > 1 {
-		return "", fmt.Errorf("too many results for the query: %s", path)
+		return nil, fmt.Errorf("too many results for the query: %s", path)
 	}
 
 	if len(interfaceList) == 0 {
-		return "", JsonPathDoesNotExistError{Path: path}
+		return nil, JsonPathDoesNotExistError{Path: path}
 	}
 
 	return interfaceList[0], nil

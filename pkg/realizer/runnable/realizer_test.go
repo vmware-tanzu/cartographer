@@ -489,7 +489,7 @@ var _ = Describe("Realizer", func() {
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [configmap] for run template [my-template]: failed to evaluate path [data.hasnot]: evaluate: failed to find results: hasnot is not found`))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [configmap] for run template [my-template]: failed to evaluate path [data.hasnot]: jsonpath returned empty list: data.hasnot`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
 		})
 	})
