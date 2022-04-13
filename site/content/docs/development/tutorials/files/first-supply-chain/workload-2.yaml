@@ -1,9 +1,0 @@
----
-apiVersion: carto.run/v1alpha1
-kind: Workload
-metadata:
-  name: whale-hello-there
-  labels:
-    workload-type: pre-built
-spec:
-  image: docker.io/crccheck/hello-world:latest

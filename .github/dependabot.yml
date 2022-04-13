@@ -32,15 +32,3 @@ updates:
     schedule:
       interval: daily
       time: "00:00"
-  - package-ecosystem: npm
-    labels: ["dependencies"]
-    directory: /site
-    schedule:
-      interval: daily
-      time: "00:00"
-  - package-ecosystem: npm
-    labels: ["dependencies"]
-    directory: /experimental/live-editor
-    schedule:
-      interval: daily
-      time: "00:00"
