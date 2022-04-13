@@ -28,6 +28,9 @@ kind create cluster --image kindest/node:v1.21.1
 3. Install [Tekton](https://tekton.dev/docs/getting-started/#installation), which provides a
   mechanism to create pipelines and tasks for application testing, scanning, etc.
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 In order to demonstrate updatable testing, the example has a Tekton Task that will run `go test` on a
