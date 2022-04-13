@@ -10,7 +10,7 @@
 # Summary
 [summary]: #summary
 
-This RFC proposes collapsing all current "Blueprints" and templates (not including `ClusterRunTemplate`) into a common type, `ClusterBlueprint`. 
+This RFC proposes collapsing all current "Blueprints" and templates (not including `ClusterRunTemplate`, as that resource is in the domain of [Runnable](https://cartographer.sh/docs/v0.3.0/reference/runnable/)) into a common type, `ClusterBlueprint`. 
 As part of this, the RFC proposes that outputs be dynamically typed via a new CR `ClusterBlueprintType` and remove the statically typed outputs that exist today (url, revision, image, config). This allows us to maintain the contract of swappable templates, without restricting outputs to a predefined set. 
 Additionally, the selectors will be removed from blueprints and instead be specified in a new CR `ClusterBlueprintSelector`.
 
