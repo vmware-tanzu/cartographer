@@ -10,9 +10,9 @@
 # Summary
 [summary]: #summary
 
-This RFC proposes collapsing all current "Blueprints" and templates (not including `ClusterRunTemplate`, as that resource is in the domain of [Runnable](https://cartographer.sh/docs/v0.3.0/reference/runnable/)) into a common type, `ClusterBlueprint`. 
+This RFC proposes collapsing `ClusterSupplyChain`, `ClusterDelivery` and templates (not including `ClusterRunTemplate`, as that resource is in the domain of [Runnable](https://cartographer.sh/docs/v0.3.0/reference/runnable/)) into a common type, `ClusterBlueprint`. 
 As part of this, the RFC proposes that outputs be dynamically typed via a new CR `ClusterBlueprintType` and remove the statically typed outputs that exist today (url, revision, image, config). This allows us to maintain the contract of swappable templates, without restricting outputs to a predefined set. 
-Additionally, the selectors will be removed from blueprints and instead be specified in a new CR `ClusterBlueprintSelector`.
+Additionally, the selectors will now be specified in a new CR `ClusterBlueprintSelector`.
 
 
 # Motivation
@@ -38,7 +38,7 @@ reconcilers, this would enable us to have one reconciler for all blueprints and 
 * `ClusterBlueprints` will encapsulate everything the current templates allow, while adding `spec.resources` to enable defining multiple resources (i.e. snippets).
 * A `ClusterBlueprint` can take one of `spec.resources`, `spec.template`, and `spec.ytt`. It will allow inlining of templates in `spec.resources`.
 * A `ClusterBlueprint` must specify a `blueprintTypeRef` which defines the outputs required from the blueprint. The `ClusterBlueprint`'s `spec.outputs` must match those outputs.
-* A `ClusterBlueprintType` defines only `spec.outputs`, which is an array of output names. By leaving the `name` key in the array, we leave open the possibility to later add `type` to each output, though this RFC currently proposes only supporting string outputs.
+* A `ClusterBlueprintType` defines only `spec.outputs`, which is an array of output names and optional schema (openAPI schema). Adding a schema would allow for template authoring tools to understand the structure of the outputs.
 * A `ClusterBlueprintSelector` defines a `spec.blueprintRef`, `spec.selector` (per the v1alpha2 syntax), and `spec.ownerType` to define the type of owner to match against. This type takes an `apiVersion` and `kind` to leave open the possibility to later support other owner types, though this RFC proposes only supporting the existing workload and deliverable types.
 
 Example with resources, inlining, two outputs, and workload selector:
@@ -59,16 +59,17 @@ spec:
           output: zoo
           name: zoo-resource-name
       inline:
-        # mutually exclusive - template, ytt
-        template: {}
-        ytt: {}
+        # mutually exclusive - unstructured, ytt
+        template:
+          unstructured: {}
+          ytt: ""
 
         outputs:
           - name: foo
             valuePath: .status.url
 
     - name: second-resource
-      # mutually exclusive - blueprintName, options
+      # mutually exclusive - blueprintRef, options
       options:
         - name: another-blueprint
         - name: diff-blueprint
@@ -81,8 +82,9 @@ spec:
           name: a-new-resource-name
 
     - name: third-resource
-      # mutually exclusive - blueprintName, options
-      blueprintName: another-another-blueprint
+      # mutually exclusive - blueprintRef, options
+      blueprintRef: 
+        name: another-another-blueprint
       inputs:
         - resource: first-resource
           output: foo
@@ -105,6 +107,8 @@ metadata:
 spec:
   outputs:
     - name: baz
+      schema:
+        type: string
     - name: fizz
   
 ---
