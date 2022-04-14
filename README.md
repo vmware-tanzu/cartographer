@@ -1,7 +1,7 @@
 # Cartographer
 
-<img src="hack/img/cartographer-logo.png">
-<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="hack/img/passing.svg"></a>
+<img src="assets/cartographer-logo.png">
+<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="assets/passing.svg"></a>
 
 Cartographer is a Kubernetes-native [Choreographer] providing higher modularity and scalability for the software supply chain.
 
