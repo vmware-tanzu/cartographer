@@ -88,6 +88,9 @@ supplychain, forms something powerful.
 
 5. [Tree](https://github.com/ahmetb/kubectl-tree), a tool that we will use to observe the objects created.
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 ### Location of files

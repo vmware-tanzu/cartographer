@@ -48,6 +48,9 @@ objects would be set by the different personas in the system:
 
 2. Install [Tekton](https://tekton.dev/docs/getting-started/#installation)
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 ### Location of files
