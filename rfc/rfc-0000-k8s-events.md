@@ -88,6 +88,7 @@ key guiding principles:
 1. > Let it be something that isn't satisfactorily presented in other user views (eg: `k get workload`).
 2. > Let the event list be as meaningful as is necessary, and no more.
 
+These are examples of types of events that could be emitted. This RFC makes no recommendation as to which events are required.
 The cartographer controller could emit the following events:
 
 | Reason | Message Format | Description | involvedObject |
