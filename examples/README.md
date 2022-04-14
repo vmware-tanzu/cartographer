@@ -34,4 +34,4 @@ resources from the kubernetes cluster at rest. All told, the controllers request
 "at rest".
 
 When Cartographer runs these examples in testing, we
-use [the following overlay](../hack/overlays/remove-resource-requests-from-deployments.yaml) to remove these requests.
+use [this overlay](../hack/overlays/remove-resource-requests-from-deployments.yaml) to remove these requests.
