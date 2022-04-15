@@ -40,6 +40,11 @@ const (
 	TemplateOptionsMatchErrorResourcesSubmittedReason    = "TemplateOptionsMatchError"
 )
 
+const (
+	ResourceReady     = "Ready"
+	ResourceSubmitted = "ResourceSubmitted"
+)
+
 // ValidWorkloadPaths Note: this needs to be updated anytime the spec changes
 var ValidWorkloadPaths = map[string]bool{
 	"spec.source":                true,

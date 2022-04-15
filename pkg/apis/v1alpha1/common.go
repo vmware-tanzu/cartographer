@@ -214,6 +214,8 @@ type RealizedResource struct {
 
 	// Outputs are values from the object in StampedRef that can be consumed by other resources
 	Outputs []Output `json:"outputs,omitempty"`
+
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type Input struct {

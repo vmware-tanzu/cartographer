@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -66,7 +67,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResources = append(realizedResources, generateRealizedResource(resource, template, stampedObject, out, previousResources))
+		realizedResources = append(realizedResources, generateRealizedResource(resource, template, stampedObject, out, err, previousResources))
 
 		outs.AddOutput(resource.Name, out)
 	}
@@ -74,7 +75,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return realizedResources, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
+func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, err error, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
 	if stampedObject == nil || template == nil {
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resource.Name {
@@ -116,13 +117,49 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		}
 	}
 
+	conditionManagerBuilder := conditions.NewConditionManager
+	conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
+
+	if err != nil {
+		switch typedErr := err.(type) {
+		case GetTemplateError:
+			conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+		case StampError:
+			conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
+		case ApplyStampedObjectError:
+			conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+		case RetrieveOutputError:
+			conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
+		case ResolveTemplateOptionError:
+			conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+		case TemplateOptionsMatchError:
+			conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
+		default:
+			conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
+		}
+	} else {
+		conditionManager.AddPositive(ResourceSubmittedCondition())
+	}
+
+	conditions, _ := conditionManager.Finalize()
+
 	return v1alpha1.RealizedResource{
 		Name:        resource.Name,
 		StampedRef:  stampedRef,
 		TemplateRef: templateRef,
 		Inputs:      inputs,
 		Outputs:     outputs,
+		Conditions:  conditions,
 	}
+}
+
+func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.RealizedResource) []metav1.Condition {
+	for _, previousResource := range previousResources {
+		if previousResource.Name == resourceName {
+			return previousResource.Conditions
+		}
+	}
+	return nil
 }
 
 func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
