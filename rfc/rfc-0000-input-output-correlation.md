@@ -84,7 +84,7 @@ spec:
     spec:
       scanUrl: "$(sources.source.url)$"
       sourceRevision: "$(sources.source.url)$"
-correlationRules:
+  correlationRules:
   - input: "$(sources.source.url)"              #evaluated against inputs in template context
     output: "$(status.outputs.url)"             #evaluated against resource status
   - input: "$(sources.source.revision)"         #evaluated against inputs in template context
