@@ -120,7 +120,11 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 	conditionManagerBuilder := conditions.NewConditionManager
 	conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
-	conditions.AddConditionForError(&conditionManager, err)
+	if err != nil {
+		conditions.AddConditionForError(&conditionManager, err)
+	} else {
+		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
+	}
 
 	conditions, _ := conditionManager.Finalize()
 

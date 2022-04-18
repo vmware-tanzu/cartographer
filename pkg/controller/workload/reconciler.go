@@ -130,7 +130,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 
-	conditions.AddConditionForError(&r.conditionManager, err)
+	if err != nil {
+		conditions.AddConditionForError(&r.conditionManager, err)
+	} else {
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition())
+	}
 
 	// Check if error is unhandled
 	if err != nil {

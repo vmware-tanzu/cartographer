@@ -176,24 +176,20 @@ func TemplateOptionsMatchErrorCondition(err error) metav1.Condition {
 }
 
 func AddConditionForError(conditionManager *ConditionManager, err error) {
-	if err != nil {
-		switch typedErr := err.(type) {
-		case cerrors.GetTemplateError:
-			(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
-		case cerrors.StampError:
-			(*conditionManager).AddPositive(TemplateStampFailureCondition(typedErr))
-		case cerrors.ApplyStampedObjectError:
-			(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-		case cerrors.RetrieveOutputError:
-			(*conditionManager).AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
-		case cerrors.ResolveTemplateOptionError:
-			(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
-		case cerrors.TemplateOptionsMatchError:
-			(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
-		default:
-			(*conditionManager).AddPositive(UnknownResourceErrorCondition(typedErr))
-		}
-	} else {
-		(*conditionManager).AddPositive(ResourceSubmittedCondition())
+	switch typedErr := err.(type) {
+	case cerrors.GetTemplateError:
+		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+	case cerrors.StampError:
+		(*conditionManager).AddPositive(TemplateStampFailureCondition(typedErr))
+	case cerrors.ApplyStampedObjectError:
+		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+	case cerrors.RetrieveOutputError:
+		(*conditionManager).AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
+	case cerrors.ResolveTemplateOptionError:
+		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+	case cerrors.TemplateOptionsMatchError:
+		(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
+	default:
+		(*conditionManager).AddPositive(UnknownResourceErrorCondition(typedErr))
 	}
 }
