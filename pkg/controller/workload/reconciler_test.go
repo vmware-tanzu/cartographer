@@ -18,12 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	errors2 "github.com/vmware-tanzu/cartographer/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -361,12 +361,12 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to specify the supply chain is ready", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.SupplyChainReadyCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.SupplyChainReadyCondition()))
 		})
 
 		It("calls the condition manager to report the resources have been submitted", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourcesSubmittedCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ResourcesSubmittedCondition()))
 		})
 
 		It("watches the stampedObjects kinds", func() {
@@ -447,7 +447,7 @@ var _ = Describe("Reconciler", func() {
 					Reason:             "SomeReason",
 					Message:            "some informative message",
 				}
-				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.MissingReadyInSupplyChainCondition(expectedCondition)))
+				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.MissingReadyInSupplyChainCondition(expectedCondition)))
 			})
 
 			It("logs the handled error message", func() {
@@ -463,7 +463,7 @@ var _ = Describe("Reconciler", func() {
 			Context("of type GetTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = realizer.GetTemplateError{
+					templateError = errors2.GetTemplateError{
 						Err:      errors.New("some error"),
 						Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
 					}
@@ -472,7 +472,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateObjectRetrievalFailureCondition(templateError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateObjectRetrievalFailureCondition(templateError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -491,9 +491,9 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type StampError", func() {
-				var stampError realizer.StampError
+				var stampError errors2.StampError
 				BeforeEach(func() {
-					stampError = realizer.StampError{
+					stampError = errors2.StampError{
 						Err:             errors.New("some error"),
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
 						SupplyChainName: supplyChainName,
@@ -512,7 +512,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateStampFailureCondition(stampError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateStampFailureCondition(stampError)))
 				})
 
 				It("does not return an error", func() {
@@ -544,9 +544,9 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError errors2.ApplyStampedObjectError
 				BeforeEach(func() {
-					stampedObjectError = realizer.ApplyStampedObjectError{
+					stampedObjectError = errors2.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
 						Resource:      &v1alpha1.SupplyChainResource{Name: "some-name"},
@@ -556,7 +556,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateRejectedByAPIServerCondition(stampedObjectError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -581,7 +581,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError errors2.ApplyStampedObjectError
 				BeforeEach(func() {
 					status := &metav1.Status{
 						Message: "fantastic error",
@@ -592,7 +592,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObject1.SetNamespace("a-namespace")
 					stampedObject1.SetName("a-name")
 
-					stampedObjectError = realizer.ApplyStampedObjectError{
+					stampedObjectError = errors2.ApplyStampedObjectError{
 						Err:             kerrors.FromObject(status),
 						StampedObject:   stampedObject1,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
@@ -604,7 +604,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateRejectedByAPIServerCondition(stampedObjectError)))
 				})
 
 				It("handles the error and logs it", func() {
@@ -631,7 +631,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type RetrieveOutputError", func() {
-				var retrieveError realizer.RetrieveOutputError
+				var retrieveError errors2.RetrieveOutputError
 				var stampedObject *unstructured.Unstructured
 				BeforeEach(func() {
 					stampedObject = &unstructured.Unstructured{}
@@ -643,7 +643,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					retrieveError = realizer.RetrieveOutputError{
+					retrieveError = errors2.RetrieveOutputError{
 						Err:             jsonPathError,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
 						StampedObject:   stampedObject,
@@ -655,7 +655,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(workload.MissingValueAtPathCondition(stampedObject, "this.wont.find.anything")))
+						Equal(conditions.MissingValueAtPathCondition(stampedObject, "this.wont.find.anything")))
 				})
 
 				It("does not return an error", func() {
@@ -687,10 +687,10 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ResolveTemplateOptionError", func() {
-				var resolveOptionErr realizer.ResolveTemplateOptionError
+				var resolveOptionErr errors2.ResolveTemplateOptionError
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					resolveOptionErr = realizer.ResolveTemplateOptionError{
+					resolveOptionErr = errors2.ResolveTemplateOptionError{
 						Err:             jsonPathError,
 						SupplyChainName: supplyChainName,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
@@ -702,7 +702,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(workload.ResolveTemplateOptionsErrorCondition(resolveOptionErr)))
+						Equal(conditions.ResolveTemplateOptionsErrorCondition(resolveOptionErr)))
 				})
 
 				It("does not return an error", func() {
@@ -728,9 +728,9 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type TemplateOptionsMatchError", func() {
-				var templateOptionsMatchErr realizer.TemplateOptionsMatchError
+				var templateOptionsMatchErr errors2.TemplateOptionsMatchError
 				BeforeEach(func() {
-					templateOptionsMatchErr = realizer.TemplateOptionsMatchError{
+					templateOptionsMatchErr = errors2.TemplateOptionsMatchError{
 						SupplyChainName: supplyChainName,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
 						OptionNames:     []string{"option1", "option2"},
@@ -741,7 +741,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(workload.TemplateOptionsMatchErrorCondition(templateOptionsMatchErr)))
+						Equal(conditions.TemplateOptionsMatchErrorCondition(templateOptionsMatchErr)))
 				})
 
 				It("does not return an error", func() {
@@ -796,7 +796,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.UnknownResourceErrorCondition(realizerError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.UnknownResourceErrorCondition(realizerError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -849,7 +849,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("calls the condition manager to add a service account secret not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ServiceAccountSecretNotFoundCondition(repoError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountSecretNotFoundCondition(repoError)))
 			})
 
 			It("handles the error and logs it", func() {
@@ -868,7 +868,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("calls the condition manager to add a resource realizer builder error condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
 			})
 
 			It("returns an unhandled error", func() {
@@ -886,7 +886,7 @@ var _ = Describe("Reconciler", func() {
 		})
 		It("calls the condition manager to report the bad state", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.WorkloadMissingLabelsCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.WorkloadMissingLabelsCondition()))
 		})
 
 		It("does not return an error", func() {
@@ -906,7 +906,7 @@ var _ = Describe("Reconciler", func() {
 	Context("and repo returns an empty list of supply chains", func() {
 		It("calls the condition manager to add a supply chain not found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.SupplyChainNotFoundCondition(workloadLabels)))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.SupplyChainNotFoundCondition(workloadLabels)))
 		})
 
 		It("does not return an error", func() {
@@ -944,7 +944,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to report too mane supply chains matched", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.TooManySupplyChainMatchesCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.TooManySupplyChainMatchesCondition()))
 		})
 
 		It("does not return an error", func() {

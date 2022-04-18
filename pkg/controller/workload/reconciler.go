@@ -105,51 +105,44 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	workload.Status.SupplyChainRef.Name = supplyChain.Name
 
 	if !r.isSupplyChainReady(supplyChain) {
-		r.conditionManager.AddPositive(MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
+		r.conditionManager.AddPositive(conditions.MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
 		log.Info("supply chain is not in ready state")
 		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
 	}
-	r.conditionManager.AddPositive(SupplyChainReadyCondition())
+	r.conditionManager.AddPositive(conditions.SupplyChainReadyCondition())
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
 
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
 		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
 	if err != nil {
-		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
+		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
 		return r.completeReconciliation(ctx, workload, workload.Status.Resources, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
+
+	conditions.AddConditionForError(&r.conditionManager, err)
+
+	// Check if error is unhandled
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
-		case realizer.GetTemplateError:
-			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+		case cerrors.GetTemplateError:
 			err = cerrors.NewUnhandledError(err)
-		case realizer.StampError:
-			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case realizer.ApplyStampedObjectError:
-			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+		case cerrors.ApplyStampedObjectError:
 			if !kerrors.IsForbidden(typedErr.Err) {
 				err = cerrors.NewUnhandledError(err)
 			}
-		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
-		case realizer.ResolveTemplateOptionError:
-			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
-		case realizer.TemplateOptionsMatchError:
-			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
-			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
@@ -159,7 +152,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					"object", resource.StampedRef)
 			}
 		}
-		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
 	r.trackDependencies(workload, realizedResources, serviceAccountName, serviceAccountNS)
@@ -234,7 +226,7 @@ func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) meta
 func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	if len(workload.Labels) == 0 {
-		r.conditionManager.AddPositive(WorkloadMissingLabelsCondition())
+		r.conditionManager.AddPositive(conditions.WorkloadMissingLabelsCondition())
 		log.Info("workload is missing required labels")
 		return nil, fmt.Errorf("workload [%s/%s] is missing required labels",
 			workload.Namespace, workload.Name)
@@ -248,7 +240,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	}
 
 	if len(supplyChains) == 0 {
-		r.conditionManager.AddPositive(SupplyChainNotFoundCondition(workload.Labels))
+		r.conditionManager.AddPositive(conditions.SupplyChainNotFoundCondition(workload.Labels))
 		log.Info("no supply chain found where full selector is satisfied by label",
 			"labels", workload.Labels)
 		return nil, fmt.Errorf("no supply chain [%s/%s] found where full selector is satisfied by labels: %v",
@@ -256,7 +248,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	}
 
 	if len(supplyChains) > 1 {
-		r.conditionManager.AddPositive(TooManySupplyChainMatchesCondition())
+		r.conditionManager.AddPositive(conditions.TooManySupplyChainMatchesCondition())
 		log.Info("more than one supply chain selected for workload",
 			"supply chains", getSupplyChainNames(supplyChains))
 		return nil, fmt.Errorf("more than one supply chain selected for workload [%s/%s]: %+v",

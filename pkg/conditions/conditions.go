@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload
+package conditions
 
 import (
 	"fmt"
-
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -71,6 +71,14 @@ func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Conditi
 }
 
 // -- Resource conditions
+
+func ResourceSubmittedCondition() metav1.Condition {
+	return metav1.Condition{
+		Type:   v1alpha1.ResourceSubmitted,
+		Status: metav1.ConditionTrue,
+		Reason: v1alpha1.CompleteResourcesSubmittedReason,
+	}
+}
 
 func ResourcesSubmittedCondition() metav1.Condition {
 	return metav1.Condition{
@@ -163,5 +171,28 @@ func TemplateOptionsMatchErrorCondition(err error) metav1.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateOptionsMatchErrorResourcesSubmittedReason,
 		Message: err.Error(),
+	}
+}
+
+func AddConditionForError(conditionManager *ConditionManager, err error) {
+	if err != nil {
+		switch typedErr := err.(type) {
+		case cerrors.GetTemplateError:
+			(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
+		case cerrors.StampError:
+			(*conditionManager).AddPositive(TemplateStampFailureCondition(typedErr))
+		case cerrors.ApplyStampedObjectError:
+			(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
+		case cerrors.RetrieveOutputError:
+			(*conditionManager).AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
+		case cerrors.ResolveTemplateOptionError:
+			(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
+		case cerrors.TemplateOptionsMatchError:
+			(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
+		default:
+			(*conditionManager).AddPositive(UnknownResourceErrorCondition(typedErr))
+		}
+	} else {
+		(*conditionManager).AddPositive(ResourceSubmittedCondition())
 	}
 }

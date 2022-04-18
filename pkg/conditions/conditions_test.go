@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package conditions_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 )
 
 var _ = Describe("Conditions", func() {
@@ -41,14 +41,14 @@ var _ = Describe("Conditions", func() {
 			It("has the correct message", func() {
 				obj.SetNamespace("my-ns")
 
-				condition := workload.MissingValueAtPathCondition(obj, "spec.foo")
+				condition := conditions.MissingValueAtPathCondition(obj, "spec.foo")
 				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget] in namespace [my-ns]"))
 			})
 		})
 
 		Context("stamped object does not have a namespace", func() {
 			It("has the correct message", func() {
-				condition := workload.MissingValueAtPathCondition(obj, "spec.foo")
+				condition := conditions.MissingValueAtPathCondition(obj, "spec.foo")
 				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget]"))
 			})
 		})

@@ -120,26 +120,7 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 	conditionManagerBuilder := conditions.NewConditionManager
 	conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
-	if err != nil {
-		switch typedErr := err.(type) {
-		case GetTemplateError:
-			conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
-		case StampError:
-			conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case ApplyStampedObjectError:
-			conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-		case RetrieveOutputError:
-			conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
-		case ResolveTemplateOptionError:
-			conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
-		case TemplateOptionsMatchError:
-			conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
-		default:
-			conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
-		}
-	} else {
-		conditionManager.AddPositive(ResourceSubmittedCondition())
-	}
+	conditions.AddConditionForError(&conditionManager, err)
 
 	conditions, _ := conditionManager.Finalize()
 
