@@ -16,11 +16,12 @@ package conditions
 
 import (
 	"fmt"
-	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 

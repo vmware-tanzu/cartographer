@@ -18,12 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
-	errors2 "github.com/vmware-tanzu/cartographer/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +39,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -463,7 +464,7 @@ var _ = Describe("Reconciler", func() {
 			Context("of type GetTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = errors2.GetTemplateError{
+					templateError = cerrors.GetTemplateError{
 						Err:      errors.New("some error"),
 						Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
 					}
@@ -491,9 +492,9 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type StampError", func() {
-				var stampError errors2.StampError
+				var stampError cerrors.StampError
 				BeforeEach(func() {
-					stampError = errors2.StampError{
+					stampError = cerrors.StampError{
 						Err:             errors.New("some error"),
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
 						SupplyChainName: supplyChainName,
@@ -544,9 +545,9 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError", func() {
-				var stampedObjectError errors2.ApplyStampedObjectError
+				var stampedObjectError cerrors.ApplyStampedObjectError
 				BeforeEach(func() {
-					stampedObjectError = errors2.ApplyStampedObjectError{
+					stampedObjectError = cerrors.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
 						Resource:      &v1alpha1.SupplyChainResource{Name: "some-name"},
@@ -581,7 +582,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
-				var stampedObjectError errors2.ApplyStampedObjectError
+				var stampedObjectError cerrors.ApplyStampedObjectError
 				BeforeEach(func() {
 					status := &metav1.Status{
 						Message: "fantastic error",
@@ -592,7 +593,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObject1.SetNamespace("a-namespace")
 					stampedObject1.SetName("a-name")
 
-					stampedObjectError = errors2.ApplyStampedObjectError{
+					stampedObjectError = cerrors.ApplyStampedObjectError{
 						Err:             kerrors.FromObject(status),
 						StampedObject:   stampedObject1,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
@@ -631,7 +632,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type RetrieveOutputError", func() {
-				var retrieveError errors2.RetrieveOutputError
+				var retrieveError cerrors.RetrieveOutputError
 				var stampedObject *unstructured.Unstructured
 				BeforeEach(func() {
 					stampedObject = &unstructured.Unstructured{}
@@ -643,7 +644,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					retrieveError = errors2.RetrieveOutputError{
+					retrieveError = cerrors.RetrieveOutputError{
 						Err:             jsonPathError,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
 						StampedObject:   stampedObject,
@@ -687,10 +688,10 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ResolveTemplateOptionError", func() {
-				var resolveOptionErr errors2.ResolveTemplateOptionError
+				var resolveOptionErr cerrors.ResolveTemplateOptionError
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					resolveOptionErr = errors2.ResolveTemplateOptionError{
+					resolveOptionErr = cerrors.ResolveTemplateOptionError{
 						Err:             jsonPathError,
 						SupplyChainName: supplyChainName,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
@@ -728,9 +729,9 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type TemplateOptionsMatchError", func() {
-				var templateOptionsMatchErr errors2.TemplateOptionsMatchError
+				var templateOptionsMatchErr cerrors.TemplateOptionsMatchError
 				BeforeEach(func() {
-					templateOptionsMatchErr = errors2.TemplateOptionsMatchError{
+					templateOptionsMatchErr = cerrors.TemplateOptionsMatchError{
 						SupplyChainName: supplyChainName,
 						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
 						OptionNames:     []string{"option1", "option2"},

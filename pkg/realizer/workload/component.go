@@ -17,12 +17,13 @@ package workload
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
