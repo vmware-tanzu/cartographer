@@ -26,6 +26,14 @@ import (
 
 // -- Resource conditions
 
+func ResourceSubmittedCondition() metav1.Condition {
+	return metav1.Condition{
+		Type:   v1alpha1.ResourceSubmitted,
+		Status: metav1.ConditionTrue,
+		Reason: v1alpha1.CompleteResourcesSubmittedReason,
+	}
+}
+
 func ResourcesSubmittedCondition(conditionType string) metav1.Condition {
 	return metav1.Condition{
 		Type:   conditionType,

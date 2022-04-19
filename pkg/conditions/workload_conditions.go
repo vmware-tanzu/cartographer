@@ -69,16 +69,6 @@ func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Conditi
 	}
 }
 
-// -- Resource conditions
-
-func ResourceSubmittedCondition() metav1.Condition {
-	return metav1.Condition{
-		Type:   v1alpha1.ResourceSubmitted,
-		Status: metav1.ConditionTrue,
-		Reason: v1alpha1.CompleteResourcesSubmittedReason,
-	}
-}
-
 func AddConditionForWorkloadError(conditionManager *ConditionManager, conditionType string, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
