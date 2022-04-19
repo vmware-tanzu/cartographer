@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package controllers_test
 
 import (
 	"context"
@@ -38,7 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
@@ -53,7 +53,7 @@ import (
 var _ = Describe("Reconciler", func() {
 	var (
 		out                          *Buffer
-		reconciler                   workload.Reconciler
+		reconciler                   controllers.Reconciler
 		ctx                          context.Context
 		req                          ctrl.Request
 		repo                         *repositoryfakes.FakeRepository
@@ -108,7 +108,7 @@ var _ = Describe("Reconciler", func() {
 			return builtResourceRealizer, nil
 		}
 
-		reconciler = workload.Reconciler{
+		reconciler = controllers.Reconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,
