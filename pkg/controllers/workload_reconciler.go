@@ -137,6 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Check if error is unhandled
+	// TODO: Can we abstract this? This is not easy on the eyes...
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -146,6 +147,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if !kerrors.IsForbidden(typedErr.Err) {
 				err = cerrors.NewUnhandledError(err)
 			}
+		case cerrors.StampError, cerrors.RetrieveOutputError, cerrors.ResolveTemplateOptionError, cerrors.TemplateOptionsMatchError:
+			break
 		default:
 			err = cerrors.NewUnhandledError(err)
 		}
