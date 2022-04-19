@@ -67,7 +67,21 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResources = append(realizedResources, generateRealizedResource(resource, template, stampedObject, out, err, previousResources))
+		realizedResource := generateRealizedResource(resource, template, stampedObject, out, err, previousResources)
+
+		conditionManagerBuilder := conditions.NewConditionManager
+		conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
+
+		if err != nil {
+			conditions.AddConditionForError(&conditionManager, v1alpha1.ResourceSubmitted, err)
+		} else {
+			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
+		}
+
+		conditions, _ := conditionManager.Finalize()
+		realizedResource.Conditions = conditions
+
+		realizedResources = append(realizedResources, realizedResource)
 
 		outs.AddOutput(resource.Name, out)
 	}
@@ -117,24 +131,12 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		}
 	}
 
-	conditionManagerBuilder := conditions.NewConditionManager
-	conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
-
-	if err != nil {
-		conditions.AddConditionForError(&conditionManager, err)
-	} else {
-		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
-	}
-
-	conditions, _ := conditionManager.Finalize()
-
 	return v1alpha1.RealizedResource{
 		Name:        resource.Name,
 		StampedRef:  stampedRef,
 		TemplateRef: templateRef,
 		Inputs:      inputs,
 		Outputs:     outputs,
-		Conditions:  conditions,
 	}
 }
 

@@ -24,7 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -131,25 +130,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 
 	if err != nil {
-		conditions.AddConditionForError(&r.conditionManager, err)
+		conditions.AddConditionForError(&r.conditionManager, v1alpha1.WorkloadResourceSubmitted, err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition())
 	}
 
-	// Check if error is unhandled
-	// TODO: Can we abstract this? This is not easy on the eyes...
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
-		switch typedErr := err.(type) {
-		case cerrors.GetTemplateError:
-			err = cerrors.NewUnhandledError(err)
-		case cerrors.ApplyStampedObjectError:
-			if !kerrors.IsForbidden(typedErr.Err) {
-				err = cerrors.NewUnhandledError(err)
-			}
-		case cerrors.StampError, cerrors.RetrieveOutputError, cerrors.ResolveTemplateOptionError, cerrors.TemplateOptionsMatchError:
-			break
-		default:
+		if cerrors.CheckErrorUnhandledType(err) {
 			err = cerrors.NewUnhandledError(err)
 		}
 	} else {

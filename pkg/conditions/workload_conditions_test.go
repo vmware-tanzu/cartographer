@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 )
 
@@ -41,14 +42,14 @@ var _ = Describe("Conditions", func() {
 			It("has the correct message", func() {
 				obj.SetNamespace("my-ns")
 
-				condition := conditions.MissingValueAtPathCondition(obj, "spec.foo")
+				condition := conditions.MissingValueAtPathCondition(v1alpha1.WorkloadResourceSubmitted, obj, "spec.foo")
 				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget] in namespace [my-ns]"))
 			})
 		})
 
 		Context("stamped object does not have a namespace", func() {
 			It("has the correct message", func() {
-				condition := conditions.MissingValueAtPathCondition(obj, "spec.foo")
+				condition := conditions.MissingValueAtPathCondition(v1alpha1.WorkloadResourceSubmitted, obj, "spec.foo")
 				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget]"))
 			})
 		})

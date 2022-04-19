@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -134,4 +135,21 @@ func (e RetrieveOutputError) JsonPathExpression() string {
 		return jsonPathErrorContext.JsonPathExpression()
 	}
 	return "<no jsonpath context>"
+}
+
+func CheckErrorUnhandledType(err error) bool {
+	switch typedErr := err.(type) {
+	case GetTemplateError:
+		return true
+	case ApplyStampedObjectError:
+		if !kerrors.IsForbidden(typedErr.Err) {
+			return true
+		} else {
+			return false
+		}
+	case StampError, RetrieveOutputError, ResolveTemplateOptionError, TemplateOptionsMatchError:
+		return false
+	default:
+		return true
+	}
 }
