@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable_test
+package controllers_test
 
 import (
 	"context"
@@ -38,7 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
@@ -50,10 +50,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("Reconciler", func() {
+var _ = Describe("DeliverableReconciler", func() {
 	var (
 		out               *Buffer
-		reconciler        deliverable.Reconciler
+		reconciler        controllers.DeliverableReconciler
 		ctx               context.Context
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
@@ -111,7 +111,7 @@ var _ = Describe("Reconciler", func() {
 			return builtResourceRealizer, nil
 		}
 
-		reconciler = deliverable.Reconciler{
+		reconciler = controllers.DeliverableReconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,
@@ -367,12 +367,12 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to specify the delivery is ready", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliveryReadyCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.DeliveryReadyCondition()))
 		})
 
 		It("calls the condition manager to report the resources have been submitted", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.ResourcesSubmittedCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ResourcesSubmittedCondition(v1alpha1.DeliverableResourcesSubmitted)))
 		})
 
 		It("watches the stampedObjects kinds", func() {
@@ -454,7 +454,7 @@ var _ = Describe("Reconciler", func() {
 					Reason:             "SomeReason",
 					Message:            "some informative message",
 				}
-				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.MissingReadyInDeliveryCondition(expectedCondition)))
+				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.MissingReadyInDeliveryCondition(expectedCondition)))
 			})
 
 			It("logs the handled error message", func() {
@@ -480,7 +480,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateObjectRetrievalFailureCondition(templateError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateObjectRetrievalFailureCondition(v1alpha1.DeliverableResourcesSubmitted, templateError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -521,7 +521,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateStampFailureCondition(stampError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateStampFailureCondition(v1alpha1.DeliverableResourcesSubmitted, stampError)))
 				})
 
 				It("does not return an error", func() {
@@ -567,7 +567,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateRejectedByAPIServerCondition(v1alpha1.DeliverableResourcesSubmitted, stampedObjectError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -616,7 +616,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateRejectedByAPIServerCondition(v1alpha1.DeliverableResourcesSubmitted, stampedObjectError)))
 				})
 
 				It("handles the error and logs it", func() {
@@ -675,7 +675,7 @@ var _ = Describe("Reconciler", func() {
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.TemplateStampFailureByObservedGenerationCondition(retrieveError)))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateStampFailureByObservedGenerationCondition(retrieveError)))
 					})
 
 					It("does not return an error", func() {
@@ -715,7 +715,7 @@ var _ = Describe("Reconciler", func() {
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.DeploymentConditionNotMetCondition(retrieveError)))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.DeploymentConditionNotMetCondition(retrieveError)))
 					})
 
 					It("does not return an error", func() {
@@ -755,7 +755,7 @@ var _ = Describe("Reconciler", func() {
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.DeploymentFailedConditionMetCondition(retrieveError)))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.DeploymentFailedConditionMetCondition(retrieveError)))
 					})
 
 					It("does not return an error", func() {
@@ -795,7 +795,7 @@ var _ = Describe("Reconciler", func() {
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.MissingValueAtPathCondition(stampedObject, "this.wont.find.anything")))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.MissingValueAtPathCondition(v1alpha1.DeliverableResourcesSubmitted, stampedObject, "this.wont.find.anything")))
 					})
 
 					It("does not return an error", func() {
@@ -835,7 +835,7 @@ var _ = Describe("Reconciler", func() {
 
 					It("calls the condition manager to report", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.UnknownResourceErrorCondition(retrieveError)))
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.UnknownResourceErrorCondition(v1alpha1.DeliverableResourcesSubmitted, retrieveError)))
 					})
 
 					It("does not return an error", func() {
@@ -886,7 +886,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(deliverable.ResolveTemplateOptionsErrorCondition(resolveOptionErr)))
+						Equal(conditions.ResolveTemplateOptionsErrorCondition(v1alpha1.DeliverableResourcesSubmitted, resolveOptionErr)))
 				})
 
 				It("does not return an error", func() {
@@ -926,7 +926,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(deliverable.TemplateOptionsMatchErrorCondition(templateOptionsMatchErr)))
+						Equal(conditions.TemplateOptionsMatchErrorCondition(v1alpha1.DeliverableResourcesSubmitted, templateOptionsMatchErr)))
 				})
 
 				It("does not return an error", func() {
@@ -981,7 +981,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.UnknownResourceErrorCondition(realizerError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.UnknownResourceErrorCondition(v1alpha1.DeliverableResourcesSubmitted, realizerError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -1034,7 +1034,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("calls the condition manager to add a service account secret not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.ServiceAccountSecretNotFoundCondition(repoError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountSecretNotFoundCondition(repoError)))
 			})
 
 			It("handles the error and logs it", func() {
@@ -1053,7 +1053,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("calls the condition manager to add a resource realizer builder error condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(deliverable.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
 			})
 
 			It("returns an unhandled error", func() {
@@ -1086,7 +1086,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to report the bad state", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliverableMissingLabelsCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.DeliverableMissingLabelsCondition()))
 		})
 	})
 
@@ -1098,7 +1098,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to add a delivery not found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.DeliveryNotFoundCondition(deliverableLabels)))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.DeliveryNotFoundCondition(deliverableLabels)))
 		})
 
 		It("logs the handled error message", func() {
@@ -1145,7 +1145,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to report too mane deliveries matched", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(deliverable.TooManyDeliveryMatchesCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.TooManyDeliveryMatchesCondition()))
 		})
 
 		It("logs the handled error message", func() {

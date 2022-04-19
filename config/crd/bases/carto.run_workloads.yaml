@@ -484,6 +484,9 @@ spec:
                 items:
                   properties:
                     conditions:
+                      description: 'Conditions describing this resource''s reconcile
+                        state. The top level condition is of type `Ready`, and follows
+                        these Kubernetes conventions: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
                       items:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct

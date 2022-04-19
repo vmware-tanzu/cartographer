@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable
+package controllers
 
 //go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
@@ -24,7 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -44,13 +43,12 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type Reconciler struct {
+type DeliverableReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
@@ -60,7 +58,7 @@ type Reconciler struct {
 	conditionManager        conditions.ConditionManager
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
@@ -105,59 +103,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deliverable.Status.DeliveryRef.Name = delivery.Name
 
 	if !r.isDeliveryReady(delivery) {
-		r.conditionManager.AddPositive(MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
+		r.conditionManager.AddPositive(conditions.MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
 		log.Info("delivery is not in ready state")
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
 	}
-	r.conditionManager.AddPositive(DeliveryReadyCondition())
+	r.conditionManager.AddPositive(conditions.DeliveryReadyCondition())
 
-	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(deliverable, delivery)
+	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForDeliverable(deliverable, delivery)
 
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
 	if err != nil {
-		r.conditionManager.AddPositive(ResourceRealizerBuilderErrorCondition(err))
+		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery, deliverable.Status.Resources)
+
+	if err != nil {
+		conditions.AddConditionForDeliverableError(&r.conditionManager, v1alpha1.DeliverableResourcesSubmitted, err)
+	} else {
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(v1alpha1.DeliverableResourcesSubmitted))
+	}
+
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
-		switch typedErr := err.(type) {
-		case cerrors.GetTemplateError:
-			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
-			err = cerrors.NewUnhandledError(err)
-		case cerrors.StampError:
-			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case cerrors.ApplyStampedObjectError:
-			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
-			if !kerrors.IsForbidden(typedErr.Err) {
-				err = cerrors.NewUnhandledError(err)
-			}
-		case cerrors.RetrieveOutputError:
-			switch typedErr.Err.(type) {
-			case templates.ObservedGenerationError:
-				r.conditionManager.AddPositive(TemplateStampFailureByObservedGenerationCondition(typedErr))
-			case templates.DeploymentFailedConditionMetError:
-				r.conditionManager.AddPositive(DeploymentFailedConditionMetCondition(typedErr))
-			case templates.DeploymentConditionError:
-				r.conditionManager.AddPositive(DeploymentConditionNotMetCondition(typedErr))
-			case templates.JsonPathError:
-				r.conditionManager.AddPositive(MissingValueAtPathCondition(typedErr.StampedObject, typedErr.JsonPathExpression()))
-			default:
-				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
-			}
-		case cerrors.ResolveTemplateOptionError:
-			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
-		case cerrors.TemplateOptionsMatchError:
-			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
-		default:
-			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
+		if cerrors.CheckErrorUnhandledType(err) {
 			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
@@ -167,7 +143,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					"object", resource.StampedRef)
 			}
 		}
-		r.conditionManager.AddPositive(ResourcesSubmittedCondition())
 	}
 
 	r.trackDependencies(deliverable, realizedResources, serviceAccountName, serviceAccountNS)
@@ -199,7 +174,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.completeReconciliation(ctx, deliverable, realizedResources, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
+func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
@@ -226,12 +201,12 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, deliverable *v1
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
+func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	return readyCondition.Status == "True"
 }
 
-func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
+func (r *DeliverableReconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: deliverable.Namespace,
 		Name:      deliverable.Name,
@@ -271,7 +246,7 @@ func (r *Reconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realiz
 	}
 }
 
-func (r *Reconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
+func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
@@ -321,10 +296,10 @@ func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condit
 	return metav1.Condition{}
 }
 
-func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
+func (r *DeliverableReconciler) getDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	if len(deliverable.Labels) == 0 {
-		r.conditionManager.AddPositive(DeliverableMissingLabelsCondition())
+		r.conditionManager.AddPositive(conditions.DeliverableMissingLabelsCondition())
 		log.Info("deliverable is missing required labels")
 		return nil, fmt.Errorf("deliverable [%s/%s] is missing required labels",
 			deliverable.Namespace, deliverable.Name)
@@ -338,7 +313,7 @@ func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverabl
 	}
 
 	if len(deliveries) == 0 {
-		r.conditionManager.AddPositive(DeliveryNotFoundCondition(deliverable.Labels))
+		r.conditionManager.AddPositive(conditions.DeliveryNotFoundCondition(deliverable.Labels))
 		log.Info("no delivery found where full selector is satisfied by label",
 			"labels", deliverable.Labels)
 		return nil, fmt.Errorf("no delivery [%s/%s] found where full selector is satisfied by labels: %v",
@@ -346,7 +321,7 @@ func (r *Reconciler) getDeliveriesForDeliverable(ctx context.Context, deliverabl
 	}
 
 	if len(deliveries) > 1 {
-		r.conditionManager.AddPositive(TooManyDeliveryMatchesCondition())
+		r.conditionManager.AddPositive(conditions.TooManyDeliveryMatchesCondition())
 		log.Info("more than one delivery selected for deliverable",
 			"deliveries", getDeliveryNames(deliveries))
 		return nil, fmt.Errorf("more than one delivery selected for deliverable [%s/%s]: %+v",
@@ -367,7 +342,7 @@ func getDeliveryNames(objs []*v1alpha1.ClusterDelivery) []string {
 	return names
 }
 
-func getServiceAccountNameAndNamespace(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) (string, string) {
+func getServiceAccountNameAndNamespaceForDeliverable(deliverable *v1alpha1.Deliverable, delivery *v1alpha1.ClusterDelivery) (string, string) {
 	serviceAccountName := "default"
 	serviceAccountNS := deliverable.Namespace
 
@@ -383,7 +358,7 @@ func getServiceAccountNameAndNamespace(deliverable *v1alpha1.Deliverable, delive
 	return serviceAccountName, serviceAccountNS
 }
 
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),

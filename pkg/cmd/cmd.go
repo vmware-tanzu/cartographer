@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/delivery"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
@@ -83,7 +82,7 @@ func (cmd *Command) Execute(ctx context.Context) error {
 }
 
 func registerControllers(mgr manager.Manager) error {
-	if err := (&controllers.Reconciler{}).SetupWithManager(mgr); err != nil {
+	if err := (&controllers.WorkloadReconciler{}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("failed to register workload controller: %w", err)
 	}
 
@@ -91,7 +90,7 @@ func registerControllers(mgr manager.Manager) error {
 		return fmt.Errorf("failed to register supply chain controller: %w", err)
 	}
 
-	if err := (&deliverable.Reconciler{}).SetupWithManager(mgr); err != nil {
+	if err := (&controllers.DeliverableReconciler{}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("failed to register deliverable controller: %w", err)
 	}
 

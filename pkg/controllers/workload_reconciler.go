@@ -48,7 +48,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type Reconciler struct {
+type WorkloadReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
@@ -58,7 +58,7 @@ type Reconciler struct {
 	DependencyTracker       dependency.DependencyTracker
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
@@ -110,7 +110,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	r.conditionManager.AddPositive(conditions.SupplyChainReadyCondition())
 
-	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespace(workload, supplyChain)
+	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForWorkload(workload, supplyChain)
 
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
@@ -130,9 +130,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 
 	if err != nil {
-		conditions.AddConditionForError(&r.conditionManager, v1alpha1.WorkloadResourceSubmitted, err)
+		conditions.AddConditionForWorkloadError(&r.conditionManager, v1alpha1.WorkloadResourcesSubmitted, err)
 	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition())
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(v1alpha1.WorkloadResourcesSubmitted))
 	}
 
 	if err != nil {
@@ -178,7 +178,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.completeReconciliation(ctx, workload, realizedResources, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
+func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	workload.Status.Conditions, changed = r.conditionManager.Finalize()
@@ -204,7 +204,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, workload *v1alp
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
+func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
 	supplyChainReadyCondition := getSupplyChainReadyCondition(supplyChain)
 	return supplyChainReadyCondition.Status == "True"
 }
@@ -218,7 +218,7 @@ func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) meta
 	return metav1.Condition{}
 }
 
-func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
+func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	if len(workload.Labels) == 0 {
 		r.conditionManager.AddPositive(conditions.WorkloadMissingLabelsCondition())
@@ -254,7 +254,7 @@ func (r *Reconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v
 	return supplyChains[0], nil
 }
 
-func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
+func (r *WorkloadReconciler) trackDependencies(workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: workload.Namespace,
 		Name:      workload.Name,
@@ -296,7 +296,7 @@ func (r *Reconciler) trackDependencies(workload *v1alpha1.Workload, realizedReso
 	}
 }
 
-func (r *Reconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
+func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
@@ -346,7 +346,7 @@ func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
 	return names
 }
 
-func getServiceAccountNameAndNamespace(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) (string, string) {
+func getServiceAccountNameAndNamespaceForWorkload(workload *v1alpha1.Workload, supplyChain *v1alpha1.ClusterSupplyChain) (string, string) {
 	serviceAccountName := "default"
 	serviceAccountNS := workload.Namespace
 
@@ -363,7 +363,7 @@ func getServiceAccountNameAndNamespace(workload *v1alpha1.Workload, supplyChain 
 }
 
 // TODO: kubebuilder:rbac
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),

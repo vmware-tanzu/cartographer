@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	WorkloadReady             = "Ready"
-	WorkloadSupplyChainReady  = "SupplyChainReady"
-	WorkloadResourceSubmitted = "ResourcesSubmitted"
+	WorkloadReady              = "Ready"
+	WorkloadSupplyChainReady   = "SupplyChainReady"
+	WorkloadResourcesSubmitted = "ResourcesSubmitted"
 )
 
 const (
@@ -38,11 +38,6 @@ const (
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 	ResolveTemplateOptionsErrorResourcesSubmittedReason  = "ResolveTemplateOptionsError"
 	TemplateOptionsMatchErrorResourcesSubmittedReason    = "TemplateOptionsMatchError"
-)
-
-const (
-	ResourceReady     = "Ready"
-	ResourceSubmitted = "ResourceSubmitted"
 )
 
 // ValidWorkloadPaths Note: this needs to be updated anytime the spec changes

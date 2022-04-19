@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable
+package conditions
 
 import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 // -- Delivery conditions
@@ -73,46 +73,6 @@ func MissingReadyInDeliveryCondition(deliveryReadyCondition metav1.Condition) me
 
 // -- Resource conditions
 
-func ResourcesSubmittedCondition() metav1.Condition {
-	return metav1.Condition{
-		Type:   v1alpha1.DeliverableResourcesSubmitted,
-		Status: metav1.ConditionTrue,
-		Reason: v1alpha1.CompleteResourcesSubmittedReason,
-	}
-}
-
-func TemplateObjectRetrievalFailureCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateObjectRetrievalFailureResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func MissingValueAtPathCondition(obj *unstructured.Unstructured, expression string) metav1.Condition {
-	var namespaceMsg string
-	if obj.GetNamespace() != "" {
-		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
-	}
-	return metav1.Condition{
-		Type:   v1alpha1.WorkloadResourceSubmitted,
-		Status: metav1.ConditionUnknown,
-		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
-			expression, utils.GetFullyQualifiedType(obj), obj.GetName(), namespaceMsg),
-	}
-}
-
-func TemplateStampFailureCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
 func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
@@ -140,56 +100,32 @@ func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
 	}
 }
 
-func TemplateRejectedByAPIServerCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateRejectedByAPIServerResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func UnknownResourceErrorCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.UnknownErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func ResourceRealizerBuilderErrorCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ResourceRealizerBuilderErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func ResolveTemplateOptionsErrorCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ResolveTemplateOptionsErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func TemplateOptionsMatchErrorCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateOptionsMatchErrorResourcesSubmittedReason,
-		Message: err.Error(),
+func AddConditionForDeliverableError(conditionManager *ConditionManager, conditionType string, err error) {
+	switch typedErr := err.(type) {
+	case cerrors.GetTemplateError:
+		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(conditionType, typedErr))
+	case cerrors.StampError:
+		(*conditionManager).AddPositive(TemplateStampFailureCondition(conditionType, typedErr))
+	case cerrors.ApplyStampedObjectError:
+		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(conditionType, typedErr))
+	case cerrors.RetrieveOutputError:
+		switch typedErr.Err.(type) {
+		case templates.ObservedGenerationError:
+			(*conditionManager).AddPositive(TemplateStampFailureByObservedGenerationCondition(typedErr))
+		case templates.DeploymentFailedConditionMetError:
+			(*conditionManager).AddPositive(DeploymentFailedConditionMetCondition(typedErr))
+		case templates.DeploymentConditionError:
+			(*conditionManager).AddPositive(DeploymentConditionNotMetCondition(typedErr))
+		case templates.JsonPathError:
+			(*conditionManager).AddPositive(MissingValueAtPathCondition(conditionType, typedErr.StampedObject, typedErr.JsonPathExpression()))
+		default:
+			(*conditionManager).AddPositive(UnknownResourceErrorCondition(conditionType, typedErr))
+		}
+	case cerrors.ResolveTemplateOptionError:
+		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(conditionType, typedErr))
+	case cerrors.TemplateOptionsMatchError:
+		(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(conditionType, typedErr))
+	default:
+		(*conditionManager).AddPositive(UnknownResourceErrorCondition(conditionType, typedErr))
 	}
 }

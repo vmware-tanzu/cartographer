@@ -18,11 +18,9 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 // -- Supply Chain conditions
@@ -81,103 +79,7 @@ func ResourceSubmittedCondition() metav1.Condition {
 	}
 }
 
-func ResourcesSubmittedCondition() metav1.Condition {
-	return metav1.Condition{
-		Type:   v1alpha1.WorkloadResourceSubmitted,
-		Status: metav1.ConditionTrue,
-		Reason: v1alpha1.CompleteResourcesSubmittedReason,
-	}
-}
-
-func TemplateObjectRetrievalFailureCondition(conditionType string, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    conditionType,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateObjectRetrievalFailureResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func MissingValueAtPathCondition(conditionType string, obj *unstructured.Unstructured, expression string) metav1.Condition {
-	var namespaceMsg string
-	if obj.GetNamespace() != "" {
-		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
-	}
-	return metav1.Condition{
-		Type:   conditionType,
-		Status: metav1.ConditionUnknown,
-		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
-			expression, utils.GetFullyQualifiedType(obj), obj.GetName(), namespaceMsg),
-	}
-}
-
-func TemplateStampFailureCondition(conditionType string, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    conditionType,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func TemplateRejectedByAPIServerCondition(conditionType string, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    conditionType,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateRejectedByAPIServerResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func UnknownResourceErrorCondition(conditionType string, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    conditionType,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.UnknownErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func ResolveTemplateOptionsErrorCondition(conditionType string, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    conditionType,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ResolveTemplateOptionsErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func TemplateOptionsMatchErrorCondition(conditionType string, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    conditionType,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.TemplateOptionsMatchErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-// -- Reconciler conditions
-
-func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourceSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func ResourceRealizerBuilderErrorCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourceSubmitted,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ResourceRealizerBuilderErrorResourcesSubmittedReason,
-		Message: err.Error(),
-	}
-}
-
-func AddConditionForError(conditionManager *ConditionManager, conditionType string, err error) {
+func AddConditionForWorkloadError(conditionManager *ConditionManager, conditionType string, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
 		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(conditionType, typedErr))

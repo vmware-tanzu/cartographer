@@ -75,7 +75,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
 		if err != nil {
-			conditions.AddConditionForError(&conditionManager, v1alpha1.ResourceSubmitted, err)
+			conditions.AddConditionForDeliverableError(&conditionManager, v1alpha1.ResourceSubmitted, err)
 		} else {
 			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 		}
