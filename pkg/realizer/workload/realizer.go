@@ -67,7 +67,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResource := generateRealizedResource(resource, template, stampedObject, out, err, previousResources)
+		realizedResource := generateRealizedResource(resource, template, stampedObject, out, previousResources)
 
 		conditionManagerBuilder := conditions.NewConditionManager
 		conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
@@ -89,7 +89,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return realizedResources, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, err error, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
+func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
 	if stampedObject == nil || template == nil {
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resource.Name {

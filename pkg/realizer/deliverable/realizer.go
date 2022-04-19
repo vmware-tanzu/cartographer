@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -68,7 +69,21 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResources = append(realizedResources, generateRealizedResource(resource, template, stampedObject, out, previousResources))
+		realizedResource := generateRealizedResource(resource, template, stampedObject, out, previousResources)
+
+		conditionManagerBuilder := conditions.NewConditionManager
+		conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
+
+		if err != nil {
+			conditions.AddConditionForError(&conditionManager, v1alpha1.ResourceSubmitted, err)
+		} else {
+			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
+		}
+
+		conditions, _ := conditionManager.Finalize()
+		realizedResource.Conditions = conditions
+
+		realizedResources = append(realizedResources, realizedResource)
 
 		outs.AddOutput(resource.Name, out)
 	}
@@ -105,34 +120,7 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
-		var err error
-		outputs, err = template.GenerateResourceOutput(output)
-		if err != nil {
-			for _, previousResource := range previousResources {
-				if previousResource.Name == resource.Name {
-					outputs = previousResource.Outputs
-					break
-				}
-			}
-		} else {
-			currTime := metav1.NewTime(time.Now())
-			for j, out := range outputs {
-				outputs[j].LastTransitionTime = currTime
-				for _, previousResource := range previousResources {
-					if previousResource.Name == resource.Name {
-						for _, previousOutput := range previousResource.Outputs {
-							if previousOutput.Name == out.Name {
-								if previousOutput.Digest == out.Digest {
-									outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-								}
-								break
-							}
-						}
-						break
-					}
-				}
-			}
-		}
+		outputs = getOutputs(resource.Name, template, previousResources, output)
 	}
 
 	var stampedRef *corev1.ObjectReference
@@ -152,4 +140,45 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 		Inputs:      inputs,
 		Outputs:     outputs,
 	}
+}
+
+func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.RealizedResource) []metav1.Condition {
+	for _, previousResource := range previousResources {
+		if previousResource.Name == resourceName {
+			return previousResource.Conditions
+		}
+	}
+	return nil
+}
+
+func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+	outputs, err := template.GenerateResourceOutput(output)
+	if err != nil {
+		for _, previousResource := range previousResources {
+			if previousResource.Name == resourceName {
+				outputs = previousResource.Outputs
+				break
+			}
+		}
+	} else {
+		currTime := metav1.NewTime(time.Now())
+		for j, out := range outputs {
+			outputs[j].LastTransitionTime = currTime
+			for _, previousResource := range previousResources {
+				if previousResource.Name == resourceName {
+					for _, previousOutput := range previousResource.Outputs {
+						if previousOutput.Name == out.Name {
+							if previousOutput.Digest == out.Digest {
+								outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
+							}
+							break
+						}
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return outputs
 }

@@ -135,10 +135,18 @@ var _ = Describe("Realize", func() {
 			))
 			Expect(time.Since(realizedResources[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
 			Expect(len(realizedResources[0].Conditions)).To(Equal(2))
-			Expect(realizedResources[0].Conditions[0].Type).To(Equal("ResourceSubmitted"))
-			Expect(realizedResources[0].Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-			Expect(realizedResources[0].Conditions[1].Type).To(Equal("Ready"))
-			Expect(realizedResources[0].Conditions[1].Status).To(Equal(metav1.ConditionTrue))
+			Expect(realizedResources[0].Conditions[0]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("ResourceSubmitted"),
+					"Status": Equal(metav1.ConditionTrue),
+				},
+			))
+			Expect(realizedResources[0].Conditions[1]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				},
+			))
 
 			Expect(realizedResources[1].Name).To(Equal(resource2.Name))
 			Expect(realizedResources[1].TemplateRef.Name).To(Equal(template2.Name))
@@ -147,10 +155,18 @@ var _ = Describe("Realize", func() {
 			Expect(realizedResources[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(realizedResources[1].Outputs).To(BeNil())
 			Expect(len(realizedResources[0].Conditions)).To(Equal(2))
-			Expect(realizedResources[1].Conditions[0].Type).To(Equal("ResourceSubmitted"))
-			Expect(realizedResources[1].Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-			Expect(realizedResources[1].Conditions[1].Type).To(Equal("Ready"))
-			Expect(realizedResources[1].Conditions[1].Status).To(Equal(metav1.ConditionTrue))
+			Expect(realizedResources[1].Conditions[0]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("ResourceSubmitted"),
+					"Status": Equal(metav1.ConditionTrue),
+				},
+			))
+			Expect(realizedResources[1].Conditions[1]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				},
+			))
 		})
 
 		It("returns the first error encountered realizing a resource and continues to realize", func() {
@@ -390,10 +406,18 @@ var _ = Describe("Realize", func() {
 				Expect(realizedResources[0].Outputs).To(Equal(previousResources[0].Outputs))
 				Expect(realizedResources[0].Conditions).ToNot(Equal(previousResources[0].Conditions))
 				Expect(len(realizedResources[0].Conditions)).To(Equal(2))
-				Expect(realizedResources[0].Conditions[0].Type).To(Equal("ResourceSubmitted"))
-				Expect(realizedResources[0].Conditions[0].Status).To(Equal(metav1.ConditionFalse))
-				Expect(realizedResources[0].Conditions[1].Type).To(Equal("Ready"))
-				Expect(realizedResources[0].Conditions[1].Status).To(Equal(metav1.ConditionFalse))
+				Expect(realizedResources[0].Conditions[0]).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Type":   Equal("ResourceSubmitted"),
+						"Status": Equal(metav1.ConditionFalse),
+					},
+				))
+				Expect(realizedResources[0].Conditions[1]).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Type":   Equal("Ready"),
+						"Status": Equal(metav1.ConditionFalse),
+					},
+				))
 
 				Expect(realizedResources[1].Name).To(Equal(previousResources[1].Name))
 				Expect(realizedResources[1].StampedRef).To(Equal(previousResources[1].StampedRef))
@@ -401,11 +425,19 @@ var _ = Describe("Realize", func() {
 				Expect(realizedResources[1].Inputs).To(Equal(previousResources[1].Inputs))
 				Expect(realizedResources[1].Outputs).To(Equal(previousResources[1].Outputs))
 				Expect(realizedResources[1].Conditions).ToNot(Equal(previousResources[1].Conditions))
-				Expect(len(realizedResources[0].Conditions)).To(Equal(2))
-				Expect(realizedResources[1].Conditions[0].Type).To(Equal("ResourceSubmitted"))
-				Expect(realizedResources[1].Conditions[0].Status).To(Equal(metav1.ConditionFalse))
-				Expect(realizedResources[1].Conditions[1].Type).To(Equal("Ready"))
-				Expect(realizedResources[1].Conditions[1].Status).To(Equal(metav1.ConditionFalse))
+				Expect(len(realizedResources[1].Conditions)).To(Equal(2))
+				Expect(realizedResources[1].Conditions[0]).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Type":   Equal("ResourceSubmitted"),
+						"Status": Equal(metav1.ConditionFalse),
+					},
+				))
+				Expect(realizedResources[1].Conditions[1]).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Type":   Equal("Ready"),
+						"Status": Equal(metav1.ConditionFalse),
+					},
+				))
 
 				Expect(realizedResources[2]).ToNot(Equal(previousResources[2]))
 				Expect(realizedResources[2].StampedRef.Name).To(Equal("StampedObj"))
