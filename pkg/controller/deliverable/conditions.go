@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
+	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
@@ -118,7 +118,7 @@ func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Conditi
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
-		Message: fmt.Sprintf("resource [%s] cannot satisfy observedCompletion without observedGeneration in object status", err.(deliverable.RetrieveOutputError).ResourceName()),
+		Message: fmt.Sprintf("resource [%s] cannot satisfy observedCompletion without observedGeneration in object status", err.(errors.RetrieveOutputError).GetResourceName()),
 	}
 }
 
@@ -127,7 +127,7 @@ func DeploymentConditionNotMetCondition(err error) metav1.Condition {
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
 		Status:  metav1.ConditionUnknown,
 		Reason:  v1alpha1.DeploymentConditionNotMetResourcesSubmittedReason,
-		Message: fmt.Sprintf("resource [%s] condition not met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
+		Message: fmt.Sprintf("resource [%s] condition not met: %s", err.(errors.RetrieveOutputError).GetResourceName(), err.(errors.RetrieveOutputError).Err.Error()),
 	}
 }
 
@@ -136,7 +136,7 @@ func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
 		Type:    v1alpha1.DeliverableResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.DeploymentFailedConditionMetResourcesSubmittedReason,
-		Message: fmt.Sprintf("resource [%s] failed condition met: %s", err.(deliverable.RetrieveOutputError).ResourceName(), err.(deliverable.RetrieveOutputError).Err.Error()),
+		Message: fmt.Sprintf("resource [%s] failed condition met: %s", err.(errors.RetrieveOutputError).GetResourceName(), err.(errors.RetrieveOutputError).Err.Error()),
 	}
 }
 

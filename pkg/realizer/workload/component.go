@@ -87,9 +87,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
 		return nil, nil, nil, errors.GetTemplateError{
-			Err:             err,
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
+			Err:           err,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
+			ResourceName:  resource.Name,
+			TemplateName:  templateName,
 		}
 	}
 
@@ -133,9 +135,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
 		return template, nil, nil, errors.StampError{
-			Err:             err,
-			Resource:        resource,
-			SupplyChainName: supplyChainName,
+			Err:           err,
+			ResourceName:  resource.Name,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
@@ -143,10 +146,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return template, nil, nil, errors.ApplyStampedObjectError{
-			Err:             err,
-			StampedObject:   stampedObject,
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
+			Err:           err,
+			StampedObject: stampedObject,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
+			ResourceName:  resource.Name,
 		}
 	}
 
@@ -156,10 +160,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return template, stampedObject, nil, errors.RetrieveOutputError{
-			Err:             err,
-			Resource:        resource,
-			SupplyChainName: supplyChainName,
-			StampedObject:   stampedObject,
+			Err:           err,
+			ResourceName:  resource.Name,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
+			StampedObject: stampedObject,
 		}
 	}
 
@@ -171,10 +176,11 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 
 	if err != nil {
 		return "", errors.ResolveTemplateOptionError{
-			Err:             err,
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
-			OptionName:      resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			Err:           err,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
+			ResourceName:  resource.Name,
+			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
 		}
 	}
 
@@ -185,9 +191,10 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 		}
 
 		return "", errors.TemplateOptionsMatchError{
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
-			OptionNames:     optionNames,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
+			ResourceName:  resource.Name,
+			OptionNames:   optionNames,
 		}
 	}
 

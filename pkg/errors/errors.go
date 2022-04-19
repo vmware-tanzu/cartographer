@@ -12,57 +12,64 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable
+package errors
 
 import (
 	"fmt"
 	"strings"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 const NoJsonpathContext = "<no jsonpath context>"
 
+const SupplyChain = "supply chain"
+const Delivery = "delivery"
+
 type GetTemplateError struct {
-	Err          error
-	DeliveryName string
-	Resource     *v1alpha1.DeliveryResource
+	Err           error
+	BlueprintName string
+	ResourceName  string
+	TemplateName  string
+	BlueprintType string
 }
 
 func (e GetTemplateError) Error() string {
-	return fmt.Errorf("unable to get template [%s] for resource [%s] in delivery [%s]: %w",
-		e.Resource.TemplateRef.Name,
-		e.Resource.Name,
-		e.DeliveryName,
+	return fmt.Errorf("unable to get template [%s] for resource [%s] in %s [%s]: %w",
+		e.TemplateName,
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
 		e.Err,
 	).Error()
 }
 
 type ResolveTemplateOptionError struct {
-	Err          error
-	DeliveryName string
-	Resource     *v1alpha1.DeliveryResource
-	OptionName   string
-	Key          string
+	Err           error
+	BlueprintName string
+	ResourceName  string
+	OptionName    string
+	BlueprintType string
 }
 
 func (e ResolveTemplateOptionError) Error() string {
-	return fmt.Errorf("key [%s] is invalid in template option [%s] for resource [%s] in delivery [%s]: %w",
-		e.Key,
+	return fmt.Errorf("error matching against template option [%s] for resource [%s] in %s [%s]: %w",
 		e.OptionName,
-		e.Resource.Name,
-		e.DeliveryName,
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
 		e.Err,
 	).Error()
 }
 
 type TemplateOptionsMatchError struct {
-	DeliveryName string
-	Resource     *v1alpha1.DeliveryResource
-	OptionNames  []string
+	BlueprintName string
+	ResourceName  string
+	OptionNames   []string
+	BlueprintType string
 }
 
 func (e TemplateOptionsMatchError) Error() string {
@@ -70,80 +77,80 @@ func (e TemplateOptionsMatchError) Error() string {
 	if len(e.OptionNames) != 0 {
 		optionNamesList = "[" + strings.Join(e.OptionNames, ", ") + "] "
 	}
-	return fmt.Errorf("expected exactly 1 option to match, found [%d] matching options %sfor resource [%s] in delivery [%s]",
+	return fmt.Errorf("expected exactly 1 option to match, found [%d] matching options %sfor resource [%s] in %s [%s]",
 		len(e.OptionNames),
 		optionNamesList,
-		e.Resource.Name,
-		e.DeliveryName,
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
 	).Error()
 }
 
 type ApplyStampedObjectError struct {
 	Err           error
-	DeliveryName  string
+	BlueprintName string
 	StampedObject *unstructured.Unstructured
-	Resource      *v1alpha1.DeliveryResource
+	ResourceName  string
+	BlueprintType string
 }
 
 func (e ApplyStampedObjectError) Error() string {
-	return fmt.Errorf("unable to apply object [%s/%s] for resource [%s] in delivery [%s]: %w",
+	return fmt.Errorf("unable to apply object [%s/%s] for resource [%s] in %s [%s]: %w",
 		e.StampedObject.GetNamespace(),
 		e.StampedObject.GetName(),
-		e.Resource.Name,
-		e.DeliveryName,
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
 		e.Err,
 	).Error()
 }
 
 type StampError struct {
-	Err          error
-	DeliveryName string
-	Resource     *v1alpha1.DeliveryResource
+	Err           error
+	BlueprintName string
+	ResourceName  string
+	BlueprintType string
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object for resource [%s] in delivery [%s]: %w",
-		e.Resource.Name,
-		e.DeliveryName,
+	return fmt.Errorf("unable to stamp object for resource [%s] in %s [%s]: %w",
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
 		e.Err,
 	).Error()
 }
 
 type RetrieveOutputError struct {
 	Err           error
-	DeliveryName  string
-	Resource      *v1alpha1.DeliveryResource
+	BlueprintName string
+	ResourceName  string
 	StampedObject *unstructured.Unstructured
-}
-
-type JsonPathErrorContext interface {
-	JsonPathExpression() string
+	BlueprintType string
 }
 
 func (e RetrieveOutputError) Error() string {
 	if e.JsonPathExpression() == NoJsonpathContext {
-		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in delivery [%s]: %w",
+		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in %s [%s]: %w",
 			e.StampedObject.GetNamespace(),
 			e.StampedObject.GetName(),
 			utils.GetFullyQualifiedType(e.StampedObject),
-			e.Resource.Name,
-			e.DeliveryName,
+			e.ResourceName,
+			e.BlueprintType,
+			e.BlueprintName,
 			e.Err,
 		).Error()
 	}
-	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s] in delivery [%s]: %w",
+	return fmt.Errorf("unable to retrieve outputs [%s] from stamped object [%s/%s] of type [%s] for resource [%s] in %s [%s]: %w",
 		e.JsonPathExpression(),
 		e.StampedObject.GetNamespace(),
 		e.StampedObject.GetName(),
 		utils.GetFullyQualifiedType(e.StampedObject),
-		e.Resource.Name,
-		e.DeliveryName,
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
 		e.Err,
 	).Error()
-}
-
-func (e RetrieveOutputError) ResourceName() string {
-	return e.Resource.Name
 }
 
 func (e RetrieveOutputError) JsonPathExpression() string {
@@ -152,4 +159,29 @@ func (e RetrieveOutputError) JsonPathExpression() string {
 		return jsonPathErrorContext.JsonPathExpression()
 	}
 	return NoJsonpathContext
+}
+
+type JsonPathErrorContext interface {
+	JsonPathExpression() string
+}
+
+func (e RetrieveOutputError) GetResourceName() string {
+	return e.ResourceName
+}
+
+func CheckErrorUnhandledType(err error) bool {
+	switch typedErr := err.(type) {
+	case GetTemplateError:
+		return true
+	case ApplyStampedObjectError:
+		if !kerrors.IsForbidden(typedErr.Err) {
+			return true
+		} else {
+			return false
+		}
+	case StampError, RetrieveOutputError, ResolveTemplateOptionError, TemplateOptionsMatchError:
+		return false
+	default:
+		return true
+	}
 }

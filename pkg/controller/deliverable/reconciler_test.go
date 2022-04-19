@@ -39,6 +39,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controller/deliverable"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -470,9 +471,9 @@ var _ = Describe("Reconciler", func() {
 			Context("of type GetTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = realizer.GetTemplateError{
-						Resource: &v1alpha1.DeliveryResource{Name: "some-name"},
-						Err:      errors.New("some error"),
+					templateError = cerrors.GetTemplateError{
+						ResourceName: "some-name",
+						Err:          errors.New("some error"),
 					}
 					rlzr.RealizeReturns(nil, templateError)
 				})
@@ -498,12 +499,13 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type StampError", func() {
-				var stampError realizer.StampError
+				var stampError cerrors.StampError
 				BeforeEach(func() {
-					stampError = realizer.StampError{
-						Err:          errors.New("some error"),
-						Resource:     &v1alpha1.DeliveryResource{Name: "some-name"},
-						DeliveryName: "some-delivery",
+					stampError = cerrors.StampError{
+						Err:           errors.New("some error"),
+						ResourceName:  "some-name",
+						BlueprintName: "some-delivery",
+						BlueprintType: cerrors.Delivery,
 					}
 					realizedResources[0].StampedRef = nil
 					realizedResources[1].StampedRef = nil
@@ -553,12 +555,12 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError cerrors.ApplyStampedObjectError
 				BeforeEach(func() {
-					stampedObjectError = realizer.ApplyStampedObjectError{
+					stampedObjectError = cerrors.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
-						Resource:      &v1alpha1.DeliveryResource{Name: "some-name"},
+						ResourceName:  "some-name",
 					}
 					rlzr.RealizeReturns(realizedResources, stampedObjectError)
 				})
@@ -590,7 +592,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError cerrors.ApplyStampedObjectError
 				BeforeEach(func() {
 					status := &metav1.Status{
 						Message: "fantastic error",
@@ -601,11 +603,12 @@ var _ = Describe("Reconciler", func() {
 					stampedObject1.SetNamespace("a-namespace")
 					stampedObject1.SetName("a-name")
 
-					stampedObjectError = realizer.ApplyStampedObjectError{
+					stampedObjectError = cerrors.ApplyStampedObjectError{
 						Err:           kerrors.FromObject(status),
 						StampedObject: stampedObject1,
-						Resource:      &v1alpha1.DeliveryResource{Name: "some-name"},
-						DeliveryName:  deliveryName,
+						ResourceName:  "some-name",
+						BlueprintName: deliveryName,
+						BlueprintType: cerrors.Delivery,
 					}
 
 					rlzr.RealizeReturns(realizedResources, stampedObjectError)
@@ -640,7 +643,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type RetrieveOutputError", func() {
-				var retrieveError realizer.RetrieveOutputError
+				var retrieveError cerrors.RetrieveOutputError
 				var wrappedError error
 				var stampedObject *unstructured.Unstructured
 
@@ -654,10 +657,11 @@ var _ = Describe("Reconciler", func() {
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
 
-					retrieveError = realizer.RetrieveOutputError{
+					retrieveError = cerrors.RetrieveOutputError{
 						Err:           wrappedError,
-						Resource:      &v1alpha1.DeliveryResource{Name: "some-resource"},
-						DeliveryName:  deliveryName,
+						ResourceName:  "some-resource",
+						BlueprintName: deliveryName,
+						BlueprintType: cerrors.Delivery,
 						StampedObject: stampedObject,
 					}
 
@@ -866,15 +870,15 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ResolveTemplateOptionError", func() {
-				var resolveOptionErr realizer.ResolveTemplateOptionError
+				var resolveOptionErr cerrors.ResolveTemplateOptionError
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					resolveOptionErr = realizer.ResolveTemplateOptionError{
-						Err:          jsonPathError,
-						DeliveryName: deliveryName,
-						Resource:     &v1alpha1.DeliveryResource{Name: "some-resource"},
-						OptionName:   "some-option",
-						Key:          "some-key",
+					resolveOptionErr = cerrors.ResolveTemplateOptionError{
+						Err:           jsonPathError,
+						BlueprintName: deliveryName,
+						BlueprintType: cerrors.Delivery,
+						ResourceName:  "some-resource",
+						OptionName:    "some-option",
 					}
 					rlzr.RealizeReturns(nil, resolveOptionErr)
 				})
@@ -895,7 +899,7 @@ var _ = Describe("Reconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-					Expect(out).To(Say(`"handled error":"key \[some-key\] is invalid in template option \[some-option\] for resource \[some-resource\] in delivery \[some-delivery\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
+					Expect(out).To(Say(`"handled error":"error matching against template option \[some-option\] for resource \[some-resource\] in delivery \[some-delivery\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 				})
 
 				It("does not track the template", func() {
@@ -908,12 +912,13 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type TemplateOptionsMatchError", func() {
-				var templateOptionsMatchErr realizer.TemplateOptionsMatchError
+				var templateOptionsMatchErr cerrors.TemplateOptionsMatchError
 				BeforeEach(func() {
-					templateOptionsMatchErr = realizer.TemplateOptionsMatchError{
-						DeliveryName: deliveryName,
-						Resource:     &v1alpha1.DeliveryResource{Name: "some-resource"},
-						OptionNames:  []string{"option1", "option2"},
+					templateOptionsMatchErr = cerrors.TemplateOptionsMatchError{
+						BlueprintName: deliveryName,
+						BlueprintType: cerrors.Delivery,
+						ResourceName:  "some-resource",
+						OptionNames:   []string{"option1", "option2"},
 					}
 					rlzr.RealizeReturns(nil, templateOptionsMatchErr)
 				})

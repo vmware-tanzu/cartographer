@@ -129,17 +129,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
-		case realizer.GetTemplateError:
+		case cerrors.GetTemplateError:
 			r.conditionManager.AddPositive(TemplateObjectRetrievalFailureCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
-		case realizer.StampError:
+		case cerrors.StampError:
 			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case realizer.ApplyStampedObjectError:
+		case cerrors.ApplyStampedObjectError:
 			r.conditionManager.AddPositive(TemplateRejectedByAPIServerCondition(typedErr))
 			if !kerrors.IsForbidden(typedErr.Err) {
 				err = cerrors.NewUnhandledError(err)
 			}
-		case realizer.RetrieveOutputError:
+		case cerrors.RetrieveOutputError:
 			switch typedErr.Err.(type) {
 			case templates.ObservedGenerationError:
 				r.conditionManager.AddPositive(TemplateStampFailureByObservedGenerationCondition(typedErr))
@@ -152,9 +152,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			default:
 				r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))
 			}
-		case realizer.ResolveTemplateOptionError:
+		case cerrors.ResolveTemplateOptionError:
 			r.conditionManager.AddPositive(ResolveTemplateOptionsErrorCondition(typedErr))
-		case realizer.TemplateOptionsMatchError:
+		case cerrors.TemplateOptionsMatchError:
 			r.conditionManager.AddPositive(TemplateOptionsMatchErrorCondition(typedErr))
 		default:
 			r.conditionManager.AddPositive(UnknownResourceErrorCondition(typedErr))

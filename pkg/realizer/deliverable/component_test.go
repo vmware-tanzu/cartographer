@@ -214,7 +214,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [source-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.GetTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.GetTemplateError"))
 			})
 		})
 
@@ -270,7 +270,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.StampError"))
 			})
 		})
 
@@ -322,7 +322,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.RetrieveOutputError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RetrieveOutputError"))
 			})
 		})
 
@@ -387,7 +387,7 @@ var _ = Describe("Resource", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(err.Error()).To(ContainSubstring("bad object"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.ApplyStampedObjectError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.ApplyStampedObjectError"))
 			})
 		})
 
@@ -439,7 +439,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("deliverable.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.StampError"))
 			})
 		})
 	})

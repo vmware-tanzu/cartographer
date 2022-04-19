@@ -465,8 +465,8 @@ var _ = Describe("Reconciler", func() {
 				var templateError error
 				BeforeEach(func() {
 					templateError = cerrors.GetTemplateError{
-						Err:      errors.New("some error"),
-						Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
+						Err:          errors.New("some error"),
+						ResourceName: "some-name",
 					}
 					rlzr.RealizeReturns(nil, templateError)
 				})
@@ -495,9 +495,10 @@ var _ = Describe("Reconciler", func() {
 				var stampError cerrors.StampError
 				BeforeEach(func() {
 					stampError = cerrors.StampError{
-						Err:             errors.New("some error"),
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
-						SupplyChainName: supplyChainName,
+						Err:           errors.New("some error"),
+						ResourceName:  "some-name",
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
 					}
 					realizedResources[0].StampedRef = nil
 					realizedResources[1].StampedRef = nil
@@ -550,7 +551,7 @@ var _ = Describe("Reconciler", func() {
 					stampedObjectError = cerrors.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
-						Resource:      &v1alpha1.SupplyChainResource{Name: "some-name"},
+						ResourceName:  "some-name",
 					}
 					rlzr.RealizeReturns(realizedResources, stampedObjectError)
 				})
@@ -594,10 +595,11 @@ var _ = Describe("Reconciler", func() {
 					stampedObject1.SetName("a-name")
 
 					stampedObjectError = cerrors.ApplyStampedObjectError{
-						Err:             kerrors.FromObject(status),
-						StampedObject:   stampedObject1,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
-						SupplyChainName: supplyChainName,
+						Err:           kerrors.FromObject(status),
+						StampedObject: stampedObject1,
+						ResourceName:  "some-name",
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
 					}
 
 					rlzr.RealizeReturns(realizedResources, stampedObjectError)
@@ -645,10 +647,11 @@ var _ = Describe("Reconciler", func() {
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = cerrors.RetrieveOutputError{
-						Err:             jsonPathError,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						StampedObject:   stampedObject,
-						SupplyChainName: supplyChainName,
+						Err:           jsonPathError,
+						ResourceName:  "some-resource",
+						StampedObject: stampedObject,
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
 					}
 					rlzr.RealizeReturns(realizedResources, retrieveError)
 				})
@@ -692,10 +695,11 @@ var _ = Describe("Reconciler", func() {
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					resolveOptionErr = cerrors.ResolveTemplateOptionError{
-						Err:             jsonPathError,
-						SupplyChainName: supplyChainName,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						OptionName:      "some-option",
+						Err:           jsonPathError,
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
+						ResourceName:  "some-resource",
+						OptionName:    "some-option",
 					}
 					rlzr.RealizeReturns(nil, resolveOptionErr)
 				})
@@ -732,9 +736,10 @@ var _ = Describe("Reconciler", func() {
 				var templateOptionsMatchErr cerrors.TemplateOptionsMatchError
 				BeforeEach(func() {
 					templateOptionsMatchErr = cerrors.TemplateOptionsMatchError{
-						SupplyChainName: supplyChainName,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						OptionNames:     []string{"option1", "option2"},
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
+						ResourceName:  "some-resource",
+						OptionNames:   []string{"option1", "option2"},
 					}
 					rlzr.RealizeReturns(nil, templateOptionsMatchErr)
 				})
