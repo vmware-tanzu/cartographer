@@ -85,10 +85,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 		log.Error(err, "failed to get delivery cluster template")
 		return nil, nil, nil, errors.GetTemplateError{
 			Err:           err,
-			BlueprintName: deliveryName,
-			BlueprintType: errors.Delivery,
 			ResourceName:  resource.Name,
 			TemplateName:  templateName,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
@@ -142,9 +142,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 		return template, nil, nil, errors.ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
+			ResourceName:  resource.Name,
 			BlueprintName: deliveryName,
 			BlueprintType: errors.Delivery,
-			ResourceName:  resource.Name,
 		}
 	}
 
@@ -157,9 +157,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 		return template, stampedObject, nil, errors.RetrieveOutputError{
 			Err:           err,
 			ResourceName:  resource.Name,
+			StampedObject: stampedObject,
 			BlueprintName: deliveryName,
 			BlueprintType: errors.Delivery,
-			StampedObject: stampedObject,
 		}
 	}
 
@@ -172,10 +172,10 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryR
 	if err != nil {
 		return "", errors.ResolveTemplateOptionError{
 			Err:           err,
-			BlueprintName: deliveryName,
-			BlueprintType: errors.Delivery,
 			ResourceName:  resource.Name,
 			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
@@ -186,10 +186,10 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryR
 		}
 
 		return "", errors.TemplateOptionsMatchError{
-			BlueprintName: deliveryName,
-			BlueprintType: errors.Delivery,
 			ResourceName:  resource.Name,
 			OptionNames:   optionNames,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
