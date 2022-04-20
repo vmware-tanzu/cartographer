@@ -130,9 +130,9 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 
 	if err != nil {
-		conditions.AddConditionForWorkloadError(&r.conditionManager, v1alpha1.OwnerResourcesSubmitted, err)
+		conditions.AddConditionForWorkloadError(&r.conditionManager, true, err)
 	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(v1alpha1.OwnerResourcesSubmitted))
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
 
 	if err != nil {

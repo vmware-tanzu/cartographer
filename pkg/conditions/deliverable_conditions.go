@@ -99,14 +99,14 @@ func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
 	}
 }
 
-func AddConditionForDeliverableError(conditionManager *ConditionManager, conditionType string, err error) {
+func AddConditionForDeliverableError(conditionManager *ConditionManager, isOwner bool, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
-		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(isOwner, typedErr))
 	case cerrors.StampError:
-		(*conditionManager).AddPositive(TemplateStampFailureCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateStampFailureCondition(isOwner, typedErr))
 	case cerrors.ApplyStampedObjectError:
-		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(isOwner, typedErr))
 	case cerrors.RetrieveOutputError:
 		switch typedErr.Err.(type) {
 		case templates.ObservedGenerationError:
@@ -116,15 +116,15 @@ func AddConditionForDeliverableError(conditionManager *ConditionManager, conditi
 		case templates.DeploymentConditionError:
 			(*conditionManager).AddPositive(DeploymentConditionNotMetCondition(typedErr))
 		case templates.JsonPathError:
-			(*conditionManager).AddPositive(MissingValueAtPathCondition(conditionType, typedErr.StampedObject, typedErr.JsonPathExpression()))
+			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression()))
 		default:
-			(*conditionManager).AddPositive(UnknownResourceErrorCondition(conditionType, typedErr))
+			(*conditionManager).AddPositive(UnknownResourceErrorCondition(isOwner, typedErr))
 		}
 	case cerrors.ResolveTemplateOptionError:
-		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(isOwner, typedErr))
 	case cerrors.TemplateOptionsMatchError:
-		(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(isOwner, typedErr))
 	default:
-		(*conditionManager).AddPositive(UnknownResourceErrorCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(UnknownResourceErrorCondition(isOwner, typedErr))
 	}
 }

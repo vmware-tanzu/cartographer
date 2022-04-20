@@ -34,30 +34,37 @@ func ResourceSubmittedCondition() metav1.Condition {
 	}
 }
 
-func ResourcesSubmittedCondition(conditionType string) metav1.Condition {
+func getConditionType(isOwner bool) string {
+	if isOwner {
+		return v1alpha1.OwnerResourcesSubmitted
+	} else {
+		return v1alpha1.ResourceSubmitted
+	}
+}
+func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 	return metav1.Condition{
-		Type:   conditionType,
+		Type:   getConditionType(isOwner),
 		Status: metav1.ConditionTrue,
 		Reason: v1alpha1.CompleteResourcesSubmittedReason,
 	}
 }
 
-func TemplateObjectRetrievalFailureCondition(conditionType string, err error) metav1.Condition {
+func TemplateObjectRetrievalFailureCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    conditionType,
+		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateObjectRetrievalFailureResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func MissingValueAtPathCondition(conditionType string, obj *unstructured.Unstructured, expression string) metav1.Condition {
+func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string) metav1.Condition {
 	var namespaceMsg string
 	if obj.GetNamespace() != "" {
 		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
 	}
 	return metav1.Condition{
-		Type:   conditionType,
+		Type:   getConditionType(isOwner),
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
 		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
@@ -65,45 +72,45 @@ func MissingValueAtPathCondition(conditionType string, obj *unstructured.Unstruc
 	}
 }
 
-func TemplateStampFailureCondition(conditionType string, err error) metav1.Condition {
+func TemplateStampFailureCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    conditionType,
+		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func TemplateRejectedByAPIServerCondition(conditionType string, err error) metav1.Condition {
+func TemplateRejectedByAPIServerCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    conditionType,
+		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateRejectedByAPIServerResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func UnknownResourceErrorCondition(conditionType string, err error) metav1.Condition {
+func UnknownResourceErrorCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    conditionType,
+		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.UnknownErrorResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func ResolveTemplateOptionsErrorCondition(conditionType string, err error) metav1.Condition {
+func ResolveTemplateOptionsErrorCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    conditionType,
+		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.ResolveTemplateOptionsErrorResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
 
-func TemplateOptionsMatchErrorCondition(conditionType string, err error) metav1.Condition {
+func TemplateOptionsMatchErrorCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    conditionType,
+		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateOptionsMatchErrorResourcesSubmittedReason,
 		Message: err.Error(),
