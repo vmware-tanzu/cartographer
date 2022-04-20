@@ -114,7 +114,7 @@ func TemplateOptionsMatchErrorCondition(conditionType string, err error) metav1.
 
 func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
 		Message: err.Error(),
@@ -123,7 +123,7 @@ func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 
 func ResourceRealizerBuilderErrorCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.ResourceRealizerBuilderErrorResourcesSubmittedReason,
 		Message: err.Error(),

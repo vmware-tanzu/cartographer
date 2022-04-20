@@ -82,7 +82,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.DeliverableReady, deliverable.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
 
 	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
@@ -126,9 +126,9 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery, deliverable.Status.Resources)
 
 	if err != nil {
-		conditions.AddConditionForDeliverableError(&r.conditionManager, v1alpha1.DeliverableResourcesSubmitted, err)
+		conditions.AddConditionForDeliverableError(&r.conditionManager, v1alpha1.OwnerResourcesSubmitted, err)
 	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(v1alpha1.DeliverableResourcesSubmitted))
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(v1alpha1.OwnerResourcesSubmitted))
 	}
 
 	if err != nil {

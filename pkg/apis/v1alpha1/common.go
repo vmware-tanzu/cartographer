@@ -31,6 +31,11 @@ const (
 )
 
 const (
+	OwnerReady              = "Ready"
+	OwnerResourcesSubmitted = "ResourcesSubmitted"
+)
+
+const (
 	ResourceReady     = "Ready"
 	ResourceSubmitted = "ResourceSubmitted"
 )
