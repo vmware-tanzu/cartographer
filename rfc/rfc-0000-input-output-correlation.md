@@ -123,7 +123,8 @@ spec:
     spec:
       sourceUrl: "$(sources.source.url)$"
       sourceRevision: "$(sources.source.url)$"
-observesGeneration: true
+observesGeneration: true                         #signifies resource complies with observedGeneration pattern
+correlationTimeout: 600                          #maximum timeout in seconds
 correlationRules:
   - expectedValue: "$(sources.source.url)$"      #evaluated against inputs in template context
     actualPath: ".spec.sourceUrl"                #evaluated against the in-cluster resource
@@ -146,6 +147,10 @@ Additionally, relying on the spec to make assertions imposes a further restricti
 propagation: Cartographer must not stamp out any further changes to the resource until it has finished processing the
 current spec completely. That is, it must have reached either a Healthy or Unhealthy status (as per
 [Allow Resources to Report Status](https://github.com/vmware-tanzu/cartographer/pull/738)).
+
+To prevent halting when a resource never reaches either of these statuses, a `correlationTimeout` property can specify
+the maximum time to wait, after which Cartographer assumes the resource has reached the Unhealthy status. If this is
+accepted, exposing a mechanism to override timeouts per resource in owner blueprints will likely be necessary.
 
 # Migration
 
