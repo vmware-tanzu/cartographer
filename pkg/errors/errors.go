@@ -31,9 +31,9 @@ const Delivery = "delivery"
 
 type GetTemplateError struct {
 	Err           error
-	BlueprintName string
 	ResourceName  string
 	TemplateName  string
+	BlueprintName string
 	BlueprintType string
 }
 
@@ -49,9 +49,9 @@ func (e GetTemplateError) Error() string {
 
 type ResolveTemplateOptionError struct {
 	Err           error
-	BlueprintName string
 	ResourceName  string
 	OptionName    string
+	BlueprintName string
 	BlueprintType string
 }
 
@@ -66,9 +66,9 @@ func (e ResolveTemplateOptionError) Error() string {
 }
 
 type TemplateOptionsMatchError struct {
-	BlueprintName string
 	ResourceName  string
 	OptionNames   []string
+	BlueprintName string
 	BlueprintType string
 }
 
@@ -88,9 +88,9 @@ func (e TemplateOptionsMatchError) Error() string {
 
 type ApplyStampedObjectError struct {
 	Err           error
-	BlueprintName string
 	StampedObject *unstructured.Unstructured
 	ResourceName  string
+	BlueprintName string
 	BlueprintType string
 }
 
@@ -107,8 +107,8 @@ func (e ApplyStampedObjectError) Error() string {
 
 type StampError struct {
 	Err           error
-	BlueprintName string
 	ResourceName  string
+	BlueprintName string
 	BlueprintType string
 }
 
@@ -123,9 +123,9 @@ func (e StampError) Error() string {
 
 type RetrieveOutputError struct {
 	Err           error
-	BlueprintName string
 	ResourceName  string
 	StampedObject *unstructured.Unstructured
+	BlueprintName string
 	BlueprintType string
 }
 

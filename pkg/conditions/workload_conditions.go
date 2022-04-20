@@ -69,21 +69,21 @@ func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Conditi
 	}
 }
 
-func AddConditionForWorkloadError(conditionManager *ConditionManager, conditionType string, err error) {
+func AddConditionForWorkloadError(conditionManager *ConditionManager, isOwner bool, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
-		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(isOwner, typedErr))
 	case cerrors.StampError:
-		(*conditionManager).AddPositive(TemplateStampFailureCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateStampFailureCondition(isOwner, typedErr))
 	case cerrors.ApplyStampedObjectError:
-		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(isOwner, typedErr))
 	case cerrors.RetrieveOutputError:
-		(*conditionManager).AddPositive(MissingValueAtPathCondition(conditionType, typedErr.StampedObject, typedErr.JsonPathExpression()))
+		(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression()))
 	case cerrors.ResolveTemplateOptionError:
-		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(isOwner, typedErr))
 	case cerrors.TemplateOptionsMatchError:
-		(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(TemplateOptionsMatchErrorCondition(isOwner, typedErr))
 	default:
-		(*conditionManager).AddPositive(UnknownResourceErrorCondition(conditionType, typedErr))
+		(*conditionManager).AddPositive(UnknownResourceErrorCondition(isOwner, typedErr))
 	}
 }

@@ -126,9 +126,9 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery, deliverable.Status.Resources)
 
 	if err != nil {
-		conditions.AddConditionForDeliverableError(&r.conditionManager, v1alpha1.OwnerResourcesSubmitted, err)
+		conditions.AddConditionForDeliverableError(&r.conditionManager, true, err)
 	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(v1alpha1.OwnerResourcesSubmitted))
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
 
 	if err != nil {

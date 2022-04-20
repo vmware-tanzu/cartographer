@@ -88,10 +88,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		log.Error(err, "failed to get cluster template")
 		return nil, nil, nil, errors.GetTemplateError{
 			Err:           err,
-			BlueprintName: supplyChainName,
-			BlueprintType: errors.SupplyChain,
 			ResourceName:  resource.Name,
 			TemplateName:  templateName,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
@@ -148,9 +148,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		return template, nil, nil, errors.ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
+			ResourceName:  resource.Name,
 			BlueprintName: supplyChainName,
 			BlueprintType: errors.SupplyChain,
-			ResourceName:  resource.Name,
 		}
 	}
 
@@ -162,9 +162,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		return template, stampedObject, nil, errors.RetrieveOutputError{
 			Err:           err,
 			ResourceName:  resource.Name,
+			StampedObject: stampedObject,
 			BlueprintName: supplyChainName,
 			BlueprintType: errors.SupplyChain,
-			StampedObject: stampedObject,
 		}
 	}
 
@@ -177,10 +177,10 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 	if err != nil {
 		return "", errors.ResolveTemplateOptionError{
 			Err:           err,
-			BlueprintName: supplyChainName,
-			BlueprintType: errors.SupplyChain,
 			ResourceName:  resource.Name,
 			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
@@ -191,10 +191,10 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 		}
 
 		return "", errors.TemplateOptionsMatchError{
-			BlueprintName: supplyChainName,
-			BlueprintType: errors.SupplyChain,
 			ResourceName:  resource.Name,
 			OptionNames:   optionNames,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
