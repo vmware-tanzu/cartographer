@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supplychain_test
+package controllers_test
 
 import (
 	"context"
@@ -32,16 +32,16 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/supplychain"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("Reconciler", func() {
+var _ = Describe("SupplyChainReconciler", func() {
 	var (
 		out                *Buffer
-		reconciler         supplychain.Reconciler
+		reconciler         controllers.SupplyChainReconciler
 		ctx                context.Context
 		req                reconcile.Request
 		conditionManager   *conditionsfakes.FakeConditionManager
@@ -96,7 +96,7 @@ var _ = Describe("Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		reconciler = supplychain.Reconciler{
+		reconciler = controllers.SupplyChainReconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			DependencyTracker:       dependencyTracker,
@@ -154,7 +154,7 @@ var _ = Describe("Reconciler", func() {
 	It("adds a positive templates found condition", func() {
 		_, _ = reconciler.Reconcile(ctx, req)
 
-		Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesFoundCondition()))
+		Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.TemplatesFoundCondition()))
 	})
 
 	It("does not return an error", func() {
@@ -280,7 +280,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("adds a positive templates NOT found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(supplychain.TemplatesNotFoundCondition([]string{"first name"})))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.TemplatesNotFoundCondition([]string{"first name"})))
 		})
 
 		It("does not return an error", func() {

@@ -74,7 +74,7 @@ func MissingReadyInDeliveryCondition(deliveryReadyCondition metav1.Condition) me
 
 func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.TemplateStampFailureResourcesSubmittedReason,
 		Message: fmt.Sprintf("resource [%s] cannot satisfy observedCompletion without observedGeneration in object status", err.(cerrors.RetrieveOutputError).GetResourceName()),
@@ -83,7 +83,7 @@ func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Conditi
 
 func DeploymentConditionNotMetCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionUnknown,
 		Reason:  v1alpha1.DeploymentConditionNotMetResourcesSubmittedReason,
 		Message: fmt.Sprintf("resource [%s] condition not met: %s", err.(cerrors.RetrieveOutputError).GetResourceName(), err.(cerrors.RetrieveOutputError).Err.Error()),
@@ -92,7 +92,7 @@ func DeploymentConditionNotMetCondition(err error) metav1.Condition {
 
 func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.DeliverableResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.DeploymentFailedConditionMetResourcesSubmittedReason,
 		Message: fmt.Sprintf("resource [%s] failed condition met: %s", err.(cerrors.RetrieveOutputError).GetResourceName(), err.(cerrors.RetrieveOutputError).Err.Error()),

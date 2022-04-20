@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package delivery
+package conditions
 
 import (
 	"fmt"
@@ -30,17 +30,17 @@ func TemplatesNotFoundCondition(resourceNames []string) metav1.Condition {
 	)
 
 	return metav1.Condition{
-		Type:    v1alpha1.DeliveryTemplatesReady,
+		Type:    v1alpha1.BlueprintTemplatesReady,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.NotFoundDeliveryTemplatesReadyReason,
+		Reason:  v1alpha1.NotFoundTemplatesReadyReason,
 		Message: message,
 	}
 }
 
 func TemplatesFoundCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.DeliveryTemplatesReady,
+		Type:   v1alpha1.BlueprintTemplatesReady,
 		Status: metav1.ConditionTrue,
-		Reason: v1alpha1.ReadyDeliveryTemplatesReadyReason,
+		Reason: v1alpha1.ReadyTemplatesReadyReason,
 	}
 }

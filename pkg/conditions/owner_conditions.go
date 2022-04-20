@@ -24,7 +24,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-// -- Resource conditions
+// -- Owner.Status.Resource[x].ResourceSubmitted
 
 func ResourceSubmittedCondition() metav1.Condition {
 	return metav1.Condition{
@@ -34,6 +34,8 @@ func ResourceSubmittedCondition() metav1.Condition {
 	}
 }
 
+// -- Owner.ResourcesSubmitted
+
 func ResourcesSubmittedCondition(conditionType string) metav1.Condition {
 	return metav1.Condition{
 		Type:   conditionType,
@@ -41,6 +43,9 @@ func ResourcesSubmittedCondition(conditionType string) metav1.Condition {
 		Reason: v1alpha1.CompleteResourcesSubmittedReason,
 	}
 }
+
+// -- ResourceSubmitted conditions &&
+// -- ResourcesSubmitted conditions
 
 func TemplateObjectRetrievalFailureCondition(conditionType string, err error) metav1.Condition {
 	return metav1.Condition{
@@ -110,11 +115,11 @@ func TemplateOptionsMatchErrorCondition(conditionType string, err error) metav1.
 	}
 }
 
-// -- Reconciler conditions
+// -- ResourcesSubmitted conditions
 
 func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
 		Message: err.Error(),
@@ -123,7 +128,7 @@ func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 
 func ResourceRealizerBuilderErrorCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.WorkloadResourcesSubmitted,
+		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.ResourceRealizerBuilderErrorResourcesSubmittedReason,
 		Message: err.Error(),

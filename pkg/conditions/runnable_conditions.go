@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runnable
+package conditions
 
 import (
 	"fmt"
@@ -81,7 +81,7 @@ func FailedToListCreatedObjectsCondition(err error) metav1.Condition {
 	}
 }
 
-func TemplateStampFailureCondition(err error) metav1.Condition {
+func RunnableTemplateStampFailureCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
@@ -99,7 +99,7 @@ func UnknownErrorCondition(err error) metav1.Condition {
 	}
 }
 
-func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
+func RunnableServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
