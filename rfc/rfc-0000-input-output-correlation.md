@@ -150,7 +150,9 @@ current spec completely. That is, it must have reached either a Healthy or Unhea
 
 To prevent halting when a resource never reaches either of these statuses, a `correlationTimeout` property can specify
 the maximum time to wait, after which Cartographer assumes the resource has reached the Unhealthy status. If this is
-accepted, exposing a mechanism to override timeouts per resource in owner blueprints will likely be necessary.
+accepted, exposing a mechanism to override timeouts per resource in owner blueprints will likely be necessary. When
+Cartographer stamps the resource, it must store the current timestamp in the status for the resource so that it can
+determine if the timeout is exceeded in a future reconciliation pass.
 
 # Migration
 
