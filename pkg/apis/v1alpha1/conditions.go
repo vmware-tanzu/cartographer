@@ -14,14 +14,15 @@
 
 package v1alpha1
 
-// -- Owner
+// -----------------------------------------
+// -- OWNER.STATUS.CONDITIONS --
 // ConditionTypes
-// Workload            Deliverable
-//   SupplyChainReady    DeliveryReady
-//   ResourcesSubmitted  ResourcesSubmitted
-//   Ready               Ready
+//   Workload            Deliverable
+//     SupplyChainReady    DeliveryReady
+//     ResourcesSubmitted  ResourcesSubmitted
+//     Ready               Ready
 
-// ConditionTypes
+// -- OWNER ConditionTypes
 
 const (
 	OwnerReady               = "Ready"
@@ -30,7 +31,7 @@ const (
 	OwnerResourcesSubmitted  = "ResourcesSubmitted"
 )
 
-// ConditionReasons - SupplyChainReady
+// -- OWNER ConditionType - SupplyChainReady ConditionReasons
 
 const (
 	ReadySupplyChainReason                 = "Ready"
@@ -39,7 +40,7 @@ const (
 	MultipleMatchesSupplyChainReadyReason  = "MultipleSupplyChainMatches"
 )
 
-// ConditionReasons - DeliveryReady
+// -- OWNER ConditionType - DeliveryReady ConditionReasons
 
 const (
 	ReadyDeliveryReason                    = "Ready"
@@ -48,8 +49,8 @@ const (
 	MultipleMatchesDeliveryReadyReason     = "MultipleDeliveryMatches"
 )
 
-// ConditionReasons - ResourceSubmitted &&
-// ConditionReasons - ResourcesSubmitted
+// -- RESOURCE ConditionType - ResourceSubmitted ConditionReasons &&
+// -- OWNER ConditionType - ResourcesSubmitted ConditionReasons
 
 const (
 	CompleteResourcesSubmittedReason                       = "ResourceSubmissionComplete"
@@ -62,68 +63,72 @@ const (
 	TemplateOptionsMatchErrorResourcesSubmittedReason      = "TemplateOptionsMatchError"
 )
 
-// ConditionReasons - ResourcesSubmitted
-
-const (
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
-	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
-)
-
-// ConditionReasons - ResourcesSubmitted - Deliverable
+// -- RESOURCE (OWNER DELIVERABLE) ConditionType - ResourceSubmitted ConditionReasons &&
+// -- OWNER DELIVERABLE ConditionType -ResourcesSubmitted ConditionReasons
 
 const (
 	DeploymentConditionNotMetResourcesSubmittedReason    = "ConditionNotMet"
 	DeploymentFailedConditionMetResourcesSubmittedReason = "FailedConditionMet"
 )
 
-// -- Owner.Status.Resource
+// -- OWNER ConditionType - ResourcesSubmitted ConditionReasons
+
+const (
+	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
+)
+
+// -----------------------------------------
+// -- OWNER.STATUS.RESOURCE[x].CONDITIONS --
 // ConditionTypes
-//   (ResourcesHealthy)
+//   (ResourcesHealthy) - TODO
 //   ResourcesSubmitted
 //   Ready
 
-// ConditionTypes
+// -- RESOURCE ConditionTypes
 
 const (
 	ResourceReady     = "Ready"
 	ResourceSubmitted = "ResourceSubmitted"
 )
 
-// ConditionReasons - ResourceSubmitted
+// -- RESOURCE ConditionType - ResourceSubmitted ConditionReasons (above)
 
-// -- Blueprint
+// -----------------------------------------
+// -- BLUEPRINT.STATUS.CONDITIONS --
 // ConditionTypes
-// SupplyChain         Delivery
-//   TemplatesReady      TemplatesReady
-//   Ready               Ready
+//   SupplyChain         Delivery
+//     TemplatesReady      TemplatesReady
+//     Ready               Ready
 
-// ConditionTypes
+// -- BLUEPRINT ConditionTypes
 
 const (
 	BlueprintTemplatesReady = "TemplatesReady"
 	BlueprintReady          = "Ready"
 )
 
-// ConditionReasons - TemplatesReady
+// -- BLUEPRINT ConditionType - TemplatesReady ConditionReasons
 
 const (
 	ReadyTemplatesReadyReason    = "Ready"
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
 )
 
-// -- Runnable
+// -----------------------------------------
+// -- RUNNABLE.STATUS.CONDITIONS --
 // ConditionTypes
-//   RunTempplateReady
+//   RunTemplateReady
 //   Ready
 
-// ConditionTypes
+// -- RUNNABLE ConditionTypes
 
 const (
 	RunnableReady    = "Ready"
 	RunTemplateReady = "RunTemplateReady"
 )
 
-// ConditionReasons - RunTemplateReady
+// -- RUNNABLE ConditionType - RunTemplateReady ConditionReasons
 
 const (
 	ReadyRunTemplateReason                            = "Ready"
