@@ -169,7 +169,7 @@ func (e RetrieveOutputError) GetResourceName() string {
 	return e.ResourceName
 }
 
-func CheckErrorUnhandledType(err error) bool {
+func IsUnhandledErrorType(err error) bool {
 	switch typedErr := err.(type) {
 	case GetTemplateError:
 		return true

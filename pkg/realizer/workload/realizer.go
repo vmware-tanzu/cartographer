@@ -69,8 +69,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 		realizedResource := generateRealizedResource(resource, template, stampedObject, out, previousResources)
 
-		conditionManagerBuilder := conditions.NewConditionManager
-		conditionManager := conditionManagerBuilder(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
+		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
 		if err != nil {
 			conditions.AddConditionForWorkloadError(&conditionManager, false, err)
