@@ -133,7 +133,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
-		if cerrors.CheckErrorUnhandledType(err) {
+		if cerrors.IsUnhandledErrorType(err) {
 			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
