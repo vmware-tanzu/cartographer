@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package controllers_test
 
 import (
 	"context"
@@ -38,7 +38,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -49,10 +50,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("Reconciler", func() {
+var _ = Describe("WorkloadReconciler", func() {
 	var (
 		out                          *Buffer
-		reconciler                   workload.Reconciler
+		reconciler                   controllers.WorkloadReconciler
 		ctx                          context.Context
 		req                          ctrl.Request
 		repo                         *repositoryfakes.FakeRepository
@@ -107,7 +108,7 @@ var _ = Describe("Reconciler", func() {
 			return builtResourceRealizer, nil
 		}
 
-		reconciler = workload.Reconciler{
+		reconciler = controllers.WorkloadReconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,
@@ -361,12 +362,12 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to specify the supply chain is ready", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.SupplyChainReadyCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.SupplyChainReadyCondition()))
 		})
 
 		It("calls the condition manager to report the resources have been submitted", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourcesSubmittedCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ResourcesSubmittedCondition(true)))
 		})
 
 		It("watches the stampedObjects kinds", func() {
@@ -447,7 +448,7 @@ var _ = Describe("Reconciler", func() {
 					Reason:             "SomeReason",
 					Message:            "some informative message",
 				}
-				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.MissingReadyInSupplyChainCondition(expectedCondition)))
+				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.MissingReadyInSupplyChainCondition(expectedCondition)))
 			})
 
 			It("logs the handled error message", func() {
@@ -463,16 +464,16 @@ var _ = Describe("Reconciler", func() {
 			Context("of type GetTemplateError", func() {
 				var templateError error
 				BeforeEach(func() {
-					templateError = realizer.GetTemplateError{
-						Err:      errors.New("some error"),
-						Resource: &v1alpha1.SupplyChainResource{Name: "some-name"},
+					templateError = cerrors.GetTemplateError{
+						Err:          errors.New("some error"),
+						ResourceName: "some-name",
 					}
 					rlzr.RealizeReturns(nil, templateError)
 				})
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateObjectRetrievalFailureCondition(templateError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateObjectRetrievalFailureCondition(true, templateError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -491,12 +492,13 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type StampError", func() {
-				var stampError realizer.StampError
+				var stampError cerrors.StampError
 				BeforeEach(func() {
-					stampError = realizer.StampError{
-						Err:             errors.New("some error"),
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
-						SupplyChainName: supplyChainName,
+					stampError = cerrors.StampError{
+						Err:           errors.New("some error"),
+						ResourceName:  "some-name",
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
 					}
 					realizedResources[0].StampedRef = nil
 					realizedResources[1].StampedRef = nil
@@ -512,7 +514,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateStampFailureCondition(stampError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateStampFailureCondition(true, stampError)))
 				})
 
 				It("does not return an error", func() {
@@ -544,19 +546,19 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError cerrors.ApplyStampedObjectError
 				BeforeEach(func() {
-					stampedObjectError = realizer.ApplyStampedObjectError{
+					stampedObjectError = cerrors.ApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
-						Resource:      &v1alpha1.SupplyChainResource{Name: "some-name"},
+						ResourceName:  "some-name",
 					}
 					rlzr.RealizeReturns(realizedResources, stampedObjectError)
 				})
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateRejectedByAPIServerCondition(true, stampedObjectError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -581,7 +583,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError cerrors.ApplyStampedObjectError
 				BeforeEach(func() {
 					status := &metav1.Status{
 						Message: "fantastic error",
@@ -592,11 +594,12 @@ var _ = Describe("Reconciler", func() {
 					stampedObject1.SetNamespace("a-namespace")
 					stampedObject1.SetName("a-name")
 
-					stampedObjectError = realizer.ApplyStampedObjectError{
-						Err:             kerrors.FromObject(status),
-						StampedObject:   stampedObject1,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-name"},
-						SupplyChainName: supplyChainName,
+					stampedObjectError = cerrors.ApplyStampedObjectError{
+						Err:           kerrors.FromObject(status),
+						StampedObject: stampedObject1,
+						ResourceName:  "some-name",
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
 					}
 
 					rlzr.RealizeReturns(realizedResources, stampedObjectError)
@@ -604,7 +607,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.TemplateRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateRejectedByAPIServerCondition(true, stampedObjectError)))
 				})
 
 				It("handles the error and logs it", func() {
@@ -631,7 +634,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type RetrieveOutputError", func() {
-				var retrieveError realizer.RetrieveOutputError
+				var retrieveError cerrors.RetrieveOutputError
 				var stampedObject *unstructured.Unstructured
 				BeforeEach(func() {
 					stampedObject = &unstructured.Unstructured{}
@@ -643,11 +646,12 @@ var _ = Describe("Reconciler", func() {
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					retrieveError = realizer.RetrieveOutputError{
-						Err:             jsonPathError,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						StampedObject:   stampedObject,
-						SupplyChainName: supplyChainName,
+					retrieveError = cerrors.RetrieveOutputError{
+						Err:           jsonPathError,
+						ResourceName:  "some-resource",
+						StampedObject: stampedObject,
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
 					}
 					rlzr.RealizeReturns(realizedResources, retrieveError)
 				})
@@ -655,7 +659,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(workload.MissingValueAtPathCondition(stampedObject, "this.wont.find.anything")))
+						Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything")))
 				})
 
 				It("does not return an error", func() {
@@ -687,14 +691,15 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type ResolveTemplateOptionError", func() {
-				var resolveOptionErr realizer.ResolveTemplateOptionError
+				var resolveOptionErr cerrors.ResolveTemplateOptionError
 				BeforeEach(func() {
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
-					resolveOptionErr = realizer.ResolveTemplateOptionError{
-						Err:             jsonPathError,
-						SupplyChainName: supplyChainName,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						OptionName:      "some-option",
+					resolveOptionErr = cerrors.ResolveTemplateOptionError{
+						Err:           jsonPathError,
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
+						ResourceName:  "some-resource",
+						OptionName:    "some-option",
 					}
 					rlzr.RealizeReturns(nil, resolveOptionErr)
 				})
@@ -702,7 +707,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(workload.ResolveTemplateOptionsErrorCondition(resolveOptionErr)))
+						Equal(conditions.ResolveTemplateOptionsErrorCondition(true, resolveOptionErr)))
 				})
 
 				It("does not return an error", func() {
@@ -728,12 +733,13 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			Context("of type TemplateOptionsMatchError", func() {
-				var templateOptionsMatchErr realizer.TemplateOptionsMatchError
+				var templateOptionsMatchErr cerrors.TemplateOptionsMatchError
 				BeforeEach(func() {
-					templateOptionsMatchErr = realizer.TemplateOptionsMatchError{
-						SupplyChainName: supplyChainName,
-						Resource:        &v1alpha1.SupplyChainResource{Name: "some-resource"},
-						OptionNames:     []string{"option1", "option2"},
+					templateOptionsMatchErr = cerrors.TemplateOptionsMatchError{
+						BlueprintName: supplyChainName,
+						BlueprintType: cerrors.SupplyChain,
+						ResourceName:  "some-resource",
+						OptionNames:   []string{"option1", "option2"},
 					}
 					rlzr.RealizeReturns(nil, templateOptionsMatchErr)
 				})
@@ -741,7 +747,7 @@ var _ = Describe("Reconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(workload.TemplateOptionsMatchErrorCondition(templateOptionsMatchErr)))
+						Equal(conditions.TemplateOptionsMatchErrorCondition(true, templateOptionsMatchErr)))
 				})
 
 				It("does not return an error", func() {
@@ -796,7 +802,7 @@ var _ = Describe("Reconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.UnknownResourceErrorCondition(realizerError)))
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.UnknownResourceErrorCondition(true, realizerError)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -849,7 +855,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("calls the condition manager to add a service account secret not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ServiceAccountSecretNotFoundCondition(repoError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountSecretNotFoundCondition(repoError)))
 			})
 
 			It("handles the error and logs it", func() {
@@ -868,7 +874,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("calls the condition manager to add a resource realizer builder error condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(workload.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ResourceRealizerBuilderErrorCondition(resourceRealizerBuilderError)))
 			})
 
 			It("returns an unhandled error", func() {
@@ -886,7 +892,7 @@ var _ = Describe("Reconciler", func() {
 		})
 		It("calls the condition manager to report the bad state", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.WorkloadMissingLabelsCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.WorkloadMissingLabelsCondition()))
 		})
 
 		It("does not return an error", func() {
@@ -906,7 +912,7 @@ var _ = Describe("Reconciler", func() {
 	Context("and repo returns an empty list of supply chains", func() {
 		It("calls the condition manager to add a supply chain not found condition", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.SupplyChainNotFoundCondition(workloadLabels)))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.SupplyChainNotFoundCondition(workloadLabels)))
 		})
 
 		It("does not return an error", func() {
@@ -944,7 +950,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("calls the condition manager to report too mane supply chains matched", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
-			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(workload.TooManySupplyChainMatchesCondition()))
+			Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.TooManySupplyChainMatchesCondition()))
 		})
 
 		It("does not return an error", func() {

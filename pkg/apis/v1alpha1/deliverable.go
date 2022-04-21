@@ -19,9 +19,7 @@ import (
 )
 
 const (
-	DeliverableReady              = "Ready"
-	DeliverableDeliveryReady      = "DeliveryReady"
-	DeliverableResourcesSubmitted = "ResourcesSubmitted"
+	DeliverableDeliveryReady = "DeliveryReady"
 )
 
 const (

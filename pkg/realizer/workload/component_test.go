@@ -214,7 +214,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.GetTemplateError"))
 			})
 		})
 
@@ -272,7 +272,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.StampError"))
 			})
 		})
 
@@ -324,7 +324,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RetrieveOutputError"))
 			})
 		})
 
@@ -387,7 +387,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.ApplyStampedObjectError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.ApplyStampedObjectError"))
 			})
 		})
 
@@ -439,7 +439,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.StampError"))
 			})
 		})
 
@@ -606,7 +606,7 @@ var _ = Describe("Resource", func() {
 					Expect(template).To(BeNil())
 
 					Expect(err).To(HaveOccurred())
-					Expect(reflect.TypeOf(err).String()).To(Equal("workload.ResolveTemplateOptionError"))
+					Expect(reflect.TypeOf(err).String()).To(Equal("errors.ResolveTemplateOptionError"))
 					Expect(err.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
 					Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[] operator [Exists] values [[]]: evaluate: failed to parse jsonpath '{.spec.env[}': unterminated array`))
 				})

@@ -24,9 +24,7 @@ import (
 )
 
 const (
-	WorkloadReady             = "Ready"
-	WorkloadSupplyChainReady  = "SupplyChainReady"
-	WorkloadResourceSubmitted = "ResourcesSubmitted"
+	WorkloadSupplyChainReady = "SupplyChainReady"
 )
 
 const (

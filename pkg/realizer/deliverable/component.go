@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -82,10 +83,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get delivery cluster template")
-		return nil, nil, nil, GetTemplateError{
-			Err:          err,
-			DeliveryName: deliveryName,
-			Resource:     resource,
+		return nil, nil, nil, errors.GetTemplateError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			TemplateName:  templateName,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
@@ -125,21 +128,23 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
-		return template, nil, nil, StampError{
-			Err:          err,
-			Resource:     resource,
-			DeliveryName: deliveryName,
+		return template, nil, nil, errors.StampError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
 	err = r.deliverableRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return template, nil, nil, ApplyStampedObjectError{
+		return template, nil, nil, errors.ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
-			DeliveryName:  deliveryName,
-			Resource:      resource,
+			ResourceName:  resource.Name,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
@@ -149,11 +154,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.DeliveryRe
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		return template, stampedObject, nil, RetrieveOutputError{
+		return template, stampedObject, nil, errors.RetrieveOutputError{
 			Err:           err,
-			Resource:      resource,
-			DeliveryName:  deliveryName,
+			ResourceName:  resource.Name,
 			StampedObject: stampedObject,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
@@ -164,11 +170,12 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryR
 	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.deliverable, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
 
 	if err != nil {
-		return "", ResolveTemplateOptionError{
-			Err:          err,
-			DeliveryName: deliveryName,
-			Resource:     resource,
-			OptionName:   resource.TemplateRef.Options[err.SelectorIndex()].Name,
+		return "", errors.ResolveTemplateOptionError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 
@@ -178,10 +185,11 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.DeliveryR
 			optionNames = append(optionNames, resource.TemplateRef.Options[optionIndex].Name)
 		}
 
-		return "", TemplateOptionsMatchError{
-			DeliveryName: deliveryName,
-			Resource:     resource,
-			OptionNames:  optionNames,
+		return "", errors.TemplateOptionsMatchError{
+			ResourceName:  resource.Name,
+			OptionNames:   optionNames,
+			BlueprintName: deliveryName,
+			BlueprintType: errors.Delivery,
 		}
 	}
 

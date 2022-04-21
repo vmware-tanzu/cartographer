@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -85,10 +86,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
-		return nil, nil, nil, GetTemplateError{
-			Err:             err,
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
+		return nil, nil, nil, errors.GetTemplateError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			TemplateName:  templateName,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
@@ -131,21 +134,23 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
-		return template, nil, nil, StampError{
-			Err:             err,
-			Resource:        resource,
-			SupplyChainName: supplyChainName,
+		return template, nil, nil, errors.StampError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
 	err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return template, nil, nil, ApplyStampedObjectError{
-			Err:             err,
-			StampedObject:   stampedObject,
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
+		return template, nil, nil, errors.ApplyStampedObjectError{
+			Err:           err,
+			StampedObject: stampedObject,
+			ResourceName:  resource.Name,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
@@ -154,11 +159,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		return template, stampedObject, nil, RetrieveOutputError{
-			Err:             err,
-			Resource:        resource,
-			SupplyChainName: supplyChainName,
-			StampedObject:   stampedObject,
+		return template, stampedObject, nil, errors.RetrieveOutputError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			StampedObject: stampedObject,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
@@ -169,12 +175,13 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.workload, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
 
 	if err != nil {
-		return "", ResolveTemplateOptionError{
-			Err:             err,
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
-			OptionName:      resource.TemplateRef.Options[err.SelectorIndex()].Name,
-		 }
+		return "", errors.ResolveTemplateOptionError{
+			Err:           err,
+			ResourceName:  resource.Name,
+			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
+		}
 	}
 
 	if len(bestMatchingTemplateOptionsIndices) != 1 {
@@ -183,10 +190,11 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 			optionNames = append(optionNames, resource.TemplateRef.Options[optionIndex].Name)
 		}
 
-		return "", TemplateOptionsMatchError{
-			SupplyChainName: supplyChainName,
-			Resource:        resource,
-			OptionNames:     optionNames,
+		return "", errors.TemplateOptionsMatchError{
+			ResourceName:  resource.Name,
+			OptionNames:   optionNames,
+			BlueprintName: supplyChainName,
+			BlueprintType: errors.SupplyChain,
 		}
 	}
 
