@@ -23,6 +23,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
+// -- Blueprint.Status.Conditions - TemplatesReady
+
 func TemplatesNotFoundCondition(resourceNames []string) metav1.Condition {
 	message := fmt.Sprintf(
 		"did not find the template of the resource(s) [%s]",

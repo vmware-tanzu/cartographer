@@ -24,7 +24,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-// -- ClusterRunTemplate conditions
+// -- Runnable.Status.Conditions - RunTemplateReady
 
 func RunTemplateReadyCondition() metav1.Condition {
 	return metav1.Condition{

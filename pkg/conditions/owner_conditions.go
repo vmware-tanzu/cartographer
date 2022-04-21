@@ -24,7 +24,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-// -- Owner.Status.Resource[x].ResourceSubmitted
+// -- Owner.Status.Resource[x].Conditions - ResourceSubmitted - True
 
 func ResourceSubmittedCondition() metav1.Condition {
 	return metav1.Condition{
@@ -34,7 +34,7 @@ func ResourceSubmittedCondition() metav1.Condition {
 	}
 }
 
-// -- Owner.ResourcesSubmitted
+// -- Owner.Status.Conditions - ResourcesSubmitted - True
 
 func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 	return metav1.Condition{
@@ -44,8 +44,8 @@ func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 	}
 }
 
-// -- ResourceSubmitted conditions &&
-// -- ResourcesSubmitted conditions
+// -- Owner.Status.Resource[x].Conditions - ResourceSubmitted &&
+// -- Owner.Status.Conditions - ResourcesSubmitted
 
 func TemplateObjectRetrievalFailureCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
@@ -123,7 +123,7 @@ func getConditionType(isOwner bool) string {
 	}
 }
 
-// -- ResourcesSubmitted conditions
+// -- Owner.Status.Conditions - ResourcesSubmitted
 
 func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
