@@ -239,28 +239,28 @@ var _ = Describe("DeliverableReconciler", func() {
 			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 
 			realizedResources = []v1alpha1.ResourceStatus{
-				{
-					StampedRef: &corev1.ObjectReference{
-						Kind:       "MyThing",
-						APIVersion: "thing.io/alphabeta1",
-					},
-					TemplateRef: &corev1.ObjectReference{
-						Kind:       "my-image-kind",
-						Name:       "my-image-template",
-						APIVersion: "carto.run/v1alpha1",
-					},
-				},
-				{
-					StampedRef: &corev1.ObjectReference{
-						Kind:       "NiceToSeeYou",
-						APIVersion: "hello.io/goodbye",
-					},
-					TemplateRef: &corev1.ObjectReference{
-						Kind:       "my-config-kind",
-						Name:       "my-config-template",
-						APIVersion: "carto.run/v1alpha1",
-					},
-				},
+				//{
+				//	StampedRef: &corev1.ObjectReference{
+				//		Kind:       "MyThing",
+				//		APIVersion: "thing.io/alphabeta1",
+				//	},
+				//	TemplateRef: &corev1.ObjectReference{
+				//		Kind:       "my-image-kind",
+				//		Name:       "my-image-template",
+				//		APIVersion: "carto.run/v1alpha1",
+				//	},
+				//},
+				//{
+				//	StampedRef: &corev1.ObjectReference{
+				//		Kind:       "NiceToSeeYou",
+				//		APIVersion: "hello.io/goodbye",
+				//	},
+				//	TemplateRef: &corev1.ObjectReference{
+				//		Kind:       "my-config-kind",
+				//		Name:       "my-config-template",
+				//		APIVersion: "carto.run/v1alpha1",
+				//	},
+				//},
 			}
 
 			rlzr.RealizeReturns(realizedResources, nil)
@@ -1224,12 +1224,12 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			rlzr.RealizeReturns([]v1alpha1.ResourceStatus{
 				{
-					Name: "some-resource",
-					StampedRef: &corev1.ObjectReference{
-						APIVersion: "some-api-version",
-						Kind:       "some-kind",
-						Name:       "some-new-stamped-obj-name",
-					},
+					//Name: "some-resource",
+					//StampedRef: &corev1.ObjectReference{
+					//	APIVersion: "some-api-version",
+					//	Kind:       "some-kind",
+					//	Name:       "some-new-stamped-obj-name",
+					//},
 				},
 			}, nil)
 		})
@@ -1237,12 +1237,12 @@ var _ = Describe("DeliverableReconciler", func() {
 			BeforeEach(func() {
 				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
-						Name: "some-resource",
-						StampedRef: &corev1.ObjectReference{
-							APIVersion: "some-api-version",
-							Kind:       "some-kind",
-							Name:       "some-new-stamped-obj-name",
-						},
+						//Name: "some-resource",
+						//StampedRef: &corev1.ObjectReference{
+						//	APIVersion: "some-api-version",
+						//	Kind:       "some-kind",
+						//	Name:       "some-new-stamped-obj-name",
+						//},
 					},
 				}
 				repo.GetDeliverableReturns(dl, nil)
@@ -1260,12 +1260,12 @@ var _ = Describe("DeliverableReconciler", func() {
 			BeforeEach(func() {
 				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
-						Name: "some-resource",
-						StampedRef: &corev1.ObjectReference{
-							APIVersion: "some-api-version",
-							Kind:       "some-kind",
-							Name:       "some-old-stamped-obj-name",
-						},
+						//Name: "some-resource",
+						//StampedRef: &corev1.ObjectReference{
+						//	APIVersion: "some-api-version",
+						//	Kind:       "some-kind",
+						//	Name:       "some-old-stamped-obj-name",
+						//},
 					},
 				}
 				repo.GetDeliverableReturns(dl, nil)

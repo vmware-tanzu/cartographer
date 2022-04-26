@@ -18,11 +18,10 @@ package workload
 
 import (
 	"context"
+	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,7 +33,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, resourceStatuses controllers.ResourceStatuses) error
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, resourceStatuses resources.ResourceStatuses) error
 }
 
 type realizer struct{}
@@ -43,7 +42,7 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, resourceStatuses controllers.ResourceStatuses) error {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, resourceStatuses resources.ResourceStatuses) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
@@ -71,39 +70,25 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 		// -------------------
 
-		previousResourceStatus := resourceStatuses.GetPrevious(resource.Name)
+		previousRealizedResource := resourceStatuses.GetPreviousRealizedResource(resource.Name)
 
-		var resourceStatus *v1alpha1.ResourceStatus
+		var realizedResource *v1alpha1.RealizedResource
 
-		if (stampedObject == nil || template == nil) && previousResourceStatus != nil {
-			resourceStatus = previousResourceStatus
+		if (stampedObject == nil || template == nil) && previousRealizedResource != nil {
+			realizedResource = previousRealizedResource
 		} else {
-			resourceStatus = generateResourceStatus(resource, template, stampedObject, out, previousResourceStatus)
+			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
 		}
 
-		var previousConditions []metav1.Condition
-		if previousResourceStatus != nil {
-			previousConditions = previousResourceStatus.Conditions
-		}
-
-		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, previousConditions)
-		if err != nil {
-			conditions.AddConditionForWorkloadError(&conditionManager, false, err)
-		} else {
-			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
-		}
-
-		resourceStatus.Conditions, _ = conditionManager.Finalize()
-
-		resourceStatuses.Add(resourceStatus)
+		resourceStatuses.Add(realizedResource, err)
 	}
 
 	return firstError
 }
 
-func generateResourceStatus(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResourceStatus *v1alpha1.ResourceStatus) *v1alpha1.ResourceStatus {
-	if previousResourceStatus == nil {
-		previousResourceStatus = &v1alpha1.ResourceStatus{}
+func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+	if previousRealizedResource == nil {
+		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
 
 	var inputs []v1alpha1.Input
@@ -126,7 +111,7 @@ func generateResourceStatus(resource v1alpha1.SupplyChainResource, template temp
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
-		outputs = getOutputs(template, previousResourceStatus, output)
+		outputs = getOutputs(template, previousRealizedResource, output)
 	}
 
 	var stampedRef *corev1.ObjectReference
@@ -139,7 +124,7 @@ func generateResourceStatus(resource v1alpha1.SupplyChainResource, template temp
 		}
 	}
 
-	return &v1alpha1.ResourceStatus{
+	return &v1alpha1.RealizedResource{
 		Name:        resource.Name,
 		StampedRef:  stampedRef,
 		TemplateRef: templateRef,
@@ -148,15 +133,15 @@ func generateResourceStatus(resource v1alpha1.SupplyChainResource, template temp
 	}
 }
 
-func getOutputs(template templates.Template, previousResourceStatus *v1alpha1.ResourceStatus, output *templates.Output) []v1alpha1.Output {
+func getOutputs(template templates.Template, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
 	if err != nil {
-		outputs = previousResourceStatus.Outputs
+		outputs = previousRealizedResource.Outputs
 	} else {
 		currTime := metav1.NewTime(time.Now())
 		for j, out := range outputs {
 			outputs[j].LastTransitionTime = currTime
-			for _, previousOutput := range previousResourceStatus.Outputs {
+			for _, previousOutput := range previousRealizedResource.Outputs {
 				if previousOutput.Name == out.Name {
 					if previousOutput.Digest == out.Digest {
 						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime

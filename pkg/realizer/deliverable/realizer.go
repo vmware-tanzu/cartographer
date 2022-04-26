@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -91,53 +90,53 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 }
 
 func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.ResourceStatus) v1alpha1.ResourceStatus {
-	if stampedObject == nil || template == nil {
-		for _, previousResource := range previousResources {
-			if previousResource.Name == resource.Name {
-				return previousResource
-			}
-		}
-	}
+	//if stampedObject == nil || template == nil {
+	//	for _, previousResource := range previousResources {
+	//		if previousResource.Name == resource.Name {
+	//			return previousResource
+	//		}
+	//	}
+	//}
+	//
+	//var inputs []v1alpha1.Input
+	//for _, source := range resource.Sources {
+	//	inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
+	//}
+	//for _, config := range resource.Configs {
+	//	inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
+	//}
+	//if resource.Deployment != nil {
+	//	inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
+	//}
 
-	var inputs []v1alpha1.Input
-	for _, source := range resource.Sources {
-		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
-	}
-	for _, config := range resource.Configs {
-		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
-	}
-	if resource.Deployment != nil {
-		inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
-	}
+	//var templateRef *corev1.ObjectReference
+	//var outputs []v1alpha1.Output
+	//if template != nil {
+	//	templateRef = &corev1.ObjectReference{
+	//		Kind:       template.GetKind(),
+	//		Name:       template.GetName(),
+	//		APIVersion: v1alpha1.SchemeGroupVersion.String(),
+	//	}
+	//
+	//	outputs = getOutputs(resource.Name, template, previousResources, output)
+	//}
 
-	var templateRef *corev1.ObjectReference
-	var outputs []v1alpha1.Output
-	if template != nil {
-		templateRef = &corev1.ObjectReference{
-			Kind:       template.GetKind(),
-			Name:       template.GetName(),
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
-		}
-
-		outputs = getOutputs(resource.Name, template, previousResources, output)
-	}
-
-	var stampedRef *corev1.ObjectReference
-	if stampedObject != nil {
-		stampedRef = &corev1.ObjectReference{
-			Kind:       stampedObject.GetKind(),
-			Namespace:  stampedObject.GetNamespace(),
-			Name:       stampedObject.GetName(),
-			APIVersion: stampedObject.GetAPIVersion(),
-		}
-	}
+	////var stampedRef *corev1.ObjectReference
+	//if stampedObject != nil {
+	//	stampedRef = &corev1.ObjectReference{
+	//		Kind:       stampedObject.GetKind(),
+	//		Namespace:  stampedObject.GetNamespace(),
+	//		Name:       stampedObject.GetName(),
+	//		APIVersion: stampedObject.GetAPIVersion(),
+	//	}
+	//}
 
 	return v1alpha1.ResourceStatus{
-		Name:        resource.Name,
-		StampedRef:  stampedRef,
-		TemplateRef: templateRef,
-		Inputs:      inputs,
-		Outputs:     outputs,
+		//Name:        resource.Name,
+		//StampedRef:  stampedRef,
+		//TemplateRef: templateRef,
+		//Inputs:      inputs,
+		//Outputs:     outputs,
 	}
 }
 
