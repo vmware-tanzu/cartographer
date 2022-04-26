@@ -36,7 +36,7 @@ kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/do
 ```
 And you're done!
 
-<img src="site/themes/template/static/img/Carto-install-yaml-v2.gif">
+<img src="examples/Carto-install-yaml-v2.gif">
 
 ## Documentation
 
