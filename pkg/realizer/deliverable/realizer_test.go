@@ -206,13 +206,13 @@ var _ = Describe("Realize", func() {
 			templateModel2    templates.Template
 			templateModel3    templates.Template
 			obj               *unstructured.Unstructured
-			previousResources []v1alpha1.RealizedResource
+			previousResources []v1alpha1.ResourceStatus
 			previousTime      metav1.Time
 			delivery          *v1alpha1.ClusterDelivery
 		)
 		BeforeEach(func() {
 			previousTime = metav1.NewTime(time.Now())
-			previousResources = []v1alpha1.RealizedResource{
+			previousResources = []v1alpha1.ResourceStatus{
 				{
 					Name: "resource1",
 					StampedRef: &corev1.ObjectReference{

@@ -10,30 +10,30 @@ import (
 )
 
 type FakeRealizer struct {
-	RealizeStub        func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain, []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	RealizeStub        func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain, []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error)
 	realizeMutex       sync.RWMutex
 	realizeArgsForCall []struct {
 		arg1 context.Context
 		arg2 workload.ResourceRealizer
 		arg3 *v1alpha1.ClusterSupplyChain
-		arg4 []v1alpha1.RealizedResource
+		arg4 []v1alpha1.ResourceStatus
 	}
 	realizeReturns struct {
-		result1 []v1alpha1.RealizedResource
+		result1 []v1alpha1.ResourceStatus
 		result2 error
 	}
 	realizeReturnsOnCall map[int]struct {
-		result1 []v1alpha1.RealizedResource
+		result1 []v1alpha1.ResourceStatus
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRealizer, arg3 *v1alpha1.ClusterSupplyChain, arg4 []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
-	var arg4Copy []v1alpha1.RealizedResource
+func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRealizer, arg3 *v1alpha1.ClusterSupplyChain, arg4 []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error) {
+	var arg4Copy []v1alpha1.ResourceStatus
 	if arg4 != nil {
-		arg4Copy = make([]v1alpha1.RealizedResource, len(arg4))
+		arg4Copy = make([]v1alpha1.ResourceStatus, len(arg4))
 		copy(arg4Copy, arg4)
 	}
 	fake.realizeMutex.Lock()
@@ -42,7 +42,7 @@ func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 workload.ResourceRe
 		arg1 context.Context
 		arg2 workload.ResourceRealizer
 		arg3 *v1alpha1.ClusterSupplyChain
-		arg4 []v1alpha1.RealizedResource
+		arg4 []v1alpha1.ResourceStatus
 	}{arg1, arg2, arg3, arg4Copy})
 	stub := fake.RealizeStub
 	fakeReturns := fake.realizeReturns
@@ -63,41 +63,41 @@ func (fake *FakeRealizer) RealizeCallCount() int {
 	return len(fake.realizeArgsForCall)
 }
 
-func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain, []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)) {
+func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain, []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error)) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = stub
 }
 
-func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain, []v1alpha1.RealizedResource) {
+func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, workload.ResourceRealizer, *v1alpha1.ClusterSupplyChain, []v1alpha1.ResourceStatus) {
 	fake.realizeMutex.RLock()
 	defer fake.realizeMutex.RUnlock()
 	argsForCall := fake.realizeArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *FakeRealizer) RealizeReturns(result1 []v1alpha1.RealizedResource, result2 error) {
+func (fake *FakeRealizer) RealizeReturns(result1 []v1alpha1.ResourceStatus, result2 error) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = nil
 	fake.realizeReturns = struct {
-		result1 []v1alpha1.RealizedResource
+		result1 []v1alpha1.ResourceStatus
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 []v1alpha1.RealizedResource, result2 error) {
+func (fake *FakeRealizer) RealizeReturnsOnCall(i int, result1 []v1alpha1.ResourceStatus, result2 error) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = nil
 	if fake.realizeReturnsOnCall == nil {
 		fake.realizeReturnsOnCall = make(map[int]struct {
-			result1 []v1alpha1.RealizedResource
+			result1 []v1alpha1.ResourceStatus
 			result2 error
 		})
 	}
 	fake.realizeReturnsOnCall[i] = struct {
-		result1 []v1alpha1.RealizedResource
+		result1 []v1alpha1.ResourceStatus
 		result2 error
 	}{result1, result2}
 }

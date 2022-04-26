@@ -209,7 +209,7 @@ type FieldSelectorRequirement struct {
 	Values []string `json:"values,omitempty"`
 }
 
-type RealizedResource struct {
+type ResourceStatus struct {
 	// Name is the name of the resource in the blueprint
 	Name string `json:"name"`
 

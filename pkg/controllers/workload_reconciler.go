@@ -19,8 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -86,7 +84,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, err)
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, false, err)
 	}
 
 	log = log.WithValues("supply chain", supplyChain.Name)
@@ -95,7 +93,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, false, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
 		)
 	}
@@ -106,7 +104,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if !r.isSupplyChainReady(supplyChain) {
 		r.conditionManager.AddPositive(conditions.MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
 		log.Info("supply chain is not in ready state")
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, false, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
 	}
 	r.conditionManager.AddPositive(conditions.SupplyChainReadyCondition())
 
@@ -116,21 +114,21 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, false, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
-		return r.completeReconciliation(ctx, workload, workload.Status.Resources, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, workload.Status.Resources, false, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
+	realizedResources, resourcesStatusChanged, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
 
 	if err != nil {
-		conditions.AddConditionForWorkloadError(&r.conditionManager, true, err)
+		conditions.AddConditionForResourceSubmitted(&r.conditionManager, true, err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
@@ -175,15 +173,21 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	return r.completeReconciliation(ctx, workload, realizedResources, err)
+	return r.completeReconciliation(ctx, workload, realizedResources, resourcesStatusChanged, err)
 }
 
-func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
+// workload.status
+//   resources:
+//      - name:
+//        conditions:
+//          - type: Ready
+
+func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, realizedResources []v1alpha1.ResourceStatus, resourcesStatusChanged bool, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
-	var changed bool
-	workload.Status.Conditions, changed = r.conditionManager.Finalize()
+	var conditionsChanged bool
+	workload.Status.Conditions, conditionsChanged = r.conditionManager.Finalize()
 	var updateErr error
-	if changed || (workload.Status.ObservedGeneration != workload.Generation) || !reflect.DeepEqual(workload.Status.Resources, realizedResources) {
+	if conditionsChanged || (workload.Status.ObservedGeneration != workload.Generation) || resourcesStatusChanged {
 		workload.Status.Resources = realizedResources
 		workload.Status.ObservedGeneration = workload.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, workload)
@@ -254,7 +258,7 @@ func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, wor
 	return supplyChains[0], nil
 }
 
-func (r *WorkloadReconciler) trackDependencies(workload *v1alpha1.Workload, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
+func (r *WorkloadReconciler) trackDependencies(workload *v1alpha1.Workload, realizedResources []v1alpha1.ResourceStatus, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: workload.Namespace,
 		Name:      workload.Name,
@@ -296,7 +300,7 @@ func (r *WorkloadReconciler) trackDependencies(workload *v1alpha1.Workload, real
 	}
 }
 
-func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
+func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.ResourceStatus) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference

@@ -33,7 +33,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error)
 }
 
 type realizer struct{}
@@ -42,12 +42,12 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
-	var realizedResources []v1alpha1.RealizedResource
+	var realizedResources []v1alpha1.ResourceStatus
 	var firstError error
 
 	for i := range delivery.Spec.Resources {
@@ -90,7 +90,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return realizedResources, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
+func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.ResourceStatus) v1alpha1.ResourceStatus {
 	if stampedObject == nil || template == nil {
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resource.Name {
@@ -132,7 +132,7 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 		}
 	}
 
-	return v1alpha1.RealizedResource{
+	return v1alpha1.ResourceStatus{
 		Name:        resource.Name,
 		StampedRef:  stampedRef,
 		TemplateRef: templateRef,
@@ -141,7 +141,7 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 	}
 }
 
-func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.RealizedResource) []metav1.Condition {
+func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.ResourceStatus) []metav1.Condition {
 	for _, previousResource := range previousResources {
 		if previousResource.Name == resourceName {
 			return previousResource.Conditions
@@ -150,7 +150,7 @@ func getPreviousResourceConditions(resourceName string, previousResources []v1al
 	return nil
 }
 
-func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.ResourceStatus, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
 	if err != nil {
 		for _, previousResource := range previousResources {

@@ -18,6 +18,7 @@ package workload
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -33,7 +34,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, bool, error)
 }
 
 type realizer struct{}
@@ -42,13 +43,14 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, bool, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
-	var realizedResources []v1alpha1.RealizedResource
+	var realizedResources []v1alpha1.ResourceStatus
 	var firstError error
+	resourcesStatusChanged := false
 
 	for i := range supplyChain.Spec.Resources {
 		resource := supplyChain.Spec.Resources[i]
@@ -67,28 +69,45 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResource := generateRealizedResource(resource, template, stampedObject, out, previousResources)
+		resourceStatus := generateResourceStatus(resource, template, stampedObject, out, previousResources)
+		previousResourceStatus := getPreviousResourceStatus(resource.Name, previousResources)
 
-		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
+		// set previousResourceStatus.Conditions to nil
+		resourceStatus.Conditions = nil
+		previousResourceStatusConditions := previousResourceStatus.Conditions
+		previousResourceStatus.Conditions = nil
+		if !reflect.DeepEqual(resourceStatus, &previousResourceStatus) {
+			resourcesStatusChanged = true
+		}
+		// DeepEqual resourceStatus and previousResourceStatus, if diff mark resourcesStatusChanged = true
+
+		// set back
+		previousResourceStatus.Conditions = previousResourceStatusConditions
+		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, previousResourceStatus.Conditions)
 
 		if err != nil {
-			conditions.AddConditionForWorkloadError(&conditionManager, false, err)
+			conditions.AddConditionForResourceSubmitted(&conditionManager, false, err)
 		} else {
 			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 		}
 
-		conditions, _ := conditionManager.Finalize()
-		realizedResource.Conditions = conditions
+		// if resourceStatus and previousResourceStatus are different, did the conditions (minus the time change on the resource, if yes, mark resourcesStatusChanged = true
+		// DONE
+		conditions, changed := conditionManager.Finalize()
+		if !resourcesStatusChanged && changed {
+			resourcesStatusChanged = true
+		}
+		resourceStatus.Conditions = conditions
 
-		realizedResources = append(realizedResources, realizedResource)
+		realizedResources = append(realizedResources, resourceStatus)
 
 		outs.AddOutput(resource.Name, out)
 	}
 
-	return realizedResources, firstError
+	return realizedResources, resourcesStatusChanged, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
+func generateResourceStatus(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.ResourceStatus) v1alpha1.ResourceStatus {
 	if stampedObject == nil || template == nil {
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resource.Name {
@@ -130,7 +149,7 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 		}
 	}
 
-	return v1alpha1.RealizedResource{
+	return v1alpha1.ResourceStatus{
 		Name:        resource.Name,
 		StampedRef:  stampedRef,
 		TemplateRef: templateRef,
@@ -139,16 +158,16 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 	}
 }
 
-func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.RealizedResource) []metav1.Condition {
+func getPreviousResourceStatus(resourceName string, previousResources []v1alpha1.ResourceStatus) *v1alpha1.ResourceStatus {
 	for _, previousResource := range previousResources {
 		if previousResource.Name == resourceName {
-			return previousResource.Conditions
+			return &previousResource
 		}
 	}
 	return nil
 }
 
-func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.ResourceStatus, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
 	if err != nil {
 		for _, previousResource := range previousResources {

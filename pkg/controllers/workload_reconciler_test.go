@@ -211,7 +211,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		var (
 			supplyChainName   string
 			supplyChain       v1alpha1.ClusterSupplyChain
-			realizedResources []v1alpha1.RealizedResource
+			realizedResources []v1alpha1.ResourceStatus
 		)
 		BeforeEach(func() {
 			supplyChainName = "some-supply-chain"
@@ -233,7 +233,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 
-			realizedResources = []v1alpha1.RealizedResource{
+			realizedResources = []v1alpha1.ResourceStatus{
 				{
 					StampedRef: &corev1.ObjectReference{
 						Kind:       "MyThing",
@@ -1029,7 +1029,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 
-			rlzr.RealizeReturns([]v1alpha1.RealizedResource{
+			rlzr.RealizeReturns([]v1alpha1.ResourceStatus{
 				{
 					Name: "some-resource",
 					StampedRef: &corev1.ObjectReference{
@@ -1042,7 +1042,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 		Context("template does not change so there are no orphaned objects", func() {
 			BeforeEach(func() {
-				wl.Status.Resources = []v1alpha1.RealizedResource{
+				wl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
 						Name: "some-resource",
 						StampedRef: &corev1.ObjectReference{
@@ -1065,7 +1065,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 		Context("a template changes so there are orphaned objects", func() {
 			BeforeEach(func() {
-				wl.Status.Resources = []v1alpha1.RealizedResource{
+				wl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
 						Name: "some-resource",
 						StampedRef: &corev1.ObjectReference{
