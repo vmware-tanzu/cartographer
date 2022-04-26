@@ -209,7 +209,7 @@ type FieldSelectorRequirement struct {
 	Values []string `json:"values,omitempty"`
 }
 
-type ResourceStatus struct {
+type RealizedResource struct {
 	// Name is the name of the resource in the blueprint
 	Name string `json:"name"`
 
@@ -224,6 +224,10 @@ type ResourceStatus struct {
 
 	// Outputs are values from the object in StampedRef that can be consumed by other resources
 	Outputs []Output `json:"outputs,omitempty"`
+}
+
+type ResourceStatus struct {
+	RealizedResource `json:",inline"`
 
 	// Conditions describing this resource's reconcile state. The top level condition is
 	// of type `Ready`, and follows these Kubernetes conventions:
