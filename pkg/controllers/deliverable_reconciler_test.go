@@ -216,7 +216,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		var (
 			deliveryName      string
 			delivery          v1alpha1.ClusterDelivery
-			realizedResources []v1alpha1.RealizedResource
+			realizedResources []v1alpha1.ResourceStatus
 		)
 		BeforeEach(func() {
 			deliveryName = "some-delivery"
@@ -238,7 +238,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			}
 			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 
-			realizedResources = []v1alpha1.RealizedResource{
+			realizedResources = []v1alpha1.ResourceStatus{
 				{
 					StampedRef: &corev1.ObjectReference{
 						Kind:       "MyThing",
@@ -1222,7 +1222,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			}
 			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 
-			rlzr.RealizeReturns([]v1alpha1.RealizedResource{
+			rlzr.RealizeReturns([]v1alpha1.ResourceStatus{
 				{
 					Name: "some-resource",
 					StampedRef: &corev1.ObjectReference{
@@ -1235,7 +1235,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		})
 		Context("template does not change so there are no orphaned objects", func() {
 			BeforeEach(func() {
-				dl.Status.Resources = []v1alpha1.RealizedResource{
+				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
 						Name: "some-resource",
 						StampedRef: &corev1.ObjectReference{
@@ -1258,7 +1258,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		Context("a template changes so there are orphaned objects", func() {
 			BeforeEach(func() {
-				dl.Status.Resources = []v1alpha1.RealizedResource{
+				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
 						Name: "some-resource",
 						StampedRef: &corev1.ObjectReference{
