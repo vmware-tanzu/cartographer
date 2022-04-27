@@ -31,7 +31,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
-	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -118,7 +117,7 @@ var _ = Describe("Realize", func() {
 		})
 
 		It("realizes each resource in delivery order, accumulating output for each subsequent resource", func() {
-			resourceStatuses := resources.NewResourceStatuses(nil)
+			resourceStatuses := realizer.NewResourceStatuses(nil)
 			err := rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
 			Expect(err).To(Succeed())
 
@@ -188,7 +187,7 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 			resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-			resourceStatuses := resources.NewResourceStatuses(nil)
+			resourceStatuses := realizer.NewResourceStatuses(nil)
 			err = rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
 			Expect(err).To(MatchError("realizing is hard"))
 
@@ -377,7 +376,7 @@ var _ = Describe("Realize", func() {
 			}
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, obj, oldOutput2, nil)
 
-			resourceStatuses := resources.NewResourceStatuses(previousResources)
+			resourceStatuses := realizer.NewResourceStatuses(previousResources)
 			err := rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -434,7 +433,7 @@ var _ = Describe("Realize", func() {
 			})
 
 			It("the status uses the previous resource for resource 1 and resource 2", func() {
-				resourceStatuses := resources.NewResourceStatuses(previousResources)
+				resourceStatuses := realizer.NewResourceStatuses(previousResources)
 				err := rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
 				Expect(err).To(MatchError("im in a bad state"))
 

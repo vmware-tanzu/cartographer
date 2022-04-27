@@ -42,7 +42,6 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -84,7 +83,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
 
-	resourceStatuses := resources.NewResourceStatuses(deliverable.Status.Resources)
+	resourceStatuses := realizer.NewResourceStatuses(deliverable.Status.Resources)
 
 	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
@@ -128,7 +127,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.Realizer.Realize(ctx, resourceRealizer, delivery, resourceStatuses)
 
 	if err != nil {
-		conditions.AddConditionForDeliverableError(&r.conditionManager, true, err)
+		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
@@ -176,7 +175,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return r.completeReconciliation(ctx, deliverable, resourceStatuses, err)
 }
 
-func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses resources.ResourceStatuses, err error) (ctrl.Result, error) {
+func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses realizer.ResourceStatuses, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()

@@ -42,7 +42,6 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
-	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -84,7 +83,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
 
-	resourceStatuses := resources.NewResourceStatuses(workload.Status.Resources)
+	resourceStatuses := realizer.NewResourceStatuses(workload.Status.Resources)
 
 	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
@@ -133,7 +132,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if err != nil {
 		// TODO: Use interface for differences
-		conditions.AddConditionForResourceSubmitted(&r.conditionManager, true, err)
+		conditions.AddConditionForResourceSubmittedWorkload(&r.conditionManager, true, err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
@@ -181,7 +180,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return r.completeReconciliation(ctx, workload, resourceStatuses, err)
 }
 
-func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, resourceStatuses resources.ResourceStatuses, err error) (ctrl.Result, error) {
+func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, resourceStatuses realizer.ResourceStatuses, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	workload.Status.Conditions, changed = r.conditionManager.Finalize()

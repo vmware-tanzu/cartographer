@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resources
+package workload
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,7 +126,7 @@ func (r *resourceStatuses) createConditions(name string, err error) []metav1.Con
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, previousConditions)
 	if err != nil {
-		conditions.AddConditionForResourceSubmitted(&conditionManager, false, err)
+		conditions.AddConditionForResourceSubmittedWorkload(&conditionManager, false, err)
 	} else {
 		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 	}
