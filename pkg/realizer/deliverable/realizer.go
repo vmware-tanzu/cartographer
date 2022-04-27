@@ -21,18 +21,19 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, resourceStatuses resources.ResourceStatuses) error
 }
 
 type realizer struct{}
@@ -41,12 +42,11 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.ResourceStatus) ([]v1alpha1.ResourceStatus, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, resourceStatuses resources.ResourceStatuses) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
-	var realizedResources []v1alpha1.ResourceStatus
 	var firstError error
 
 	for i := range delivery.Spec.Resources {
@@ -68,109 +68,83 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResource := generateRealizedResource(resource, template, stampedObject, out, previousResources)
-
-		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
-
-		if err != nil {
-			conditions.AddConditionForDeliverableError(&conditionManager, false, err)
-		} else {
-			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
-		}
-
-		conditions, _ := conditionManager.Finalize()
-		realizedResource.Conditions = conditions
-
-		realizedResources = append(realizedResources, realizedResource)
-
 		outs.AddOutput(resource.Name, out)
+
+		previousRealizedResource := resourceStatuses.GetPreviousRealizedResource(resource.Name)
+
+		var realizedResource *v1alpha1.RealizedResource
+
+		if (stampedObject == nil || template == nil) && previousRealizedResource != nil {
+			realizedResource = previousRealizedResource
+		} else {
+			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
+		}
+
+		resourceStatuses.Add(realizedResource, err)
 	}
 
-	return realizedResources, firstError
+	return firstError
 }
 
-func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.ResourceStatus) v1alpha1.ResourceStatus {
-	//if stampedObject == nil || template == nil {
-	//	for _, previousResource := range previousResources {
-	//		if previousResource.Name == resource.Name {
-	//			return previousResource
-	//		}
-	//	}
-	//}
-	//
-	//var inputs []v1alpha1.Input
-	//for _, source := range resource.Sources {
-	//	inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
-	//}
-	//for _, config := range resource.Configs {
-	//	inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
-	//}
-	//if resource.Deployment != nil {
-	//	inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
-	//}
-
-	//var templateRef *corev1.ObjectReference
-	//var outputs []v1alpha1.Output
-	//if template != nil {
-	//	templateRef = &corev1.ObjectReference{
-	//		Kind:       template.GetKind(),
-	//		Name:       template.GetName(),
-	//		APIVersion: v1alpha1.SchemeGroupVersion.String(),
-	//	}
-	//
-	//	outputs = getOutputs(resource.Name, template, previousResources, output)
-	//}
-
-	////var stampedRef *corev1.ObjectReference
-	//if stampedObject != nil {
-	//	stampedRef = &corev1.ObjectReference{
-	//		Kind:       stampedObject.GetKind(),
-	//		Namespace:  stampedObject.GetNamespace(),
-	//		Name:       stampedObject.GetName(),
-	//		APIVersion: stampedObject.GetAPIVersion(),
-	//	}
-	//}
-
-	return v1alpha1.ResourceStatus{
-		//Name:        resource.Name,
-		//StampedRef:  stampedRef,
-		//TemplateRef: templateRef,
-		//Inputs:      inputs,
-		//Outputs:     outputs,
+func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+	if previousRealizedResource == nil {
+		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
-}
 
-func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.ResourceStatus) []metav1.Condition {
-	for _, previousResource := range previousResources {
-		if previousResource.Name == resourceName {
-			return previousResource.Conditions
+	var inputs []v1alpha1.Input
+	for _, source := range resource.Sources {
+		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
+	}
+	for _, config := range resource.Configs {
+		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
+	}
+	if resource.Deployment != nil {
+		inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
+	}
+
+	var templateRef *corev1.ObjectReference
+	var outputs []v1alpha1.Output
+	if template != nil {
+		templateRef = &corev1.ObjectReference{
+			Kind:       template.GetKind(),
+			Name:       template.GetName(),
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+		}
+
+		outputs = getOutputs(template, previousRealizedResource, output)
+	}
+
+	var stampedRef *corev1.ObjectReference
+	if stampedObject != nil {
+		stampedRef = &corev1.ObjectReference{
+			Kind:       stampedObject.GetKind(),
+			Namespace:  stampedObject.GetNamespace(),
+			Name:       stampedObject.GetName(),
+			APIVersion: stampedObject.GetAPIVersion(),
 		}
 	}
-	return nil
+
+	return &v1alpha1.RealizedResource{
+		Name:        resource.Name,
+		StampedRef:  stampedRef,
+		TemplateRef: templateRef,
+		Inputs:      inputs,
+		Outputs:     outputs,
+	}
 }
 
-func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.ResourceStatus, output *templates.Output) []v1alpha1.Output {
+func getOutputs(template templates.Template, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
 	if err != nil {
-		for _, previousResource := range previousResources {
-			if previousResource.Name == resourceName {
-				outputs = previousResource.Outputs
-				break
-			}
-		}
+		outputs = previousRealizedResource.Outputs
 	} else {
 		currTime := metav1.NewTime(time.Now())
 		for j, out := range outputs {
 			outputs[j].LastTransitionTime = currTime
-			for _, previousResource := range previousResources {
-				if previousResource.Name == resourceName {
-					for _, previousOutput := range previousResource.Outputs {
-						if previousOutput.Name == out.Name {
-							if previousOutput.Digest == out.Digest {
-								outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-							}
-							break
-						}
+			for _, previousOutput := range previousRealizedResource.Outputs {
+				if previousOutput.Name == out.Name {
+					if previousOutput.Digest == out.Digest {
+						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
 					}
 					break
 				}

@@ -18,7 +18,6 @@ package workload
 
 import (
 	"context"
-	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -67,8 +67,6 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		}
 
 		outs.AddOutput(resource.Name, out)
-
-		// -------------------
 
 		previousRealizedResource := resourceStatuses.GetPreviousRealizedResource(resource.Name)
 

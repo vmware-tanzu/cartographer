@@ -19,7 +19,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -32,6 +31,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -157,7 +157,7 @@ var _ = Describe("Realize", func() {
 			Expect(len(currentStatuses[1].Inputs)).To(Equal(1))
 			Expect(currentStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(currentStatuses[1].Outputs).To(BeNil())
-			Expect(len(currentStatuses[0].Conditions)).To(Equal(2))
+			Expect(len(currentStatuses[1].Conditions)).To(Equal(2))
 			Expect(currentStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),

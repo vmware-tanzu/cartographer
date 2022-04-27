@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -46,13 +45,14 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/resources"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = FDescribe("WorkloadReconciler", func() {
+var _ = Describe("WorkloadReconciler", func() {
 	var (
 		out                          *Buffer
 		reconciler                   controllers.WorkloadReconciler
