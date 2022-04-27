@@ -52,7 +52,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("WorkloadReconciler", func() {
+var _ = FDescribe("WorkloadReconciler", func() {
 	var (
 		out                          *Buffer
 		reconciler                   controllers.WorkloadReconciler
@@ -283,6 +283,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			var resource2Status v1alpha1.ResourceStatus
 
 			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
 
 			for i := range currentStatuses {
 				switch currentStatuses[i].Name {
@@ -425,6 +426,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
 
 			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
 			var resource1Status v1alpha1.ResourceStatus
 			var resource2Status v1alpha1.ResourceStatus
 

@@ -121,50 +121,50 @@ var _ = Describe("Realize", func() {
 
 			Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
 
-			currentStatueses := resourceStatuses.GetCurrent()
-			Expect(currentStatueses).To(HaveLen(2))
+			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
 
-			Expect(currentStatueses[0].Name).To(Equal(resource1.Name))
-			Expect(currentStatueses[0].TemplateRef.Name).To(Equal(template1.Name))
-			Expect(currentStatueses[0].StampedRef.Name).To(Equal("obj1"))
-			Expect(currentStatueses[0].Inputs).To(BeNil())
-			Expect(len(currentStatueses[0].Outputs)).To(Equal(1))
-			Expect(currentStatueses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
+			Expect(currentStatuses[0].Name).To(Equal(resource1.Name))
+			Expect(currentStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
+			Expect(currentStatuses[0].StampedRef.Name).To(Equal("obj1"))
+			Expect(currentStatuses[0].Inputs).To(BeNil())
+			Expect(len(currentStatuses[0].Outputs)).To(Equal(1))
+			Expect(currentStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("image"),
 					"Preview": Equal("whatever\n"),
 					"Digest":  HavePrefix("sha256"),
 				},
 			))
-			Expect(time.Since(currentStatueses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
-			Expect(len(currentStatueses[0].Conditions)).To(Equal(2))
-			Expect(currentStatueses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
+			Expect(time.Since(currentStatuses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
+			Expect(len(currentStatuses[0].Conditions)).To(Equal(2))
+			Expect(currentStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
-			Expect(currentStatueses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
+			Expect(currentStatuses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("Ready"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
 
-			Expect(currentStatueses[1].Name).To(Equal(resource2.Name))
-			Expect(currentStatueses[1].TemplateRef.Name).To(Equal(template2.Name))
-			Expect(currentStatueses[1].StampedRef.Name).To(Equal("obj2"))
-			Expect(len(currentStatueses[1].Inputs)).To(Equal(1))
-			Expect(currentStatueses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
-			Expect(currentStatueses[1].Outputs).To(BeNil())
-			Expect(len(currentStatueses[0].Conditions)).To(Equal(2))
-			Expect(currentStatueses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
+			Expect(currentStatuses[1].Name).To(Equal(resource2.Name))
+			Expect(currentStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+			Expect(currentStatuses[1].StampedRef.Name).To(Equal("obj2"))
+			Expect(len(currentStatuses[1].Inputs)).To(Equal(1))
+			Expect(currentStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
+			Expect(currentStatuses[1].Outputs).To(BeNil())
+			Expect(len(currentStatuses[0].Conditions)).To(Equal(2))
+			Expect(currentStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
-			Expect(currentStatueses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
+			Expect(currentStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("Ready"),
 					"Status": Equal(metav1.ConditionTrue),
@@ -347,7 +347,6 @@ var _ = Describe("Realize", func() {
 			var resource3Status v1alpha1.ResourceStatus
 
 			for i := range currentStatuses {
-
 				switch currentStatuses[i].Name {
 				case "resource1":
 					resource1Status = currentStatuses[i]
@@ -356,7 +355,6 @@ var _ = Describe("Realize", func() {
 				case "resource3":
 					resource3Status = currentStatuses[i]
 				}
-
 			}
 
 			Expect(len(resource1Status.Outputs)).To(Equal(2))
