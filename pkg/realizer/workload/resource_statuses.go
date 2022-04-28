@@ -15,6 +15,8 @@
 package workload
 
 import (
+	"reflect"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -34,11 +36,11 @@ func NewResourceStatuses(previousResourceStatuses []v1alpha1.ResourceStatus) *re
 	for _, previousResourceStatus := range previousResourceStatuses {
 
 		statuses = append(statuses, &resourceStatus{
-			Name: previousResourceStatus.Name,
-			Previous: &v1alpha1.ResourceStatus{
+			name: previousResourceStatus.Name,
+			previous: &v1alpha1.ResourceStatus{
 				RealizedResource: previousResourceStatus.RealizedResource,
 			},
-			Current: nil,
+			current: nil,
 		})
 	}
 
@@ -48,9 +50,10 @@ func NewResourceStatuses(previousResourceStatuses []v1alpha1.ResourceStatus) *re
 }
 
 type resourceStatus struct {
-	Name     string
-	Previous *v1alpha1.ResourceStatus
-	Current  *v1alpha1.ResourceStatus
+	name     string
+	previous *v1alpha1.ResourceStatus
+	current  *v1alpha1.ResourceStatus
+	changed  bool
 }
 
 type resourceStatuses struct {
@@ -58,7 +61,20 @@ type resourceStatuses struct {
 }
 
 func (r *resourceStatuses) IsChanged() bool {
-	// TODO
+	for _, status := range r.statuses {
+		if status.current == nil {
+			continue
+		}
+		if status.changed {
+			return true
+		}
+		if status.previous == nil {
+			return true
+		}
+		if !reflect.DeepEqual(status.current.RealizedResource, status.previous.RealizedResource) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -68,8 +84,8 @@ func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
 	// TODO: if current is nil, we need to use previous?
 	// ...In the case of reconciler failing before we get to the realizer
 	for _, status := range r.statuses {
-		if status != nil && status.Current != nil {
-			currentStatuses = append(currentStatuses, *status.Current)
+		if status != nil && status.current != nil {
+			currentStatuses = append(currentStatuses, *status.current)
 		}
 	}
 
@@ -78,8 +94,8 @@ func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
 
 func (r *resourceStatuses) GetPreviousRealizedResource(name string) *v1alpha1.RealizedResource {
 	for _, status := range r.statuses {
-		if status.Name == name {
-			return &status.Previous.RealizedResource
+		if status.name == name {
+			return &status.previous.RealizedResource
 		}
 	}
 
@@ -91,7 +107,7 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 
 	var existingStatus *resourceStatus
 	for _, status := range r.statuses {
-		if status.Name == name {
+		if status.name == name {
 			existingStatus = status
 			break
 		}
@@ -99,12 +115,12 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 
 	if existingStatus == nil {
 		existingStatus = &resourceStatus{
-			Name: name,
+			name: name,
 		}
 		r.statuses = append(r.statuses, existingStatus)
 	}
 
-	existingStatus.Current = &v1alpha1.ResourceStatus{
+	existingStatus.current = &v1alpha1.ResourceStatus{
 		RealizedResource: *realizedResource,
 		Conditions:       r.createConditions(name, err),
 	}
@@ -113,15 +129,15 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 func (r *resourceStatuses) createConditions(name string, err error) []metav1.Condition {
 	var existingStatus *resourceStatus
 	for _, status := range r.statuses {
-		if status.Name == name {
+		if status.name == name {
 			existingStatus = status
 			break
 		}
 	}
 
 	var previousConditions []metav1.Condition
-	if existingStatus.Previous != nil {
-		previousConditions = existingStatus.Previous.Conditions
+	if existingStatus.previous != nil {
+		previousConditions = existingStatus.previous.Conditions
 	}
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, previousConditions)
@@ -131,6 +147,7 @@ func (r *resourceStatuses) createConditions(name string, err error) []metav1.Con
 		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 	}
 
-	resourceConditions, _ := conditionManager.Finalize()
+	resourceConditions, changed := conditionManager.Finalize()
+	existingStatus.changed = changed
 	return resourceConditions
 }
