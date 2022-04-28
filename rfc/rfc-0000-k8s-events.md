@@ -43,40 +43,25 @@ users.
 
 [what-it-is]: #what-it-is
 
-This first diagram shows the objects tracked or managed by the Cartographer controller, except for **Artifact** and
-**Controller Stamp**.
-
-![Cartographer Objects](./rfc-k8s-events/objects.jpg)
-
 ## Developer View
 
-To date, Cartographer presents at least some information from all these sources to developers:
+Cartographer presents useful information to developers in the **owner** (workload/deliverable). This information is
+derived from stamped objects and contributing resources such as **templates** and **blueprints**:
 
-![Owner](./rfc-k8s-events/owner.jpg)
+This RFC addresses the absence of awareness that "something is happening", especially after a developer has committed
+new code. With event's we can provide information that show's activity and causality not present in the current snapshot
+of state.
 
-Note: `status.resources[.conditions]` do not currently look like this, but there is work to present a **Healthy** status
-[in this rfc](https://github.com/vmware-tanzu/cartographer/pull/738). Although there is no art to tackle sharing
-per-resource 'Submitted' status (I will raise a separate RFC), it's something that can be handled entirely using the
-status in a workload (ie, it does not require the use of events)
-
-With different initiatives (in RFCs for workload status improvements) the developer's view of information is becoming
-quite complete, but a key issue is the absence of awareness that "something is happening", especially after they've
-committed new code. With event's we can provide information that show's activity and causality not present in the
-current snapshot of state.
-
-We add events to the Owners (Workload/Deliverable) to enable debug and reasoning about Cartographer's behavior.
+We add events to the **Owners** (Workload/Deliverable) to enable debug and reasoning about Cartographer's behavior.
 
 ## Operator View
 
-The situation is worse for users managing the supply chains (Devops/Ops). By looking at a supply chain, there is very
-little information about how supply chains are behaving, or if any issues are occurring for developers:
-
-![Blueprint](./rfc-k8s-events/blueprint.jpg)
-
-Although these users can access the logs, we can provide them a more concise view of how supply chains are behaving
-on-cluster.
-
-We add events to the Blueprints (Supply Chain/Delivery) to enable debug and reasoning about Cartographer's behavior.
+The situation is worse for users managing the **blueprints** (Devops/Ops). Some metrics can be recorded in **
+blueprints**
+and this might be a valid topic for another RFC, however events also present a useful way for authors to avoid trawling
+through logs to get a quick overview of temporal behaviour of **owners** (workload/delivery) as they rely on the
+author's
+**blueprint**.
 
 # How it Works
 
@@ -88,8 +73,8 @@ key guiding principles:
 1. > Let it be something that isn't satisfactorily presented in other user views (eg: `k get workload`).
 2. > Let the event list be as meaningful as is necessary, and no more.
 
-These are examples of types of events that could be emitted. This RFC makes no recommendation as to which events are required.
-The cartographer controller could emit the following events:
+These are examples of types of events that could be emitted. This RFC makes no recommendation as to which events are
+required. The cartographer controller could emit the following events:
 
 | Reason | Message Format | Description | involvedObject |
 | --- | --- | --- | --- |
