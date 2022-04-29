@@ -37,9 +37,7 @@ func NewResourceStatuses(previousResourceStatuses []v1alpha1.ResourceStatus) *re
 
 		statuses = append(statuses, &resourceStatus{
 			name: previousResourceStatus.Name,
-			previous: &v1alpha1.ResourceStatus{
-				RealizedResource: previousResourceStatus.RealizedResource,
-			},
+			previous: &previousResourceStatus,
 			current: nil,
 		})
 	}
@@ -52,8 +50,8 @@ func NewResourceStatuses(previousResourceStatuses []v1alpha1.ResourceStatus) *re
 type resourceStatus struct {
 	name     string
 	previous *v1alpha1.ResourceStatus
-	current  *v1alpha1.ResourceStatus
-	changed  bool
+	current           *v1alpha1.ResourceStatus
+	conditionsChanged bool
 }
 
 type resourceStatuses struct {
@@ -63,12 +61,12 @@ type resourceStatuses struct {
 func (r *resourceStatuses) IsChanged() bool {
 	for _, status := range r.statuses {
 		if status.current == nil {
-			continue
-		}
-		if status.changed {
 			return true
 		}
 		if status.previous == nil {
+			return true
+		}
+		if status.conditionsChanged {
 			return true
 		}
 		if !reflect.DeepEqual(status.current.RealizedResource, status.previous.RealizedResource) {
@@ -148,6 +146,6 @@ func (r *resourceStatuses) createConditions(name string, err error) []metav1.Con
 	}
 
 	resourceConditions, changed := conditionManager.Finalize()
-	existingStatus.changed = changed
+	existingStatus.conditionsChanged = changed
 	return resourceConditions
 }
