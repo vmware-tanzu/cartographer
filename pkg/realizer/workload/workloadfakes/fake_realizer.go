@@ -3,10 +3,10 @@ package workloadfakes
 
 import (
 	"context"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"sync"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 )
 
