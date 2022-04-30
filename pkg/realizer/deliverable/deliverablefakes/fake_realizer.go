@@ -3,6 +3,7 @@ package deliverablefakes
 
 import (
 	"context"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"sync"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -10,13 +11,13 @@ import (
 )
 
 type FakeRealizer struct {
-	RealizeStub        func(context.Context, deliverable.ResourceRealizer, *v1alpha1.ClusterDelivery, deliverable.ResourceStatuses) error
+	RealizeStub        func(context.Context, deliverable.ResourceRealizer, *v1alpha1.ClusterDelivery, statuses.ResourceStatuses) error
 	realizeMutex       sync.RWMutex
 	realizeArgsForCall []struct {
 		arg1 context.Context
 		arg2 deliverable.ResourceRealizer
 		arg3 *v1alpha1.ClusterDelivery
-		arg4 deliverable.ResourceStatuses
+		arg4 statuses.ResourceStatuses
 	}
 	realizeReturns struct {
 		result1 error
@@ -28,14 +29,14 @@ type FakeRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 deliverable.ResourceRealizer, arg3 *v1alpha1.ClusterDelivery, arg4 deliverable.ResourceStatuses) error {
+func (fake *FakeRealizer) Realize(arg1 context.Context, arg2 deliverable.ResourceRealizer, arg3 *v1alpha1.ClusterDelivery, arg4 statuses.ResourceStatuses) error {
 	fake.realizeMutex.Lock()
 	ret, specificReturn := fake.realizeReturnsOnCall[len(fake.realizeArgsForCall)]
 	fake.realizeArgsForCall = append(fake.realizeArgsForCall, struct {
 		arg1 context.Context
 		arg2 deliverable.ResourceRealizer
 		arg3 *v1alpha1.ClusterDelivery
-		arg4 deliverable.ResourceStatuses
+		arg4 statuses.ResourceStatuses
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.RealizeStub
 	fakeReturns := fake.realizeReturns
@@ -56,13 +57,13 @@ func (fake *FakeRealizer) RealizeCallCount() int {
 	return len(fake.realizeArgsForCall)
 }
 
-func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, deliverable.ResourceRealizer, *v1alpha1.ClusterDelivery, deliverable.ResourceStatuses) error) {
+func (fake *FakeRealizer) RealizeCalls(stub func(context.Context, deliverable.ResourceRealizer, *v1alpha1.ClusterDelivery, statuses.ResourceStatuses) error) {
 	fake.realizeMutex.Lock()
 	defer fake.realizeMutex.Unlock()
 	fake.RealizeStub = stub
 }
 
-func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, deliverable.ResourceRealizer, *v1alpha1.ClusterDelivery, deliverable.ResourceStatuses) {
+func (fake *FakeRealizer) RealizeArgsForCall(i int) (context.Context, deliverable.ResourceRealizer, *v1alpha1.ClusterDelivery, statuses.ResourceStatuses) {
 	fake.realizeMutex.RLock()
 	defer fake.realizeMutex.RUnlock()
 	argsForCall := fake.realizeArgsForCall[i]

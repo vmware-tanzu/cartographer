@@ -41,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
@@ -83,11 +84,9 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
 
-	resourceStatuses := realizer.NewResourceStatuses(deliverable.Status.Resources)
-
 	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
-		return r.completeReconciliation(ctx, deliverable, resourceStatuses, err)
+		return r.completeReconciliation(ctx, deliverable, nil, err)
 	}
 
 	log = log.WithValues("delivery", delivery.Name)
@@ -96,7 +95,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for delivery")
-		return r.completeReconciliation(ctx, deliverable, resourceStatuses, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for delivery [%s]: %w", delivery.Name, err)))
 	}
 
@@ -106,7 +105,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if !r.isDeliveryReady(delivery) {
 		r.conditionManager.AddPositive(conditions.MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
 		log.Info("delivery is not in ready state")
-		return r.completeReconciliation(ctx, deliverable, resourceStatuses, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
+		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
 	}
 	r.conditionManager.AddPositive(conditions.DeliveryReadyCondition())
 
@@ -115,15 +114,16 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, resourceStatuses, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, deliverable, resourceStatuses, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
+	resourceStatuses := statuses.NewResourceStatuses(deliverable.Status.Resources, conditions.AddConditionForResourceSubmittedDeliverable)
 	err = r.Realizer.Realize(ctx, resourceRealizer, delivery, resourceStatuses)
 
 	if err != nil {
@@ -175,15 +175,17 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return r.completeReconciliation(ctx, deliverable, resourceStatuses, err)
 }
 
-func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses realizer.ResourceStatuses, err error) (ctrl.Result, error) {
+func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
-	// TODO: Implement IsChanged()
-	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) || resourceStatuses.IsChanged() {
-		deliverable.Status.Resources = resourceStatuses.GetCurrent()
+	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) || (resourceStatuses != nil && resourceStatuses.IsChanged()) {
+		if resourceStatuses != nil {
+			deliverable.Status.Resources = resourceStatuses.GetCurrent()
+		}
+
 		deliverable.Status.ObservedGeneration = deliverable.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, deliverable)
 		if updateErr != nil {

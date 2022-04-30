@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable
+package statuses
 
 import (
+	"reflect"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -28,48 +30,61 @@ type ResourceStatuses interface {
 	IsChanged() bool
 }
 
-func NewResourceStatuses(previousResourceStatuses []v1alpha1.ResourceStatus) *resourceStatuses {
+type AddConditionsFunc func(conditionManager *conditions.ConditionManager, isOwner bool, err error)
+
+func NewResourceStatuses(previousResourceStatuses []v1alpha1.ResourceStatus, addConditionsFunc AddConditionsFunc) *resourceStatuses {
 	var statuses []*resourceStatus
 
-	for _, previousResourceStatus := range previousResourceStatuses {
-
+	for i := range previousResourceStatuses {
 		statuses = append(statuses, &resourceStatus{
-			Name: previousResourceStatus.Name,
-			Previous: &v1alpha1.ResourceStatus{
-				RealizedResource: previousResourceStatus.RealizedResource,
-			},
-			Current: nil,
+			name:     previousResourceStatuses[i].Name,
+			previous: &previousResourceStatuses[i],
+			current:  nil,
 		})
 	}
 
 	return &resourceStatuses{
-		statuses: statuses,
+		statuses:          statuses,
+		addConditionsFunc: addConditionsFunc,
 	}
 }
 
 type resourceStatus struct {
-	Name     string
-	Previous *v1alpha1.ResourceStatus
-	Current  *v1alpha1.ResourceStatus
+	name              string
+	previous          *v1alpha1.ResourceStatus
+	current           *v1alpha1.ResourceStatus
+	conditionsChanged bool
 }
 
 type resourceStatuses struct {
-	statuses []*resourceStatus
+	statuses          []*resourceStatus
+	addConditionsFunc AddConditionsFunc
 }
 
 func (r *resourceStatuses) IsChanged() bool {
-	// TODO
+	for _, status := range r.statuses {
+		if status.current == nil {
+			return true
+		}
+		if status.previous == nil {
+			return true
+		}
+		if status.conditionsChanged {
+			return true
+		}
+		if !reflect.DeepEqual(status.current.RealizedResource, status.previous.RealizedResource) {
+			return true
+		}
+	}
 	return false
 }
 
 func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
 	var currentStatuses []v1alpha1.ResourceStatus
 
-	// TODO: if current is nil, we need to use previous?
-	// ...In the case of reconciler failing before we get to the realizer
 	for _, status := range r.statuses {
-		if status != nil && status.Current != nil {
-			currentStatuses = append(currentStatuses, *status.Current)
+		if status != nil && status.current != nil {
+			currentStatuses = append(currentStatuses, *status.current)
 		}
 	}
 
@@ -78,8 +93,8 @@ func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
 
 func (r *resourceStatuses) GetPreviousRealizedResource(name string) *v1alpha1.RealizedResource {
 	for _, status := range r.statuses {
-		if status.Name == name {
-			return &status.Previous.RealizedResource
+		if status.name == name {
+			return &status.previous.RealizedResource
 		}
 	}
 
@@ -91,7 +106,7 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 
 	var existingStatus *resourceStatus
 	for _, status := range r.statuses {
-		if status.Name == name {
+		if status.name == name {
 			existingStatus = status
 			break
 		}
@@ -99,12 +114,12 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 
 	if existingStatus == nil {
 		existingStatus = &resourceStatus{
-			Name: name,
+			name: name,
 		}
 		r.statuses = append(r.statuses, existingStatus)
 	}
 
-	existingStatus.Current = &v1alpha1.ResourceStatus{
+	existingStatus.current = &v1alpha1.ResourceStatus{
 		RealizedResource: *realizedResource,
 		Conditions:       r.createConditions(name, err),
 	}
@@ -113,24 +128,25 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 func (r *resourceStatuses) createConditions(name string, err error) []metav1.Condition {
 	var existingStatus *resourceStatus
 	for _, status := range r.statuses {
-		if status.Name == name {
+		if status.name == name {
 			existingStatus = status
 			break
 		}
 	}
 
 	var previousConditions []metav1.Condition
-	if existingStatus.Previous != nil {
-		previousConditions = existingStatus.Previous.Conditions
+	if existingStatus.previous != nil {
+		previousConditions = existingStatus.previous.Conditions
 	}
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, previousConditions)
 	if err != nil {
-		conditions.AddConditionForResourceSubmittedDeliverable(&conditionManager, false, err)
+		r.addConditionsFunc(&conditionManager, false, err)
 	} else {
 		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 	}
 
-	resourceConditions, _ := conditionManager.Finalize()
+	resourceConditions, changed := conditionManager.Finalize()
+	existingStatus.conditionsChanged = changed
 	return resourceConditions
 }

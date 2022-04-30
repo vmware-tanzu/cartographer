@@ -29,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -114,7 +116,7 @@ var _ = Describe("Realize", func() {
 		})
 
 		It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
-			resourceStatuses := realizer.NewResourceStatuses(nil)
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
 			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -177,7 +179,7 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 			resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-			resourceStatuses := realizer.NewResourceStatuses(nil)
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
 			err = rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, resourceStatuses)
 			Expect(err).To(MatchError("realizing is hard"))
 
@@ -335,7 +337,7 @@ var _ = Describe("Realize", func() {
 			}
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, obj, oldOutput2, nil)
 
-			resourceStatuses := realizer.NewResourceStatuses(previousResources)
+			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -393,7 +395,7 @@ var _ = Describe("Realize", func() {
 			})
 
 			It("the status uses the previous resource for resource 2", func() {
-				resourceStatuses := realizer.NewResourceStatuses(previousResources)
+				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 				err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain, resourceStatuses)
 				Expect(err).To(MatchError("im in a bad state"))
 

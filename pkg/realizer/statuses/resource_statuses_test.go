@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package statuses_test
 
 import (
 	"errors"
@@ -23,11 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 )
 
-var _ = FDescribe("ResourceStatuses", func() {
-	var statuses workload.ResourceStatuses
+var _ = Describe("ResourceStatuses", func() {
+	var resourceStatuses statuses.ResourceStatuses
 
 	Context("a resourceStatuses with previous statuses", func() {
 		BeforeEach(func() {
@@ -58,40 +59,38 @@ var _ = FDescribe("ResourceStatuses", func() {
 					},
 				},
 			}
-			statuses = workload.NewResourceStatuses(previous)
+			resourceStatuses = statuses.NewResourceStatuses(previous, conditions.AddConditionForResourceSubmittedWorkload)
 		})
 
 		Context("#add is called with an unchanged resource", func() {
-			BeforeEach(func() {
-				statuses.Add(&v1alpha1.RealizedResource{
+			It("the resourceStatuses reports IsChanged is false", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name:        "resource1",
 					StampedRef:  nil,
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
 				}, nil)
-			})
-			It("the resourceStatuses reports IsChanged is false", func() {
-				Expect(statuses.IsChanged()).To(BeFalse())
+				Expect(resourceStatuses.IsChanged()).To(BeFalse())
 			})
 		})
 
 		Context("#add is called with a new resource", func() {
 			It("the resourceStatuses reports IsChanged is true", func() {
-				statuses.Add(&v1alpha1.RealizedResource{
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name:        "resource2",
 					StampedRef:  nil,
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
 				}, nil)
-				Expect(statuses.IsChanged()).To(BeTrue())
+				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
 
 		Context("#add is called with a changed resource", func() {
 			It("the resourceStatuses reports IsChanged is true", func() {
-				statuses.Add(&v1alpha1.RealizedResource{
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name: "resource1",
 					StampedRef: &corev1.ObjectReference{
 						Name: "Fred",
@@ -100,55 +99,51 @@ var _ = FDescribe("ResourceStatuses", func() {
 					Inputs:      nil,
 					Outputs:     nil,
 				}, nil)
-				Expect(statuses.IsChanged()).To(BeTrue())
+				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
 
 		Context("#add is called with a changed condition on a resource", func() {
 			It("the resourceStatuses reports IsChanged is true", func() {
-				statuses.Add(&v1alpha1.RealizedResource{
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name:        "resource1",
 					StampedRef:  nil,
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
 				}, errors.New("has an error"))
-				Expect(statuses.IsChanged()).To(BeTrue())
+				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
 
-		Context("#add is not called, but nothing else is changed", func() {
+		Context("#add is not called", func() {
 			It("the resourceStatuses reports IsChanged is true", func() {
-				Expect(statuses.IsChanged()).To(BeTrue())
+				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
-
 	})
 
 	Context("a resourceStatuses with no previous statuses", func() {
 		BeforeEach(func() {
-			statuses = workload.NewResourceStatuses(nil)
+			resourceStatuses = statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
 		})
 
-		Context("there are new realized resources", func() {
-			BeforeEach(func() {
-				statuses.Add(&v1alpha1.RealizedResource{
+		Context("#add is called with a new resource", func() {
+			It("the resourceStatuses reports IsChanged is true", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name:        "resource1",
 					StampedRef:  nil,
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
 				}, nil)
-			})
-
-			It("the resourceStatuses reports IsChanged is true", func() {
-				Expect(statuses.IsChanged()).To(BeTrue())
+				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
 
-		Context("there are no new realized resources", func() {
+		Context("#add is not called", func() {
 			It("the resourceStatuses reports IsChanged is false", func() {
-				Expect(statuses.IsChanged()).To(BeFalse())
+				Expect(resourceStatuses.IsChanged()).To(BeFalse())
 			})
 		})
 	})
