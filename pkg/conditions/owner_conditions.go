@@ -24,7 +24,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-// -- Resource conditions
+// -- Owner.Status.Resource[x].Conditions - ResourceSubmitted - True
 
 func ResourceSubmittedCondition() metav1.Condition {
 	return metav1.Condition{
@@ -34,13 +34,8 @@ func ResourceSubmittedCondition() metav1.Condition {
 	}
 }
 
-func getConditionType(isOwner bool) string {
-	if isOwner {
-		return v1alpha1.OwnerResourcesSubmitted
-	} else {
-		return v1alpha1.ResourceSubmitted
-	}
-}
+// -- Owner.Status.Conditions - ResourcesSubmitted - True
+
 func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 	return metav1.Condition{
 		Type:   getConditionType(isOwner),
@@ -48,6 +43,9 @@ func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 		Reason: v1alpha1.CompleteResourcesSubmittedReason,
 	}
 }
+
+// -- Owner.Status.Resource[x].Conditions - ResourceSubmitted &&
+// -- Owner.Status.Conditions - ResourcesSubmitted
 
 func TemplateObjectRetrievalFailureCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
@@ -117,7 +115,15 @@ func TemplateOptionsMatchErrorCondition(isOwner bool, err error) metav1.Conditio
 	}
 }
 
-// -- Reconciler conditions
+func getConditionType(isOwner bool) string {
+	if isOwner {
+		return v1alpha1.OwnerResourcesSubmitted
+	} else {
+		return v1alpha1.ResourceSubmitted
+	}
+}
+
+// -- Owner.Status.Conditions - ResourcesSubmitted
 
 func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
