@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supplychain
+package controllers
 
 import (
 	"context"
@@ -38,14 +38,14 @@ type Timer interface {
 	Now() metav1.Time
 }
 
-type Reconciler struct {
+type SupplyChainReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
 	DependencyTracker       dependency.DependencyTracker
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *SupplyChainReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
@@ -64,14 +64,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.SupplyChainReady, supplyChain.Status.Conditions)
+	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.BlueprintReady, supplyChain.Status.Conditions)
 
 	err = r.reconcileSupplyChain(ctx, supplyChain)
 
 	return r.completeReconciliation(ctx, supplyChain, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
+func (r *SupplyChainReconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var changed bool
@@ -98,7 +98,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, supplyChain *v1
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain) error {
+func (r *SupplyChainReconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain) error {
 	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
@@ -131,15 +131,15 @@ func (r *Reconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.C
 	}
 
 	if len(resourcesNotFound) > 0 {
-		r.conditionManager.AddPositive(TemplatesNotFoundCondition(resourcesNotFound))
+		r.conditionManager.AddPositive(conditions.TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
-		r.conditionManager.AddPositive(TemplatesFoundCondition())
+		r.conditionManager.AddPositive(conditions.TemplatesFoundCondition())
 	}
 
 	return nil
 }
 
-func (r *Reconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, templateName, templateKind string) (bool, error) {
+func (r *SupplyChainReconciler) validateResource(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, templateName, templateKind string) (bool, error) {
 	template, err := r.Repo.GetTemplate(ctx, templateName, templateKind)
 	if err != nil {
 		return false, err
@@ -161,7 +161,7 @@ func (r *Reconciler) validateResource(ctx context.Context, supplyChain *v1alpha1
 	return template != nil, nil
 }
 
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *SupplyChainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("supply-chain-repo-cache")),

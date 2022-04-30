@@ -18,28 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	DeliverableDeliveryReady = "DeliveryReady"
-)
-
-const (
-	ReadyDeliveryReason                    = "Ready"
-	DeliverableLabelsMissingDeliveryReason = "DeliverableLabelsMissing"
-	NotFoundDeliveryReadyReason            = "DeliveryNotFound"
-	MultipleMatchesDeliveryReadyReason     = "MultipleDeliveryMatches"
-)
-
-const (
-	CompleteResourcesSubmittedReason                       = "ResourceSubmissionComplete"
-	TemplateObjectRetrievalFailureResourcesSubmittedReason = "TemplateObjectRetrievalFailure"
-	MissingValueAtPathResourcesSubmittedReason             = "MissingValueAtPath"
-	TemplateStampFailureResourcesSubmittedReason           = "TemplateStampFailure"
-	TemplateRejectedByAPIServerResourcesSubmittedReason    = "TemplateRejectedByAPIServer"
-	UnknownErrorResourcesSubmittedReason                   = "UnknownError"
-	DeploymentConditionNotMetResourcesSubmittedReason      = "ConditionNotMet"
-	DeploymentFailedConditionMetResourcesSubmittedReason   = "FailedConditionMet"
-)
-
 var ValidDeliverablePaths = map[string]bool{
 	"spec.source":                true,
 	"spec.source.git":            true,

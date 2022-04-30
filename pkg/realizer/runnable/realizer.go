@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/discovery"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -58,7 +59,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	if err != nil {
 		log.Error(err, "failed to get runnable cluster template")
-		return nil, nil, GetRunTemplateError{
+		return nil, nil, errors.RunnableGetRunTemplateError{
 			Err:         err,
 			TemplateRef: &runnable.Spec.RunTemplateRef,
 		}
@@ -74,7 +75,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	selected, err := r.resolveSelector(ctx, runnable.Spec.Selector, runnableRepo, discoveryClient, runnable.GetNamespace())
 	if err != nil {
 		log.Error(err, "failed to resolve selector", "selector", runnable.Spec.Selector)
-		return nil, nil, ResolveSelectorError{
+		return nil, nil, errors.RunnableResolveSelectorError{
 			Err:      err,
 			Selector: runnable.Spec.Selector,
 		}
@@ -92,7 +93,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
-		return nil, nil, StampError{
+		return nil, nil, errors.RunnableStampError{
 			Err:         err,
 			TemplateRef: &runnable.Spec.RunTemplateRef,
 		}
@@ -102,7 +103,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	err = runnableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), map[string]string{"carto.run/runnable-name": runnable.Name})
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return nil, nil, ApplyStampedObjectError{
+		return nil, nil, errors.RunnableApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
 			TemplateRef:   &runnable.Spec.RunTemplateRef,
@@ -112,7 +113,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	allRunnableStampedObjects, err := runnableRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
 	if err != nil {
 		log.Error(err, "failed to list objects")
-		return stampedObject, nil, ListCreatedObjectsError{
+		return stampedObject, nil, errors.RunnableListCreatedObjectsError{
 			Err:       err,
 			Namespace: stampedObject.GetNamespace(),
 			Labels:    labels,
@@ -130,7 +131,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
 		}
 		log.Error(err, "failed to retrieve output from object")
-		return stampedObject, nil, RetrieveOutputError{
+		return stampedObject, nil, errors.RunnableRetrieveOutputError{
 			Err:           err,
 			StampedObject: stampedObject,
 			TemplateRef:   &runnable.Spec.RunTemplateRef,

@@ -23,7 +23,7 @@ import (
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 )
 
-// -- Supply Chain conditions
+// -- Workload.Status.Conditions - SupplyChainReady
 
 func SupplyChainReadyCondition() metav1.Condition {
 	return metav1.Condition{

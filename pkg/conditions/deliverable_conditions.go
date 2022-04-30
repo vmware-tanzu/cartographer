@@ -24,7 +24,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-// -- Delivery conditions
+// -- Deliverable.Status.Conditions - DeliveryReady
 
 func DeliveryReadyCondition() metav1.Condition {
 	return metav1.Condition{
@@ -70,7 +70,8 @@ func MissingReadyInDeliveryCondition(deliveryReadyCondition metav1.Condition) me
 	}
 }
 
-// -- Resource conditions
+// -- Deliverable.Status.Resource[x].Conditions - ResourceSubmitted &&
+// -- Deliverable.Status.Conditions - ResourcesSubmitted
 
 func TemplateStampFailureByObservedGenerationCondition(err error) metav1.Condition {
 	return metav1.Condition{

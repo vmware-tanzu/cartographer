@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package delivery
+package controllers
 
 import (
 	"context"
@@ -34,13 +34,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type Reconciler struct {
+type DeliveryReconiler struct {
 	Repo              repository.Repository
 	DependencyTracker dependency.DependencyTracker
 	conditionManager  conditions.ConditionManager
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
+func (r *DeliveryReconiler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
@@ -59,14 +59,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 
-	r.conditionManager = conditions.NewConditionManager(v1alpha1.DeliveryReady, delivery.Status.Conditions)
+	r.conditionManager = conditions.NewConditionManager(v1alpha1.BlueprintReady, delivery.Status.Conditions)
 
 	err = r.reconcileDelivery(ctx, delivery)
 
 	return r.completeReconciliation(ctx, delivery, err)
 }
 
-func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.ClusterDelivery) error {
+func (r *DeliveryReconiler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.ClusterDelivery) error {
 	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
@@ -99,15 +99,15 @@ func (r *Reconciler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.C
 	}
 
 	if len(resourcesNotFound) > 0 {
-		r.conditionManager.AddPositive(TemplatesNotFoundCondition(resourcesNotFound))
+		r.conditionManager.AddPositive(conditions.TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
-		r.conditionManager.AddPositive(TemplatesFoundCondition())
+		r.conditionManager.AddPositive(conditions.TemplatesFoundCondition())
 	}
 
 	return nil
 }
 
-func (r *Reconciler) validateResource(ctx context.Context, delivery *v1alpha1.ClusterDelivery, templateName, templateKind string) (bool, error) {
+func (r *DeliveryReconiler) validateResource(ctx context.Context, delivery *v1alpha1.ClusterDelivery, templateName, templateKind string) (bool, error) {
 	template, err := r.Repo.GetTemplate(ctx, templateName, templateKind)
 	if err != nil {
 		return false, err
@@ -128,7 +128,7 @@ func (r *Reconciler) validateResource(ctx context.Context, delivery *v1alpha1.Cl
 	return template != nil, nil
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
+func (r *DeliveryReconiler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var changed bool
@@ -155,7 +155,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, delivery *v1alp
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DeliveryReconiler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("delivery-repo-cache")),

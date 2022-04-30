@@ -23,21 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	WorkloadSupplyChainReady = "SupplyChainReady"
-)
-
-const (
-	ReadySupplyChainReason                               = "Ready"
-	WorkloadLabelsMissingSupplyChainReason               = "WorkloadLabelsMissing"
-	NotFoundSupplyChainReadyReason                       = "SupplyChainNotFound"
-	MultipleMatchesSupplyChainReadyReason                = "MultipleSupplyChainMatches"
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
-	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
-	ResolveTemplateOptionsErrorResourcesSubmittedReason  = "ResolveTemplateOptionsError"
-	TemplateOptionsMatchErrorResourcesSubmittedReason    = "TemplateOptionsMatchError"
-)
-
 // ValidWorkloadPaths Note: this needs to be updated anytime the spec changes
 var ValidWorkloadPaths = map[string]bool{
 	"spec.source":                true,

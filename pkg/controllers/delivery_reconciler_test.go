@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package delivery_test
+package controllers_test
 
 import (
 	"context"
@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/delivery"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 )
@@ -38,7 +38,7 @@ var _ = Describe("delivery reconciler", func() {
 	var (
 		repo              *repositoryfakes.FakeRepository
 		dependencyTracker *dependencyfakes.FakeDependencyTracker
-		reconciler        delivery.Reconciler
+		reconciler        controllers.DeliveryReconiler
 		ctx               context.Context
 		req               reconcile.Request
 		out               *Buffer
@@ -49,7 +49,7 @@ var _ = Describe("delivery reconciler", func() {
 
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
 
-		reconciler = delivery.Reconciler{
+		reconciler = controllers.DeliveryReconiler{
 			Repo:              repo,
 			DependencyTracker: dependencyTracker,
 		}

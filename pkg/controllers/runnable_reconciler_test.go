@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runnable_test
+package controllers_test
 
 import (
 	"context"
@@ -39,8 +39,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
-	"github.com/vmware-tanzu/cartographer/pkg/controller/runnable"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -53,7 +53,7 @@ var _ = Describe("Reconcile", func() {
 	var (
 		out                      *Buffer
 		ctx                      context.Context
-		reconciler               runnable.Reconciler
+		reconciler               controllers.RunnableReconciler
 		request                  controllerruntime.Request
 		repo                     *repositoryfakes.FakeRepository
 		rlzr                     *runnablefakes.FakeRealizer
@@ -103,7 +103,7 @@ var _ = Describe("Reconcile", func() {
 			return builtClient, fakeDiscoveryClient, nil
 		}
 
-		reconciler = runnable.Reconciler{
+		reconciler = controllers.RunnableReconciler{
 			Repo:                    repo,
 			Realizer:                rlzr,
 			StampedTracker:          stampedTracker,
@@ -391,7 +391,7 @@ var _ = Describe("Reconcile", func() {
 			Context("of type GetRunTemplateError", func() {
 				var err error
 				BeforeEach(func() {
-					err = realizer.GetRunTemplateError{
+					err = cerrors.RunnableGetRunTemplateError{
 						Err:         errors.New("some error"),
 						TemplateRef: &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 					}
@@ -400,7 +400,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.RunTemplateMissingCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.RunTemplateMissingCondition(err)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -413,7 +413,7 @@ var _ = Describe("Reconcile", func() {
 			Context("of type ResolveSelectorError", func() {
 				var err error
 				BeforeEach(func() {
-					err = realizer.ResolveSelectorError{
+					err = cerrors.RunnableResolveSelectorError{
 						Err: errors.New("some error"),
 						Selector: &v1alpha1.ResourceSelector{
 							Resource: v1alpha1.ResourceType{
@@ -428,7 +428,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.TemplateStampFailureCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.RunnableTemplateStampFailureCondition(err)))
 				})
 
 				It("does not return an error", func() {
@@ -448,7 +448,7 @@ var _ = Describe("Reconcile", func() {
 			Context("of type StampError", func() {
 				var err error
 				BeforeEach(func() {
-					err = realizer.StampError{
+					err = cerrors.RunnableStampError{
 						Err:         errors.New("some error"),
 						TemplateRef: &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 					}
@@ -464,7 +464,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.TemplateStampFailureCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.RunnableTemplateStampFailureCondition(err)))
 				})
 
 				It("does not return an error", func() {
@@ -484,7 +484,7 @@ var _ = Describe("Reconcile", func() {
 			Context("of type ApplyStampedObjectError", func() {
 				var err error
 				BeforeEach(func() {
-					err = realizer.ApplyStampedObjectError{
+					err = cerrors.RunnableApplyStampedObjectError{
 						Err:           errors.New("some error"),
 						StampedObject: &unstructured.Unstructured{},
 						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
@@ -494,7 +494,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.StampedObjectRejectedByAPIServerCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.StampedObjectRejectedByAPIServerCondition(err)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -505,7 +505,7 @@ var _ = Describe("Reconcile", func() {
 			})
 
 			Context("of type ApplyStampedObjectError where the user did not have proper permissions", func() {
-				var stampedObjectError realizer.ApplyStampedObjectError
+				var stampedObjectError cerrors.RunnableApplyStampedObjectError
 				BeforeEach(func() {
 					status := &metav1.Status{
 						Message: "fantastic error",
@@ -521,7 +521,7 @@ var _ = Describe("Reconcile", func() {
 					stampedObject.SetNamespace("a-namespace")
 					stampedObject.SetName("a-name")
 
-					stampedObjectError = realizer.ApplyStampedObjectError{
+					stampedObjectError = cerrors.RunnableApplyStampedObjectError{
 						Err:           kerrors.FromObject(status),
 						StampedObject: stampedObject,
 						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
@@ -532,7 +532,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.StampedObjectRejectedByAPIServerCondition(stampedObjectError)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.StampedObjectRejectedByAPIServerCondition(stampedObjectError)))
 				})
 
 				It("handles the error and logs it", func() {
@@ -547,7 +547,7 @@ var _ = Describe("Reconcile", func() {
 			Context("of type ListCreatedObjectsError", func() {
 				var err error
 				BeforeEach(func() {
-					err = realizer.ListCreatedObjectsError{
+					err = cerrors.RunnableListCreatedObjectsError{
 						Err:       errors.New("some error"),
 						Namespace: "some-ns",
 						Labels:    map[string]string{"hi": "bye"},
@@ -557,7 +557,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.FailedToListCreatedObjectsCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.FailedToListCreatedObjectsCondition(err)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
@@ -581,7 +581,7 @@ var _ = Describe("Reconcile", func() {
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
 
-					err = realizer.RetrieveOutputError{
+					err = cerrors.RunnableRetrieveOutputError{
 						Err:           errors.New("some error"),
 						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 						StampedObject: stampedObject,
@@ -591,7 +591,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.OutputPathNotSatisfiedCondition(stampedObject, err.Error())))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.OutputPathNotSatisfiedCondition(stampedObject, err.Error())))
 				})
 
 				It("does not return an error", func() {
@@ -617,7 +617,7 @@ var _ = Describe("Reconcile", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(runnable.UnknownErrorCondition(err)))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.UnknownErrorCondition(err)))
 				})
 
 				It("returns an unhandled error and requeues", func() {
