@@ -1,32 +1,60 @@
 # Meta
 [meta]: #meta
-- Name: (fill in the feature name: My Feature)
-- Start Date: (fill in today's date: YYYY-MM-DD)
-- Author(s): (Github usernames)
-- Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
+- Name: Allow developers to provide service configuration for builds
+- Start Date: 2022-05-02
+- Author(s): [squeedee](https://github.com/squeedee)
+- Status: Draft
 - RFC Pull Request: (leave blank)
-- Supersedes: (put "N/A" unless this replaces an existing RFC, then link to that RFC)
+- Supersedes: "N/A"
 
 # Summary
 [summary]: #summary
 
-One paragraph explanation of the feature.
+Just as developers can provide environment variables for build time, they need the ability to provide service bindings
+as well (dependent on how the supply chain and templates are designed)
+
+As a rule-of-thumb, build configuration should be provided on a per-supply-chain basis, yet some users have clear
+requirements for workload-level configuration.
 
 # Motivation
 [motivation]: #motivation
 
-- Why should we do this?
-- What use cases does it support?
-- What is the expected outcome?
+Some resources that might be used in a supply chain can only access secrets (especially artifact repository credentials)
+using a service binding. Quite often these need to be provided on a per-workload basis.
 
 # What it is
 [what-it-is]: #what-it-is
 
-This provides a high level overview of the feature.
+Two alternatives for providing services that bind at build time.
 
-- Define any new terminology.
-- Define the target persona: application developer, supply chain/delivery author, template author, and/or project contributor.
-- Explaining the feature largely in terms of examples.
+## Alternative: match current env design
+
+Workloads currently have environment variables for build and runtime, so we could add a serviceClaims key to `spec.build`:
+
+```yaml
+spec:
+  env:                  # Runtime ENV vars (existing)
+    - name: VAR_NAME
+      value: var_value
+  serviceClaims:        # Runtime service claims (existing)
+    - name: db
+      ref: <database service ref>
+  build:
+    env:                # Build time ENV vars (existing)
+      - name: VAR_NAME
+        value: var_value
+    serviceClaims:      # build time service claims !! NEW, proposed by this RFC !!
+        - name: artifactory
+          ref:
+            apiVersion: v1
+            kind: Secret
+            name: artifactory_maven_repo
+```
+
+## Alternative: use labels to avoid 
+
+
+
 
 # How it Works
 [how-it-works]: #how-it-works
