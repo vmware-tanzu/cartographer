@@ -103,9 +103,9 @@ resource (we omit `<resource name>`)
 **Note:** On naming, we're tring to start with the location in the object diagram (first diagram) that represents the
 change. `stamped object` is not well known to users, but we need to rectify that, or use a clearer term to describe "the
 resource on etcd", which would normally be "Resource". Unfortunately we've overloaded resource to mean the collective
-concept of a template, a configuration, it's submission to the API and it's resulting changes from external events.
+concept of a template, a configuration, its submission to the API and its resulting changes from external events.
 
-There are a lot of event's here, and more could exist, but we should review these during the RFC review process. I hope
+There are a lot of events here, and more could exist, but we should review these during the RFC review process. I hope
 we can prune the list and make it `as meaningful as is necessary, and no more`
 
 Example output:
