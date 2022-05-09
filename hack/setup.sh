@@ -450,7 +450,7 @@ setup_source_to_gitops() {
           --data-value registry.server="$REGISTRY" \
           --data-value workload_name="$test_name" \
           --data-value image_prefix="$REGISTRY/example-$test_name-" \
-          --data-value source_repo.url="https://github.com/kontinue/hello-world" \
+          --data-value source_repo.url="https://github.com/carto-labs/hello-world" \
           --data-value source_repo.branch="main" \
           --data-value git_repository="$GITOPS_REPO" \
           --data-value git_branch="$GITOPS_BRANCH" \
