@@ -24,7 +24,7 @@ to provide user's awareness of state-changing event's that are meaningful for de
 Developers and Operators need to debug issues where workloads stall, do not make it to deployment, or where other level
 changes do not propagate as they should.
 
-Cartographer concern's itself with creating **Stamped Objects** from **Templates** and passing **Artifact**
+Cartographer concerns itself with creating **Stamped Objects** from **Templates** and passing **Artifact**
 references between them. By design, the passing of references (and desired state definitions in the **owner** spec)
 is _by value_. A user can only see if a state change is transferred from source to sink, not when it happened, or how
 often, or even what the specific cause was for a resource to be updated.
