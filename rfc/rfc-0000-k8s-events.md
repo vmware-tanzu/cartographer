@@ -121,7 +121,7 @@ Normal    ResourceExternalSpecChange  35s (x4 over 22s)      workload-controller
 
 [migration]: #migration
 
-THis RFC only adds to the API, there are no breaking changes that require migration.
+This RFC only adds to the API, there are no breaking changes that require migration.
 
 # Drawbacks
 
