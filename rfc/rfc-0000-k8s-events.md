@@ -78,21 +78,21 @@ required. The cartographer controller could emit the following events:
 
 | Reason | Message Format | Description | involvedObject |
 | --- | --- | --- | --- |
-| StampedObjectExternalSpecChange | an external actor changed the spec of `<resource>.<group>/<name>` | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Owner |
-| StampedObjectExternalSpecChange | an external actor changed the spec of resource: `<resource name>` for object `<resource>.<group>` | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Blueprint |
-| StampedObjectGetError | `<resource name>` could not retrieve `<resource>.<group>/<name>` due to error: `<error message>` | Loading a resource is failing due to a client.get issue (missing is not an error) | Owner |
-| StampedObjectGetError | `<resource name>` could not retrieve `<resource>.<group>` due to error: `<error message>` | Loading a resources is failing due to a client.get issue (missing is not an error) - this could be spammy | Blueprint |
-| StampedObjectGarbageCollected | `<resource>.<group>/<name>` is no longer referenced | This owner has selected a different template, either by supply chain selection or templating, and this object is no longer needed | Owner |
-| ImmutableStampedObjectGarbageCollected | `<n> * <resource>.<group>` historical objects deleted due to garbage collection policy | This runnable's GC policy has caused `n` objects to be removed | Runnable |
-| StampedObjectInvalid | `<resource name>` could not be applied as `<resource>.<group>/<name>` due to API server error `<error message>` | This object was (probably) malformed. | Owner |
-| StampedObjectInvalid | `<resource name>` could not be applied as `<resource>.<group>` due to API server error `<error message>` | This object was (probably) malformed. This lets operators know their templates might have issues | Blueprint |
-| StampedObjectKindNotFound | `<resource name>` could not be applied because `<resource>.<group>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
-| StampedObjectKindNotFound | `<resource name>` could not be applied because `<resource>.<group>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Blueprint |
-| StampedObjectApplied | `<resource name>` was applied as `<resource>.<group>/<name>` | a stamped object needed to be created/updated | Owner |
-| StampedObjectKindChanged | `<resource name>` was `<old group>.<old kind>`, now `<new group>.<new kind>` | YTT selection for a template GVK changed, or templated values in GVK changed | Owner |
-| ResourceOutputChanged | `<resource name>` found a new output in `<resource>.<group>/<name>` | a resource produced a new output | Owner |
-| ResourceHealthyStatusChanged | `<resource name>` found a new status in `<resource>.<group>/<name>` | a resource produced a new healthy status | Owner |
-| SupplyChainChanged | supply chain changed from `<old supply chain name>` to `<new supply chain name>` | Workload selected for a new or different supply chain. Note: `none` is a possible name. | Owner |
+| StampedObjectExternalSpecChange | an external actor changed the spec of "\<resource>.\<group>/\<name>" | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Owner |
+| StampedObjectExternalSpecChange | an external actor changed the spec of resource: "\<resource name>" for object "\<resource>.\<group>" | Our cache of the spec, and the spec we just generated match, but the API server has a different one. A lot of these is evidence of thrashing with external resources | Blueprint |
+| StampedObjectGetError | "\<resource name>" could not retrieve "\<resource>.\<group>/\<name>" due to error: "\<error message>" | Loading a resource is failing due to a client.get issue (missing is not an error) | Owner |
+| StampedObjectGetError | "\<resource name>" could not retrieve "\<resource>.\<group>" due to error: "\<error message>" | Loading a resources is failing due to a client.get issue (missing is not an error) - this could be spammy | Blueprint |
+| StampedObjectGarbageCollected | "\<resource>.\<group>/\<name>" is no longer referenced | This owner has selected a different template, either by supply chain selection or templating, and this object is no longer needed | Owner |
+| ImmutableStampedObjectGarbageCollected | "\<n> * \<resource>.\<group>" historical objects deleted due to garbage collection policy | This runnable's GC policy has caused "n" objects to be removed | Runnable |
+| StampedObjectInvalid | "\<resource name>" could not be applied as "\<resource>.\<group>/\<name>" due to API server error "\<error message>" | This object was (probably) malformed. | Owner |
+| StampedObjectInvalid | "\<resource name>" could not be applied as "\<resource>.\<group>" due to API server error "\<error message>" | This object was (probably) malformed. This lets operators know their templates might have issues | Blueprint |
+| StampedObjectKindNotFound | "\<resource name>" could not be applied because "\<resource>.\<group>" does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
+| StampedObjectKindNotFound | "\<resource name>" could not be applied because "\<resource>.\<group>" does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Blueprint |
+| StampedObjectApplied | "\<resource name>" was applied as "\<resource>.\<group>/\<name>" | a stamped object needed to be created/updated | Owner |
+| StampedObjectKindChanged | "\<resource name>" was "\<old group>.\<old kind>", now "\<new group>.\<new kind>" | YTT selection for a template GVK changed, or templated values in GVK changed | Owner |
+| ResourceOutputChanged | "\<resource name>" found a new output in "\<resource>.\<group>/\<name>" | a resource produced a new output | Owner |
+| ResourceHealthyStatusChanged | "\<resource name>" found a new status in "\<resource>.\<group>/\<name>" | a resource produced a new healthy status | Owner |
+| SupplyChainChanged | supply chain changed from "\<old supply chain name>" to "\<new supply chain name>" | Workload selected for a new or different supply chain. Note: "none" is a possible name. | Owner |
 | WorkloadSelected | supply chain matched a workload | A workload was selected for (really, this is when the supplyChainRef changes). This makes the count a useful metric | Blueprint |
 
 **Note:** `<resource name>` represents the blueprint's `.spec.resource[].name` and *not* the stamped object's `.metadata.name`
