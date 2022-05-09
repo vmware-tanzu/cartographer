@@ -49,7 +49,7 @@ Cartographer presents useful information to developers in the **owner** (workloa
 derived from stamped objects and contributing resources such as **templates** and **blueprints**:
 
 This RFC addresses the absence of awareness that "something is happening", especially after a developer has committed
-new code. With event's we can provide information that show's activity and causality not present in the current snapshot
+new code. With events we can provide information that shows activity and causality not present in the current snapshot
 of state.
 
 We add events to the **Owners** (Workload/Deliverable) to enable debug and reasoning about Cartographer's behavior.
