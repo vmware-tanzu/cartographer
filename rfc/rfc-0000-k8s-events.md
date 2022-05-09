@@ -86,7 +86,7 @@ required. The cartographer controller could emit the following events:
 | ImmutableStampedObjectGarbageCollected | `<n> * <resource>.<group>` historical objects deleted due to garbage collection policy | This runnable's GC policy has caused `n` objects to be removed | Runnable |
 | StampedObjectInvalid | `<resource name>` could not be applied as `<resource>.<group>/<name>` due to API server error `<error message>` | This object was (probably) malformed. | Owner |
 | StampedObjectInvalid | `<resource name>` could not be applied as `<resource>.<group>` due to API server error `<error message>` | This object was (probably) malformed. This lets operators know their templates might have issues | Blueprint |
-| StampedObjectKindNotFound | `<resource name>` could not be applied because `<resource>.<group>/<name>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
+| StampedObjectKindNotFound | `<resource name>` could not be applied because `<resource>.<group>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Owner |
 | StampedObjectKindNotFound | `<resource name>` could not be applied because `<resource>.<group>` does not exist on this cluster | Did someone forget to install the CRDs? Otherwise it's a malformed template | Blueprint |
 | StampedObjectApplied | `<resource name>` was applied as `<resource>.<group>/<name>` | a stamped object needed to be created/updated | Owner |
 | StampedObjectKindChanged | `<resource name>` was `<old group>.<old kind>`, now `<new group>.<new kind>` | YTT selection for a template GVK changed, or templated values in GVK changed | Owner |
