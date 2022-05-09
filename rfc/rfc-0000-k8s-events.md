@@ -67,7 +67,7 @@ author's
 
 [how-it-works]: #how-it-works
 
-To avoid over-communicating, and making the view of event's overwhelming and dilute for user's we will start with two
+To avoid over-communicating, and making the view of events overwhelming and dilute for users we will start with two
 key guiding principles:
 
 1. > Let it be something that isn't satisfactorily presented in other user views (eg: `k get workload`).
