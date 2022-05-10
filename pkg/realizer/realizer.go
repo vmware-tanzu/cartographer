@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable
+package realizer
 
-//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
 	"context"
@@ -31,10 +31,50 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
+func MakeSupplychainOwnerResources(supplyChain *v1alpha1.ClusterSupplyChain) []OwnerResource {
+	var resources []OwnerResource
+	for _, resource := range supplyChain.Spec.Resources {
+		resources = append(resources, OwnerResource{
+			Name: resource.Name,
+			TemplateRef: v1alpha1.TemplateReference{
+				Kind: resource.TemplateRef.Kind,
+				Name: resource.TemplateRef.Name,
+			},
+			TemplateOptions: resource.TemplateRef.Options,
+			Params:          resource.Params,
+			Sources:         resource.Sources,
+			Images:          resource.Images,
+			Configs:         resource.Configs,
+		})
+	}
+	return resources
+}
+
+func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResource {
+	var resources []OwnerResource
+	for _, resource := range delivery.Spec.Resources {
+		resources = append(resources, OwnerResource{
+			Name: resource.Name,
+			TemplateRef: v1alpha1.TemplateReference{
+				Kind: resource.TemplateRef.Kind,
+				Name: resource.TemplateRef.Name,
+			},
+			TemplateOptions: resource.TemplateRef.Options,
+			Params:          resource.Params,
+			Sources:         resource.Sources,
+			Configs:         resource.Configs,
+			Deployment:      resource.Deployment,
+		})
+	}
+	return resources
+}
+
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, resourceStatuses statuses.ResourceStatuses) error
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprintName string, ownerResources []OwnerResource, resourceStatuses statuses.ResourceStatuses) error
 }
+
+type ResourceLabeler func(resource OwnerResource) templates.Labels
 
 type realizer struct{}
 
@@ -42,18 +82,17 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, resourceStatuses statuses.ResourceStatuses) error {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprintName string, ownerResources []OwnerResource, resourceStatuses statuses.ResourceStatuses) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
 	var firstError error
 
-	for i := range delivery.Spec.Resources {
-		resource := delivery.Spec.Resources[i]
+	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, delivery.Name, outs)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
@@ -86,7 +125,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
 	if previousRealizedResource == nil {
 		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
@@ -95,11 +134,17 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 	for _, source := range resource.Sources {
 		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
 	}
-	for _, config := range resource.Configs {
-		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
+
+	for _, image := range resource.Images {
+		inputs = append(inputs, v1alpha1.Input{Name: image.Resource})
 	}
+
 	if resource.Deployment != nil {
 		inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
+	}
+
+	for _, config := range resource.Configs {
+		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
 	}
 
 	var templateRef *corev1.ObjectReference

@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -37,9 +39,9 @@ import (
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
@@ -117,7 +119,8 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
+
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -126,7 +129,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	resourceStatuses := statuses.NewResourceStatuses(workload.Status.Resources, conditions.AddConditionForResourceSubmittedWorkload)
-	err = r.Realizer.Realize(ctx, resourceRealizer, supplyChain, resourceStatuses)
+	err = r.Realizer.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 
 	if err != nil {
 		conditions.AddConditionForResourceSubmittedWorkload(&r.conditionManager, true, err)
@@ -210,6 +213,33 @@ func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workloa
 func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
 	supplyChainReadyCondition := getSupplyChainReadyCondition(supplyChain)
 	return supplyChainReadyCondition.Status == "True"
+}
+
+func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
+	return func(resource realizer.OwnerResource) templates.Labels {
+		switch blueprint.(type) {
+		case *v1alpha1.ClusterSupplyChain:
+			return templates.Labels{
+				"carto.run/workload-name":         owner.GetName(),
+				"carto.run/workload-namespace":    owner.GetNamespace(),
+				"carto.run/supply-chain-name":     blueprint.GetName(),
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}
+		case *v1alpha1.ClusterDelivery:
+			return templates.Labels{
+				"carto.run/deliverable-name":      owner.GetName(),
+				"carto.run/deliverable-namespace": owner.GetNamespace(),
+				"carto.run/delivery-name":         blueprint.GetName(),
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}
+		default:
+			panic("Unexpected code path")
+		}
+	}
 }
 
 func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) metav1.Condition {

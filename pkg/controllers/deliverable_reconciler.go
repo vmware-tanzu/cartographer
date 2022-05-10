@@ -37,10 +37,11 @@ import (
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -115,14 +116,15 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
+
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	resourceStatuses := statuses.NewResourceStatuses(deliverable.Status.Resources, conditions.AddConditionForResourceSubmittedDeliverable)
-	err = r.Realizer.Realize(ctx, resourceRealizer, delivery, resourceStatuses)
+	err = r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 
 	if err != nil {
 		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, err)
@@ -206,6 +208,19 @@ func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deli
 func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	return readyCondition.Status == "True"
+}
+
+func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
+	return func(resource realizer.OwnerResource) templates.Labels {
+		return templates.Labels{
+			"carto.run/deliverable-name":      owner.GetName(),
+			"carto.run/deliverable-namespace": owner.GetNamespace(),
+			"carto.run/delivery-name":         blueprint.GetName(),
+			"carto.run/resource-name":         resource.Name,
+			"carto.run/template-kind":         resource.TemplateRef.Kind,
+			"carto.run/cluster-template-name": resource.TemplateRef.Name,
+		}
+	}
 }
 
 func (r *DeliverableReconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.ResourceStatus, serviceAccountName, serviceAccountNS string) {

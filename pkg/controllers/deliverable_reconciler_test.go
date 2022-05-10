@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -41,8 +42,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -60,17 +61,18 @@ var _ = Describe("DeliverableReconciler", func() {
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
 		conditionManager  *conditionsfakes.FakeConditionManager
-		rlzr              *deliverablefakes.FakeRealizer
+		rlzr              *realizerfakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
 		stampedTracker    *stampedfakes.FakeStampedTracker
 		dependencyTracker *dependencyfakes.FakeDependencyTracker
 
-		builtResourceRealizer        *deliverablefakes.FakeResourceRealizer
-		resourceRealizerSecret       *corev1.Secret
-		serviceAccountSecret         *corev1.Secret
-		serviceAccountName           string
-		resourceRealizerBuilderError error
+		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
+		labelerForBuiltResourceRealizer realizer.ResourceLabeler
+		resourceRealizerSecret          *corev1.Secret
+		serviceAccountSecret            *corev1.Secret
+		serviceAccountName              string
+		resourceRealizerBuilderError    error
 	)
 
 	BeforeEach(func() {
@@ -84,7 +86,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &deliverablefakes.FakeRealizer{}
+		rlzr = &realizerfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -104,12 +106,13 @@ var _ = Describe("DeliverableReconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.BlueprintParam) (realizer.ResourceRealizer, error) {
+
+		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
 			resourceRealizerSecret = secret
-			builtResourceRealizer = &deliverablefakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
 
@@ -268,7 +271,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					},
 				}, nil)
 
-			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 				statusesVal := reflect.ValueOf(statuses)
 				existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -277,7 +280,30 @@ var _ = Describe("DeliverableReconciler", func() {
 			}
 		})
 
-		It("updates the status of the deliverable with the realizedResources", func() {
+		It("labels owner resources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+			Expect(labelerForBuiltResourceRealizer).To(Not(BeNil()))
+
+			resource := realizer.OwnerResource{
+				TemplateRef: v1alpha1.TemplateReference{
+					Kind: "be-kind",
+					Name: "no-names",
+				},
+				Name: "fine-i-have-a-name",
+			}
+
+			labels := labelerForBuiltResourceRealizer(resource)
+			Expect(labels).To(Equal(templates.Labels{
+				"carto.run/deliverable-name":      "my-deliverable",
+				"carto.run/deliverable-namespace": "my-namespace",
+				"carto.run/delivery-name":         "some-delivery",
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}))
+		})
+
+		It("updates the status of the owner with the realizedResources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.StatusUpdateCallCount()).To(Equal(1))
@@ -317,7 +343,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _, _ := rlzr.RealizeArgsForCall(0)
+			_, resourceRealizer, _, _, _ := rlzr.RealizeArgsForCall(0)
 			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
@@ -585,7 +611,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						}, nil,
 					)
 
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -644,7 +670,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						StampedObject: &unstructured.Unstructured{},
 						ResourceName:  "some-name",
 					}
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -699,7 +725,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						BlueprintType: cerrors.Delivery,
 					}
 
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -759,7 +785,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						StampedObject: stampedObject,
 					}
 
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -1076,7 +1102,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				var realizerError error
 				BeforeEach(func() {
 					realizerError = errors.New("some error")
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -1341,7 +1367,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					},
 				}, nil,
 			)
-			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 				statusesVal := reflect.ValueOf(statuses)
 				existingVal := reflect.ValueOf(resourceStatuses)
 

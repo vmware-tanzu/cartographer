@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload
+package realizer
 
 import (
 	"context"
 	"fmt"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -31,49 +33,64 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
+type OwnerResource struct {
+	TemplateRef     v1alpha1.TemplateReference
+	TemplateOptions []v1alpha1.TemplateOption
+	Params          []v1alpha1.BlueprintParam
+	Name            string
+	Sources         []v1alpha1.ResourceReference
+	Images          []v1alpha1.ResourceReference
+	Configs         []v1alpha1.ResourceReference
+	Deployment      *v1alpha1.DeploymentReference
+}
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
-	workload          *v1alpha1.Workload
-	systemRepo        repository.Repository
-	workloadRepo      repository.Repository
-	supplyChainParams []v1alpha1.BlueprintParam
+	owner           client.Object
+	ownerParams     []v1alpha1.OwnerParam
+	systemRepo      repository.Repository
+	ownerRepo       repository.Repository
+	blueprintParams []v1alpha1.BlueprintParam
+	resourceLabeler ResourceLabeler
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
-		workloadClient, _, err := clientBuilder(secret, false)
+	return func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
+		ownerClient, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
 
-		workloadRepo := repositoryBuilder(workloadClient, cache)
+		ownerRepo := repositoryBuilder(ownerClient, cache)
 
 		return &resourceRealizer{
-			workload:          workload,
-			systemRepo:        systemRepo,
-			workloadRepo:      workloadRepo,
-			supplyChainParams: supplyChainParams,
+			owner:           owner,
+			ownerParams:     ownerParams,
+			systemRepo:      systemRepo,
+			ownerRepo:       ownerRepo,
+			blueprintParams: supplyChainParams,
+			resourceLabeler: resourceLabeler,
 		}, nil
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
 	var templateName string
 	var err error
-	if len(resource.TemplateRef.Options) > 0 {
-		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
+	if len(resource.TemplateOptions) > 0 {
+		templateName, err = r.findMatchingTemplateName(resource, blueprintName)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -90,7 +107,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 			Err:           err,
 			ResourceName:  resource.Name,
 			TemplateName:  templateName,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
@@ -101,59 +118,55 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 	}
 
-	labels := map[string]string{
-		"carto.run/workload-name":         r.workload.Name,
-		"carto.run/workload-namespace":    r.workload.Namespace,
-		"carto.run/supply-chain-name":     supplyChainName,
-		"carto.run/resource-name":         resource.Name,
-		"carto.run/template-kind":         template.GetKind(),
-		"carto.run/cluster-template-name": template.GetName(),
-	}
+	labels := r.resourceLabeler(resource)
 
 	inputs := outputs.GenerateInputs(resource)
-	workloadTemplatingContext := map[string]interface{}{
-		"workload": r.workload,
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
-		"sources":  inputs.Sources,
-		"images":   inputs.Images,
-		"configs":  inputs.Configs,
+
+	ownerTemplatingContext := map[string]interface{}{
+		"workload":    r.owner,
+		"deliverable": r.owner,
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.blueprintParams, resource.Params, r.ownerParams),
+		"sources":     inputs.Sources,
+		"images":      inputs.Images,
+		"deployment":  inputs.Deployment,
+		"configs":     inputs.Configs,
 	}
 
-	// Todo: this belongs in Stamp.
 	if inputs.OnlyConfig() != nil {
-		workloadTemplatingContext["config"] = inputs.OnlyConfig()
+		ownerTemplatingContext["config"] = inputs.OnlyConfig()
 	}
 	if inputs.OnlyImage() != nil {
-		workloadTemplatingContext["image"] = inputs.OnlyImage()
+		ownerTemplatingContext["image"] = inputs.OnlyImage()
 	}
 	if inputs.OnlySource() != nil {
-		workloadTemplatingContext["source"] = inputs.OnlySource()
+		ownerTemplatingContext["source"] = inputs.OnlySource()
 	}
 
-	stampContext := templates.StamperBuilder(r.workload, workloadTemplatingContext, labels)
+	stampContext := templates.StamperBuilder(r.owner, ownerTemplatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
 		return template, nil, nil, errors.StampError{
 			Err:           err,
 			ResourceName:  resource.Name,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
 
-	err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+	err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return template, nil, nil, errors.ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
 			ResourceName:  resource.Name,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
 
+	template.SetInputs(inputs)
 	template.SetStampedObject(stampedObject)
 
 	output, err := template.GetOutput()
@@ -163,7 +176,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 			Err:           err,
 			ResourceName:  resource.Name,
 			StampedObject: stampedObject,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
@@ -171,14 +184,14 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	return template, stampedObject, output, nil
 }
 
-func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
-	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.workload, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
+func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supplyChainName string) (string, error) {
+	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateOptions))
 
 	if err != nil {
 		return "", errors.ResolveTemplateOptionError{
 			Err:           err,
 			ResourceName:  resource.Name,
-			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			OptionName:    resource.TemplateOptions[err.SelectorIndex()].Name,
 			BlueprintName: supplyChainName,
 			BlueprintType: errors.SupplyChain,
 		}
@@ -187,7 +200,7 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 	if len(bestMatchingTemplateOptionsIndices) != 1 {
 		var optionNames []string
 		for _, optionIndex := range bestMatchingTemplateOptionsIndices {
-			optionNames = append(optionNames, resource.TemplateRef.Options[optionIndex].Name)
+			optionNames = append(optionNames, resource.TemplateOptions[optionIndex].Name)
 		}
 
 		return "", errors.TemplateOptionsMatchError{
@@ -198,5 +211,5 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 		}
 	}
 
-	return resource.TemplateRef.Options[bestMatchingTemplateOptionsIndices[0]].Name, nil
+	return resource.TemplateOptions[bestMatchingTemplateOptionsIndices[0]].Name, nil
 }

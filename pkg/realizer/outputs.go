@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload
+package realizer
 
 import (
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -54,11 +53,12 @@ func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 	return output.Config
 }
 
-func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templates.Inputs {
+func (o Outputs) GenerateInputs(resource OwnerResource) *templates.Inputs {
 	inputs := &templates.Inputs{
-		Sources: map[string]templates.SourceInput{},
-		Images:  map[string]templates.ImageInput{},
-		Configs: map[string]templates.ConfigInput{},
+		Sources:    map[string]templates.SourceInput{},
+		Images:     map[string]templates.ImageInput{},
+		Configs:    map[string]templates.ConfigInput{},
+		Deployment: &templates.SourceInput{},
 	}
 
 	for _, referenceSource := range resource.Sources {
@@ -88,6 +88,16 @@ func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templat
 			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
 				Config: config,
 				Name:   referenceConfig.Name,
+			}
+		}
+	}
+
+	if resource.Deployment != nil {
+		deployment := o.getResourceSource(resource.Deployment.Resource)
+		if deployment != nil {
+			inputs.Deployment = &templates.SourceInput{
+				URL:      deployment.URL,
+				Revision: deployment.Revision,
 			}
 		}
 	}

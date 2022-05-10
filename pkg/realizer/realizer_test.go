@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deliverable_test
+package realizer_test
 
 import (
 	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,72 +31,67 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/conditions"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Realize", func() {
 	var (
-		resourceRealizer *deliverablefakes.FakeResourceRealizer
+		resourceRealizer *realizerfakes.FakeResourceRealizer
 		rlzr             realizer.Realizer
 	)
 	BeforeEach(func() {
 		rlzr = realizer.NewRealizer()
-		resourceRealizer = &deliverablefakes.FakeResourceRealizer{}
+		resourceRealizer = &realizerfakes.FakeResourceRealizer{}
 	})
 
 	Context("there are no previous resources", func() {
 		var (
-			delivery              *v1alpha1.ClusterDelivery
-			resource1             v1alpha1.DeliveryResource
-			resource2             v1alpha1.DeliveryResource
-			template1             *v1alpha1.ClusterSourceTemplate
+			template1             *v1alpha1.ClusterImageTemplate
 			template2             *v1alpha1.ClusterTemplate
 			executedResourceOrder []string
+			supplyChain           *v1alpha1.ClusterSupplyChain
+			resource1             v1alpha1.SupplyChainResource
+			resource2             v1alpha1.SupplyChainResource
 		)
 		BeforeEach(func() {
-			resource1 = v1alpha1.DeliveryResource{
+			resource1 = v1alpha1.SupplyChainResource{
 				Name: "resource1",
 			}
-			resource2 = v1alpha1.DeliveryResource{
+			resource2 = v1alpha1.SupplyChainResource{
 				Name: "resource2",
-				Configs: []v1alpha1.ResourceReference{
+				Images: []v1alpha1.ResourceReference{
 					{
-						Name:     "my-config",
+						Name:     "my-image",
 						Resource: "resource1",
 					},
 				},
 			}
-			template1 = &v1alpha1.ClusterSourceTemplate{
+			template1 = &v1alpha1.ClusterImageTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-source-template",
+					Name: "my-image-template",
 				},
 			}
 			template2 = &v1alpha1.ClusterTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-config-template",
+					Name: "my-cluster-template",
 				},
 			}
-			delivery = &v1alpha1.ClusterDelivery{
-				ObjectMeta: metav1.ObjectMeta{Name: "greatest-delivery"},
-				Spec: v1alpha1.DeliverySpec{
-					Resources: []v1alpha1.DeliveryResource{resource1, resource2},
+			supplyChain = &v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
+				Spec: v1alpha1.SupplyChainSpec{
+					Resources: []v1alpha1.SupplyChainResource{resource1, resource2},
 				},
 			}
 
-			outputFromFirstResource := &templates.Output{Source: &templates.Source{
-				URL:      "whatever",
-				Revision: "whatever-rev",
-			}}
+			outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-			resourceRealizer.DoCalls(func(ctx context.Context, resource *v1alpha1.DeliveryResource, deliveryName string, outputs realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 				executedResourceOrder = append(executedResourceOrder, resource.Name)
-				Expect(deliveryName).To(Equal("greatest-delivery"))
+				Expect(blueprintName).To(Equal("greatest-supply-chain"))
 				if resource.Name == "resource1" {
 					Expect(outputs).To(Equal(realizer.NewOutputs()))
 					template, err := templates.NewModelFromAPI(template1)
@@ -109,73 +106,66 @@ var _ = Describe("Realize", func() {
 					expectedSecondResourceOutputs.AddOutput("resource1", outputFromFirstResource)
 					Expect(outputs).To(Equal(expectedSecondResourceOutputs))
 				}
-
 				template, err := templates.NewModelFromAPI(template2)
 				Expect(err).NotTo(HaveOccurred())
 				stampedObj := &unstructured.Unstructured{}
 				stampedObj.SetName("obj2")
 				return template, stampedObj, &templates.Output{}, nil
 			})
+
 		})
 
-		It("realizes each resource in delivery order, accumulating output for each subsequent resource", func() {
-			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedDeliverable)
-			err := rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
-			Expect(err).To(Succeed())
+		It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+			Expect(err).ToNot(HaveOccurred())
 
+			currentResourceStatuses := resourceStatuses.GetCurrent()
 			Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
 
-			currentStatuses := resourceStatuses.GetCurrent()
-			Expect(currentStatuses).To(HaveLen(2))
+			Expect(currentResourceStatuses).To(HaveLen(2))
 
-			Expect(currentStatuses[0].Name).To(Equal(resource1.Name))
-			Expect(currentStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
-			Expect(currentStatuses[0].StampedRef.Name).To(Equal("obj1"))
-			Expect(currentStatuses[0].Inputs).To(BeNil())
-			Expect(len(currentStatuses[0].Outputs)).To(Equal(2))
-			Expect(currentStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
+			Expect(currentResourceStatuses[0].Name).To(Equal(resource1.Name))
+			Expect(currentResourceStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
+			Expect(currentResourceStatuses[0].StampedRef.Name).To(Equal("obj1"))
+			Expect(currentResourceStatuses[0].Inputs).To(BeNil())
+			Expect(len(currentResourceStatuses[0].Outputs)).To(Equal(1))
+			Expect(currentResourceStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
-					"Name":    Equal("url"),
+					"Name":    Equal("image"),
 					"Preview": Equal("whatever\n"),
-					"Digest":  Equal("sha256:cd293be6cea034bd45a0352775a219ef5dc7825ce55d1f7dae9762d80ce64411"),
+					"Digest":  HavePrefix("sha256"),
 				},
 			))
-			Expect(currentStatuses[0].Outputs[1]).To(MatchFields(IgnoreExtras,
-				Fields{
-					"Name":    Equal("revision"),
-					"Preview": Equal("whatever-rev\n"),
-					"Digest":  Equal("sha256:2c743bc345f5599513bde37c18a4b761a0ec1f2c8de4201b745caa46d24784ec"),
-				},
-			))
-			Expect(time.Since(currentStatuses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
-			Expect(len(currentStatuses[0].Conditions)).To(Equal(2))
-			Expect(currentStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
+			Expect(time.Since(currentResourceStatuses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
+			Expect(currentResourceStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
-			Expect(currentStatuses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
+			Expect(currentResourceStatuses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("Ready"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
 
-			Expect(currentStatuses[1].Name).To(Equal(resource2.Name))
-			Expect(currentStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
-			Expect(currentStatuses[1].StampedRef.Name).To(Equal("obj2"))
-			Expect(len(currentStatuses[1].Inputs)).To(Equal(1))
-			Expect(currentStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
-			Expect(currentStatuses[1].Outputs).To(BeNil())
-			Expect(len(currentStatuses[1].Conditions)).To(Equal(2))
-			Expect(currentStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
+			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
+			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+			Expect(currentResourceStatuses[1].StampedRef.Name).To(Equal("obj2"))
+			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
+			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
+			Expect(currentResourceStatuses[1].Outputs).To(BeNil())
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
+			Expect(currentResourceStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
-			Expect(currentStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
+			Expect(currentResourceStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("Ready"),
 					"Status": Equal(metav1.ConditionTrue),
@@ -189,17 +179,17 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 			resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
-			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedDeliverable)
-			err = rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			err = rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 			Expect(err).To(MatchError("realizing is hard"))
 
-			currentStatuses := resourceStatuses.GetCurrent()
-			Expect(currentStatuses).To(HaveLen(2))
+			currentResourceStatuses := resourceStatuses.GetCurrent()
+			Expect(currentResourceStatuses).To(HaveLen(2))
 
-			Expect(currentStatuses[0].Name).To(Equal("resource1"))
-			Expect(currentStatuses[0].TemplateRef).To(BeNil())
-			Expect(currentStatuses[0].StampedRef).To(BeNil())
-			Expect(currentStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+			Expect(currentResourceStatuses[0].Name).To(Equal("resource1"))
+			Expect(currentResourceStatuses[0].TemplateRef).To(BeNil())
+			Expect(currentResourceStatuses[0].StampedRef).To(BeNil())
+			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
 		})
 	})
 
@@ -211,7 +201,7 @@ var _ = Describe("Realize", func() {
 			obj               *unstructured.Unstructured
 			previousResources []v1alpha1.ResourceStatus
 			previousTime      metav1.Time
-			delivery          *v1alpha1.ClusterDelivery
+			supplyChain       *v1alpha1.ClusterSupplyChain
 		)
 		BeforeEach(func() {
 			previousTime = metav1.NewTime(time.Now())
@@ -268,8 +258,8 @@ var _ = Describe("Realize", func() {
 						},
 						Outputs: []v1alpha1.Output{
 							{
-								Name:               "config",
-								Preview:            "whateve\nr",
+								Name:               "image",
+								Preview:            "whatever\n",
 								Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("whatever\n"))),
 								LastTransitionTime: previousTime,
 							},
@@ -302,10 +292,10 @@ var _ = Describe("Realize", func() {
 				},
 			}
 
-			resource1 := v1alpha1.DeliveryResource{
+			resource1 := v1alpha1.SupplyChainResource{
 				Name: "resource1",
 			}
-			resource2 := v1alpha1.DeliveryResource{
+			resource2 := v1alpha1.SupplyChainResource{
 				Name: "resource2",
 				Sources: []v1alpha1.ResourceReference{
 					{
@@ -314,14 +304,14 @@ var _ = Describe("Realize", func() {
 					},
 				},
 			}
-			resource3 := v1alpha1.DeliveryResource{
+			resource3 := v1alpha1.SupplyChainResource{
 				Name: "resource3",
 			}
 
-			delivery = &v1alpha1.ClusterDelivery{
+			supplyChain = &v1alpha1.ClusterSupplyChain{
 				ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
-				Spec: v1alpha1.DeliverySpec{
-					Resources: []v1alpha1.DeliveryResource{resource1, resource2, resource3},
+				Spec: v1alpha1.SupplyChainSpec{
+					Resources: []v1alpha1.SupplyChainResource{resource1, resource2, resource3},
 				},
 			}
 
@@ -336,10 +326,10 @@ var _ = Describe("Realize", func() {
 			templateModel1, err = templates.NewModelFromAPI(template1)
 			Expect(err).NotTo(HaveOccurred())
 
-			template2 := &v1alpha1.ClusterConfigTemplate{
+			template2 := &v1alpha1.ClusterImageTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-config-template",
+					Name: "my-image-template",
 				},
 			}
 			templateModel2, err = templates.NewModelFromAPI(template2)
@@ -348,7 +338,7 @@ var _ = Describe("Realize", func() {
 			template3 := &v1alpha1.ClusterConfigTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-config-2-template",
+					Name: "my-config-template",
 				},
 			}
 			templateModel3, err = templates.NewModelFromAPI(template3)
@@ -369,7 +359,7 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(0, templateModel1, &unstructured.Unstructured{}, newOutput, nil)
 
 			oldOutput := &templates.Output{
-				Config: "whatever",
+				Image: "whatever",
 			}
 			resourceRealizer.DoReturnsOnCall(1, templateModel2, &unstructured.Unstructured{}, oldOutput, nil)
 
@@ -378,49 +368,34 @@ var _ = Describe("Realize", func() {
 			}
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, obj, oldOutput2, nil)
 
-			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedDeliverable)
-			err := rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
+			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
+			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
-			currentStatuses := resourceStatuses.GetCurrent()
-			var resource1Status v1alpha1.ResourceStatus
-			var resource2Status v1alpha1.ResourceStatus
-			var resource3Status v1alpha1.ResourceStatus
-
-			for i := range currentStatuses {
-				switch currentStatuses[i].Name {
-				case "resource1":
-					resource1Status = currentStatuses[i]
-				case "resource2":
-					resource2Status = currentStatuses[i]
-				case "resource3":
-					resource3Status = currentStatuses[i]
-				}
-			}
-
-			Expect(len(resource1Status.Outputs)).To(Equal(2))
-			Expect(resource1Status.Outputs[0]).To(MatchFields(IgnoreExtras,
+			currentResourceStatuses := resourceStatuses.GetCurrent()
+			Expect(len(currentResourceStatuses[0].Outputs)).To(Equal(2))
+			Expect(currentResourceStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("url"),
 					"Preview": Equal("hi\n"),
 					"Digest":  HavePrefix("sha256"),
 				},
 			))
-			Expect(resource1Status.Outputs[1]).To(MatchFields(IgnoreExtras,
+			Expect(currentResourceStatuses[0].Outputs[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("revision"),
 					"Preview": Equal("bye\n"),
 					"Digest":  HavePrefix("sha256"),
 				},
 			))
-			Expect(resource1Status.Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))
-			Expect(resource1Status.Outputs[1].LastTransitionTime).ToNot(Equal(previousTime))
+			Expect(currentResourceStatuses[0].Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))
+			Expect(currentResourceStatuses[0].Outputs[1].LastTransitionTime).ToNot(Equal(previousTime))
 
-			Expect(len(resource2Status.Outputs)).To(Equal(1))
-			Expect(resource2Status.Outputs[0].LastTransitionTime).To(Equal(previousTime))
+			Expect(len(currentResourceStatuses[1].Outputs)).To(Equal(1))
+			Expect(currentResourceStatuses[1].Outputs[0].LastTransitionTime).To(Equal(previousTime))
 
-			Expect(len(resource3Status.Outputs)).To(Equal(1))
-			Expect(resource3Status.Outputs[0].LastTransitionTime).To(Equal(previousTime))
+			Expect(len(currentResourceStatuses[2].Outputs)).To(Equal(1))
+			Expect(currentResourceStatuses[2].Outputs[0].LastTransitionTime).To(Equal(previousTime))
 		})
 
 		Context("there is an error realizing resource 1", func() {
@@ -435,67 +410,55 @@ var _ = Describe("Realize", func() {
 			})
 
 			It("the status uses the previous resource for resource 1 and resource 2", func() {
-				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedDeliverable)
-				err := rlzr.Realize(context.TODO(), resourceRealizer, delivery, resourceStatuses)
+				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
+				err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 				Expect(err).To(MatchError("im in a bad state"))
 
-				currentStatuses := resourceStatuses.GetCurrent()
-				Expect(currentStatuses).To(HaveLen(3))
+				currentResourceStatuses := resourceStatuses.GetCurrent()
+				Expect(currentResourceStatuses).To(HaveLen(3))
 
-				var resource1Status v1alpha1.ResourceStatus
-				var resource2Status v1alpha1.ResourceStatus
-				var resource3Status v1alpha1.ResourceStatus
-
-				for i := range currentStatuses {
-					switch currentStatuses[i].Name {
-					case "resource1":
-						resource1Status = currentStatuses[i]
-					case "resource2":
-						resource2Status = currentStatuses[i]
-					case "resource3":
-						resource3Status = currentStatuses[i]
-					}
-				}
-
-				Expect(resource1Status.Name).To(Equal(previousResources[0].Name))
-				Expect(resource1Status.StampedRef).To(Equal(previousResources[0].StampedRef))
-				Expect(resource1Status.TemplateRef).To(Equal(previousResources[0].TemplateRef))
-				Expect(resource1Status.Inputs).To(Equal(previousResources[0].Inputs))
-				Expect(resource1Status.Outputs).To(Equal(previousResources[0].Outputs))
-				Expect(len(resource1Status.Conditions)).To(Equal(2))
-				Expect(resource1Status.Conditions[0]).To(MatchFields(IgnoreExtras,
+				Expect(currentResourceStatuses[0].Name).To(Equal(previousResources[0].Name))
+				Expect(currentResourceStatuses[0].StampedRef).To(Equal(previousResources[0].StampedRef))
+				Expect(currentResourceStatuses[0].TemplateRef).To(Equal(previousResources[0].TemplateRef))
+				Expect(currentResourceStatuses[0].Inputs).To(Equal(previousResources[0].Inputs))
+				Expect(currentResourceStatuses[0].Outputs).To(Equal(previousResources[0].Outputs))
+				Expect(currentResourceStatuses[0].Conditions).ToNot(Equal(previousResources[0].Conditions))
+				Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
+				Expect(currentResourceStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("ResourceSubmitted"),
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
-				Expect(resource1Status.Conditions[1]).To(MatchFields(IgnoreExtras,
+				Expect(currentResourceStatuses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("Ready"),
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
 
-				Expect(resource2Status.Name).To(Equal(previousResources[1].Name))
-				Expect(resource2Status.StampedRef).To(Equal(previousResources[1].StampedRef))
-				Expect(resource2Status.TemplateRef).To(Equal(previousResources[1].TemplateRef))
-				Expect(resource2Status.Inputs).To(Equal(previousResources[1].Inputs))
-				Expect(resource2Status.Outputs).To(Equal(previousResources[1].Outputs))
-				Expect(resource2Status.Conditions[0]).To(MatchFields(IgnoreExtras,
+				Expect(currentResourceStatuses[1].Name).To(Equal(previousResources[1].Name))
+				Expect(currentResourceStatuses[1].StampedRef).To(Equal(previousResources[1].StampedRef))
+				Expect(currentResourceStatuses[1].TemplateRef).To(Equal(previousResources[1].TemplateRef))
+				Expect(currentResourceStatuses[1].Inputs).To(Equal(previousResources[1].Inputs))
+				Expect(currentResourceStatuses[1].Outputs).To(Equal(previousResources[1].Outputs))
+				Expect(currentResourceStatuses[1].Conditions).ToNot(Equal(previousResources[1].Conditions))
+				Expect(len(currentResourceStatuses[1].Conditions)).To(Equal(2))
+				Expect(currentResourceStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("ResourceSubmitted"),
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
-				Expect(resource2Status.Conditions[1]).To(MatchFields(IgnoreExtras,
+				Expect(currentResourceStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("Ready"),
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
 
-				Expect(resource3Status).ToNot(Equal(previousResources[2]))
-				Expect(resource3Status.StampedRef.Name).To(Equal("StampedObj"))
+				Expect(currentResourceStatuses[2]).ToNot(Equal(previousResources[2]))
+				Expect(currentResourceStatuses[2].StampedRef.Name).To(Equal("StampedObj"))
 			})
 		})
 	})

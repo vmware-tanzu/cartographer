@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -41,9 +42,9 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -54,22 +55,23 @@ import (
 
 var _ = Describe("WorkloadReconciler", func() {
 	var (
-		out                          *Buffer
-		reconciler                   controllers.WorkloadReconciler
-		ctx                          context.Context
-		req                          ctrl.Request
-		repo                         *repositoryfakes.FakeRepository
-		conditionManager             *conditionsfakes.FakeConditionManager
-		rlzr                         *workloadfakes.FakeRealizer
-		wl                           *v1alpha1.Workload
-		workloadLabels               map[string]string
-		stampedTracker               *stampedfakes.FakeStampedTracker
-		dependencyTracker            *dependencyfakes.FakeDependencyTracker
-		builtResourceRealizer        *workloadfakes.FakeResourceRealizer
-		resourceRealizerSecret       *corev1.Secret
-		serviceAccountSecret         *corev1.Secret
-		serviceAccountName           string
-		resourceRealizerBuilderError error
+		out                             *Buffer
+		reconciler                      controllers.WorkloadReconciler
+		ctx                             context.Context
+		req                             ctrl.Request
+		repo                            *repositoryfakes.FakeRepository
+		conditionManager                *conditionsfakes.FakeConditionManager
+		rlzr                            *realizerfakes.FakeRealizer
+		wl                              *v1alpha1.Workload
+		workloadLabels                  map[string]string
+		stampedTracker                  *stampedfakes.FakeStampedTracker
+		dependencyTracker               *dependencyfakes.FakeDependencyTracker
+		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
+		labelerForBuiltResourceRealizer realizer.ResourceLabeler
+		resourceRealizerSecret          *corev1.Secret
+		serviceAccountSecret            *corev1.Secret
+		serviceAccountName              string
+		resourceRealizerBuilderError    error
 	)
 
 	BeforeEach(func() {
@@ -83,7 +85,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &workloadfakes.FakeRealizer{}
+		rlzr = &realizerfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -101,12 +103,14 @@ var _ = Describe("WorkloadReconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (realizer.ResourceRealizer, error) {
+
+		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
 			resourceRealizerSecret = secret
-			builtResourceRealizer = &workloadfakes.FakeResourceRealizer{}
+			builtResourceRealizer = &realizerfakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
 
@@ -265,13 +269,36 @@ var _ = Describe("WorkloadReconciler", func() {
 				}, nil,
 			)
 
-			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 				statusesVal := reflect.ValueOf(statuses)
 				existingVal := reflect.ValueOf(resourceStatuses)
 
 				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
 				return nil
 			}
+		})
+
+		It("labels owner resources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+			Expect(labelerForBuiltResourceRealizer).To(Not(BeNil()))
+
+			resource := realizer.OwnerResource{
+				TemplateRef: v1alpha1.TemplateReference{
+					Kind: "be-kind",
+					Name: "no-names",
+				},
+				Name: "fine-i-have-a-name",
+			}
+
+			labels := labelerForBuiltResourceRealizer(resource)
+			Expect(labels).To(Equal(templates.Labels{
+				"carto.run/workload-name":         "my-workload-name",
+				"carto.run/workload-namespace":    "my-namespace",
+				"carto.run/supply-chain-name":     "some-supply-chain",
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}))
 		})
 
 		It("updates the status of the workload with the realizedResources", func() {
@@ -314,7 +341,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _, _ := rlzr.RealizeArgsForCall(0)
+			_, resourceRealizer, _, _, _ := rlzr.RealizeArgsForCall(0)
 			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
@@ -581,7 +608,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						}, nil,
 					)
 
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -647,7 +674,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						StampedObject: &unstructured.Unstructured{},
 						ResourceName:  "some-name",
 					}
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -711,7 +738,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						BlueprintType: cerrors.SupplyChain,
 					}
 
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -777,7 +804,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						BlueprintName: supplyChainName,
 						BlueprintType: cerrors.SupplyChain,
 					}
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -936,7 +963,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				var realizerError error
 				BeforeEach(func() {
 					realizerError = errors.New("some error")
-					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
 						existingVal := reflect.ValueOf(resourceStatuses)
 
@@ -1196,7 +1223,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					},
 				}, nil,
 			)
-			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 				statusesVal := reflect.ValueOf(statuses)
 				existingVal := reflect.ValueOf(resourceStatuses)
 
