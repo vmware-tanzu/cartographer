@@ -17,6 +17,7 @@ package workload
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -33,23 +34,35 @@ import (
 
 //go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
+type OwnerResource struct {
+	TemplateRef     v1alpha1.TemplateReference
+	TemplateOptions []v1alpha1.TemplateOption
+	Params          []v1alpha1.BlueprintParam
+	Name            string
+	Sources         []v1alpha1.ResourceReference
+	Images          []v1alpha1.ResourceReference
+	Configs         []v1alpha1.ResourceReference
+	Deployment      *v1alpha1.DeploymentReference
+}
+
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
-	owner             *v1alpha1.Workload
+	owner             client.Object
+	ownerParams       []v1alpha1.OwnerParam
 	systemRepo        repository.Repository
 	ownerRepo         repository.Repository
 	supplyChainParams []v1alpha1.BlueprintParam
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, owner *v1alpha1.Workload, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, owner *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
+	return func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -59,6 +72,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 
 		return &resourceRealizer{
 			owner:             owner,
+			ownerParams:       ownerParams,
 			systemRepo:        systemRepo,
 			ownerRepo:         ownerRepo,
 			supplyChainParams: supplyChainParams,
@@ -66,13 +80,13 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
 	var templateName string
 	var err error
-	if len(resource.TemplateRef.Options) > 0 {
+	if len(resource.TemplateOptions) > 0 {
 		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
 		if err != nil {
 			return nil, nil, nil, err
@@ -102,8 +116,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	}
 
 	labels := map[string]string{
-		"carto.run/workload-name":         r.owner.Name,      // TODO Template!!
-		"carto.run/workload-namespace":    r.owner.Namespace, // TODO Template!!
+		"carto.run/workload-name":         r.owner.GetName(),      // TODO Template!!
+		"carto.run/workload-namespace":    r.owner.GetNamespace(), // TODO Template!!
 		"carto.run/supply-chain-name":     supplyChainName,
 		"carto.run/resource-name":         resource.Name,
 		"carto.run/template-kind":         template.GetKind(),
@@ -113,7 +127,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	inputs := outputs.GenerateInputs(resource)
 	ownerTemplatingContext := map[string]interface{}{
 		"workload": r.owner, // TODO Template!!
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.owner.Spec.Params),
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.ownerParams),
 		"sources":  inputs.Sources,
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,
@@ -171,14 +185,14 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	return template, stampedObject, output, nil
 }
 
-func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
-	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
+func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supplyChainName string) (string, error) {
+	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateOptions))
 
 	if err != nil {
 		return "", errors.ResolveTemplateOptionError{
 			Err:           err,
 			ResourceName:  resource.Name,
-			OptionName:    resource.TemplateRef.Options[err.SelectorIndex()].Name,
+			OptionName:    resource.TemplateOptions[err.SelectorIndex()].Name,
 			BlueprintName: supplyChainName,
 			BlueprintType: errors.SupplyChain,
 		}
@@ -187,7 +201,7 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 	if len(bestMatchingTemplateOptionsIndices) != 1 {
 		var optionNames []string
 		for _, optionIndex := range bestMatchingTemplateOptionsIndices {
-			optionNames = append(optionNames, resource.TemplateRef.Options[optionIndex].Name)
+			optionNames = append(optionNames, resource.TemplateOptions[optionIndex].Name)
 		}
 
 		return "", errors.TemplateOptionsMatchError{
@@ -198,5 +212,5 @@ func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyCha
 		}
 	}
 
-	return resource.TemplateRef.Options[bestMatchingTemplateOptionsIndices[0]].Name, nil
+	return resource.TemplateOptions[bestMatchingTemplateOptionsIndices[0]].Name, nil
 }

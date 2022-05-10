@@ -31,9 +31,56 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
+type Blueprint struct {
+	Name      string
+	Resources []OwnerResource
+}
+
+func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Blueprint {
+	blueprint := &Blueprint{
+		Name: supplyChain.Name,
+	}
+	for _, resource := range supplyChain.Spec.Resources {
+		blueprint.Resources = append(blueprint.Resources, OwnerResource{
+			TemplateRef: v1alpha1.TemplateReference{
+				Kind: resource.TemplateRef.Kind,
+				Name: resource.TemplateRef.Name,
+			},
+			TemplateOptions: resource.TemplateRef.Options,
+			Params:          resource.Params,
+			Name:            resource.Name,
+			Sources:         resource.Sources,
+			Images:          resource.Images,
+			Configs:         resource.Configs,
+		})
+	}
+	return blueprint
+}
+
+func MakeDeliveryBlueprint(delivery *v1alpha1.ClusterDelivery) *Blueprint {
+	blueprint := &Blueprint{
+		Name: delivery.Name,
+	}
+	for _, resource := range delivery.Spec.Resources {
+		blueprint.Resources = append(blueprint.Resources, OwnerResource{
+			TemplateRef: v1alpha1.TemplateReference{
+				Kind: resource.TemplateRef.Kind,
+				Name: resource.TemplateRef.Name,
+			},
+			TemplateOptions: resource.TemplateRef.Options,
+			Params:          resource.Params,
+			Name:            resource.Name,
+			Sources:         resource.Sources,
+			Configs:         resource.Configs,
+			Deployment:      resource.Deployment,
+		})
+	}
+	return blueprint
+}
+
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprint *Blueprint, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
 }
 
 type realizer struct{}
@@ -42,7 +89,7 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, supplyChain *v1alpha1.ClusterSupplyChain, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprint *Blueprint, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
@@ -50,9 +97,10 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	var realizedResources []v1alpha1.RealizedResource
 	var firstError error
 
-	for i := range supplyChain.Spec.Resources {
-		resource := supplyChain.Spec.Resources[i]
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, &resource, supplyChain.Name, outs)
+	for _, resource := range blueprint.Resources {
+		log = log.WithValues("resource", resource.Name)
+		ctx = logr.NewContext(ctx, log)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprint.Name, outs)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
@@ -72,7 +120,10 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
 		if err != nil {
-			conditions.AddConditionForWorkloadError(&conditionManager, false, err)
+			conditions.AddConditionForWorkloadError(&conditionManager, false, err) //TODO: different for deliverable
+
+			//conditions.AddConditionForDeliverableError(&conditionManager, false, err) //TODO:: ^^^ fix and unpend deliverable_reconciler_test
+
 		} else {
 			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 		}
@@ -88,7 +139,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return realizedResources, firstError
 }
 
-func generateRealizedResource(resource v1alpha1.SupplyChainResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
+func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
 	if stampedObject == nil || template == nil {
 		for _, previousResource := range previousResources {
 			if previousResource.Name == resource.Name {
@@ -101,9 +152,14 @@ func generateRealizedResource(resource v1alpha1.SupplyChainResource, template te
 	for _, source := range resource.Sources {
 		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
 	}
+	//TODO: vv Images and Deployment... probably dont want this leaky abstraction
 	for _, image := range resource.Images {
 		inputs = append(inputs, v1alpha1.Input{Name: image.Resource})
 	}
+	if resource.Deployment != nil {
+		inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
+	}
+	//TODO: ^^ Images and Deployment... probably dont want this leaky abstraction
 	for _, config := range resource.Configs {
 		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
 	}

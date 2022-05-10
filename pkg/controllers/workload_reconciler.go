@@ -117,7 +117,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, r.Repo, supplyChain.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -125,7 +125,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, supplyChain, workload.Status.Resources)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, realizer.MakeSupplychainBlueprint(supplyChain), workload.Status.Resources)
 
 	if err != nil {
 		conditions.AddConditionForWorkloadError(&r.conditionManager, true, err)

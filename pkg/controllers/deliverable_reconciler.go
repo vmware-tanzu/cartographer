@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -39,7 +40,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
@@ -49,8 +49,8 @@ import (
 type DeliverableReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
-	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
-	Realizer                realizer.Realizer
+	ResourceRealizerBuilder workload.ResourceRealizerBuilder
+	Realizer                workload.Realizer
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
 	conditionManager        conditions.ConditionManager
@@ -115,13 +115,13 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery, deliverable.Status.Resources)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, workload.MakeDeliveryBlueprint(delivery), deliverable.Status.Resources)
 
 	if err != nil {
 		conditions.AddConditionForDeliverableError(&r.conditionManager, true, err)
@@ -363,8 +363,8 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 
 	r.ConditionManagerBuilder = conditions.NewConditionManager
-	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
-	r.Realizer = realizer.NewRealizer()
+	r.ResourceRealizerBuilder = workload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
+	r.Realizer = workload.NewRealizer()
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-deliverable"),

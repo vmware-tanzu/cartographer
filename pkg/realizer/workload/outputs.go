@@ -15,7 +15,6 @@
 package workload
 
 import (
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -54,7 +53,7 @@ func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 	return output.Config
 }
 
-func (o Outputs) GenerateInputs(resource *v1alpha1.SupplyChainResource) *templates.Inputs {
+func (o Outputs) GenerateInputs(resource OwnerResource) *templates.Inputs {
 	inputs := &templates.Inputs{
 		Sources: map[string]templates.SourceInput{},
 		Images:  map[string]templates.ImageInput{},
