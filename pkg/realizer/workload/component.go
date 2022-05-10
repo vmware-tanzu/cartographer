@@ -35,32 +35,32 @@ import (
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource *v1alpha1.SupplyChainResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
-	workload          *v1alpha1.Workload
+	owner             *v1alpha1.Workload
 	systemRepo        repository.Repository
-	workloadRepo      repository.Repository
+	ownerRepo         repository.Repository
 	supplyChainParams []v1alpha1.BlueprintParam
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, owner *v1alpha1.Workload, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
-		workloadClient, _, err := clientBuilder(secret, false)
+	return func(secret *corev1.Secret, owner *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
+		ownerClient, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
 
-		workloadRepo := repositoryBuilder(workloadClient, cache)
+		ownerRepo := repositoryBuilder(ownerClient, cache)
 
 		return &resourceRealizer{
-			workload:          workload,
+			owner:             owner,
 			systemRepo:        systemRepo,
-			workloadRepo:      workloadRepo,
+			ownerRepo:         ownerRepo,
 			supplyChainParams: supplyChainParams,
 		}, nil
 	}
@@ -102,8 +102,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	}
 
 	labels := map[string]string{
-		"carto.run/workload-name":         r.workload.Name,
-		"carto.run/workload-namespace":    r.workload.Namespace,
+		"carto.run/workload-name":         r.owner.Name,      // TODO Template!!
+		"carto.run/workload-namespace":    r.owner.Namespace, // TODO Template!!
 		"carto.run/supply-chain-name":     supplyChainName,
 		"carto.run/resource-name":         resource.Name,
 		"carto.run/template-kind":         template.GetKind(),
@@ -111,9 +111,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 	}
 
 	inputs := outputs.GenerateInputs(resource)
-	workloadTemplatingContext := map[string]interface{}{
-		"workload": r.workload,
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.workload.Spec.Params),
+	ownerTemplatingContext := map[string]interface{}{
+		"workload": r.owner, // TODO Template!!
+		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.owner.Spec.Params),
 		"sources":  inputs.Sources,
 		"images":   inputs.Images,
 		"configs":  inputs.Configs,
@@ -121,16 +121,16 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 
 	// Todo: this belongs in Stamp.
 	if inputs.OnlyConfig() != nil {
-		workloadTemplatingContext["config"] = inputs.OnlyConfig()
+		ownerTemplatingContext["config"] = inputs.OnlyConfig()
 	}
 	if inputs.OnlyImage() != nil {
-		workloadTemplatingContext["image"] = inputs.OnlyImage()
+		ownerTemplatingContext["image"] = inputs.OnlyImage()
 	}
 	if inputs.OnlySource() != nil {
-		workloadTemplatingContext["source"] = inputs.OnlySource()
+		ownerTemplatingContext["source"] = inputs.OnlySource()
 	}
 
-	stampContext := templates.StamperBuilder(r.workload, workloadTemplatingContext, labels)
+	stampContext := templates.StamperBuilder(r.owner, ownerTemplatingContext, labels)
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
@@ -142,7 +142,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 		}
 	}
 
-	err = r.workloadRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+	err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return template, nil, nil, errors.ApplyStampedObjectError{
@@ -172,7 +172,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource *v1alpha1.SupplyChai
 }
 
 func (r *resourceRealizer) findMatchingTemplateName(resource *v1alpha1.SupplyChainResource, supplyChainName string) (string, error) {
-	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.workload, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
+	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateRef.Options))
 
 	if err != nil {
 		return "", errors.ResolveTemplateOptionError{
