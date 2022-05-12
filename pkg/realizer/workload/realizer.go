@@ -32,13 +32,15 @@ import (
 )
 
 type Blueprint struct {
-	Name      string
-	Resources []OwnerResource
+	Name                      string
+	Resources                 []OwnerResource
+	AddConditionForOwnerError func(conditionManager *conditions.ConditionManager, isOwner bool, err error)
 }
 
 func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Blueprint {
 	blueprint := &Blueprint{
-		Name: supplyChain.Name,
+		Name:                      supplyChain.Name,
+		AddConditionForOwnerError: conditions.AddConditionForWorkloadError,
 	}
 	for _, resource := range supplyChain.Spec.Resources {
 		blueprint.Resources = append(blueprint.Resources, OwnerResource{
@@ -59,7 +61,8 @@ func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Bluepri
 
 func MakeDeliveryBlueprint(delivery *v1alpha1.ClusterDelivery) *Blueprint {
 	blueprint := &Blueprint{
-		Name: delivery.Name,
+		Name:                      delivery.Name,
+		AddConditionForOwnerError: conditions.AddConditionForDeliverableError,
 	}
 	for _, resource := range delivery.Spec.Resources {
 		blueprint.Resources = append(blueprint.Resources, OwnerResource{
@@ -120,10 +123,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
 		if err != nil {
-			conditions.AddConditionForWorkloadError(&conditionManager, false, err) //TODO: different for deliverable
-
-			//conditions.AddConditionForDeliverableError(&conditionManager, false, err) //TODO:: ^^^ fix and unpend deliverable_reconciler_test
-
+			blueprint.AddConditionForOwnerError(&conditionManager, false, err)
 		} else {
 			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 		}
