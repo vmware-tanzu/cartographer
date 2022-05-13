@@ -6,7 +6,6 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/go-logr/logr v1.2.3
 	github.com/go-yaml/yaml v2.1.0+incompatible
-	github.com/googleapis/gnostic v0.5.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/valyala/fasttemplate v1.2.1
@@ -20,12 +19,15 @@ require (
 	k8s.io/client-go v0.24.0
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/cluster-api v1.1.3
-	sigs.k8s.io/controller-runtime v0.12.0
+	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/controller-tools v0.8.0
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+require (
+	github.com/google/gnostic v0.5.7-v3refs
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+)
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
@@ -52,7 +54,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
