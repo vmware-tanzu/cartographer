@@ -123,13 +123,13 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	inputs := outputs.GenerateInputs(resource)
 
 	ownerTemplatingContext := map[string]interface{}{
-		"workload":   r.owner,
-		"delivery":   r.owner,
-		"params":     templates.ParamsBuilder(template.GetDefaultParams(), r.blueprintParams, resource.Params, r.ownerParams),
-		"sources":    inputs.Sources,
-		"images":     inputs.Images,
-		"deployment": inputs.Deployment,
-		"configs":    inputs.Configs,
+		"workload":    r.owner,
+		"deliverable": r.owner,
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.blueprintParams, resource.Params, r.ownerParams),
+		"sources":     inputs.Sources,
+		"images":      inputs.Images,
+		"deployment":  inputs.Deployment,
+		"configs":     inputs.Configs,
 	}
 
 	if inputs.OnlyConfig() != nil {
@@ -166,6 +166,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
+	template.SetInputs(inputs)
 	template.SetStampedObject(stampedObject)
 
 	output, err := template.GetOutput()

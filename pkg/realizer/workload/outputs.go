@@ -55,9 +55,10 @@ func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 
 func (o Outputs) GenerateInputs(resource OwnerResource) *templates.Inputs {
 	inputs := &templates.Inputs{
-		Sources: map[string]templates.SourceInput{},
-		Images:  map[string]templates.ImageInput{},
-		Configs: map[string]templates.ConfigInput{},
+		Sources:    map[string]templates.SourceInput{},
+		Images:     map[string]templates.ImageInput{},
+		Configs:    map[string]templates.ConfigInput{},
+		Deployment: &templates.SourceInput{},
 	}
 
 	for _, referenceSource := range resource.Sources {
@@ -87,6 +88,16 @@ func (o Outputs) GenerateInputs(resource OwnerResource) *templates.Inputs {
 			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
 				Config: config,
 				Name:   referenceConfig.Name,
+			}
+		}
+	}
+
+	if resource.Deployment != nil {
+		deployment := o.getResourceSource(resource.Deployment.Resource)
+		if deployment != nil {
+			inputs.Deployment = &templates.SourceInput{
+				URL:      deployment.URL,
+				Revision: deployment.Revision,
 			}
 		}
 	}
