@@ -151,14 +151,15 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 	for _, source := range resource.Sources {
 		inputs = append(inputs, v1alpha1.Input{Name: source.Resource})
 	}
-	//TODO: vv Images and Deployment... probably dont want this leaky abstraction
+
 	for _, image := range resource.Images {
 		inputs = append(inputs, v1alpha1.Input{Name: image.Resource})
 	}
+
 	if resource.Deployment != nil {
 		inputs = append(inputs, v1alpha1.Input{Name: resource.Deployment.Resource})
 	}
-	//TODO: ^^ Images and Deployment... probably dont want this leaky abstraction
+
 	for _, config := range resource.Configs {
 		inputs = append(inputs, v1alpha1.Input{Name: config.Resource})
 	}

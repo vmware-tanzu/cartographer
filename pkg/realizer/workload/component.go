@@ -17,6 +17,7 @@ package workload
 import (
 	"context"
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -51,12 +52,12 @@ type ResourceRealizer interface {
 }
 
 type resourceRealizer struct {
-	owner             client.Object
-	ownerParams       []v1alpha1.OwnerParam
-	systemRepo        repository.Repository
-	ownerRepo         repository.Repository
-	supplyChainParams []v1alpha1.BlueprintParam
-	resourceLabeler   ResourceLabeler
+	owner           client.Object
+	ownerParams     []v1alpha1.OwnerParam
+	systemRepo      repository.Repository
+	ownerRepo       repository.Repository
+	blueprintParams []v1alpha1.BlueprintParam
+	resourceLabeler ResourceLabeler
 }
 
 type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
@@ -72,24 +73,24 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 		ownerRepo := repositoryBuilder(ownerClient, cache)
 
 		return &resourceRealizer{
-			owner:             owner,
-			ownerParams:       ownerParams,
-			systemRepo:        systemRepo,
-			ownerRepo:         ownerRepo,
-			supplyChainParams: supplyChainParams,
-			resourceLabeler:   resourceLabeler,
+			owner:           owner,
+			ownerParams:     ownerParams,
+			systemRepo:      systemRepo,
+			ownerRepo:       ownerRepo,
+			blueprintParams: supplyChainParams,
+			resourceLabeler: resourceLabeler,
 		}, nil
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, supplyChainName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
 	var templateName string
 	var err error
 	if len(resource.TemplateOptions) > 0 {
-		templateName, err = r.findMatchingTemplateName(resource, supplyChainName)
+		templateName, err = r.findMatchingTemplateName(resource, blueprintName)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -106,7 +107,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, suppl
 			Err:           err,
 			ResourceName:  resource.Name,
 			TemplateName:  templateName,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
@@ -120,15 +121,17 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, suppl
 	labels := r.resourceLabeler(resource)
 
 	inputs := outputs.GenerateInputs(resource)
+
 	ownerTemplatingContext := map[string]interface{}{
-		"deliverable": r.owner, // TODO Template!!
-		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.ownerParams),
-		"sources":     inputs.Sources,
-		"images":      inputs.Images, // TODO Template!! -images +deployment
-		"configs":     inputs.Configs,
+		"workload":   r.owner,
+		"delivery":   r.owner,
+		"params":     templates.ParamsBuilder(template.GetDefaultParams(), r.blueprintParams, resource.Params, r.ownerParams),
+		"sources":    inputs.Sources,
+		"images":     inputs.Images,
+		"deployment": inputs.Deployment,
+		"configs":    inputs.Configs,
 	}
 
-	// Todo: this belongs in Stamp.
 	if inputs.OnlyConfig() != nil {
 		ownerTemplatingContext["config"] = inputs.OnlyConfig()
 	}
@@ -146,7 +149,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, suppl
 		return template, nil, nil, errors.StampError{
 			Err:           err,
 			ResourceName:  resource.Name,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
@@ -158,7 +161,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, suppl
 			Err:           err,
 			StampedObject: stampedObject,
 			ResourceName:  resource.Name,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
@@ -172,7 +175,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, suppl
 			Err:           err,
 			ResourceName:  resource.Name,
 			StampedObject: stampedObject,
-			BlueprintName: supplyChainName,
+			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,
 		}
 	}
