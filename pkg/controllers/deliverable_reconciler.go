@@ -364,7 +364,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	r.ConditionManagerBuilder = conditions.NewConditionManager
 	r.ResourceRealizerBuilder = workload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
-	r.Realizer = workload.NewRealizer()
+	r.Realizer = workload.NewRealizerForDeliverable()
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-deliverable"),

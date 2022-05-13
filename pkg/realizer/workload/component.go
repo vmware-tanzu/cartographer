@@ -56,13 +56,14 @@ type resourceRealizer struct {
 	systemRepo        repository.Repository
 	ownerRepo         repository.Repository
 	supplyChainParams []v1alpha1.BlueprintParam
+	resourceLabeler   ResourceLabeler
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (ResourceRealizer, error) {
+	return func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(secret, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -76,6 +77,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 			systemRepo:        systemRepo,
 			ownerRepo:         ownerRepo,
 			supplyChainParams: supplyChainParams,
+			resourceLabeler:   resourceLabeler,
 		}, nil
 	}
 }
@@ -115,22 +117,15 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, suppl
 		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 	}
 
-	labels := map[string]string{
-		"carto.run/workload-name":         r.owner.GetName(),      // TODO Template!!
-		"carto.run/workload-namespace":    r.owner.GetNamespace(), // TODO Template!!
-		"carto.run/supply-chain-name":     supplyChainName,
-		"carto.run/resource-name":         resource.Name,
-		"carto.run/template-kind":         template.GetKind(),
-		"carto.run/cluster-template-name": template.GetName(),
-	}
+	labels := r.resourceLabeler(resource)
 
 	inputs := outputs.GenerateInputs(resource)
 	ownerTemplatingContext := map[string]interface{}{
-		"workload": r.owner, // TODO Template!!
-		"params":   templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.ownerParams),
-		"sources":  inputs.Sources,
-		"images":   inputs.Images,
-		"configs":  inputs.Configs,
+		"deliverable": r.owner, // TODO Template!!
+		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.supplyChainParams, resource.Params, r.ownerParams),
+		"sources":     inputs.Sources,
+		"images":      inputs.Images, // TODO Template!! -images +deployment
+		"configs":     inputs.Configs,
 	}
 
 	// Todo: this belongs in Stamp.

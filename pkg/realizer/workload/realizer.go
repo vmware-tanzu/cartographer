@@ -32,25 +32,23 @@ import (
 )
 
 type Blueprint struct {
-	Name                      string
-	Resources                 []OwnerResource
-	AddConditionForOwnerError func(conditionManager *conditions.ConditionManager, isOwner bool, err error)
+	Name      string
+	Resources []OwnerResource
 }
 
 func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Blueprint {
 	blueprint := &Blueprint{
-		Name:                      supplyChain.Name,
-		AddConditionForOwnerError: conditions.AddConditionForWorkloadError,
+		Name: supplyChain.Name,
 	}
 	for _, resource := range supplyChain.Spec.Resources {
 		blueprint.Resources = append(blueprint.Resources, OwnerResource{
+			Name: resource.Name,
 			TemplateRef: v1alpha1.TemplateReference{
 				Kind: resource.TemplateRef.Kind,
 				Name: resource.TemplateRef.Name,
 			},
 			TemplateOptions: resource.TemplateRef.Options,
 			Params:          resource.Params,
-			Name:            resource.Name,
 			Sources:         resource.Sources,
 			Images:          resource.Images,
 			Configs:         resource.Configs,
@@ -61,18 +59,17 @@ func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Bluepri
 
 func MakeDeliveryBlueprint(delivery *v1alpha1.ClusterDelivery) *Blueprint {
 	blueprint := &Blueprint{
-		Name:                      delivery.Name,
-		AddConditionForOwnerError: conditions.AddConditionForDeliverableError,
+		Name: delivery.Name,
 	}
 	for _, resource := range delivery.Spec.Resources {
 		blueprint.Resources = append(blueprint.Resources, OwnerResource{
+			Name: resource.Name,
 			TemplateRef: v1alpha1.TemplateReference{
 				Kind: resource.TemplateRef.Kind,
 				Name: resource.TemplateRef.Name,
 			},
 			TemplateOptions: resource.TemplateRef.Options,
 			Params:          resource.Params,
-			Name:            resource.Name,
 			Sources:         resource.Sources,
 			Configs:         resource.Configs,
 			Deployment:      resource.Deployment,
@@ -85,6 +82,8 @@ func MakeDeliveryBlueprint(delivery *v1alpha1.ClusterDelivery) *Blueprint {
 type Realizer interface {
 	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprint *Blueprint, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
 }
+
+type ResourceLabeler func(resource OwnerResource) templates.Labels
 
 type realizer struct{}
 
@@ -123,7 +122,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
 
 		if err != nil {
-			blueprint.AddConditionForOwnerError(&conditionManager, false, err)
+			conditions.AddConditionForDeliverableError(&conditionManager, false, err)
 		} else {
 			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
 		}

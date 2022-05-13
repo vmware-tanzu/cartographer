@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -117,7 +118,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildLabeller(workload, supplyChain))
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -205,6 +206,33 @@ func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workloa
 func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
 	supplyChainReadyCondition := getSupplyChainReadyCondition(supplyChain)
 	return supplyChainReadyCondition.Status == "True"
+}
+
+func buildLabeller(owner, blueprint client.Object) realizer.LabelResource {
+	return func(resource realizer.OwnerResource) templates.Labels {
+		switch blueprint.(type) {
+		case *v1alpha1.ClusterSupplyChain:
+			return templates.Labels{
+				"carto.run/workload-name":         owner.GetName(),
+				"carto.run/workload-namespace":    owner.GetNamespace(),
+				"carto.run/supply-chain-name":     blueprint.GetName(),
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}
+		case *v1alpha1.ClusterDelivery:
+			return templates.Labels{
+				"carto.run/deliverable-name":      owner.GetName(),
+				"carto.run/deliverable-namespace": owner.GetNamespace(),
+				"carto.run/delivery-name":         blueprint.GetName(),
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}
+		default:
+			panic("Unexpected code path")
+		}
+	}
 }
 
 func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) metav1.Condition {
@@ -371,7 +399,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
-	r.Realizer = realizer.NewRealizer()
+	r.Realizer = realizer.NewRealizerForWorkloads()
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-workload"),
