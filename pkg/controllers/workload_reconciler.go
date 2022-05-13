@@ -17,8 +17,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"reflect"
+
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -119,6 +120,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildLabeller(workload, supplyChain))
+
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -208,7 +210,7 @@ func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSup
 	return supplyChainReadyCondition.Status == "True"
 }
 
-func buildLabeller(owner, blueprint client.Object) realizer.LabelResource {
+func buildLabeller(owner, blueprint client.Object) realizer.ResourceLabeler {
 	return func(resource realizer.OwnerResource) templates.Labels {
 		switch blueprint.(type) {
 		case *v1alpha1.ClusterSupplyChain:
@@ -399,7 +401,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
-	r.Realizer = realizer.NewRealizerForWorkloads()
+	r.Realizer = realizer.NewRealizer()
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-workload"),

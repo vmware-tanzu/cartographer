@@ -17,8 +17,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"reflect"
+
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -115,7 +116,8 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildLabeller(deliverable, delivery))
+
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
@@ -364,7 +366,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	r.ConditionManagerBuilder = conditions.NewConditionManager
 	r.ResourceRealizerBuilder = workload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
-	r.Realizer = workload.NewRealizerForDeliverable()
+	r.Realizer = workload.NewRealizer()
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-deliverable"),
