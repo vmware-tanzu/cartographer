@@ -16,8 +16,14 @@ name: upgrade test
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'rfc/**'
+      - '*.md'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'rfc/**'
+      - '*.md'
 
 jobs:
   upgrade-test:
