@@ -25,6 +25,9 @@ on:
       - 'rfc/**'
       - '*.md'
 
+  schedule: # daily run
+    - cron: '0 0 * * *'
+
 jobs:
   upgrade-test:
     runs-on: ubuntu-latest
