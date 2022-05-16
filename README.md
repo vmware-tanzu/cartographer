@@ -36,7 +36,7 @@ kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/do
 ```
 And you're done!
 
-<img src="site/themes/template/static/img/Carto-install-yaml-v2.gif">
+<img src="assets/Carto-install-yaml-v2.gif">
 
 ## Documentation
 
@@ -72,7 +72,7 @@ If you have questions or want to get the latest project news, you can connect wi
       meetings: [[notes](https://docs.google.com/document/d/1HwsjzxpsNI0l1sVAUia4A65lhrkfSF-_XfKoZUHI120/edit?usp=sharing) | [recordings](https://www.youtube.com/playlist?list=PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8)]
 - Do you have ideas to improve the project? Explore the [RFC process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) we currently follow and join the weekly Office Hours meeting where the maintainers team discuss RFCs  with users and contributors:
     - Every Monday @ 2:00PM ET on [Zoom](https://VMware.zoom.us/j/94592229106?pwd=eEtpekxsSERoOVNlemJWZGJTK3hvdz09)
-    - Previous meetings: [[notes](https://docs.google.com/document/d/1ImIh7qBrOLOvGMCzY6AURhE-a68IE9_EbCf0g5s18vc/edit?usp=sharing) | [recordings](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)]  
+    - Previous meetings: [[notes](https://hackmd.io/g5EjHok9SiKqlwV846QlvA?view) | [recordings](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)]  
 ## Contributing
 
 Pull Requests and feedback on issues are very welcome! See
