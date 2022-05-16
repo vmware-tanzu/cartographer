@@ -16,8 +16,17 @@ name: upgrade test
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'rfc/**'
+      - '*.md'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'rfc/**'
+      - '*.md'
+
+  schedule: # daily run
+    - cron: '0 0 * * *'
 
 jobs:
   upgrade-test:
