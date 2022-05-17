@@ -17,7 +17,6 @@ package integration
 import (
 	"io"
 	"path/filepath"
-
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
