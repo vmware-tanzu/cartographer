@@ -37,7 +37,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
-var _ = FDescribe("DeliverableReconciler", func() {
+var _ = Describe("DeliverableReconciler", func() {
 	var templateBytes = func() []byte {
 		configMap := &corev1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
