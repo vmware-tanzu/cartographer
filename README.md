@@ -1,7 +1,10 @@
 # Cartographer
 
 <img src="assets/cartographer-logo.png">
-<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="assets/passing.svg"></a>
+<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="assets/passing.svg"></a> 
+
+![Validations](https://github.com/vmware-tanzu/cartographer/actions/workflows/validation.yaml/badge.svg?branch=main)
+![Upgrade Test](https://github.com/vmware-tanzu/cartographer/actions/workflows/upgrade-test.yaml/badge.svg?branch=main)
 
 Cartographer is a Kubernetes-native [Choreographer] providing higher modularity and scalability for the software supply chain.
 
