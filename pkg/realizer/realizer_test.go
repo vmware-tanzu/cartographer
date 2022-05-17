@@ -208,37 +208,6 @@ var _ = Describe("Realize", func() {
 			previousResources = []v1alpha1.ResourceStatus{
 				{
 					RealizedResource: v1alpha1.RealizedResource{
-						Name: "resource1",
-						StampedRef: &corev1.ObjectReference{
-							Kind:       "GitRepository",
-							Namespace:  "",
-							Name:       "",
-							APIVersion: "",
-						},
-						TemplateRef: &corev1.ObjectReference{
-							Kind:       "ClusterSourceTemplate",
-							Name:       "my-source-template",
-							APIVersion: "",
-						},
-						Inputs: nil,
-						Outputs: []v1alpha1.Output{
-							{
-								Name:               "url",
-								Preview:            "http://example.com\n",
-								Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("http://example.com\n"))),
-								LastTransitionTime: previousTime,
-							},
-							{
-								Name:               "revision",
-								Preview:            "main\n",
-								Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("main\n"))),
-								LastTransitionTime: previousTime,
-							},
-						},
-					},
-				},
-				{
-					RealizedResource: v1alpha1.RealizedResource{
 						Name: "resource2",
 						StampedRef: &corev1.ObjectReference{
 							Kind:       "Image",
@@ -372,33 +341,48 @@ var _ = Describe("Realize", func() {
 			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
-			currentResourceStatuses := resourceStatuses.GetCurrent()
-			Expect(len(currentResourceStatuses[0].Outputs)).To(Equal(2))
-			Expect(currentResourceStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
+			currentStatuses := resourceStatuses.GetCurrent()
+			var resource1Status v1alpha1.ResourceStatus
+			var resource2Status v1alpha1.ResourceStatus
+			var resource3Status v1alpha1.ResourceStatus
+
+			for i := range currentStatuses {
+				switch currentStatuses[i].Name {
+				case "resource1":
+					resource1Status = currentStatuses[i]
+				case "resource2":
+					resource2Status = currentStatuses[i]
+				case "resource3":
+					resource3Status = currentStatuses[i]
+				}
+			}
+
+			Expect(len(resource1Status.Outputs)).To(Equal(2))
+			Expect(resource1Status.Outputs[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("url"),
 					"Preview": Equal("hi\n"),
 					"Digest":  HavePrefix("sha256"),
 				},
 			))
-			Expect(currentResourceStatuses[0].Outputs[1]).To(MatchFields(IgnoreExtras,
+			Expect(resource1Status.Outputs[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Name":    Equal("revision"),
 					"Preview": Equal("bye\n"),
 					"Digest":  HavePrefix("sha256"),
 				},
 			))
-			Expect(currentResourceStatuses[0].Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))
-			Expect(currentResourceStatuses[0].Outputs[1].LastTransitionTime).ToNot(Equal(previousTime))
+			Expect(resource1Status.Outputs[0].LastTransitionTime).ToNot(Equal(previousTime))
+			Expect(resource1Status.Outputs[1].LastTransitionTime).ToNot(Equal(previousTime))
 
-			Expect(len(currentResourceStatuses[1].Outputs)).To(Equal(1))
-			Expect(currentResourceStatuses[1].Outputs[0].LastTransitionTime).To(Equal(previousTime))
+			Expect(len(resource2Status.Outputs)).To(Equal(1))
+			Expect(resource2Status.Outputs[0].LastTransitionTime).To(Equal(previousTime))
 
-			Expect(len(currentResourceStatuses[2].Outputs)).To(Equal(1))
-			Expect(currentResourceStatuses[2].Outputs[0].LastTransitionTime).To(Equal(previousTime))
+			Expect(len(resource3Status.Outputs)).To(Equal(1))
+			Expect(resource3Status.Outputs[0].LastTransitionTime).To(Equal(previousTime))
 		})
 
-		Context("there is an error realizing resource 1", func() {
+		Context("there is an error realizing resource 1 and resource 2", func() {
 			BeforeEach(func() {
 				resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("im in a bad state"))
 				resourceRealizer.DoReturnsOnCall(1, nil, nil, nil, errors.New("im missing inputs"))
@@ -409,56 +393,74 @@ var _ = Describe("Realize", func() {
 				resourceRealizer.DoReturnsOnCall(2, templateModel3, obj, nil, nil)
 			})
 
-			It("the status uses the previous resource for resource 1 and resource 2", func() {
+			It("the status uses the previous resource for resource 2", func() {
 				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 				err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 				Expect(err).To(MatchError("im in a bad state"))
 
-				currentResourceStatuses := resourceStatuses.GetCurrent()
-				Expect(currentResourceStatuses).To(HaveLen(3))
+				currentStatuses := resourceStatuses.GetCurrent()
+				Expect(currentStatuses).To(HaveLen(3))
 
-				Expect(currentResourceStatuses[0].Name).To(Equal(previousResources[0].Name))
-				Expect(currentResourceStatuses[0].StampedRef).To(Equal(previousResources[0].StampedRef))
-				Expect(currentResourceStatuses[0].TemplateRef).To(Equal(previousResources[0].TemplateRef))
-				Expect(currentResourceStatuses[0].Inputs).To(Equal(previousResources[0].Inputs))
-				Expect(currentResourceStatuses[0].Outputs).To(Equal(previousResources[0].Outputs))
-				Expect(currentResourceStatuses[0].Conditions).ToNot(Equal(previousResources[0].Conditions))
-				Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
-				Expect(currentResourceStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
+				var resource1Status v1alpha1.ResourceStatus
+				var resource2Status v1alpha1.ResourceStatus
+				var resource3Status v1alpha1.ResourceStatus
+
+				for i := range currentStatuses {
+					switch currentStatuses[i].Name {
+					case "resource1":
+						resource1Status = currentStatuses[i]
+					case "resource2":
+						resource2Status = currentStatuses[i]
+					case "resource3":
+						resource3Status = currentStatuses[i]
+					}
+				}
+
+				// Error realizing resource1, no previous resource, realizedResource should be nil
+				Expect(resource1Status.RealizedResource.Name).To(Equal("resource1"))
+				Expect(resource1Status.RealizedResource.StampedRef).To(BeNil())
+				Expect(resource1Status.RealizedResource.TemplateRef).To(BeNil())
+				Expect(resource1Status.RealizedResource.Inputs).To(BeNil())
+				Expect(resource1Status.RealizedResource.Outputs).To(BeNil())
+
+				// Error realizing resource2, realizedResource should be previous resource
+				Expect(resource2Status.Name).To(Equal(previousResources[0].Name))
+				Expect(resource2Status.StampedRef).To(Equal(previousResources[0].StampedRef))
+				Expect(resource2Status.TemplateRef).To(Equal(previousResources[0].TemplateRef))
+				Expect(resource2Status.Inputs).To(Equal(previousResources[0].Inputs))
+				Expect(resource2Status.Outputs).To(Equal(previousResources[0].Outputs))
+				Expect(resource2Status.Conditions).ToNot(Equal(previousResources[0].Conditions))
+				Expect(len(resource2Status.Conditions)).To(Equal(2))
+				Expect(resource2Status.Conditions[0]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("ResourceSubmitted"),
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
-				Expect(currentResourceStatuses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
+				Expect(resource2Status.Conditions[1]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("Ready"),
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
 
-				Expect(currentResourceStatuses[1].Name).To(Equal(previousResources[1].Name))
-				Expect(currentResourceStatuses[1].StampedRef).To(Equal(previousResources[1].StampedRef))
-				Expect(currentResourceStatuses[1].TemplateRef).To(Equal(previousResources[1].TemplateRef))
-				Expect(currentResourceStatuses[1].Inputs).To(Equal(previousResources[1].Inputs))
-				Expect(currentResourceStatuses[1].Outputs).To(Equal(previousResources[1].Outputs))
-				Expect(currentResourceStatuses[1].Conditions).ToNot(Equal(previousResources[1].Conditions))
-				Expect(len(currentResourceStatuses[1].Conditions)).To(Equal(2))
-				Expect(currentResourceStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
+				// No error realizing resource3, realizedResource should be a new resource
+				Expect(resource3Status.Name).To(Equal(previousResources[1].Name))
+				Expect(resource3Status.StampedRef).ToNot(Equal(previousResources[1].StampedRef))
+				Expect(resource3Status.TemplateRef).ToNot(Equal(previousResources[1].TemplateRef))
+				Expect(len(resource3Status.Conditions)).To(Equal(2))
+				Expect(resource3Status.Conditions[0]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("ResourceSubmitted"),
-						"Status": Equal(metav1.ConditionFalse),
+						"Status": Equal(metav1.ConditionTrue),
 					},
 				))
-				Expect(currentResourceStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
+				Expect(resource3Status.Conditions[1]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("Ready"),
-						"Status": Equal(metav1.ConditionFalse),
+						"Status": Equal(metav1.ConditionTrue),
 					},
 				))
-
-				Expect(currentResourceStatuses[2]).ToNot(Equal(previousResources[2]))
-				Expect(currentResourceStatuses[2].StampedRef.Name).To(Equal("StampedObj"))
 			})
 		})
 	})
