@@ -26,14 +26,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, resourceStatuses statuses.ResourceStatuses) error
 }
 
 type realizer struct{}
@@ -42,12 +42,11 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, delivery *v1alpha1.ClusterDelivery, resourceStatuses statuses.ResourceStatuses) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
 	outs := NewOutputs()
-	var realizedResources []v1alpha1.RealizedResource
 	var firstError error
 
 	for i := range delivery.Spec.Resources {
@@ -69,34 +68,27 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		realizedResource := generateRealizedResource(resource, template, stampedObject, out, previousResources)
+		outs.AddOutput(resource.Name, out)
 
-		conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, getPreviousResourceConditions(resource.Name, previousResources))
+		previousRealizedResource := resourceStatuses.GetPreviousRealizedResource(resource.Name)
 
-		if err != nil {
-			conditions.AddConditionForDeliverableError(&conditionManager, false, err)
+		var realizedResource *v1alpha1.RealizedResource
+
+		if (stampedObject == nil || template == nil) && previousRealizedResource != nil {
+			realizedResource = previousRealizedResource
 		} else {
-			conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
+			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
 		}
 
-		conditions, _ := conditionManager.Finalize()
-		realizedResource.Conditions = conditions
-
-		realizedResources = append(realizedResources, realizedResource)
-
-		outs.AddOutput(resource.Name, out)
+		resourceStatuses.Add(realizedResource, err)
 	}
 
-	return realizedResources, firstError
+	return firstError
 }
 
-func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousResources []v1alpha1.RealizedResource) v1alpha1.RealizedResource {
-	if stampedObject == nil || template == nil {
-		for _, previousResource := range previousResources {
-			if previousResource.Name == resource.Name {
-				return previousResource
-			}
-		}
+func generateRealizedResource(resource v1alpha1.DeliveryResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+	if previousRealizedResource == nil {
+		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
 
 	var inputs []v1alpha1.Input
@@ -119,7 +111,7 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
-		outputs = getOutputs(resource.Name, template, previousResources, output)
+		outputs = getOutputs(template, previousRealizedResource, output)
 	}
 
 	var stampedRef *corev1.ObjectReference
@@ -132,7 +124,7 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 		}
 	}
 
-	return v1alpha1.RealizedResource{
+	return &v1alpha1.RealizedResource{
 		Name:        resource.Name,
 		StampedRef:  stampedRef,
 		TemplateRef: templateRef,
@@ -141,37 +133,18 @@ func generateRealizedResource(resource v1alpha1.DeliveryResource, template templ
 	}
 }
 
-func getPreviousResourceConditions(resourceName string, previousResources []v1alpha1.RealizedResource) []metav1.Condition {
-	for _, previousResource := range previousResources {
-		if previousResource.Name == resourceName {
-			return previousResource.Conditions
-		}
-	}
-	return nil
-}
-
-func getOutputs(resourceName string, template templates.Template, previousResources []v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+func getOutputs(template templates.Template, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
 	if err != nil {
-		for _, previousResource := range previousResources {
-			if previousResource.Name == resourceName {
-				outputs = previousResource.Outputs
-				break
-			}
-		}
+		outputs = previousRealizedResource.Outputs
 	} else {
 		currTime := metav1.NewTime(time.Now())
 		for j, out := range outputs {
 			outputs[j].LastTransitionTime = currTime
-			for _, previousResource := range previousResources {
-				if previousResource.Name == resourceName {
-					for _, previousOutput := range previousResource.Outputs {
-						if previousOutput.Name == out.Name {
-							if previousOutput.Digest == out.Digest {
-								outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
-							}
-							break
-						}
+			for _, previousOutput := range previousRealizedResource.Outputs {
+				if previousOutput.Name == out.Name {
+					if previousOutput.Digest == out.Digest {
+						outputs[j].LastTransitionTime = previousOutput.LastTransitionTime
 					}
 					break
 				}

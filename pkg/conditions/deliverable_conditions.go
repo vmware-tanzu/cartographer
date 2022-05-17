@@ -100,7 +100,7 @@ func DeploymentFailedConditionMetCondition(err error) metav1.Condition {
 	}
 }
 
-func AddConditionForDeliverableError(conditionManager *ConditionManager, isOwner bool, err error) {
+func AddConditionForResourceSubmittedDeliverable(conditionManager *ConditionManager, isOwner bool, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
 		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(isOwner, typedErr))

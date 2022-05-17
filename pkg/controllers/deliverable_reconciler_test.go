@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -42,6 +43,7 @@ import (
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -83,7 +85,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		}
 
 		rlzr = &deliverablefakes.FakeRealizer{}
-		rlzr.RealizeReturns(nil, nil)
+		rlzr.RealizeReturns(nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
@@ -214,9 +216,9 @@ var _ = Describe("DeliverableReconciler", func() {
 
 	Context("and the repo returns a single matching delivery for the deliverable", func() {
 		var (
-			deliveryName      string
-			delivery          v1alpha1.ClusterDelivery
-			realizedResources []v1alpha1.RealizedResource
+			deliveryName     string
+			delivery         v1alpha1.ClusterDelivery
+			resourceStatuses statuses.ResourceStatuses
 		)
 		BeforeEach(func() {
 			deliveryName = "some-delivery"
@@ -238,8 +240,10 @@ var _ = Describe("DeliverableReconciler", func() {
 			}
 			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 
-			realizedResources = []v1alpha1.RealizedResource{
-				{
+			resourceStatuses = statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedDeliverable)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
+					Name: "resource1",
 					StampedRef: &corev1.ObjectReference{
 						Kind:       "MyThing",
 						APIVersion: "thing.io/alphabeta1",
@@ -249,8 +253,10 @@ var _ = Describe("DeliverableReconciler", func() {
 						Name:       "my-image-template",
 						APIVersion: "carto.run/v1alpha1",
 					},
-				},
-				{
+				}, nil)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
+					Name: "resource2",
 					StampedRef: &corev1.ObjectReference{
 						Kind:       "NiceToSeeYou",
 						APIVersion: "hello.io/goodbye",
@@ -260,18 +266,51 @@ var _ = Describe("DeliverableReconciler", func() {
 						Name:       "my-config-template",
 						APIVersion: "carto.run/v1alpha1",
 					},
-				},
-			}
+				}, nil)
 
-			rlzr.RealizeReturns(realizedResources, nil)
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+				statusesVal := reflect.ValueOf(statuses)
+				existingVal := reflect.ValueOf(resourceStatuses)
+
+				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+				return nil
+			}
 		})
 
-		It("updates the status of the workload with the realizedResources", func() {
+		It("updates the status of the deliverable with the realizedResources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.StatusUpdateCallCount()).To(Equal(1))
 			_, dl := repo.StatusUpdateArgsForCall(0)
-			Expect(dl.(*v1alpha1.Deliverable).Status.Resources).To(Equal(realizedResources))
+			var resource1Status v1alpha1.ResourceStatus
+			var resource2Status v1alpha1.ResourceStatus
+
+			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
+
+			for i := range currentStatuses {
+				switch currentStatuses[i].Name {
+				case "resource1":
+					resource1Status = currentStatuses[i]
+				case "resource2":
+					resource2Status = currentStatuses[i]
+				}
+			}
+
+			var deliverableResource1Status v1alpha1.ResourceStatus
+			var deliverableResource2Status v1alpha1.ResourceStatus
+
+			for i := range dl.(*v1alpha1.Deliverable).Status.Resources {
+				switch dl.(*v1alpha1.Deliverable).Status.Resources[i].Name {
+				case "resource1":
+					deliverableResource1Status = dl.(*v1alpha1.Deliverable).Status.Resources[i]
+				case "resource2":
+					deliverableResource2Status = dl.(*v1alpha1.Deliverable).Status.Resources[i]
+				}
+			}
+
+			Expect(deliverableResource1Status.RealizedResource).To(Equal(resource1Status.RealizedResource))
+			Expect(deliverableResource2Status.RealizedResource).To(Equal(resource2Status.RealizedResource))
 		})
 
 		It("dynamically creates a resource realizer", func() {
@@ -378,17 +417,33 @@ var _ = Describe("DeliverableReconciler", func() {
 		It("watches the stampedObjects kinds", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(stampedTracker.WatchCallCount()).To(Equal(2))
-			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 
-			Expect(obj.GetObjectKind().GroupVersionKind().Kind).To(Equal(realizedResources[0].StampedRef.GetObjectKind().GroupVersionKind().Kind))
-			Expect(obj.GetObjectKind().GroupVersionKind().Version).To(Equal(realizedResources[0].StampedRef.GetObjectKind().GroupVersionKind().Version))
+			var gvks []schema.GroupVersionKind
+
+			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
+			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))
 
 			_, obj, hndl, _ = stampedTracker.WatchArgsForCall(1)
-
-			Expect(obj.GetObjectKind().GroupVersionKind().Kind).To(Equal(realizedResources[1].StampedRef.GetObjectKind().GroupVersionKind().Kind))
-			Expect(obj.GetObjectKind().GroupVersionKind().Version).To(Equal(realizedResources[1].StampedRef.GetObjectKind().GroupVersionKind().Version))
+			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))
+
+			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
+			var resource1Status v1alpha1.ResourceStatus
+			var resource2Status v1alpha1.ResourceStatus
+
+			for i := range currentStatuses {
+				switch currentStatuses[i].Name {
+				case "resource1":
+					resource1Status = currentStatuses[i]
+				case "resource2":
+					resource2Status = currentStatuses[i]
+				}
+			}
+
+			Expect(gvks).To(ContainElements(resource1Status.StampedRef.GetObjectKind().GroupVersionKind(),
+				resource2Status.StampedRef.GetObjectKind().GroupVersionKind()))
 		})
 
 		It("clears the previously tracked objects for the deliverable", func() {
@@ -475,7 +530,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						ResourceName: "some-name",
 						Err:          errors.New("some error"),
 					}
-					rlzr.RealizeReturns(nil, templateError)
+					rlzr.RealizeReturns(templateError)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -507,9 +562,36 @@ var _ = Describe("DeliverableReconciler", func() {
 						BlueprintName: "some-delivery",
 						BlueprintType: cerrors.Delivery,
 					}
-					realizedResources[0].StampedRef = nil
-					realizedResources[1].StampedRef = nil
-					rlzr.RealizeReturns(realizedResources, stampError)
+					resourceStatuses.Add(
+						&v1alpha1.RealizedResource{
+							Name:       "resource1",
+							StampedRef: nil,
+							TemplateRef: &corev1.ObjectReference{
+								Kind:       "my-image-kind",
+								Name:       "my-image-template",
+								APIVersion: "carto.run/v1alpha1",
+							},
+						}, nil,
+					)
+					resourceStatuses.Add(
+						&v1alpha1.RealizedResource{
+							Name:       "resource2",
+							StampedRef: nil,
+							TemplateRef: &corev1.ObjectReference{
+								Kind:       "my-config-kind",
+								Name:       "my-config-template",
+								APIVersion: "carto.run/v1alpha1",
+							},
+						}, nil,
+					)
+
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return stampError
+					}
 				})
 
 				It("does not try to watch the stampedObjects", func() {
@@ -562,7 +644,13 @@ var _ = Describe("DeliverableReconciler", func() {
 						StampedObject: &unstructured.Unstructured{},
 						ResourceName:  "some-name",
 					}
-					rlzr.RealizeReturns(realizedResources, stampedObjectError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return stampedObjectError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -611,7 +699,13 @@ var _ = Describe("DeliverableReconciler", func() {
 						BlueprintType: cerrors.Delivery,
 					}
 
-					rlzr.RealizeReturns(realizedResources, stampedObjectError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return stampedObjectError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -665,7 +759,13 @@ var _ = Describe("DeliverableReconciler", func() {
 						StampedObject: stampedObject,
 					}
 
-					rlzr.RealizeReturns(realizedResources, retrieveError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return retrieveError
+					}
 				})
 
 				Context("which wraps an ObservedGenerationError", func() {
@@ -880,7 +980,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						ResourceName:  "some-resource",
 						OptionName:    "some-option",
 					}
-					rlzr.RealizeReturns(nil, resolveOptionErr)
+					rlzr.RealizeReturns(resolveOptionErr)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -920,7 +1020,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						ResourceName:  "some-resource",
 						OptionNames:   []string{"option1", "option2"},
 					}
-					rlzr.RealizeReturns(nil, templateOptionsMatchErr)
+					rlzr.RealizeReturns(templateOptionsMatchErr)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -953,7 +1053,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				Context("there are no matching options", func() {
 					It("logs the handled error message", func() {
 						templateOptionsMatchErr.OptionNames = []string{}
-						rlzr.RealizeReturns(realizedResources, templateOptionsMatchErr)
+						rlzr.RealizeReturns(templateOptionsMatchErr)
 
 						_, _ = reconciler.Reconcile(ctx, req)
 
@@ -976,7 +1076,13 @@ var _ = Describe("DeliverableReconciler", func() {
 				var realizerError error
 				BeforeEach(func() {
 					realizerError = errors.New("some error")
-					rlzr.RealizeReturns(realizedResources, realizerError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return realizerError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -1222,26 +1328,38 @@ var _ = Describe("DeliverableReconciler", func() {
 			}
 			repo.GetDeliveriesForDeliverableReturns([]*v1alpha1.ClusterDelivery{&delivery}, nil)
 
-			rlzr.RealizeReturns([]v1alpha1.RealizedResource{
-				{
+			rlzr.RealizeReturns(nil)
+
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedDeliverable)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
 					Name: "some-resource",
 					StampedRef: &corev1.ObjectReference{
 						APIVersion: "some-api-version",
 						Kind:       "some-kind",
 						Name:       "some-new-stamped-obj-name",
 					},
-				},
-			}, nil)
+				}, nil,
+			)
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, delivery *v1alpha1.ClusterDelivery, statuses statuses.ResourceStatuses) error {
+				statusesVal := reflect.ValueOf(statuses)
+				existingVal := reflect.ValueOf(resourceStatuses)
+
+				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+				return nil
+			}
 		})
 		Context("template does not change so there are no orphaned objects", func() {
 			BeforeEach(func() {
-				dl.Status.Resources = []v1alpha1.RealizedResource{
+				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
-						Name: "some-resource",
-						StampedRef: &corev1.ObjectReference{
-							APIVersion: "some-api-version",
-							Kind:       "some-kind",
-							Name:       "some-new-stamped-obj-name",
+						RealizedResource: v1alpha1.RealizedResource{
+							Name: "some-resource",
+							StampedRef: &corev1.ObjectReference{
+								APIVersion: "some-api-version",
+								Kind:       "some-kind",
+								Name:       "some-new-stamped-obj-name",
+							},
 						},
 					},
 				}
@@ -1258,13 +1376,15 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		Context("a template changes so there are orphaned objects", func() {
 			BeforeEach(func() {
-				dl.Status.Resources = []v1alpha1.RealizedResource{
+				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
-						Name: "some-resource",
-						StampedRef: &corev1.ObjectReference{
-							APIVersion: "some-api-version",
-							Kind:       "some-kind",
-							Name:       "some-old-stamped-obj-name",
+						RealizedResource: v1alpha1.RealizedResource{
+							Name: "some-resource",
+							StampedRef: &corev1.ObjectReference{
+								APIVersion: "some-api-version",
+								Kind:       "some-kind",
+								Name:       "some-old-stamped-obj-name",
+							},
 						},
 					},
 				}

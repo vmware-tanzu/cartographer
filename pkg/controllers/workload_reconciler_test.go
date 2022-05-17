@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -40,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -82,7 +84,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		}
 
 		rlzr = &workloadfakes.FakeRealizer{}
-		rlzr.RealizeReturns(nil, nil)
+		rlzr.RealizeReturns(nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
@@ -209,9 +211,9 @@ var _ = Describe("WorkloadReconciler", func() {
 
 	Context("and the repo returns a single matching supply-chain for the workload", func() {
 		var (
-			supplyChainName   string
-			supplyChain       v1alpha1.ClusterSupplyChain
-			realizedResources []v1alpha1.RealizedResource
+			supplyChainName  string
+			supplyChain      v1alpha1.ClusterSupplyChain
+			resourceStatuses statuses.ResourceStatuses
 		)
 		BeforeEach(func() {
 			supplyChainName = "some-supply-chain"
@@ -233,8 +235,10 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 
-			realizedResources = []v1alpha1.RealizedResource{
-				{
+			resourceStatuses = statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
+					Name: "resource1",
 					StampedRef: &corev1.ObjectReference{
 						Kind:       "MyThing",
 						APIVersion: "thing.io/alphabeta1",
@@ -244,8 +248,11 @@ var _ = Describe("WorkloadReconciler", func() {
 						Name:       "my-image-template",
 						APIVersion: "carto.run/v1alpha1",
 					},
-				},
-				{
+				}, nil,
+			)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
+					Name: "resource2",
 					StampedRef: &corev1.ObjectReference{
 						Kind:       "NiceToSeeYou",
 						APIVersion: "hello.io/goodbye",
@@ -255,10 +262,16 @@ var _ = Describe("WorkloadReconciler", func() {
 						Name:       "my-config-template",
 						APIVersion: "carto.run/v1alpha1",
 					},
-				},
-			}
+				}, nil,
+			)
 
-			rlzr.RealizeReturns(realizedResources, nil)
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+				statusesVal := reflect.ValueOf(statuses)
+				existingVal := reflect.ValueOf(resourceStatuses)
+
+				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+				return nil
+			}
 		})
 
 		It("updates the status of the workload with the realizedResources", func() {
@@ -266,7 +279,35 @@ var _ = Describe("WorkloadReconciler", func() {
 
 			Expect(repo.StatusUpdateCallCount()).To(Equal(1))
 			_, wk := repo.StatusUpdateArgsForCall(0)
-			Expect(wk.(*v1alpha1.Workload).Status.Resources).To(Equal(realizedResources))
+			var resource1Status v1alpha1.ResourceStatus
+			var resource2Status v1alpha1.ResourceStatus
+
+			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
+
+			for i := range currentStatuses {
+				switch currentStatuses[i].Name {
+				case "resource1":
+					resource1Status = currentStatuses[i]
+				case "resource2":
+					resource2Status = currentStatuses[i]
+				}
+			}
+
+			var workloadResource1Status v1alpha1.ResourceStatus
+			var workloadResource2Status v1alpha1.ResourceStatus
+
+			for i := range wk.(*v1alpha1.Workload).Status.Resources {
+				switch wk.(*v1alpha1.Workload).Status.Resources[i].Name {
+				case "resource1":
+					workloadResource1Status = wk.(*v1alpha1.Workload).Status.Resources[i]
+				case "resource2":
+					workloadResource2Status = wk.(*v1alpha1.Workload).Status.Resources[i]
+				}
+			}
+
+			Expect(workloadResource1Status.RealizedResource).To(Equal(resource1Status.RealizedResource))
+			Expect(workloadResource2Status.RealizedResource).To(Equal(resource2Status.RealizedResource))
 		})
 
 		It("dynamically creates a resource realizer", func() {
@@ -373,17 +414,33 @@ var _ = Describe("WorkloadReconciler", func() {
 		It("watches the stampedObjects kinds", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 			Expect(stampedTracker.WatchCallCount()).To(Equal(2))
-			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 
-			Expect(obj.GetObjectKind().GroupVersionKind().Kind).To(Equal(realizedResources[0].StampedRef.GetObjectKind().GroupVersionKind().Kind))
-			Expect(obj.GetObjectKind().GroupVersionKind().Version).To(Equal(realizedResources[0].StampedRef.GetObjectKind().GroupVersionKind().Version))
+			var gvks []schema.GroupVersionKind
+
+			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
+			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
 
 			_, obj, hndl, _ = stampedTracker.WatchArgsForCall(1)
-
-			Expect(obj.GetObjectKind().GroupVersionKind().Kind).To(Equal(realizedResources[1].StampedRef.GetObjectKind().GroupVersionKind().Kind))
-			Expect(obj.GetObjectKind().GroupVersionKind().Version).To(Equal(realizedResources[1].StampedRef.GetObjectKind().GroupVersionKind().Version))
+			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
 			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
+
+			currentStatuses := resourceStatuses.GetCurrent()
+			Expect(currentStatuses).To(HaveLen(2))
+			var resource1Status v1alpha1.ResourceStatus
+			var resource2Status v1alpha1.ResourceStatus
+
+			for i := range currentStatuses {
+				switch currentStatuses[i].Name {
+				case "resource1":
+					resource1Status = currentStatuses[i]
+				case "resource2":
+					resource2Status = currentStatuses[i]
+				}
+			}
+
+			Expect(gvks).To(ContainElements(resource1Status.StampedRef.GetObjectKind().GroupVersionKind(),
+				resource2Status.StampedRef.GetObjectKind().GroupVersionKind()))
 		})
 
 		It("clears the previously tracked objects for the workload", func() {
@@ -468,7 +525,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						Err:          errors.New("some error"),
 						ResourceName: "some-name",
 					}
-					rlzr.RealizeReturns(nil, templateError)
+					rlzr.RealizeReturns(templateError)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -500,9 +557,37 @@ var _ = Describe("WorkloadReconciler", func() {
 						BlueprintName: supplyChainName,
 						BlueprintType: cerrors.SupplyChain,
 					}
-					realizedResources[0].StampedRef = nil
-					realizedResources[1].StampedRef = nil
-					rlzr.RealizeReturns(realizedResources, stampError)
+
+					resourceStatuses.Add(
+						&v1alpha1.RealizedResource{
+							Name:       "resource1",
+							StampedRef: nil,
+							TemplateRef: &corev1.ObjectReference{
+								Kind:       "my-image-kind",
+								Name:       "my-image-template",
+								APIVersion: "carto.run/v1alpha1",
+							},
+						}, nil,
+					)
+					resourceStatuses.Add(
+						&v1alpha1.RealizedResource{
+							Name:       "resource2",
+							StampedRef: nil,
+							TemplateRef: &corev1.ObjectReference{
+								Kind:       "my-config-kind",
+								Name:       "my-config-template",
+								APIVersion: "carto.run/v1alpha1",
+							},
+						}, nil,
+					)
+
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return stampError
+					}
 				})
 
 				It("does not try to watch the stampedObjects", func() {
@@ -536,12 +621,21 @@ var _ = Describe("WorkloadReconciler", func() {
 					key, obj := dependencyTracker.TrackArgsForCall(0)
 					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
 					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+
+					var keys []string
+					var objs []string
 					key, obj = dependencyTracker.TrackArgsForCall(1)
-					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
 					key, obj = dependencyTracker.TrackArgsForCall(2)
-					Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					Expect(keys).To(ContainElements("my-image-kind.carto.run//my-image-template",
+						"my-config-kind.carto.run//my-config-template"))
+					Expect(objs).To(ContainElements("my-namespace/my-workload-name",
+						"my-namespace/my-workload-name"))
 				})
 			})
 
@@ -553,7 +647,13 @@ var _ = Describe("WorkloadReconciler", func() {
 						StampedObject: &unstructured.Unstructured{},
 						ResourceName:  "some-name",
 					}
-					rlzr.RealizeReturns(realizedResources, stampedObjectError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return stampedObjectError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -573,12 +673,21 @@ var _ = Describe("WorkloadReconciler", func() {
 					key, obj := dependencyTracker.TrackArgsForCall(0)
 					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
 					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+
+					var keys []string
+					var objs []string
 					key, obj = dependencyTracker.TrackArgsForCall(1)
-					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
 					key, obj = dependencyTracker.TrackArgsForCall(2)
-					Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					Expect(keys).To(ContainElements("my-image-kind.carto.run//my-image-template",
+						"my-config-kind.carto.run//my-config-template"))
+					Expect(objs).To(ContainElements("my-namespace/my-workload-name",
+						"my-namespace/my-workload-name"))
 				})
 			})
 
@@ -602,7 +711,13 @@ var _ = Describe("WorkloadReconciler", func() {
 						BlueprintType: cerrors.SupplyChain,
 					}
 
-					rlzr.RealizeReturns(realizedResources, stampedObjectError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return stampedObjectError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -624,12 +739,21 @@ var _ = Describe("WorkloadReconciler", func() {
 					key, obj := dependencyTracker.TrackArgsForCall(0)
 					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
 					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+
+					var keys []string
+					var objs []string
 					key, obj = dependencyTracker.TrackArgsForCall(1)
-					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
 					key, obj = dependencyTracker.TrackArgsForCall(2)
-					Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					Expect(keys).To(ContainElements("my-image-kind.carto.run//my-image-template",
+						"my-config-kind.carto.run//my-config-template"))
+					Expect(objs).To(ContainElements("my-namespace/my-workload-name",
+						"my-namespace/my-workload-name"))
 				})
 			})
 
@@ -653,7 +777,13 @@ var _ = Describe("WorkloadReconciler", func() {
 						BlueprintName: supplyChainName,
 						BlueprintType: cerrors.SupplyChain,
 					}
-					rlzr.RealizeReturns(realizedResources, retrieveError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return retrieveError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -681,12 +811,21 @@ var _ = Describe("WorkloadReconciler", func() {
 					key, obj := dependencyTracker.TrackArgsForCall(0)
 					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
 					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+
+					var keys []string
+					var objs []string
 					key, obj = dependencyTracker.TrackArgsForCall(1)
-					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
 					key, obj = dependencyTracker.TrackArgsForCall(2)
-					Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					Expect(keys).To(ContainElements("my-image-kind.carto.run//my-image-template",
+						"my-config-kind.carto.run//my-config-template"))
+					Expect(objs).To(ContainElements("my-namespace/my-workload-name",
+						"my-namespace/my-workload-name"))
 				})
 			})
 
@@ -701,7 +840,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						ResourceName:  "some-resource",
 						OptionName:    "some-option",
 					}
-					rlzr.RealizeReturns(nil, resolveOptionErr)
+					rlzr.RealizeReturns(resolveOptionErr)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -741,7 +880,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						ResourceName:  "some-resource",
 						OptionNames:   []string{"option1", "option2"},
 					}
-					rlzr.RealizeReturns(nil, templateOptionsMatchErr)
+					rlzr.RealizeReturns(templateOptionsMatchErr)
 				})
 
 				It("calls the condition manager to report", func() {
@@ -774,7 +913,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				Context("there are no matching options", func() {
 					It("logs the handled error message", func() {
 						templateOptionsMatchErr.OptionNames = []string{}
-						rlzr.RealizeReturns(nil, templateOptionsMatchErr)
+						rlzr.RealizeReturns(templateOptionsMatchErr)
 
 						_, _ = reconciler.Reconcile(ctx, req)
 
@@ -797,7 +936,13 @@ var _ = Describe("WorkloadReconciler", func() {
 				var realizerError error
 				BeforeEach(func() {
 					realizerError = errors.New("some error")
-					rlzr.RealizeReturns(realizedResources, realizerError)
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return realizerError
+					}
 				})
 
 				It("calls the condition manager to report", func() {
@@ -817,12 +962,21 @@ var _ = Describe("WorkloadReconciler", func() {
 					key, obj := dependencyTracker.TrackArgsForCall(0)
 					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
 					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+
+					var keys []string
+					var objs []string
 					key, obj = dependencyTracker.TrackArgsForCall(1)
-					Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
 					key, obj = dependencyTracker.TrackArgsForCall(2)
-					Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
-					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					Expect(keys).To(ContainElements("my-image-kind.carto.run//my-image-template",
+						"my-config-kind.carto.run//my-config-template"))
+					Expect(objs).To(ContainElements("my-namespace/my-workload-name",
+						"my-namespace/my-workload-name"))
 				})
 			})
 		})
@@ -1029,26 +1183,38 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
 
-			rlzr.RealizeReturns([]v1alpha1.RealizedResource{
-				{
+			rlzr.RealizeReturns(nil)
+
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
 					Name: "some-resource",
 					StampedRef: &corev1.ObjectReference{
 						APIVersion: "some-api-version",
 						Kind:       "some-kind",
 						Name:       "some-new-stamped-obj-name",
 					},
-				},
-			}, nil)
+				}, nil,
+			)
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, chain *v1alpha1.ClusterSupplyChain, statuses statuses.ResourceStatuses) error {
+				statusesVal := reflect.ValueOf(statuses)
+				existingVal := reflect.ValueOf(resourceStatuses)
+
+				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+				return nil
+			}
 		})
 		Context("template does not change so there are no orphaned objects", func() {
 			BeforeEach(func() {
-				wl.Status.Resources = []v1alpha1.RealizedResource{
+				wl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
-						Name: "some-resource",
-						StampedRef: &corev1.ObjectReference{
-							APIVersion: "some-api-version",
-							Kind:       "some-kind",
-							Name:       "some-new-stamped-obj-name",
+						RealizedResource: v1alpha1.RealizedResource{
+							Name: "some-resource",
+							StampedRef: &corev1.ObjectReference{
+								APIVersion: "some-api-version",
+								Kind:       "some-kind",
+								Name:       "some-new-stamped-obj-name",
+							},
 						},
 					},
 				}
@@ -1065,13 +1231,15 @@ var _ = Describe("WorkloadReconciler", func() {
 
 		Context("a template changes so there are orphaned objects", func() {
 			BeforeEach(func() {
-				wl.Status.Resources = []v1alpha1.RealizedResource{
+				wl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
-						Name: "some-resource",
-						StampedRef: &corev1.ObjectReference{
-							APIVersion: "some-api-version",
-							Kind:       "some-kind",
-							Name:       "some-old-stamped-obj-name",
+						RealizedResource: v1alpha1.RealizedResource{
+							Name: "some-resource",
+							StampedRef: &corev1.ObjectReference{
+								APIVersion: "some-api-version",
+								Kind:       "some-kind",
+								Name:       "some-old-stamped-obj-name",
+							},
 						},
 					},
 				}

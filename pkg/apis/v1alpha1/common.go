@@ -214,6 +214,10 @@ type RealizedResource struct {
 
 	// Outputs are values from the object in StampedRef that can be consumed by other resources
 	Outputs []Output `json:"outputs,omitempty"`
+}
+
+type ResourceStatus struct {
+	RealizedResource `json:",inline"`
 
 	// Conditions describing this resource's reconcile state. The top level condition is
 	// of type `Ready`, and follows these Kubernetes conventions:
