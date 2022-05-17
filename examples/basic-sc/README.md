@@ -300,7 +300,7 @@ metadata:
 spec:
   source:
     git:
-      url: https://github.com/kontinue/hello-world
+      url: https://github.com/carto-labs/hello-world
       revision: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4
   ...
 ```
@@ -320,7 +320,7 @@ metadata:
   name: hello-world
 spec:
   source:
-    git: {url: https://github.com/kontinue/hello-world, revision: main}
+    git: {url: https://github.com/carto-labs/hello-world, revision: main}
     ...
 status:
 	latestImage: index.docker.io/projectcartographer/hello-world@sha256:27452d42b
@@ -340,7 +340,7 @@ metadata:
 spec:
   source:
     git:
-      url: https://github.com/kontinue/hello-world
+      url: https://github.com/carto-labs/hello-world
       revision: $(most_recent_commit)$
   ...
 ```
@@ -380,7 +380,7 @@ metadata:
   name: git-repository
 spec:
   interval: 1m
-  url: https://github.com/kontinue/hello-world
+  url: https://github.com/carto-labs/hello-world
   ref: {branch: main}
 ```
 
@@ -394,7 +394,7 @@ metadata:
   name: git-repository
 spec:
   interval: 1m
-  url: https://github.com/kontinue/hello-world
+  url: https://github.com/carto-labs/hello-world
   ref: {branch: main}
 status:
   artifact:
@@ -602,7 +602,7 @@ metadata:
 spec:
   source:
     git:
-      url: https://github.com/kontinue/hello-world
+      url: https://github.com/carto-labs/hello-world
       ref: {branch: main}
 ```
 

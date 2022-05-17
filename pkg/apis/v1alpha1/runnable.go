@@ -23,22 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	RunnableReady    = "Ready"
-	RunTemplateReady = "RunTemplateReady"
-)
-
-const (
-	ReadyRunTemplateReason                            = "Ready"
-	NotFoundRunTemplateReason                         = "RunTemplateNotFound"
-	StampedObjectRejectedByAPIServerRunTemplateReason = "StampedObjectRejectedByAPIServer"
-	OutputPathNotSatisfiedRunTemplateReason           = "OutputPathNotSatisfied"
-	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
-	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
-	UnknownErrorReason                                = "UnknownError"
-	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
-)
-
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=runnables,shortName=run

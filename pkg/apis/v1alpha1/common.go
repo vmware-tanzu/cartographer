@@ -30,16 +30,6 @@ const (
 	FieldSelectorOpDoesNotExist FieldSelectorOperator = "DoesNotExist"
 )
 
-const (
-	OwnerReady              = "Ready"
-	OwnerResourcesSubmitted = "ResourcesSubmitted"
-)
-
-const (
-	ResourceReady     = "Ready"
-	ResourceSubmitted = "ResourceSubmitted"
-)
-
 type OwnerStatus struct {
 	// ObservedGeneration refers to the metadata.Generation of the spec that resulted in
 	// the current `status`.

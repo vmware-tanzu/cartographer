@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runnable
-
-//go:generate go run -modfile ../../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
+package controllers
 
 import (
 	"context"
@@ -48,7 +46,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type Reconciler struct {
+type RunnableReconciler struct {
 	Repo                    repository.Repository
 	Realizer                realizer.Realizer
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
@@ -60,7 +58,7 @@ type Reconciler struct {
 	DependencyTracker       dependency.DependencyTracker
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.Info("started")
 	defer log.Info("finished")
@@ -95,13 +93,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
-		r.conditionManager.AddPositive(ServiceAccountSecretNotFoundCondition(err))
+		r.conditionManager.AddPositive(conditions.RunnableServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	runnableClient, discoveryClient, err := r.ClientBuilder(secret, true)
 	if err != nil {
-		r.conditionManager.AddPositive(ClientBuilderErrorCondition(err))
+		r.conditionManager.AddPositive(conditions.ClientBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
@@ -109,30 +107,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
-		case realizer.GetRunTemplateError:
-			r.conditionManager.AddPositive(RunTemplateMissingCondition(typedErr))
+		case cerrors.RunnableGetRunTemplateError:
+			r.conditionManager.AddPositive(conditions.RunTemplateMissingCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
-		case realizer.ResolveSelectorError:
-			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case realizer.StampError:
-			r.conditionManager.AddPositive(TemplateStampFailureCondition(typedErr))
-		case realizer.ApplyStampedObjectError:
-			r.conditionManager.AddPositive(StampedObjectRejectedByAPIServerCondition(typedErr))
+		case cerrors.RunnableResolveSelectorError:
+			r.conditionManager.AddPositive(conditions.RunnableTemplateStampFailureCondition(typedErr))
+		case cerrors.RunnableStampError:
+			r.conditionManager.AddPositive(conditions.RunnableTemplateStampFailureCondition(typedErr))
+		case cerrors.RunnableApplyStampedObjectError:
+			r.conditionManager.AddPositive(conditions.StampedObjectRejectedByAPIServerCondition(typedErr))
 			if !kerrors.IsForbidden(typedErr.Err) {
 				err = cerrors.NewUnhandledError(err)
 			}
-		case realizer.ListCreatedObjectsError:
-			r.conditionManager.AddPositive(FailedToListCreatedObjectsCondition(typedErr))
+		case cerrors.RunnableListCreatedObjectsError:
+			r.conditionManager.AddPositive(conditions.FailedToListCreatedObjectsCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
-		case realizer.RetrieveOutputError:
-			r.conditionManager.AddPositive(OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.Error()))
+		case cerrors.RunnableRetrieveOutputError:
+			r.conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.Error()))
 		default:
-			r.conditionManager.AddPositive(UnknownErrorCondition(typedErr))
+			r.conditionManager.AddPositive(conditions.UnknownErrorCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
 		log.V(logger.DEBUG).Info("realized object", "object", stampedObject)
-		r.conditionManager.AddPositive(RunTemplateReadyCondition())
+		r.conditionManager.AddPositive(conditions.RunTemplateReadyCondition())
 	}
 
 	var trackingError error
@@ -149,7 +147,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.completeReconciliation(ctx, runnable, outputs, err)
 }
 
-func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, err error) (ctrl.Result, error) {
+func (r *RunnableReconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
@@ -174,7 +172,7 @@ func (r *Reconciler) completeReconciliation(ctx context.Context, runnable *v1alp
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) trackDependencies(runnable *v1alpha1.Runnable, serviceAccountName string) {
+func (r *RunnableReconciler) trackDependencies(runnable *v1alpha1.Runnable, serviceAccountName string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: runnable.Namespace,
 		Name:      runnable.Name,
@@ -208,7 +206,7 @@ func (r *Reconciler) trackDependencies(runnable *v1alpha1.Runnable, serviceAccou
 	})
 }
 
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runnable
+package errors
 
 import (
 	"fmt"
@@ -23,24 +23,24 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-type GetRunTemplateError struct {
+type RunnableGetRunTemplateError struct {
 	Err         error
 	TemplateRef *v1alpha1.TemplateReference
 }
 
-func (e GetRunTemplateError) Error() string {
+func (e RunnableGetRunTemplateError) Error() string {
 	return fmt.Errorf("unable to get run template [%s]: %w",
 		e.TemplateRef.Name,
 		e.Err,
 	).Error()
 }
 
-type ResolveSelectorError struct {
+type RunnableResolveSelectorError struct {
 	Err      error
 	Selector *v1alpha1.ResourceSelector
 }
 
-func (e ResolveSelectorError) Error() string {
+func (e RunnableResolveSelectorError) Error() string {
 	return fmt.Errorf("unable to resolve selector [%v], apiVersion [%s], kind [%s]: %w",
 		e.Selector.MatchingLabels,
 		e.Selector.Resource.APIVersion,
@@ -49,25 +49,25 @@ func (e ResolveSelectorError) Error() string {
 	).Error()
 }
 
-type StampError struct {
+type RunnableStampError struct {
 	Err         error
 	TemplateRef *v1alpha1.TemplateReference
 }
 
-func (e StampError) Error() string {
+func (e RunnableStampError) Error() string {
 	return fmt.Errorf("unable to stamp object for run template [%s]: %w",
 		e.TemplateRef.Name,
 		e.Err,
 	).Error()
 }
 
-type ApplyStampedObjectError struct {
+type RunnableApplyStampedObjectError struct {
 	Err           error
 	StampedObject *unstructured.Unstructured
 	TemplateRef   *v1alpha1.TemplateReference
 }
 
-func (e ApplyStampedObjectError) Error() string {
+func (e RunnableApplyStampedObjectError) Error() string {
 	name := e.StampedObject.GetName()
 	if name == "" {
 		name = e.StampedObject.GetGenerateName()
@@ -80,13 +80,13 @@ func (e ApplyStampedObjectError) Error() string {
 	).Error()
 }
 
-type ListCreatedObjectsError struct {
+type RunnableListCreatedObjectsError struct {
 	Err       error
 	Namespace string
 	Labels    map[string]string
 }
 
-func (e ListCreatedObjectsError) Error() string {
+func (e RunnableListCreatedObjectsError) Error() string {
 	return fmt.Errorf("unable to list objects in namespace [%s] with labels [%v]: %w",
 		e.Namespace,
 		e.Labels,
@@ -94,13 +94,13 @@ func (e ListCreatedObjectsError) Error() string {
 	).Error()
 }
 
-type RetrieveOutputError struct {
+type RunnableRetrieveOutputError struct {
 	Err           error
 	StampedObject *unstructured.Unstructured
 	TemplateRef   *v1alpha1.TemplateReference
 }
 
-func (e RetrieveOutputError) Error() string {
+func (e RunnableRetrieveOutputError) Error() string {
 	name := e.StampedObject.GetName()
 	if name == "" {
 		name = e.StampedObject.GetGenerateName()

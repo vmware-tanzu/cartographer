@@ -23,16 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	SupplyChainReady          = "Ready"
-	SupplyChainTemplatesReady = "TemplatesReady"
-)
-
-const (
-	ReadyTemplatesReadyReason    = "Ready"
-	NotFoundTemplatesReadyReason = "TemplatesNotFound"
-)
-
 var ValidSupplyChainTemplates = []client.Object{
 	&ClusterSourceTemplate{},
 	&ClusterImageTemplate{},
