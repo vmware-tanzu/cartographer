@@ -32,7 +32,7 @@ readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
 readonly CERT_MANAGER_VERSION=1.5.3
-readonly KAPP_CONTROLLER_VERSION=0.32.0
+readonly KAPP_CONTROLLER_VERSION=0.36.1
 readonly KNATIVE_SERVING_VERSION=0.26.0
 readonly KPACK_VERSION=0.5.1
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
@@ -450,7 +450,7 @@ setup_source_to_gitops() {
           --data-value registry.server="$REGISTRY" \
           --data-value workload_name="$test_name" \
           --data-value image_prefix="$REGISTRY/example-$test_name-" \
-          --data-value source_repo.url="https://github.com/kontinue/hello-world" \
+          --data-value source_repo.url="https://github.com/carto-labs/hello-world" \
           --data-value source_repo.branch="main" \
           --data-value git_repository="$GITOPS_REPO" \
           --data-value git_branch="$GITOPS_BRANCH" \

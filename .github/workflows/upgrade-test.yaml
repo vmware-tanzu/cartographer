@@ -19,6 +19,9 @@ on:
   pull_request:
     branches: [main]
 
+  schedule: # daily run
+    - cron: '0 0 * * *'
+
 jobs:
   upgrade-test:
     runs-on: ubuntu-latest
