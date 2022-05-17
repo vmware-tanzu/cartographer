@@ -71,6 +71,9 @@ To install `cartographer`, refer to [README.md](../../README.md).
 5. [tree](https://github.com/ahmetb/kubectl-tree#installation) and
   [yq](https://github.com/kislyuk/yq#installation) for observing objects in the cluster and their fields.
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 ### Location of files

@@ -273,7 +273,7 @@ var _ = Describe("Realizer", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("some bad error"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ApplyStampedObjectError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableApplyStampedObjectError"))
 			})
 		})
 
@@ -286,7 +286,7 @@ var _ = Describe("Realizer", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("some list error"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ListCreatedObjectsError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableListCreatedObjectsError"))
 			})
 		})
 
@@ -410,7 +410,7 @@ var _ = Describe("Realizer", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: selector matched multiple objects`))
-				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableResolveSelectorError"))
 			})
 		})
 
@@ -430,7 +430,7 @@ var _ = Describe("Realizer", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: selector did not match any objects`))
-				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableResolveSelectorError"))
 			})
 		})
 
@@ -450,7 +450,7 @@ var _ = Describe("Realizer", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(`unable to resolve selector [map[expected-label:expected-value]], apiVersion [apiversion-to-be-selected], kind [kind-to-be-selected]: failed to list objects in namespace matching selector [map[expected-label:expected-value]]: listing unstructured is hard`))
-				Expect(reflect.TypeOf(err).String()).To(Equal("runnable.ResolveSelectorError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableResolveSelectorError"))
 			})
 		})
 	})
@@ -489,8 +489,8 @@ var _ = Describe("Realizer", func() {
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [configmap] for run template [my-template]: failed to evaluate path [data.hasnot]: evaluate: failed to find results: hasnot is not found`))
-			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.RetrieveOutputError"))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [configmap] for run template [my-template]: failed to evaluate path [data.hasnot]: jsonpath returned empty list: data.hasnot`))
+			Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableRetrieveOutputError"))
 		})
 	})
 
@@ -508,7 +508,7 @@ var _ = Describe("Realizer", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`unable to stamp object for run template [my-template]: failed to unmarshal json resource template: unexpected end of JSON input`))
-			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.StampError"))
+			Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableStampError"))
 		})
 	})
 
@@ -528,7 +528,7 @@ var _ = Describe("Realizer", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`unable to get run template [my-template]: Errol mcErrorFace`))
-			Expect(reflect.TypeOf(err).String()).To(Equal("runnable.GetRunTemplateError"))
+			Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableGetRunTemplateError"))
 		})
 	})
 })

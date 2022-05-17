@@ -214,7 +214,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.GetTemplateError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.GetTemplateError"))
 			})
 		})
 
@@ -272,7 +272,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.StampError"))
 			})
 		})
 
@@ -323,8 +323,8 @@ var _ = Describe("Resource", func() {
 				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("find results: does-not-exist is not found"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.RetrieveOutputError"))
+				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RetrieveOutputError"))
 			})
 		})
 
@@ -387,7 +387,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.ApplyStampedObjectError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.ApplyStampedObjectError"))
 			})
 		})
 
@@ -439,7 +439,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("workload.StampError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.StampError"))
 			})
 		})
 
@@ -449,7 +449,7 @@ var _ = Describe("Resource", func() {
 				branch := "main"
 				workload = v1alpha1.Workload{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:                       "my-workload",
+						Name: "my-workload",
 					},
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Workload",
@@ -581,17 +581,34 @@ var _ = Describe("Resource", func() {
 				})
 			})
 
-			When("key does not exist in the spec", func() {
-				It("returns a ResolveTemplateOptionError", func() {
+			When("one option has key that does not exist in the spec", func() {
+				It("does not error", func() {
 					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
+
+					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
+
+					Expect(template.GetName()).To(Equal("template-chosen"))
+					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+
+					Expect(err).NotTo(HaveOccurred())
+					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
+					Expect(name).To(Equal("template-chosen"))
+					Expect(kind).To(Equal("ClusterImageTemplate"))
+				})
+			})
+
+			When("key is malformed", func() {
+				It("returns a ResolveTemplateOptionError", func() {
+					resource.TemplateRef.Options[0].Selector.MatchFields[0].Key = `spec.env[`
 
 					template, _, _, err := r.Do(ctx, &resource, supplyChainName, outputs)
 
 					Expect(template).To(BeNil())
 
 					Expect(err).To(HaveOccurred())
+					Expect(reflect.TypeOf(err).String()).To(Equal("errors.ResolveTemplateOptionError"))
 					Expect(err.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
-					Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[?(@.name=="some-name")].bad] operator [Exists] values [[]]: evaluate: failed to find results: bad is not found`))
+					Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[] operator [Exists] values [[]]: evaluate: failed to parse jsonpath '{.spec.env[}': unterminated array`))
 				})
 			})
 
