@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package realizer_test
 
 import (
 	"context"
@@ -29,21 +29,21 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 var _ = Describe("Realize", func() {
 	var (
-		resourceRealizer *workloadfakes.FakeResourceRealizer
+		resourceRealizer *realizerfakes.FakeResourceRealizer
 		rlzr             realizer.Realizer
 		ctx              context.Context
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
 		rlzr = realizer.NewRealizer()
-		resourceRealizer = &workloadfakes.FakeResourceRealizer{}
+		resourceRealizer = &realizerfakes.FakeResourceRealizer{}
 	})
 
 	Context("Workloads", func() {

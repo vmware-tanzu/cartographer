@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -42,7 +42,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -59,13 +59,13 @@ var _ = Describe("DeliverableReconciler", func() {
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
 		conditionManager  *conditionsfakes.FakeConditionManager
-		rlzr              *workloadfakes.FakeRealizer
+		rlzr              *realizerfakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
 		stampedTracker    *stampedfakes.FakeStampedTracker
 		dependencyTracker *dependencyfakes.FakeDependencyTracker
 
-		builtResourceRealizer           *workloadfakes.FakeResourceRealizer
+		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
 		labelerForBuiltResourceRealizer realizer.ResourceLabeler
 		resourceRealizerSecret          *corev1.Secret
 		serviceAccountSecret            *corev1.Secret
@@ -84,7 +84,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &workloadfakes.FakeRealizer{}
+		rlzr = &realizerfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -111,7 +111,6 @@ var _ = Describe("DeliverableReconciler", func() {
 				return nil, resourceRealizerBuilderError
 			}
 			resourceRealizerSecret = secret
-			builtResourceRealizer = &workloadfakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
 
@@ -293,7 +292,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			}))
 		})
 
-		It("updates the status of the workload with the realizedResources", func() {
+		It("updates the status of the owner with the realizedResources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(repo.StatusUpdateCallCount()).To(Equal(1))

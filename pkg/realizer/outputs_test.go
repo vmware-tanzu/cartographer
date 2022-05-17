@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package realizer_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 

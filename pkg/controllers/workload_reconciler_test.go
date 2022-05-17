@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -41,8 +42,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -59,12 +60,12 @@ var _ = Describe("WorkloadReconciler", func() {
 		req                             ctrl.Request
 		repo                            *repositoryfakes.FakeRepository
 		conditionManager                *conditionsfakes.FakeConditionManager
-		rlzr                            *workloadfakes.FakeRealizer
+		rlzr                            *realizerfakes.FakeRealizer
 		wl                              *v1alpha1.Workload
 		workloadLabels                  map[string]string
 		stampedTracker                  *stampedfakes.FakeStampedTracker
 		dependencyTracker               *dependencyfakes.FakeDependencyTracker
-		builtResourceRealizer           *workloadfakes.FakeResourceRealizer
+		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
 		labelerForBuiltResourceRealizer realizer.ResourceLabeler
 		resourceRealizerSecret          *corev1.Secret
 		serviceAccountSecret            *corev1.Secret
@@ -83,7 +84,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &workloadfakes.FakeRealizer{}
+		rlzr = &realizerfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -108,7 +109,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				return nil, resourceRealizerBuilderError
 			}
 			resourceRealizerSecret = secret
-			builtResourceRealizer = &workloadfakes.FakeResourceRealizer{}
+			builtResourceRealizer = &realizerfakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
 

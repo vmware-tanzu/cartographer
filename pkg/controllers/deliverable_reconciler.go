@@ -17,10 +17,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"reflect"
-
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -51,8 +50,8 @@ import (
 type DeliverableReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
-	ResourceRealizerBuilder workload.ResourceRealizerBuilder
-	Realizer                workload.Realizer
+	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
+	Realizer                realizer.Realizer
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
 	conditionManager        conditions.ConditionManager
@@ -124,7 +123,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, workload.MakeDeliveryOwnerResources(delivery), deliverable.Status.Resources)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), deliverable.Status.Resources)
 
 	if err != nil {
 		conditions.AddConditionForDeliverableError(&r.conditionManager, true, err)
@@ -207,8 +206,8 @@ func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelive
 	return readyCondition.Status == "True"
 }
 
-func buildDeliverableResourceLabeler(owner, blueprint client.Object) workload.ResourceLabeler {
-	return func(resource workload.OwnerResource) templates.Labels {
+func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
+	return func(resource realizer.OwnerResource) templates.Labels {
 		return templates.Labels{
 			"carto.run/deliverable-name":      owner.GetName(),
 			"carto.run/deliverable-namespace": owner.GetNamespace(),
@@ -379,8 +378,8 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 
 	r.ConditionManagerBuilder = conditions.NewConditionManager
-	r.ResourceRealizerBuilder = workload.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
-	r.Realizer = workload.NewRealizer()
+	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
+	r.Realizer = realizer.NewRealizer()
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-deliverable"),

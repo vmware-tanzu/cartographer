@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workload_test
+package realizer_test
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
