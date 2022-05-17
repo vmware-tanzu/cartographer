@@ -114,7 +114,7 @@ var _ = Describe("Resource", func() {
 	})
 
 	Describe("Do", func() {
-		When("passed a deliverable with outputs", func() {
+		When("passed a owner with outputs", func() {
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
@@ -197,89 +197,6 @@ var _ = Describe("Resource", func() {
 
 				Expect(out.Source.Revision).To(Equal("some-revision"))
 				Expect(out.Source.URL).To(Equal("some-url"))
-			})
-		})
-
-		When("passed a workload with outputs", func() {
-			BeforeEach(func() {
-				resource.Sources = []v1alpha1.ResourceReference{
-					{
-						Name:     "source-provider",
-						Resource: "previous-resource",
-					},
-				}
-
-				outputs.AddOutput("previous-resource", &templates.Output{Source: &templates.Source{
-					URL:      "some-url",
-					Revision: "some-revision",
-				}})
-
-				configMap := &corev1.ConfigMap{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "example-config-map",
-					},
-					Data: map[string]string{
-						"player_current_lives": `$(source.url)$`,
-						"some_other_info":      `$(sources.source-provider.revision)$`,
-					},
-				}
-
-				dbytes, err := json.Marshal(configMap)
-				Expect(err).ToNot(HaveOccurred())
-
-				templateAPI := &v1alpha1.ClusterImageTemplate{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ClusterImageTemplate",
-						APIVersion: "carto.run/v1alpha1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "image-template-1",
-						Namespace: "some-namespace",
-					},
-					Spec: v1alpha1.ImageTemplateSpec{
-						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: &runtime.RawExtension{Raw: dbytes},
-						},
-						ImagePath: "data.some_other_info",
-					},
-				}
-
-				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
-				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
-			})
-
-			It("creates a stamped object using the workload repository and returns the outputs and stampedObjects and template", func() {
-				template, returnedStampedObject, out, err := r.Do(ctx, resource, blueprintName, outputs)
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(template.GetName()).To(Equal("image-template-1"))
-				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
-
-				_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
-				Expect(returnedStampedObject).To(Equal(stampedObject))
-
-				metadata := stampedObject.Object["metadata"]
-				metadataValues, ok := metadata.(map[string]interface{})
-				Expect(ok).To(BeTrue())
-				Expect(metadataValues["name"]).To(Equal("example-config-map"))
-				Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-					map[string]interface{}{
-						"apiVersion":         "",
-						"kind":               "",
-						"name":               "",
-						"uid":                "",
-						"controller":         true,
-						"blockOwnerDeletion": true,
-					},
-				}))
-				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeller-dummy": "labeller"}))
-
-				Expect(out.Image).To(Equal("some-revision"))
 			})
 		})
 
