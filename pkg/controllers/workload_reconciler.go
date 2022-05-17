@@ -119,7 +119,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, workload, workload.Status.Resources, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, BuildLabeller(workload, supplyChain))
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
@@ -210,7 +210,7 @@ func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSup
 	return supplyChainReadyCondition.Status == "True"
 }
 
-func BuildLabeller(owner, blueprint client.Object) realizer.ResourceLabeler {
+func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
 	return func(resource realizer.OwnerResource) templates.Labels {
 		switch blueprint.(type) {
 		case *v1alpha1.ClusterSupplyChain:

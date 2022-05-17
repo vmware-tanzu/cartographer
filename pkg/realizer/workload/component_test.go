@@ -96,9 +96,8 @@ var _ = Describe("Resource", func() {
 
 		theSecret = &corev1.Secret{StringData: map[string]string{"blah": "blah"}}
 
-		//todo: hmmm maybe will need a real one...
 		dummyLabeler := func(resource realizer.OwnerResource) templates.Labels {
-			return templates.Labels{}
+			return templates.Labels{"expected-labels-from-labeller-dummy": "labeller"}
 		}
 		r, err = resourceRealizerBuilder(theSecret, &workload, []v1alpha1.OwnerParam{}, &fakeSystemRepo, supplyChainParams, dummyLabeler)
 
@@ -194,14 +193,7 @@ var _ = Describe("Resource", func() {
 					},
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/delivery-name":         "delivery-name",
-					"carto.run/resource-name":         "resource-1",
-					"carto.run/cluster-template-name": "source-template-1",
-					"carto.run/deliverable-name":      "",
-					"carto.run/deliverable-namespace": "",
-					"carto.run/template-kind":         "ClusterSourceTemplate",
-				}))
+				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeller-dummy": "labeller"}))
 
 				Expect(out.Source.Revision).To(Equal("some-revision"))
 				Expect(out.Source.URL).To(Equal("some-url"))
@@ -285,14 +277,7 @@ var _ = Describe("Resource", func() {
 					},
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{
-					"carto.run/supply-chain-name":     "supply-chain-name",
-					"carto.run/resource-name":         "resource-1",
-					"carto.run/cluster-template-name": "image-template-1",
-					"carto.run/workload-name":         "",
-					"carto.run/workload-namespace":    "",
-					"carto.run/template-kind":         "ClusterImageTemplate",
-				}))
+				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeller-dummy": "labeller"}))
 
 				Expect(out.Image).To(Equal("some-revision"))
 			})
@@ -336,7 +321,7 @@ var _ = Describe("Resource", func() {
 				Expect(template).To(BeNil())
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1 Options:[]}]: resource does not match a known template"))
+				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1}]: resource does not match a known template"))
 			})
 		})
 

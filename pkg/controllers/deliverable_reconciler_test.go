@@ -65,11 +65,12 @@ var _ = Describe("DeliverableReconciler", func() {
 		stampedTracker    *stampedfakes.FakeStampedTracker
 		dependencyTracker *dependencyfakes.FakeDependencyTracker
 
-		builtResourceRealizer        *workloadfakes.FakeResourceRealizer
-		resourceRealizerSecret       *corev1.Secret
-		serviceAccountSecret         *corev1.Secret
-		serviceAccountName           string
-		resourceRealizerBuilderError error
+		builtResourceRealizer           *workloadfakes.FakeResourceRealizer
+		labelerForBuiltResourceRealizer realizer.ResourceLabeler
+		resourceRealizerSecret          *corev1.Secret
+		serviceAccountSecret            *corev1.Secret
+		serviceAccountName              string
+		resourceRealizerBuilderError    error
 	)
 
 	BeforeEach(func() {
@@ -105,6 +106,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		resourceRealizerBuilderError = nil
 
 		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -266,6 +268,29 @@ var _ = Describe("DeliverableReconciler", func() {
 			}
 
 			rlzr.RealizeReturns(realizedResources, nil)
+		})
+
+		It("labels owner resources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+			Expect(labelerForBuiltResourceRealizer).To(Not(BeNil()))
+
+			resource := realizer.OwnerResource{
+				TemplateRef: v1alpha1.TemplateReference{
+					Kind: "be-kind",
+					Name: "no-names",
+				},
+				Name: "fine-i-have-a-name",
+			}
+
+			labels := labelerForBuiltResourceRealizer(resource)
+			Expect(labels).To(Equal(templates.Labels{
+				"carto.run/deliverable-name":      "my-deliverable",
+				"carto.run/deliverable-namespace": "my-namespace",
+				"carto.run/delivery-name":         "some-delivery",
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}))
 		})
 
 		It("updates the status of the workload with the realizedResources", func() {

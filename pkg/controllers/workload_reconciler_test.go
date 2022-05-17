@@ -53,22 +53,23 @@ import (
 
 var _ = Describe("WorkloadReconciler", func() {
 	var (
-		out                          *Buffer
-		reconciler                   controllers.WorkloadReconciler
-		ctx                          context.Context
-		req                          ctrl.Request
-		repo                         *repositoryfakes.FakeRepository
-		conditionManager             *conditionsfakes.FakeConditionManager
-		rlzr                         *workloadfakes.FakeRealizer
-		wl                           *v1alpha1.Workload
-		workloadLabels               map[string]string
-		stampedTracker               *stampedfakes.FakeStampedTracker
-		dependencyTracker            *dependencyfakes.FakeDependencyTracker
-		builtResourceRealizer        *workloadfakes.FakeResourceRealizer
-		resourceRealizerSecret       *corev1.Secret
-		serviceAccountSecret         *corev1.Secret
-		serviceAccountName           string
-		resourceRealizerBuilderError error
+		out                             *Buffer
+		reconciler                      controllers.WorkloadReconciler
+		ctx                             context.Context
+		req                             ctrl.Request
+		repo                            *repositoryfakes.FakeRepository
+		conditionManager                *conditionsfakes.FakeConditionManager
+		rlzr                            *workloadfakes.FakeRealizer
+		wl                              *v1alpha1.Workload
+		workloadLabels                  map[string]string
+		stampedTracker                  *stampedfakes.FakeStampedTracker
+		dependencyTracker               *dependencyfakes.FakeDependencyTracker
+		builtResourceRealizer           *workloadfakes.FakeResourceRealizer
+		labelerForBuiltResourceRealizer realizer.ResourceLabeler
+		resourceRealizerSecret          *corev1.Secret
+		serviceAccountSecret            *corev1.Secret
+		serviceAccountName              string
+		resourceRealizerBuilderError    error
 	)
 
 	BeforeEach(func() {
@@ -102,6 +103,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		resourceRealizerBuilderError = nil
 
 		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -261,6 +263,29 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 
 			rlzr.RealizeReturns(realizedResources, nil)
+		})
+
+		It("labels owner resources", func() {
+			_, _ = reconciler.Reconcile(ctx, req)
+			Expect(labelerForBuiltResourceRealizer).To(Not(BeNil()))
+
+			resource := realizer.OwnerResource{
+				TemplateRef: v1alpha1.TemplateReference{
+					Kind: "be-kind",
+					Name: "no-names",
+				},
+				Name: "fine-i-have-a-name",
+			}
+
+			labels := labelerForBuiltResourceRealizer(resource)
+			Expect(labels).To(Equal(templates.Labels{
+				"carto.run/workload-name":         "my-workload-name",
+				"carto.run/workload-namespace":    "my-namespace",
+				"carto.run/supply-chain-name":     "some-supply-chain",
+				"carto.run/resource-name":         resource.Name,
+				"carto.run/template-kind":         resource.TemplateRef.Kind,
+				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			}))
 		})
 
 		It("updates the status of the workload with the realizedResources", func() {

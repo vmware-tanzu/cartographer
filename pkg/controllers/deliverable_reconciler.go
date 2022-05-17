@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"reflect"
 
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
@@ -116,7 +117,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, BuildLabeller(deliverable, delivery))
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
@@ -204,6 +205,19 @@ func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deli
 func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelivery) bool {
 	readyCondition := getDeliveryReadyCondition(delivery)
 	return readyCondition.Status == "True"
+}
+
+func buildDeliverableResourceLabeler(owner, blueprint client.Object) workload.ResourceLabeler {
+	return func(resource workload.OwnerResource) templates.Labels {
+		return templates.Labels{
+			"carto.run/deliverable-name":      owner.GetName(),
+			"carto.run/deliverable-namespace": owner.GetNamespace(),
+			"carto.run/delivery-name":         blueprint.GetName(),
+			"carto.run/resource-name":         resource.Name,
+			"carto.run/template-kind":         resource.TemplateRef.Kind,
+			"carto.run/cluster-template-name": resource.TemplateRef.Name,
+		}
+	}
 }
 
 func (r *DeliverableReconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
