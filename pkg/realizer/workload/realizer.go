@@ -31,17 +31,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-type Blueprint struct {
-	Name      string
-	Resources []OwnerResource
-}
-
-func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Blueprint {
-	blueprint := &Blueprint{
-		Name: supplyChain.Name,
-	}
+func MakeSupplychainOwnerResources(supplyChain *v1alpha1.ClusterSupplyChain) []OwnerResource {
+	var resources []OwnerResource
 	for _, resource := range supplyChain.Spec.Resources {
-		blueprint.Resources = append(blueprint.Resources, OwnerResource{
+		resources = append(resources, OwnerResource{
 			Name: resource.Name,
 			TemplateRef: v1alpha1.TemplateReference{
 				Kind: resource.TemplateRef.Kind,
@@ -54,15 +47,13 @@ func MakeSupplychainBlueprint(supplyChain *v1alpha1.ClusterSupplyChain) *Bluepri
 			Configs:         resource.Configs,
 		})
 	}
-	return blueprint
+	return resources
 }
 
-func MakeDeliveryBlueprint(delivery *v1alpha1.ClusterDelivery) *Blueprint {
-	blueprint := &Blueprint{
-		Name: delivery.Name,
-	}
+func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResource {
+	var resources []OwnerResource
 	for _, resource := range delivery.Spec.Resources {
-		blueprint.Resources = append(blueprint.Resources, OwnerResource{
+		resources = append(resources, OwnerResource{
 			Name: resource.Name,
 			TemplateRef: v1alpha1.TemplateReference{
 				Kind: resource.TemplateRef.Kind,
@@ -75,12 +66,12 @@ func MakeDeliveryBlueprint(delivery *v1alpha1.ClusterDelivery) *Blueprint {
 			Deployment:      resource.Deployment,
 		})
 	}
-	return blueprint
+	return resources
 }
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprint *Blueprint, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
+	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprintName string, ownerResources []OwnerResource, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error)
 }
 
 type ResourceLabeler func(resource OwnerResource) templates.Labels
@@ -91,7 +82,7 @@ func NewRealizer() Realizer {
 	return &realizer{}
 }
 
-func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprint *Blueprint, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
+func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprintName string, ownerResources []OwnerResource, previousResources []v1alpha1.RealizedResource) ([]v1alpha1.RealizedResource, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("Realize")
 
@@ -99,10 +90,10 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	var realizedResources []v1alpha1.RealizedResource
 	var firstError error
 
-	for _, resource := range blueprint.Resources {
+	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprint.Name, outs)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",

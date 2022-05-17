@@ -40,7 +40,7 @@ var _ = Describe("Outputs", func() {
 
 			Context("And the sources have a match with the outputs", func() {
 				It("Adds sources to inputs", func() {
-					resource := &v1alpha1.SupplyChainResource{
+					resource := realizer.OwnerResource{
 						Sources: []v1alpha1.ResourceReference{
 							{
 								Name:     "source-ref",
@@ -58,7 +58,7 @@ var _ = Describe("Outputs", func() {
 
 			Context("And the sources do not have a match with the outputs", func() {
 				It("Does not add sources to inputs", func() {
-					resource := &v1alpha1.SupplyChainResource{
+					resource := realizer.OwnerResource{
 						Sources: []v1alpha1.ResourceReference{
 							{
 								Name:     "source-ref",
@@ -84,7 +84,7 @@ var _ = Describe("Outputs", func() {
 
 			Context("And the images have a match with the outputs", func() {
 				It("Adds images to inputs", func() {
-					resource := &v1alpha1.SupplyChainResource{
+					resource := realizer.OwnerResource{
 						Images: []v1alpha1.ResourceReference{
 							{
 								Name:     "image-ref",
@@ -101,7 +101,7 @@ var _ = Describe("Outputs", func() {
 
 			Context("And the images do not have a match with the outputs", func() {
 				It("Does not add images to inputs", func() {
-					resource := &v1alpha1.SupplyChainResource{
+					resource := realizer.OwnerResource{
 						Images: []v1alpha1.ResourceReference{
 							{
 								Name:     "image-ref",
@@ -128,7 +128,7 @@ var _ = Describe("Outputs", func() {
 
 			Context("And the configs have a match with the outputs", func() {
 				It("Adds configs to inputs", func() {
-					resource := &v1alpha1.SupplyChainResource{
+					resource := realizer.OwnerResource{
 						Configs: []v1alpha1.ResourceReference{
 							{
 								Name:     "config-ref",
@@ -145,7 +145,7 @@ var _ = Describe("Outputs", func() {
 
 			Context("And the configs do not have a match with the outputs", func() {
 				It("Does not add configs to inputs", func() {
-					resource := &v1alpha1.SupplyChainResource{
+					resource := realizer.OwnerResource{
 						Configs: []v1alpha1.ResourceReference{
 							{
 								Name:     "config-ref",

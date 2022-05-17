@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -99,7 +100,8 @@ var _ = Describe("WorkloadReconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, workload *v1alpha1.Workload, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam) (realizer.ResourceRealizer, error) {
+
+		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
@@ -273,7 +275,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _, _ := rlzr.RealizeArgsForCall(0)
+			_, resourceRealizer, _, _, _ := rlzr.RealizeArgsForCall(0)
 			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 

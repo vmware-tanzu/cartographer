@@ -116,14 +116,14 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildLabeller(deliverable, delivery))
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, BuildLabeller(deliverable, delivery))
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, workload.MakeDeliveryBlueprint(delivery), deliverable.Status.Resources)
+	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, workload.MakeDeliveryOwnerResources(delivery), deliverable.Status.Resources)
 
 	if err != nil {
 		conditions.AddConditionForDeliverableError(&r.conditionManager, true, err)

@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/workload/workloadfakes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -40,8 +42,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable/deliverablefakes"
+	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/workload"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -58,13 +59,13 @@ var _ = Describe("DeliverableReconciler", func() {
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
 		conditionManager  *conditionsfakes.FakeConditionManager
-		rlzr              *deliverablefakes.FakeRealizer
+		rlzr              *workloadfakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
 		stampedTracker    *stampedfakes.FakeStampedTracker
 		dependencyTracker *dependencyfakes.FakeDependencyTracker
 
-		builtResourceRealizer        *deliverablefakes.FakeResourceRealizer
+		builtResourceRealizer        *workloadfakes.FakeResourceRealizer
 		resourceRealizerSecret       *corev1.Secret
 		serviceAccountSecret         *corev1.Secret
 		serviceAccountName           string
@@ -82,7 +83,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &deliverablefakes.FakeRealizer{}
+		rlzr = &workloadfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil, nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -102,12 +103,13 @@ var _ = Describe("DeliverableReconciler", func() {
 		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
 
 		resourceRealizerBuilderError = nil
-		resourceRealizerBuilder := func(secret *corev1.Secret, deliverable *v1alpha1.Deliverable, systemRepo repository.Repository, deliveryParams []v1alpha1.BlueprintParam) (realizer.ResourceRealizer, error) {
+
+		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
 			resourceRealizerSecret = secret
-			builtResourceRealizer = &deliverablefakes.FakeResourceRealizer{}
+			builtResourceRealizer = &workloadfakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
 
@@ -278,7 +280,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, resourceRealizer, _, _ := rlzr.RealizeArgsForCall(0)
+			_, resourceRealizer, _, _, _ := rlzr.RealizeArgsForCall(0)
 			Expect(resourceRealizer).To(Equal(builtResourceRealizer))
 		})
 
