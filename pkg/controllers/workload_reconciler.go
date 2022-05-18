@@ -216,27 +216,13 @@ func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSup
 
 func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
 	return func(resource realizer.OwnerResource) templates.Labels {
-		switch blueprint.(type) {
-		case *v1alpha1.ClusterSupplyChain:
-			return templates.Labels{
-				"carto.run/workload-name":         owner.GetName(),
-				"carto.run/workload-namespace":    owner.GetNamespace(),
-				"carto.run/supply-chain-name":     blueprint.GetName(),
-				"carto.run/resource-name":         resource.Name,
-				"carto.run/template-kind":         resource.TemplateRef.Kind,
-				"carto.run/cluster-template-name": resource.TemplateRef.Name,
-			}
-		case *v1alpha1.ClusterDelivery:
-			return templates.Labels{
-				"carto.run/deliverable-name":      owner.GetName(),
-				"carto.run/deliverable-namespace": owner.GetNamespace(),
-				"carto.run/delivery-name":         blueprint.GetName(),
-				"carto.run/resource-name":         resource.Name,
-				"carto.run/template-kind":         resource.TemplateRef.Kind,
-				"carto.run/cluster-template-name": resource.TemplateRef.Name,
-			}
-		default:
-			panic("Unexpected code path")
+		return templates.Labels{
+			"carto.run/workload-name":         owner.GetName(),
+			"carto.run/workload-namespace":    owner.GetNamespace(),
+			"carto.run/supply-chain-name":     blueprint.GetName(),
+			"carto.run/resource-name":         resource.Name,
+			"carto.run/template-kind":         resource.TemplateRef.Kind,
+			"carto.run/cluster-template-name": resource.TemplateRef.Name,
 		}
 	}
 }
