@@ -44,6 +44,3 @@ jobs:
         uses: ./.github/actions/create-and-test-release
         with:
           version: v0.0.0-dev
-          docker-registry: projectcartographer
-          docker-username: projectcartographer
-          docker-password: ${{ secrets.DOCKER_PASSWORD }}

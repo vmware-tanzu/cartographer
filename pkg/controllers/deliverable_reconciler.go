@@ -17,7 +17,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -38,9 +37,11 @@ import (
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
-	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/deliverable"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -84,7 +85,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
 	if err != nil {
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, err)
+		return r.completeReconciliation(ctx, deliverable, nil, err)
 	}
 
 	log = log.WithValues("delivery", delivery.Name)
@@ -93,7 +94,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for delivery")
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for delivery [%s]: %w", delivery.Name, err)))
 	}
 
@@ -103,7 +104,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if !r.isDeliveryReady(delivery) {
 		r.conditionManager.AddPositive(conditions.MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
 		log.Info("delivery is not in ready state")
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
+		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
 	}
 	r.conditionManager.AddPositive(conditions.DeliveryReadyCondition())
 
@@ -112,19 +113,21 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, r.Repo, delivery.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
+
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, deliverable, deliverable.Status.Resources, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	realizedResources, err := r.Realizer.Realize(ctx, resourceRealizer, delivery, deliverable.Status.Resources)
+	resourceStatuses := statuses.NewResourceStatuses(deliverable.Status.Resources, conditions.AddConditionForResourceSubmittedDeliverable)
+	err = r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 
 	if err != nil {
-		conditions.AddConditionForDeliverableError(&r.conditionManager, true, err)
+		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
@@ -136,22 +139,22 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	} else {
 		if log.V(logger.DEBUG).Enabled() {
-			for _, resource := range realizedResources {
+			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
 					"object", resource.StampedRef)
 			}
 		}
 	}
 
-	r.trackDependencies(deliverable, realizedResources, serviceAccountName, serviceAccountNS)
+	r.trackDependencies(deliverable, resourceStatuses.GetCurrent(), serviceAccountName, serviceAccountNS)
 
-	cleanupErr := r.cleanupOrphanedObjects(ctx, deliverable.Status.Resources, realizedResources)
+	cleanupErr := r.cleanupOrphanedObjects(ctx, deliverable.Status.Resources, resourceStatuses.GetCurrent())
 	if cleanupErr != nil {
 		log.Error(cleanupErr, "failed to cleanup orphaned objects")
 	}
 
 	var trackingError error
-	for _, resource := range realizedResources {
+	for _, resource := range resourceStatuses.GetCurrent() {
 		if resource.StampedRef == nil {
 			continue
 		}
@@ -169,17 +172,20 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	return r.completeReconciliation(ctx, deliverable, realizedResources, err)
+	return r.completeReconciliation(ctx, deliverable, resourceStatuses, err)
 }
 
-func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, err error) (ctrl.Result, error) {
+func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
 	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
 
 	var updateErr error
-	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) || !reflect.DeepEqual(deliverable.Status.Resources, realizedResources) {
-		deliverable.Status.Resources = realizedResources
+	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) || (resourceStatuses != nil && resourceStatuses.IsChanged()) {
+		if resourceStatuses != nil {
+			deliverable.Status.Resources = resourceStatuses.GetCurrent()
+		}
+
 		deliverable.Status.ObservedGeneration = deliverable.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, deliverable)
 		if updateErr != nil {
@@ -204,7 +210,20 @@ func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelive
 	return readyCondition.Status == "True"
 }
 
-func (r *DeliverableReconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.RealizedResource, serviceAccountName, serviceAccountNS string) {
+func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
+	return func(resource realizer.OwnerResource) templates.Labels {
+		return templates.Labels{
+			"carto.run/deliverable-name":      owner.GetName(),
+			"carto.run/deliverable-namespace": owner.GetNamespace(),
+			"carto.run/delivery-name":         blueprint.GetName(),
+			"carto.run/resource-name":         resource.Name,
+			"carto.run/template-kind":         resource.TemplateRef.Kind,
+			"carto.run/cluster-template-name": resource.TemplateRef.Name,
+		}
+	}
+}
+
+func (r *DeliverableReconciler) trackDependencies(deliverable *v1alpha1.Deliverable, realizedResources []v1alpha1.ResourceStatus, serviceAccountName, serviceAccountNS string) {
 	r.DependencyTracker.ClearTracked(types.NamespacedName{
 		Namespace: deliverable.Namespace,
 		Name:      deliverable.Name,
@@ -244,7 +263,7 @@ func (r *DeliverableReconciler) trackDependencies(deliverable *v1alpha1.Delivera
 	}
 }
 
-func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.RealizedResource) error {
+func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, previousResources, realizedResources []v1alpha1.ResourceStatus) error {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference

@@ -69,7 +69,7 @@ func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Conditi
 	}
 }
 
-func AddConditionForWorkloadError(conditionManager *ConditionManager, isOwner bool, err error) {
+func AddConditionForResourceSubmittedWorkload(conditionManager *ConditionManager, isOwner bool, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
 		(*conditionManager).AddPositive(TemplateObjectRetrievalFailureCondition(isOwner, typedErr))

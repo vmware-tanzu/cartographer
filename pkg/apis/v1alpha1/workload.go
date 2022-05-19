@@ -144,7 +144,7 @@ type WorkloadStatus struct {
 
 	// Resources contain references to the objects created by the Supply Chain and the templates used to create them.
 	// It also contains Inputs and Outputs that were passed between the templates as the Supply Chain was processed.
-	Resources []RealizedResource `json:"resources,omitempty"`
+	Resources []ResourceStatus `json:"resources,omitempty"`
 }
 
 // +kubebuilder:object:root=true
