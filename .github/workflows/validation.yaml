@@ -15,9 +15,9 @@
 name: validation
 on:
   push:
-    branches: [main]
+    branches: [main, use-local-repo]
   pull_request:
-    branches: [main]
+    branches: [main, use-local-repo]
 
   schedule: # daily run
     - cron: '0 0 * * *'
