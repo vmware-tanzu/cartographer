@@ -36,6 +36,13 @@ runs:
         sudo apt update && sudo apt install -y curl tar
         ./hack/ci/install-binaries.sh ko tree grype
 
+
+    - name: prepare cluster
+      shell: bash
+      run: |
+        sudo ./hack/ci/trust-local-registry.sh
+        ./hack/setup.sh cluster
+
     - name: generate a cartographer release
       shell: bash
       env:
@@ -63,7 +70,7 @@ runs:
     - name: run e2e example
       shell: bash
       run: |
-        ./hack/setup.sh cluster pre-built-cartographer example-dependencies example
+        ./hack/setup.sh pre-built-cartographer example-dependencies example
 
     - name: scan image
       shell: bash
