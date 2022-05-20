@@ -31,7 +31,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -716,7 +715,9 @@ func TestRunnableReconciler(t *testing.T) {
 		r.Realizer = realizer.NewRealizer()
 		r.RunnableCache = repository.NewCache(c.Log)
 		r.RepositoryBuilder = repository.NewRepository
-		r.ClientBuilder = realizerclient.NewClientBuilder(rtc.)
+		r.ClientBuilder = func(_ *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
+			return c.Client, discovery.NewDiscoveryClient(c.Client), nil
+		}
 		r.ConditionManagerBuilder = conditions.NewConditionManager
 		r.DependencyTracker = dependency.NewDependencyTracker(2*utils.DefaultResyncTime, c.Log)
 
