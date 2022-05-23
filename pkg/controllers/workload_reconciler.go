@@ -388,7 +388,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 	r.ConditionManagerBuilder = conditions.NewConditionManager
 	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(
-		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
+		repository.NewRepository, realizerclient.NewBuilderWithRestMapper(mgr.GetConfig(), mgr.GetRESTMapper()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
 	r.Realizer = realizer.NewRealizer()

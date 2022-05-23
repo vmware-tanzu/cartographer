@@ -62,9 +62,9 @@ type resourceRealizer struct {
 type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
-func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.Builder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
-		ownerClient, _, err := clientBuilder(secret, false)
+		ownerClient, err := clientBuilder(secret)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}

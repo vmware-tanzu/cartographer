@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -84,9 +83,9 @@ var _ = Describe("Resource", func() {
 		}
 
 		builtClient := &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
+		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
 			secretForBuiltClient = secret
-			return builtClient, nil, nil
+			return builtClient, nil
 		}
 		out = NewBuffer()
 		logger := zap.New(zap.WriteTo(out))

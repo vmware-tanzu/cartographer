@@ -21,9 +21,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
@@ -35,7 +36,7 @@ import (
 
 //counterfeiter:generate . Realizer
 type Realizer interface {
-	Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, discoveryClient discovery.DiscoveryInterface) (*unstructured.Unstructured, templates.Outputs, error)
+	Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, apiMappedClient client.Client) (*unstructured.Unstructured, templates.Outputs, error)
 }
 
 func NewRealizer() Realizer {
@@ -50,7 +51,7 @@ type TemplatingContext struct {
 }
 
 //counterfeiter:generate k8s.io/client-go/discovery.DiscoveryInterface
-func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, discoveryClient discovery.DiscoveryInterface) (*unstructured.Unstructured, templates.Outputs, error) {
+func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, client client.Client) (*unstructured.Unstructured, templates.Outputs, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", runnable.Spec.RunTemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -72,7 +73,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		"carto.run/run-template-name": template.GetName(),
 	}
 
-	selected, err := r.resolveSelector(ctx, runnable.Spec.Selector, runnableRepo, discoveryClient, runnable.GetNamespace())
+	selected, err := r.resolveSelector(ctx, runnable.Spec.Selector, runnableRepo, client, runnable.GetNamespace())
 	if err != nil {
 		log.Error(err, "failed to resolve selector", "selector", runnable.Spec.Selector)
 		return nil, nil, errors.RunnableResolveSelectorError{
@@ -150,29 +151,23 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	return stampedObject, outputs, nil
 }
 
-func (r *runnableRealizer) resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository, discoveryClient discovery.DiscoveryInterface, namespace string) (map[string]interface{}, error) {
-	log := logr.FromContextOrDiscard(ctx)
-
-	if selector == nil {
+func (r *runnableRealizer) resolveSelector(ctx context.Context, selector *v1alpha1.ResourceSelector, repository repository.Repository, c client.Client, namespace string) (map[string]interface{}, error) {
+	if selector == nil { // FIXME: should this be a responsibvility of this method?
 		return nil, nil
 	}
 
-	apiResourceList, err := discoveryClient.ServerResourcesForGroupVersion(selector.Resource.APIVersion)
-	if err != nil {
-		log.Error(err, "failed to list server api resources")
-		return nil, fmt.Errorf("failed to list server api resources: %w", err)
-	}
+	log := logr.FromContextOrDiscard(ctx)
 
-	var namespaced bool
-	for _, apiResource := range apiResourceList.APIResources {
-		if apiResource.Kind == selector.Resource.Kind {
-			namespaced = apiResource.Namespaced
-			break
-		}
+	// FIXME!! this is not correct, still need to pull the Group from the version
+	rm, err := c.RESTMapper().RESTMapping(schema.GroupKind{Kind: selector.Resource.Kind, Group: selector.Resource.APIVersion})
+
+	if err != nil {
+		log.Error(err, "failed to discover namespace for resource", "resource", selector.Resource)
+		return nil, fmt.Errorf("failed to discover namespace for resource [%s, %s]: %w", selector.Resource.Kind, selector.Resource.APIVersion, err) // FIXME get formatting right
 	}
 
 	var results []*unstructured.Unstructured
-	if namespaced {
+	if rm.Scope == meta.RESTScopeNamespace {
 		results, err = repository.ListUnstructured(ctx, schema.FromAPIVersionAndKind(selector.Resource.APIVersion, selector.Resource.Kind), namespace, selector.MatchingLabels)
 		if err != nil {
 			log.Error(err, "failed to list objects in namespace matching selector", "selector", selector.MatchingLabels)

@@ -52,7 +52,7 @@ type RunnableReconciler struct {
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	conditionManager        conditions.ConditionManager
 	RepositoryBuilder       repository.RepositoryBuilder
-	ClientBuilder           realizerclient.ClientBuilder
+	ClientBuilder           realizerclient.Builder
 	RunnableCache           repository.RepoCache
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
@@ -97,13 +97,13 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
-	runnableClient, discoveryClient, err := r.ClientBuilder(secret, true)
+	runnableClient, err := r.ClientBuilder(secret)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ClientBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), discoveryClient)
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), runnableClient)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -215,7 +215,7 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Realizer = realizer.NewRealizer()
 	r.RunnableCache = repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache"))
 	r.RepositoryBuilder = repository.NewRepository
-	r.ClientBuilder = realizerclient.NewClientBuilder(mgr.GetConfig())
+	r.ClientBuilder = realizerclient.NewBuilderWithRestMapper(mgr.GetConfig(), mgr.GetRESTMapper())
 	r.ConditionManagerBuilder = conditions.NewConditionManager
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,

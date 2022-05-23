@@ -48,7 +48,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -76,7 +75,6 @@ var _ = Describe("Reconcile", func() {
 		serviceAccountSecret     *corev1.Secret
 		secretForBuiltClient     *corev1.Secret
 		serviceAccountName       string
-		fakeDiscoveryClient      *runnablefakes.FakeDiscoveryInterface
 	)
 
 	BeforeEach(func() {
@@ -89,7 +87,6 @@ var _ = Describe("Reconcile", func() {
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
 		conditionManager = &conditionsfakes.FakeConditionManager{}
 		fakeCache = &repositoryfakes.FakeRepoCache{}
-		fakeDiscoveryClient = &runnablefakes.FakeDiscoveryInterface{}
 
 		serviceAccountName = "alternate-service-account-name"
 
@@ -106,9 +103,9 @@ var _ = Describe("Reconcile", func() {
 		}
 
 		builtClient = &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
+		clientBuilder := func(secret *corev1.Secret) (client.Client, error) {
 			secretForBuiltClient = secret
-			return builtClient, fakeDiscoveryClient, nil
+			return builtClient, nil
 		}
 
 		reconciler = controllers.RunnableReconciler{
@@ -198,10 +195,10 @@ var _ = Describe("Reconcile", func() {
 			Expect(*cacheForBuiltRepository).To(Equal(reconciler.RunnableCache))
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
-			_, _, systemRepo, runnableRepo, discoveryClient := rlzr.RealizeArgsForCall(0)
+			_, _, systemRepo, runnableRepo, credentialedClient := rlzr.RealizeArgsForCall(0)
 			Expect(systemRepo).To(Equal(repo))
 			Expect(runnableRepo).To(Equal(fakeRunnabeRepo))
-			Expect(discoveryClient).To(Equal(fakeDiscoveryClient))
+			Expect(credentialedClient).To(Equal(builtClient))
 		})
 
 		It("updates the status.observedGeneration to equal metadata.generation", func() {
@@ -715,8 +712,8 @@ func TestRunnableReconciler(t *testing.T) {
 		r.Realizer = realizer.NewRealizer()
 		r.RunnableCache = repository.NewCache(c.Log)
 		r.RepositoryBuilder = repository.NewRepository
-		r.ClientBuilder = func(_ *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
-			return c.Client, discovery.NewDiscoveryClient(c.Client), nil
+		r.ClientBuilder = func(_ *corev1.Secret) (client.Client, error) {
+			return c.Client, nil
 		}
 		r.ConditionManagerBuilder = conditions.NewConditionManager
 		r.DependencyTracker = dependency.NewDependencyTracker(2*utils.DefaultResyncTime, c.Log)

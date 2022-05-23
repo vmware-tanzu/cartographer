@@ -18,36 +18,29 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/discovery"
-	memory "k8s.io/client-go/discovery/cached"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ClientBuilder func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error)
+type Builder func(secret *corev1.Secret) (client.Client, error)
 
-func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
-	return func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
+// NewBuilderWithRestMapper creates a client builder that generates a client:
+// 1. That will act on behalf of the user secret provided
+// 2. Contain the rest mappings discovered by controllerRuntime at startup (all
+//    the apis that are registered on the server at startup)
+func NewBuilderWithRestMapper(restConfig *rest.Config, restMapper meta.RESTMapper) Builder {
+	return func(secret *corev1.Secret) (client.Client, error) {
 		config, err := AddBearerToken(secret, restConfig)
 		if err != nil {
-			return nil, nil, fmt.Errorf("adding bearer token: %w", err)
+			return nil, fmt.Errorf("adding bearer token: %w", err)
 		}
-
-		cl, err := client.New(config, client.Options{})
+		cl, err := client.New(config, client.Options{Mapper: restMapper})
 		if err != nil {
-			return nil, nil, fmt.Errorf("creating client: %w", err)
+			return nil, fmt.Errorf("creating client: %w", err)
 		}
 
-		var cachedDiscoveryClient discovery.DiscoveryInterface
-		if needDiscovery {
-			discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-			if err != nil {
-				return cl, nil, fmt.Errorf("failed to create discovery client: %w", err)
-			}
-			cachedDiscoveryClient = memory.NewMemCacheClient(discoveryClient)
-		}
-
-		return cl, cachedDiscoveryClient, nil
+		return cl, nil
 	}
 }
 
