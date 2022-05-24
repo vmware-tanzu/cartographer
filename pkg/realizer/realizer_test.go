@@ -138,7 +138,7 @@ var _ = Describe("Realize", func() {
 				},
 			))
 			Expect(time.Since(currentResourceStatuses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
-			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(3))
 			Expect(currentResourceStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),
@@ -151,6 +151,12 @@ var _ = Describe("Realize", func() {
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
+			Expect(currentResourceStatuses[0].Conditions[2]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionTrue),
+				},
+			))
 
 			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
 			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
@@ -158,7 +164,7 @@ var _ = Describe("Realize", func() {
 			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
 			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(currentResourceStatuses[1].Outputs).To(BeNil())
-			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(3))
 			Expect(currentResourceStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("ResourceSubmitted"),
@@ -168,6 +174,12 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
 				Fields{
 					"Type":   Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				},
+			))
+			Expect(currentResourceStatuses[0].Conditions[2]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Healthy"),
 					"Status": Equal(metav1.ConditionTrue),
 				},
 			))
@@ -430,7 +442,7 @@ var _ = Describe("Realize", func() {
 				Expect(resource2Status.Inputs).To(Equal(previousResources[0].Inputs))
 				Expect(resource2Status.Outputs).To(Equal(previousResources[0].Outputs))
 				Expect(resource2Status.Conditions).ToNot(Equal(previousResources[0].Conditions))
-				Expect(len(resource2Status.Conditions)).To(Equal(2))
+				Expect(len(resource2Status.Conditions)).To(Equal(3))
 				Expect(resource2Status.Conditions[0]).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Type":   Equal("ResourceSubmitted"),
@@ -443,6 +455,12 @@ var _ = Describe("Realize", func() {
 						"Status": Equal(metav1.ConditionFalse),
 					},
 				))
+				Expect(resource2Status.Conditions[2]).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Type":   Equal("Healthy"),
+						"Status": Equal(metav1.ConditionFalse),
+					},
+				)) //TODO: fix something is wrong with this test////
 
 				// No error realizing resource3, realizedResource should be a new resource
 				Expect(resource3Status.Name).To(Equal(previousResources[1].Name))

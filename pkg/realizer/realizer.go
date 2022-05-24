@@ -18,6 +18,10 @@ package realizer
 
 import (
 	"context"
+	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -119,10 +123,110 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
 		}
 
-		resourceStatuses.Add(realizedResource, err)
+		healthCondition := metav1.Condition{}
+		if template != nil { //TODO: honestly why should this be nil?!
+			healthCondition = determineHealth(template.GetHealthRule(), realizedResource, stampedObject)
+		}
+		resourceStatuses.Add(realizedResource, err, healthCondition)
 	}
 
 	return firstError
+}
+
+func determineHealth(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition {
+	//TODO: logging...? esp see below...
+	if rule == nil {
+		if len(realizedResource.Outputs) > 0 {
+			return conditions.OutputAvailableResourcesHealthyCondition()
+		} else {
+			return conditions.OutputNotAvailableResourcesHealthyCondition()
+		}
+	}
+	if rule.AlwaysHealthy != nil {
+		return conditions.AlwaysHealthyResourcesHealthyCondition()
+	}
+	if rule.SingleConditionType != "" {
+		result, err := utils.SinglePathEvaluate(fmt.Sprintf(".status.conditions[?(@.type==\"%s\")].status", rule.SingleConditionType), stampedObject)
+		if err != nil { //TODO: logging?
+			return conditions.SingleConditionTypeEvaluationErrorCondition(err)
+		}
+		if len(result) != 0 { //TODO: logging?
+			return conditions.SingleConditionTypeNoResultResourcesCondition()
+		}
+		if conditionStatus, ok := result[0].(metav1.ConditionStatus); ok {
+			return conditions.SingleConditionMatchCondition(conditionStatus, rule.SingleConditionType)
+		}
+	}
+	if rule.MultiMatch != nil {
+		if anyMultiMatch(rule.MultiMatch.Unhealthy, stampedObject) {
+			return conditions.MultiMatchResourcesHealthyCondition(metav1.ConditionFalse)
+		}
+		if allMultiMatch(rule.MultiMatch.Healthy, stampedObject) {
+			return conditions.MultiMatchResourcesHealthyCondition(metav1.ConditionTrue)
+		}
+	}
+	return conditions.UnknownResourcesHealthyCondition()
+}
+
+func anyMultiMatch(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) bool {
+	for _, conditionRule := range rule.MatchConditions {
+		result, err := utils.SinglePathEvaluate(fmt.Sprintf(".status.conditions[?(@.type==\"%s\")].status", conditionRule.Type), stampedObject)
+		if err != nil { //TODO: logging?
+			//probably not err like return conditions.SingleConditionTypeEvaluationErrorCondition(err)
+		}
+		if len(result) != 0 { //TODO: logging?
+			//probably not err err like  return conditions.SingleConditionTypeNoResultResourcesCondition()
+		}
+		if conditionStatus, ok := result[0].(metav1.ConditionStatus); ok {
+			if conditionStatus == conditionRule.Status {
+				return true
+			}
+		}
+
+	}
+	for _, matchFieldRule := range rule.MatchFields {
+		matches, err := selector.Matches(matchFieldRule.FieldSelectorRequirement, stampedObject)
+		if err != nil {
+			//TODO: logging? prob not err right?
+		}
+		if matches {
+			return true
+		}
+	}
+	return false
+}
+
+func allMultiMatch(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) bool {
+	for _, conditionRule := range rule.MatchConditions {
+		result, err := utils.SinglePathEvaluate(fmt.Sprintf(".status.conditions[?(@.type==\"%s\")].status", conditionRule.Type), stampedObject)
+		if err != nil { //TODO: logging?
+			//probably not err like return conditions.SingleConditionTypeEvaluationErrorCondition(err)
+			return false
+		}
+		if len(result) != 0 { //TODO: logging?
+			//probably not err err like  return conditions.SingleConditionTypeNoResultResourcesCondition()
+			return false
+		}
+		if conditionStatus, ok := result[0].(metav1.ConditionStatus); ok {
+			if conditionStatus != conditionRule.Status {
+				return false
+			}
+		} else {
+			return false
+		}
+
+	}
+	for _, matchFieldRule := range rule.MatchFields {
+		matches, err := selector.Matches(matchFieldRule.FieldSelectorRequirement, stampedObject)
+		if err != nil {
+			//TODO: logging? prob not err right?
+			return false
+		}
+		if !matches {
+			return false
+		}
+	}
+	return true
 }
 
 func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {

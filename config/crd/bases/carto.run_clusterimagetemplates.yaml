@@ -50,6 +50,152 @@ spec:
           spec:
             description: 'Spec describes the image template. More info: https://cartographer.sh/docs/latest/reference/template/#clusterimagetemplate'
             properties:
+              healthRule:
+                description: HealthRule specifies rubric for determining the health
+                  of a resource stamped by this template
+                properties:
+                  alwaysHealthy:
+                    description: AlwaysHealthy being set indicates the resource should
+                      always be considered healthy
+                    type: object
+                  multiMatch:
+                    description: MultiMatch specifies explicitly which conditions
+                      and/or fields should be used to determine healthiness.
+                    properties:
+                      healthy:
+                        description: Healthy is a HealthMatchRule which stipulates
+                          when the resource should be considered healthy
+                        properties:
+                          matchConditions:
+                            description: MatchConditions are the conditions and statuses
+                              to read
+                            items:
+                              description: ConditionRequirement specifies the condition
+                                and type and status of the condition to read
+                              properties:
+                                status:
+                                  description: Status is the status of the condition
+                                  type: string
+                                type:
+                                  description: Type is the type of the condition
+                                  type: string
+                              required:
+                              - status
+                              - type
+                              type: object
+                            type: array
+                          matchFields:
+                            description: MatchFields stipulates a FieldSelectorRequirement
+                              and how to locate context relevant to it
+                            items:
+                              properties:
+                                key:
+                                  description: 'Key is the JSON path in the workload
+                                    to match against. e.g. for workload: "workload.spec.source.git.url",
+                                    e.g. for deliverable: "deliverable.spec.source.git.url"'
+                                  minLength: 1
+                                  type: string
+                                messagePath:
+                                  type: string
+                                operator:
+                                  description: Operator represents a key's relationship
+                                    to a set of values. Valid operators are In, NotIn,
+                                    Exists and DoesNotExist.
+                                  enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                                  type: string
+                                values:
+                                  description: Values is an array of string values.
+                                    If the operator is In or NotIn, the values array
+                                    must be non-empty. If the operator is Exists or
+                                    DoesNotExist, the values array must be empty.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                        required:
+                        - matchConditions
+                        - matchFields
+                        type: object
+                      unhealthy:
+                        description: Unhealthy is a HealthMatchRule which stipulates
+                          when the resource should be considered unhealthy
+                        properties:
+                          matchConditions:
+                            description: MatchConditions are the conditions and statuses
+                              to read
+                            items:
+                              description: ConditionRequirement specifies the condition
+                                and type and status of the condition to read
+                              properties:
+                                status:
+                                  description: Status is the status of the condition
+                                  type: string
+                                type:
+                                  description: Type is the type of the condition
+                                  type: string
+                              required:
+                              - status
+                              - type
+                              type: object
+                            type: array
+                          matchFields:
+                            description: MatchFields stipulates a FieldSelectorRequirement
+                              and how to locate context relevant to it
+                            items:
+                              properties:
+                                key:
+                                  description: 'Key is the JSON path in the workload
+                                    to match against. e.g. for workload: "workload.spec.source.git.url",
+                                    e.g. for deliverable: "deliverable.spec.source.git.url"'
+                                  minLength: 1
+                                  type: string
+                                messagePath:
+                                  type: string
+                                operator:
+                                  description: Operator represents a key's relationship
+                                    to a set of values. Valid operators are In, NotIn,
+                                    Exists and DoesNotExist.
+                                  enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                                  type: string
+                                values:
+                                  description: Values is an array of string values.
+                                    If the operator is In or NotIn, the values array
+                                    must be non-empty. If the operator is Exists or
+                                    DoesNotExist, the values array must be empty.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                        required:
+                        - matchConditions
+                        - matchFields
+                        type: object
+                    required:
+                    - healthy
+                    - unhealthy
+                    type: object
+                  singleConditionType:
+                    description: SingleConditionType names a single condition which,
+                      when True indicates the resource is healthy. When False it is
+                      unhealthy. Otherwise, healthiness is Unknown.
+                    type: string
+                type: object
               imagePath:
                 description: 'ImagePath is a path into the templated object''s data
                   that contains a valid image digest. This might be a URL or in some
