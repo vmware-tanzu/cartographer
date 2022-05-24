@@ -65,10 +65,10 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	log = log.WithValues("deliverable", req.NamespacedName)
 	ctx = logr.NewContext(ctx, log)
 
-	deliverable, err := r.Repo.GetDeliverable(ctx, req.Name, req.Namespace)
-	if err != nil {
-		log.Error(err, "failed to get deliverable")
-		return ctrl.Result{}, fmt.Errorf("failed to get deliverable [%s]: %w", req.NamespacedName, err)
+	deliverable, getOwnerErr := r.Repo.GetDeliverable(ctx, req.Name, req.Namespace)
+	if getOwnerErr != nil {
+		log.Error(getOwnerErr, "failed to get deliverable")
+		return ctrl.Result{}, fmt.Errorf("failed to get deliverable [%s]: %w", req.NamespacedName, getOwnerErr)
 	}
 
 	if deliverable == nil {
@@ -83,19 +83,19 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
 
-	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
-	if err != nil {
-		return r.completeReconciliation(ctx, deliverable, nil, err)
+	delivery, getBlueprintErr := r.getDeliveriesForDeliverable(ctx, deliverable)
+	if getBlueprintErr != nil {
+		return r.completeReconciliation(ctx, deliverable, nil, getBlueprintErr)
 	}
 
 	log = log.WithValues("delivery", delivery.Name)
 	ctx = logr.NewContext(ctx, log)
 
-	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
-	if err != nil {
-		log.Error(err, "failed to get object gvk for delivery")
+	deliveryGVK, getBluepringGVKErr := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
+	if getBluepringGVKErr != nil {
+		log.Error(getBluepringGVKErr, "failed to get object gvk for delivery")
 		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(
-			fmt.Errorf("failed to get object gvk for delivery [%s]: %w", delivery.Name, err)))
+			fmt.Errorf("failed to get object gvk for delivery [%s]: %w", delivery.Name, getBluepringGVKErr)))
 	}
 
 	deliverable.Status.DeliveryRef.Kind = deliveryGVK.Kind
@@ -110,34 +110,34 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForDeliverable(deliverable, delivery)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
-	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+	secret, getSecretErr := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	if getSecretErr != nil {
+		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(getSecretErr))
+		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), getSecretErr))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
+	resourceRealizer, buildRealiserErr := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
 
-	if err != nil {
-		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+	if buildRealiserErr != nil {
+		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(buildRealiserErr))
+		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", buildRealiserErr)))
 	}
 
 	resourceStatuses := statuses.NewResourceStatuses(deliverable.Status.Resources, conditions.AddConditionForResourceSubmittedDeliverable)
-	err = r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 
-	if err != nil {
-		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, err)
-	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
-	}
+	var reconcileErr error
+	realizeErr := r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 
-	if err != nil {
+	if realizeErr != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
-		if cerrors.IsUnhandledErrorType(err) {
-			err = cerrors.NewUnhandledError(err)
+		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, realizeErr)
+		if cerrors.IsUnhandledErrorType(realizeErr) {
+			reconcileErr = cerrors.NewUnhandledError(realizeErr)
+		} else {
+			reconcileErr = realizeErr
 		}
 	} else {
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 		if log.V(logger.DEBUG).Enabled() {
 			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
@@ -163,16 +163,16 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		trackingError = r.StampedTracker.Watch(log, obj, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}})
 		if trackingError != nil {
-			log.Error(err, "failed to add informer for object",
+			log.Error(trackingError, "failed to add informer for object",
 				"object", resource.StampedRef)
-			err = cerrors.NewUnhandledError(trackingError)
+			reconcileErr = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object",
 				"object", resource.StampedRef)
 		}
 	}
 
-	return r.completeReconciliation(ctx, deliverable, resourceStatuses, err)
+	return r.completeReconciliation(ctx, deliverable, resourceStatuses, reconcileErr)
 }
 
 func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {

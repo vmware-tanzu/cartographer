@@ -65,10 +65,10 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	log = log.WithValues("workload", req.NamespacedName)
 	ctx = logr.NewContext(ctx, log)
 
-	workload, err := r.Repo.GetWorkload(ctx, req.Name, req.Namespace)
-	if err != nil {
-		log.Error(err, "failed to get workload")
-		return ctrl.Result{}, fmt.Errorf("failed to get workload [%s]: %w", req.NamespacedName, err)
+	workload, getOwnerErr := r.Repo.GetWorkload(ctx, req.Name, req.Namespace)
+	if getOwnerErr != nil {
+		log.Error(getOwnerErr, "failed to get workload")
+		return ctrl.Result{}, fmt.Errorf("failed to get workload [%s]: %w", req.NamespacedName, getOwnerErr)
 	}
 
 	if workload == nil {
@@ -83,19 +83,19 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
 
-	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
-	if err != nil {
-		return r.completeReconciliation(ctx, workload, nil, err)
+	supplyChain, getBlueprintErr := r.getSupplyChainsForWorkload(ctx, workload)
+	if getBlueprintErr != nil {
+		return r.completeReconciliation(ctx, workload, nil, getBlueprintErr)
 	}
 
 	log = log.WithValues("supply chain", supplyChain.Name)
 	ctx = logr.NewContext(ctx, log)
 
-	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
-	if err != nil {
-		log.Error(err, "failed to get object gvk for supply chain")
+	supplyChainGVK, blueprintGVKErr := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
+	if blueprintGVKErr != nil {
+		log.Error(blueprintGVKErr, "failed to get object gvk for supply chain")
 		return r.completeReconciliation(ctx, workload, nil, cerrors.NewUnhandledError(
-			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
+			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, blueprintGVKErr)),
 		)
 	}
 
@@ -111,37 +111,39 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForWorkload(workload, supplyChain)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
-	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
+	secret, getSecretErr := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	if getSecretErr != nil {
+		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(getSecretErr))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), getSecretErr))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
+	resourceRealizer, buildRealizerErr := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
 
-	if err != nil {
-		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
-		log.Error(err, "failed to build resource realizer")
+	if buildRealizerErr != nil {
+		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(buildRealizerErr))
+		log.Error(buildRealizerErr, "failed to build resource realizer")
 		return r.completeReconciliation(ctx, workload, nil, cerrors.NewUnhandledError(
-			fmt.Errorf("failed to build resource realizer: %w", err)))
+			fmt.Errorf("failed to build resource realizer: %w", buildRealizerErr)))
 	}
 
 	resourceStatuses := statuses.NewResourceStatuses(workload.Status.Resources, conditions.AddConditionForResourceSubmittedWorkload)
-	err = r.Realizer.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 
-	if err != nil {
-		conditions.AddConditionForResourceSubmittedWorkload(&r.conditionManager, true, err)
-	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
-	}
+	var reconcileErr error
+	realizeErr := r.Realizer.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 
-	if err != nil {
+	if realizeErr != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
-		if cerrors.IsUnhandledErrorType(err) {
-			err = cerrors.NewUnhandledError(err)
+		conditions.AddConditionForResourceSubmittedWorkload(&r.conditionManager, true, realizeErr)
+
+		if cerrors.IsUnhandledErrorType(realizeErr) {
+			reconcileErr = cerrors.NewUnhandledError(realizeErr)
+		} else {
+			reconcileErr = realizeErr
 		}
 	} else {
+		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
+
 		if log.V(logger.DEBUG).Enabled() {
 			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
@@ -167,16 +169,16 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		trackingError = r.StampedTracker.Watch(log, obj, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
 		if trackingError != nil {
-			log.Error(err, "failed to add informer for object",
+			log.Error(trackingError, "failed to add informer for object",
 				"object", resource.StampedRef)
-			err = cerrors.NewUnhandledError(trackingError)
+			reconcileErr = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object",
 				"object", resource.StampedRef)
 		}
 	}
 
-	return r.completeReconciliation(ctx, workload, resourceStatuses, err)
+	return r.completeReconciliation(ctx, workload, resourceStatuses, reconcileErr)
 }
 
 func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {
