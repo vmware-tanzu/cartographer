@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -32,9 +33,12 @@ var _ = Describe("ClusterRunTemplate", func() {
 			apiTemplate                                                         *v1alpha1.ClusterRunTemplate
 			firstStampedObject, secondStampedObject, unconditionedStampedObject *unstructured.Unstructured
 			stampedObjects                                                      []*unstructured.Unstructured
+			serializer                                                          runtime.Serializer
 		)
 
 		BeforeEach(func() {
+			serializer = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+
 			apiTemplate = &v1alpha1.ClusterRunTemplate{}
 
 			firstStampedObject = &unstructured.Unstructured{}
@@ -57,8 +61,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 				      status: "True"
 			`)
 
-			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-			_, _, err := dec.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
+			_, _, err := serializer.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
 			Expect(err).NotTo(HaveOccurred())
 
 			secondStampedObject = &unstructured.Unstructured{}
@@ -78,8 +81,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 				      status: "True"
 			`)
 
-			dec = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-			_, _, err = dec.Decode([]byte(secondStampedObjectManifest), nil, secondStampedObject)
+			_, _, err = serializer.Decode([]byte(secondStampedObjectManifest), nil, secondStampedObject)
 			Expect(err).NotTo(HaveOccurred())
 
 			unconditionedStampedObject = &unstructured.Unstructured{}
@@ -94,8 +96,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 				  complex: other-val
 			`)
 
-			dec = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-			_, _, err = dec.Decode([]byte(unconditionedStampedObjectManifest), nil, unconditionedStampedObject)
+			_, _, err = serializer.Decode([]byte(unconditionedStampedObjectManifest), nil, unconditionedStampedObject)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		Context("when there is one object", func() {
@@ -124,6 +125,70 @@ var _ = Describe("ClusterRunTemplate", func() {
 				Context("when the object has not succeeded", func() {
 					BeforeEach(func() {
 						Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed()) // TODO: fix this notation or start using a jsonpath parser
+					})
+					It("returns empty outputs", func() {
+						template := templates.NewRunTemplateModel(apiTemplate)
+						outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs).To(BeEmpty())
+						Expect(evaluatedStampedObject).To(BeNil())
+					})
+				})
+				Context("when the object has no conditions", func() {
+					BeforeEach(func() {
+						firstStampedObject = &unstructured.Unstructured{}
+						firstStampedObjectManifest := utils.HereYamlF(`
+							apiVersion: thing/v1
+							kind: Thing
+							metadata:
+							  name: named-thing
+							  namespace: somens
+							  creationTimestamp: "2021-09-17T16:02:30Z"
+							spec:
+							  simple: is a string
+							  complex: 
+								type: object
+								name: complex object
+							  only-exists-on-first-object: populated
+							status: {}
+						`)
+
+						_, _, err := serializer.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
+						Expect(err).NotTo(HaveOccurred())
+					})
+					It("returns empty outputs", func() {
+						template := templates.NewRunTemplateModel(apiTemplate)
+						outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs).To(BeEmpty())
+						Expect(evaluatedStampedObject).To(BeNil())
+					})
+				})
+
+				Context("when the object has no succeeded condition", func() {
+					BeforeEach(func() {
+						firstStampedObject = &unstructured.Unstructured{}
+						firstStampedObjectManifest := utils.HereYamlF(`
+							apiVersion: thing/v1
+							kind: Thing
+							metadata:
+							  name: named-thing
+							  namespace: somens
+							  creationTimestamp: "2021-09-17T16:02:30Z"
+							spec:
+							  simple: is a string
+							  complex: 
+								type: object
+								name: complex object
+							  only-exists-on-first-object: populated
+							status:
+						      conditions:
+								- type: Fredded
+								  status: True
+						`)
+
+						_, _, err := serializer.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
+						Expect(err).NotTo(HaveOccurred())
 					})
 					It("returns empty outputs", func() {
 						template := templates.NewRunTemplateModel(apiTemplate)
