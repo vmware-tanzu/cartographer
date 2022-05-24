@@ -96,6 +96,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: OutputsAvailable
         - type: Ready
           status: "True"
           reason: Ready
@@ -121,6 +124,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
         - type: Ready
           status: "True"
           reason: Ready
@@ -144,6 +150,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
         - type: Ready
           status: "True"
           reason: Ready
@@ -167,6 +176,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
         - type: Ready
           status: "True"
           reason: Ready
@@ -185,6 +197,10 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
         - type: Ready
           status: "True"
           reason: Ready
+

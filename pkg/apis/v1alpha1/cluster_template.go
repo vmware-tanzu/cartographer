@@ -63,6 +63,45 @@ type TemplateSpec struct {
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
 	// +optional
 	Params TemplateParams `json:"params,omitempty"`
+
+	// HealthRule specifies rubric for determining the health of a resource
+	// stamped by this template
+	// +optional
+	HealthRule *HealthRule `json:"healthRule,omitempty"`
+}
+
+// HealthRule specifies rubric for determining the health of a resource.
+// One of AlwaysHealthy, SingleConditionType must be specified.
+type HealthRule struct {
+	// AlwaysHealthy being set indicates the resource should always be considered healthy
+	// +optional
+	AlwaysHealthy *runtime.RawExtension `json:"alwaysHealthy,omitempty"`
+
+	// SingleConditionType names a single condition which, when True indicates the resource
+	// is healthy. When False it is unhealthy. Otherwise, healthiness is Unknown.
+	// +optional
+	SingleConditionType string `json:"singleConditionType,omitempty"`
+}
+
+// HealthMatchRule specifies a rule for determining the health of a resource
+type HealthMatchRule struct {
+	// MatchConditions are the conditions and statuses to read
+	MatchConditions []ConditionRequirement `json:"matchConditions"`
+	// MatchFields stipulates a FieldSelectorRequirement and how to locate context relevant to it
+	MatchFields []HealthMatchFieldSelectorRequirement `json:"matchFields"`
+}
+
+type HealthMatchFieldSelectorRequirement struct {
+	FieldSelectorRequirement `json:",inline"`
+	MessagePath              string `json:"messagePath,omitempty"`
+}
+
+// ConditionRequirement specifies the condition and type and status of the condition to read
+type ConditionRequirement struct {
+	// Type is the type of the condition
+	Type string `json:"type"`
+	// Status is the status of the condition
+	Status metav1.ConditionStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true

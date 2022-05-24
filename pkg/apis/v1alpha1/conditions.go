@@ -81,7 +81,7 @@ const (
 // -----------------------------------------
 // -- OWNER.STATUS.RESOURCE[x].CONDITIONS --
 // ConditionTypes
-//   (ResourcesHealthy) - TODO
+//   ResourcesHealthy
 //   ResourcesSubmitted
 //   Ready
 
@@ -90,6 +90,7 @@ const (
 const (
 	ResourceReady     = "Ready"
 	ResourceSubmitted = "ResourceSubmitted"
+	ResourceHealthy   = "Healthy"
 )
 
 // -- RESOURCE ConditionType - ResourceSubmitted ConditionReasons (above)
@@ -113,6 +114,27 @@ const (
 const (
 	ReadyTemplatesReadyReason    = "Ready"
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy True ConditionReasons
+
+const (
+	OutputAvailableResourcesHealthyReason = "OutputsAvailable"
+	AlwaysHealthyResourcesHealthyReason   = "AlwaysHealthy"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy Unknown ConditionReasons
+
+const (
+	NoResourceResourcesHealthyReason         = "NoResource"
+	OutputNotAvailableResourcesHealthyReason = "OutputNotAvailable"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy False ConditionReasons
+
+const (
+	SingleConditionTypeEvaluationErrorResourcesHealthyReason = "SingleConditionEvaluationError"
+	SingleConditionTypeNoResultResourcesHealthyReason        = "SingleConditionNoResult"
 )
 
 // -----------------------------------------

@@ -391,7 +391,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
-	r.Realizer = realizer.NewRealizer()
+	r.Realizer = realizer.NewRealizer(nil)
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-workload"),
