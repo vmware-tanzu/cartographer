@@ -16,6 +16,7 @@ package templates_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -314,6 +315,81 @@ var _ = Describe("ClusterRunTemplate", func() {
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("failed to evaluate path [spec.nonexistant]: jsonpath returned empty list: spec.nonexistant"))
 					})
+				})
+			})
+		})
+
+		// ----- reworking
+
+		Context("No stamped objects", func() {
+			It("returns no output", func() {})
+		})
+
+		Context("One stamped object", func() {
+			Context("with no succeeded condition", func() {
+				It("returns no output", func() {})
+			})
+
+			Context("with a succeeded:false condition", func() {
+				It("returns no output", func() {})
+			})
+
+			Context("with a succeeded:true condition", func() {
+				Context("that does not match the outputs", func() {
+					It("returns an error", func() {})
+				})
+
+				Context("no output specified in the template", func() {
+					It("returns an empty output and the matched object", func() {})
+				})
+
+				Context("that matches the outputs", func() {
+					It("returns the outputs and the matched object", func() {})
+				})
+
+			})
+
+		})
+
+		Context("two stamped objects", func() {
+			Context("with no succeeded conditions", func() {
+				It("returns no output", func() {})
+			})
+
+			Context("with [succeeded:false, succeeded:false] conditions", func() {
+				It("returns no output", func() {})
+			})
+
+			Context("with [succeeded:true, succeeded:false] conditions", func() {
+				Context("with no output specified in the template", func() {
+					It("returns an empty output and the matched object", func() {})
+				})
+
+				Context("that do not match the outputs", func() {
+					It("returns an error", func() {})
+				})
+
+				Context("that matches the outputs", func() {
+					It("returns the earliest matched outputs and the earliest matched object", func() {})
+				})
+
+			})
+
+			Context("with [succeeded:true, succeeded:true] conditions", func() {
+				Context("with no output specified in the template", func() {
+					It("returns an empty output and the matched object", func() {})
+				})
+
+				Context("neither match the outputs", func() {
+					It("returns an error", func() {})
+				})
+
+				Context("both match the outputs", func() {
+					It("returns the latest matched outputs and the latest matched object", func() {})
+				})
+
+				Context("the earliest matches the outputs, the latest does not", func() {
+					It("returns the earliest matched outputs and the earliest matched object", func() {})
 				})
 			})
 		})
