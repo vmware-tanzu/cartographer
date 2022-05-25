@@ -16,6 +16,7 @@ package statuses
 
 import (
 	"reflect"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -24,7 +25,7 @@ import (
 )
 
 type ResourceStatuses interface {
-	GetPreviousRealizedResource(name string) *v1alpha1.RealizedResource
+	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
 	Add(status *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition)
 	GetCurrent() []v1alpha1.ResourceStatus
 	IsChanged() bool
@@ -91,10 +92,10 @@ func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
 	return currentStatuses
 }
 
-func (r *resourceStatuses) GetPreviousRealizedResource(name string) *v1alpha1.RealizedResource {
+func (r *resourceStatuses) GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus {
 	for _, status := range r.statuses {
-		if status.name == name {
-			return &status.previous.RealizedResource
+		if status.name == realizedResourceName {
+			return status.previous
 		}
 	}
 
@@ -117,6 +118,13 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 			name: name,
 		}
 		r.statuses = append(r.statuses, existingStatus)
+	}
+
+	//TODO: okay this is necessary? really? sure? okay, but if really, then reason about and ensure semantic correctness with LastTransitionTime.....
+	if len(furtherConditions) > 0 {
+		furtherConditions[0].LastTransitionTime = metav1.Time{
+			Time: time.Now(),
+		}
 	}
 
 	existingStatus.current = &v1alpha1.ResourceStatus{

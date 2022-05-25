@@ -113,24 +113,41 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 		outs.AddOutput(resource.Name, out)
 
-		previousRealizedResource := resourceStatuses.GetPreviousRealizedResource(resource.Name)
+		previousResourceStatus := resourceStatuses.GetPreviousResourceStatus(resource.Name)
 
 		var realizedResource *v1alpha1.RealizedResource
 
-		if (stampedObject == nil || template == nil) && previousRealizedResource != nil {
-			realizedResource = previousRealizedResource
+		var additionalConditions []metav1.Condition
+		if (stampedObject == nil || template == nil) && previousResourceStatus != nil {
+			realizedResource = &previousResourceStatus.RealizedResource
+			if previousResourceStatusHealthyCondition := conditionList(previousResourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy); previousResourceStatusHealthyCondition != nil {
+				additionalConditions = []metav1.Condition{*previousResourceStatusHealthyCondition}
+			}
 		} else {
+			var previousRealizedResource *v1alpha1.RealizedResource
+			if previousResourceStatus != nil {
+				previousRealizedResource = &previousResourceStatus.RealizedResource
+			}
 			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
+			if template != nil {
+				additionalConditions = []metav1.Condition{determineHealth(template.GetHealthRule(), realizedResource, stampedObject)}
+			}
 		}
-
-		healthCondition := metav1.Condition{}
-		if template != nil { //TODO: honestly why should this be nil?!
-			healthCondition = determineHealth(template.GetHealthRule(), realizedResource, stampedObject)
-		}
-		resourceStatuses.Add(realizedResource, err, healthCondition)
+		resourceStatuses.Add(realizedResource, err, additionalConditions...)
 	}
 
 	return firstError
+}
+
+type conditionList []metav1.Condition
+
+func (c conditionList) ConditionWithType(conditionType string) *metav1.Condition {
+	for _, condition := range c {
+		if condition.Type == conditionType {
+			return &condition
+		}
+	}
+	return nil
 }
 
 func determineHealth(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition {

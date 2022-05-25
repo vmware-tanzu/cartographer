@@ -99,6 +99,9 @@ status:
         - type: Ready
           status: "True"
           reason: Ready
+        - type: Healthy
+          status: "True"
+          reason: OutputsAvailable
     - name: source-provider-second
       stampedRef:
         apiVersion: v1
@@ -124,6 +127,9 @@ status:
         - type: Ready
           status: "True"
           reason: Ready
+        - type: Healthy
+          status: "True"
+          reason: OutputsAvailable
     - name: config
       stampedRef:
         apiVersion: v1
@@ -147,6 +153,9 @@ status:
         - type: Ready
           status: "True"
           reason: Ready
+        - type: Healthy
+          status: "True"
+          reason: OutputsAvailable
     - name: config-2
       stampedRef:
         apiVersion: v1
@@ -165,3 +174,6 @@ status:
         - type: Ready
           status: "True"
           reason: Ready
+        - type: Healthy
+          status: "False"
+          reason: OutputNotAvailable

@@ -90,7 +90,7 @@ const (
 const (
 	ResourceReady     = "Ready"
 	ResourceSubmitted = "ResourceSubmitted"
-	Healthy           = "Healthy"
+	ResourceHealthy   = "Healthy"
 )
 
 // -- RESOURCE ConditionType - ResourceSubmitted ConditionReasons (above)

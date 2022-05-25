@@ -10,7 +10,7 @@ import (
 
 func OutputAvailableResourcesHealthyCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionTrue,
 		Reason: v1alpha1.OutputAvailableResourcesHealthyReason,
 	}
@@ -18,7 +18,7 @@ func OutputAvailableResourcesHealthyCondition() metav1.Condition {
 
 func AlwaysHealthyResourcesHealthyCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionTrue,
 		Reason: v1alpha1.AlwaysHealthyResourcesHealthyReason,
 	}
@@ -26,7 +26,7 @@ func AlwaysHealthyResourcesHealthyCondition() metav1.Condition {
 
 func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName string) metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: status,
 		Reason: fmt.Sprintf("%sCondition", conditionName),
 	}
@@ -36,14 +36,14 @@ func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName 
 
 func UnknownResourcesHealthyCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionUnknown,
 	}
 }
 
 func SingleConditionTypeEvaluationErrorCondition(err error) metav1.Condition {
 	return metav1.Condition{
-		Type:    v1alpha1.Healthy,
+		Type:    v1alpha1.ResourceHealthy,
 		Status:  metav1.ConditionUnknown,
 		Reason:  v1alpha1.SingleConditionTypeEvaluationErrorResourcesHealthyReason,
 		Message: err.Error(),
@@ -52,7 +52,7 @@ func SingleConditionTypeEvaluationErrorCondition(err error) metav1.Condition {
 
 func SingleConditionTypeNoResultResourcesCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.SingleConditionTypeNoResultResourcesHealthyReason,
 	}
@@ -62,7 +62,7 @@ func SingleConditionTypeNoResultResourcesCondition() metav1.Condition {
 
 func OutputNotAvailableResourcesHealthyCondition() metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionFalse,
 		Reason: v1alpha1.OutputNotAvailableResourcesHealthyReason,
 	}
@@ -70,7 +70,7 @@ func OutputNotAvailableResourcesHealthyCondition() metav1.Condition {
 
 func MultiMatchResourcesHealthyCondition(status metav1.ConditionStatus) metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.Healthy,
+		Type:   v1alpha1.ResourceHealthy,
 		Status: status,
 		Reason: v1alpha1.MultiMatchedResourcesHealthyReason,
 	}
