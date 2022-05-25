@@ -221,6 +221,12 @@ var _ = Describe("ClusterRunTemplate", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: jsonpath returned empty list: spec.nonexistant"))
 				})
+
+				It("has no outputs", func() {
+					template := templates.NewRunTemplateModel(apiTemplate)
+					outputs, _, _ := template.GetOutput(stampedObjects)
+					Expect(outputs).To(BeEmpty())
+				})
 			})
 		})
 
