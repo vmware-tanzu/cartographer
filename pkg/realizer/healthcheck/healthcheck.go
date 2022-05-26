@@ -31,31 +31,33 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 			return conditions.NoResourceResourcesHealthyCondition()
 		} else if len(realizedResource.Outputs) > 0 {
 			return conditions.OutputAvailableResourcesHealthyCondition()
-		} else {
-			return conditions.OutputNotAvailableResourcesHealthyCondition()
+		} else if realizedResource.TemplateRef != nil && realizedResource.TemplateRef.Kind == "ClusterTemplate" && realizedResource.TemplateRef.APIVersion == "carto.run/v1alpha1" {
+			return conditions.AlwaysHealthyResourcesHealthyCondition()
 		}
-	}
-	if rule.AlwaysHealthy != nil {
-		return conditions.AlwaysHealthyResourcesHealthyCondition()
-	}
-	if rule.SingleConditionType != "" && stampedObject != nil {
-		jsonpathQuery := fmt.Sprintf("{.status.conditions[?(@.type==\"%s\")].status}", rule.SingleConditionType)
-		result, err := utils.SinglePathEvaluate(jsonpathQuery, stampedObject.UnstructuredContent())
-		if err != nil {
-			return conditions.SingleConditionTypeEvaluationErrorCondition(err)
+		return conditions.OutputNotAvailableResourcesHealthyCondition()
+	} else {
+		if rule.AlwaysHealthy != nil {
+			return conditions.AlwaysHealthyResourcesHealthyCondition()
 		}
-		if len(result) == 0 {
-			return conditions.SingleConditionTypeNoResultResourcesCondition()
-		}
-		if resultString, ok := result[0].(string); ok {
-			conditionStatus := metav1.ConditionStatus(resultString)
-			if conditionStatus == metav1.ConditionFalse || conditionStatus == metav1.ConditionTrue {
-				return conditions.SingleConditionMatchCondition(conditionStatus, rule.SingleConditionType)
-			} else {
-				return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, rule.SingleConditionType)
+		if rule.SingleConditionType != "" && stampedObject != nil {
+			jsonpathQuery := fmt.Sprintf("{.status.conditions[?(@.type==\"%s\")].status}", rule.SingleConditionType)
+			result, err := utils.SinglePathEvaluate(jsonpathQuery, stampedObject.UnstructuredContent())
+			if err != nil {
+				return conditions.SingleConditionTypeEvaluationErrorCondition(err)
 			}
+			if len(result) == 0 {
+				return conditions.SingleConditionTypeNoResultResourcesCondition()
+			}
+			if resultString, ok := result[0].(string); ok {
+				conditionStatus := metav1.ConditionStatus(resultString)
+				if conditionStatus == metav1.ConditionFalse || conditionStatus == metav1.ConditionTrue {
+					return conditions.SingleConditionMatchCondition(conditionStatus, rule.SingleConditionType)
+				} else {
+					return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, rule.SingleConditionType)
+				}
+			}
+			return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, "")
 		}
-		return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, "")
 	}
 	return conditions.UnknownResourcesHealthyCondition()
 }

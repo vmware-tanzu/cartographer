@@ -98,5 +98,3 @@ spec:
       name: example-config
     data:
       best_name: $(config)$
-  healthRule:
-    alwaysHealthy: {}

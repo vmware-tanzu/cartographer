@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +33,23 @@ var _ = Describe("DetermineHealthCondition", func() {
 	It("is always healthy for AlwaysHealthy health rule", func() {
 		healthRule := &v1alpha1.HealthRule{AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}}}
 		Expect(healthcheck.DetermineHealthCondition(healthRule, nil, nil)).To(MatchFields(IgnoreExtras,
+			Fields{
+				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionTrue),
+				"Reason": Equal(v1alpha1.AlwaysHealthyResourcesHealthyReason),
+			},
+		))
+	})
+
+	It("is always healthy for no rule on ClusterTemplates", func() {
+		realizedResource := &v1alpha1.RealizedResource{
+			TemplateRef: &v1.ObjectReference{
+				Kind:       "ClusterTemplate",
+				APIVersion: "carto.run/v1alpha1",
+			},
+		}
+
+		Expect(healthcheck.DetermineHealthCondition(nil, realizedResource, nil)).To(MatchFields(IgnoreExtras,
 			Fields{
 				"Type":   Equal("Healthy"),
 				"Status": Equal(metav1.ConditionTrue),
