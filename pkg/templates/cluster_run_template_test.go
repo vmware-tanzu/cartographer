@@ -446,7 +446,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 					// becomes invalid until the latest stamped object is success: true
 					It("returns no output, but the matching object", func() {
 						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(err).To(MatchError("failed to evaluate path [status.nonexistant]: jsonpath returned empty list: status.nonexistant"))
 						Expect(outputs).To(BeEmpty())
 						Expect(outputSourceObject).To(Equal(stampedObjects[0]))
 					})
@@ -612,7 +612,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 						template = makeTemplate(map[string]string{})
 					})
 
-					It("returns the no outputs and the matched object", func() {
+					It("returns the empty outputs and the matched object", func() {
 						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(outputs).To(BeEmpty())

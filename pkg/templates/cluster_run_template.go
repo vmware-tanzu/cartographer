@@ -53,12 +53,13 @@ func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Un
 	var (
 		latestTime           time.Time
 		latestMatchingObject *unstructured.Unstructured
+		latestOutputError    error
 	)
 
 	latestOutputs := Outputs{}
 
 	for _, stampedObject := range stampedObjects {
-		matched, currentOutputs := t.matchOutputs(stampedObject)
+		matched, currentOutputs, outputError := t.matchOutputs(stampedObject)
 		if !matched {
 			continue
 		}
@@ -67,27 +68,28 @@ func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Un
 		if currentTime.After(latestTime) {
 			latestMatchingObject = stampedObject
 			latestOutputs = currentOutputs
+			latestOutputError = outputError
 		}
 	}
 
-	return latestOutputs, latestMatchingObject, nil
+	return latestOutputs, latestMatchingObject, latestOutputError
 }
 
-func (t runTemplate) matchOutputs(stampedObject *unstructured.Unstructured) (bool, Outputs) {
+func (t runTemplate) matchOutputs(stampedObject *unstructured.Unstructured) (bool, Outputs, error) {
 	status, err := t.evaluator.EvaluateJsonPath(StatusPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		return false, Outputs{}
+		return false, Outputs{}, nil
 	}
 
 	if status == "True" {
 		outputError, outputs := t.getOutputsOfSingleObject(t.evaluator, *stampedObject)
 		if outputError != nil {
-			return true, Outputs{}
+			return true, Outputs{}, outputError
 		}
 
-		return true, outputs
+		return true, outputs, nil
 	}
-	return false, Outputs{}
+	return false, Outputs{}, nil
 }
 
 func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedObject unstructured.Unstructured) (error, Outputs) {
