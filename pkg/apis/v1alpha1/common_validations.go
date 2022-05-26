@@ -175,5 +175,18 @@ func (t *TemplateSpec) validate() error {
 			return fmt.Errorf("invalid template: template should not set metadata.namespace on the child object")
 		}
 	}
+	if t.HealthRule != nil {
+		return t.HealthRule.validate()
+	}
+	return nil
+}
+
+func (r *HealthRule) validate() error {
+	if r.AlwaysHealthy == nil && r.SingleConditionType == "" {
+		return fmt.Errorf("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found neither")
+	}
+	if r.AlwaysHealthy != nil && r.SingleConditionType != "" {
+		return fmt.Errorf("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found both")
+	}
 	return nil
 }
