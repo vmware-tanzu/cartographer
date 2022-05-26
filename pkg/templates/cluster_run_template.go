@@ -26,110 +26,69 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
+func NewRunTemplateModel(template *v1alpha1.ClusterRunTemplate) ClusterRunTemplate {
+	return &runTemplate{
+		template:  template,
+		evaluator: eval.EvaluatorBuilder(),
+	}
+}
+
 type Outputs map[string]apiextensionsv1.JSON
 
 type ClusterRunTemplate interface {
 	GetName() string
 	GetResourceTemplate() v1alpha1.TemplateSpec
-	GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error)
+	GetLatestSuccessfulOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error)
 }
 
 type runTemplate struct {
-	template *v1alpha1.ClusterRunTemplate
+	template  *v1alpha1.ClusterRunTemplate
+	evaluator eval.Evaluator
 }
 
 const StatusPath = `status.conditions[?(@.type=="Succeeded")].status`
 
-func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
+// Fixme: do we want a ptr receiver?
+func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
 	var (
-	//updateError                        error
-	//everyObjectErrored                 bool
-	//mostRecentlySubmittedSuccesfulTime *time.Time
-	//outputSourceObject                 *unstructured.Unstructured
+		latestTime           time.Time
+		latestMatchingObject *unstructured.Unstructured
 	)
 
-	evaluator := eval.EvaluatorBuilder()
+	latestOutputs := Outputs{}
 
-	outputs := Outputs{}
+	for _, stampedObject := range stampedObjects {
 
-	for _, so := range stampedObjects {
-		status, err := evaluator.EvaluateJsonPath(StatusPath, so.UnstructuredContent())
-		if err != nil {
-			return outputs, nil, nil
+		matched, currentOutputs := t.matchOutputs(stampedObject)
+		if !matched {
+			continue
 		}
 
-		if status == "True" {
-			outputError, currentOutputs := t.getOutputsOfSingleObject(evaluator, *so)
-			if outputError != nil {
-				return outputs, so, outputError
-			}
-
-			return currentOutputs, so, nil
+		currentTime := stampedObject.GetCreationTimestamp().Time
+		if currentTime.After(latestTime) {
+			latestMatchingObject = stampedObject
+			latestOutputs = currentOutputs
 		}
-
 	}
 
-	return outputs, nil, nil
-
-	//
-	//everyObjectErrored = true
-	//
-	//for _, stampedObject := range stampedObjects {
-	//	objectErr, provisionalOutputs := t.getOutputsOfSingleObject(evaluator, *stampedObject)
-	//
-	//	statusPath := `status.conditions[?(@.type=="Succeeded")].status`
-	//	status, err := evaluator.EvaluateJsonPath(statusPath, stampedObject.UnstructuredContent())
-	//	if err != nil {
-	//		updateError = objectErr
-	//		continue
-	//	}
-	//
-	//	if status == "True" && objectErr == nil {
-	//		objectCreationTimestamp, err := getCreationTimestamp(stampedObject, evaluator)
-	//		if err != nil {
-	//			continue
-	//		}
-	//
-	//		if mostRecentlySubmittedSuccesfulTime == nil {
-	//			mostRecentlySubmittedSuccesfulTime = objectCreationTimestamp
-	//		} else if objectCreationTimestamp.After(*mostRecentlySubmittedSuccesfulTime) {
-	//			mostRecentlySubmittedSuccesfulTime = objectCreationTimestamp
-	//		} else {
-	//			continue
-	//		}
-	//
-	//		outputs = provisionalOutputs
-	//		outputSourceObject = stampedObject
-	//	}
-	//
-	//	if objectErr != nil {
-	//		updateError = objectErr
-	//	} else {
-	//		everyObjectErrored = false
-	//	}
-	//}
-	//
-	//if everyObjectErrored {
-	//	return nil, nil, updateError
-	//}
-
-	return outputs, nil, nil
+	return latestOutputs, latestMatchingObject, nil
 }
 
-func getCreationTimestamp(stampedObject *unstructured.Unstructured, evaluator evaluator) (*time.Time, error) {
-	creationTimestamp, err := evaluator.EvaluateJsonPath("metadata.creationTimestamp", stampedObject.UnstructuredContent())
+func (t runTemplate) matchOutputs(stampedObject *unstructured.Unstructured) (bool, Outputs) {
+	status, err := t.evaluator.EvaluateJsonPath(StatusPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		return nil, err
+		return false, Outputs{}
 	}
-	creationTimeString, ok := creationTimestamp.(string)
-	if !ok {
-		return nil, err
+
+	if status == "True" {
+		outputError, outputs := t.getOutputsOfSingleObject(t.evaluator, *stampedObject)
+		if outputError != nil {
+			return true, Outputs{}
+		}
+
+		return true, outputs
 	}
-	creationTime, err := time.Parse(time.RFC3339, creationTimeString)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse creation metadata.creationTimestamp: %w", err)
-	}
-	return &creationTime, nil
+	return false, Outputs{}
 }
 
 func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedObject unstructured.Unstructured) (error, Outputs) {
@@ -153,10 +112,6 @@ func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedO
 		provisionalOutputs[key] = ext
 	}
 	return objectErr, provisionalOutputs
-}
-
-func NewRunTemplateModel(template *v1alpha1.ClusterRunTemplate) ClusterRunTemplate {
-	return &runTemplate{template: template}
 }
 
 func (t runTemplate) GetName() string {
