@@ -38,7 +38,7 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 	if rule.AlwaysHealthy != nil {
 		return conditions.AlwaysHealthyResourcesHealthyCondition()
 	}
-	if rule.SingleConditionType != "" {
+	if rule.SingleConditionType != "" && stampedObject != nil {
 		jsonpathQuery := fmt.Sprintf("{.status.conditions[?(@.type==\"%s\")].status}", rule.SingleConditionType)
 		result, err := utils.SinglePathEvaluate(jsonpathQuery, stampedObject.UnstructuredContent())
 		if err != nil {

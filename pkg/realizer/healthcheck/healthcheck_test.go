@@ -89,6 +89,15 @@ var _ = Describe("DetermineHealthCondition", func() {
 			}
 		})
 
+		It("returns unknown if there is no stamped object", func() {
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, nil)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionUnknown),
+				},
+			))
+		})
+
 		It("returns the status of the condition on the stamped object if it is True", func() {
 			stampedObject := &unstructured.Unstructured{}
 			stampedObjectYaml := utils.HereYamlF(`
