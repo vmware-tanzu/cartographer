@@ -466,55 +466,195 @@ var _ = Describe("ClusterRunTemplate", func() {
 						outputs, outputSourceObject, err := template.GetOutput(stampedObjects)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"a thing"`)}))
-
-						Expect(outputs).To(ContainElements())
 						Expect(outputSourceObject).To(Equal(stampedObjects[0]))
 					})
 				})
 			})
 		})
 
-		//XContext("two stamped objects", func() {
-		//	Context("with no succeeded conditions", func() {
-		//		It("returns no output", func() {})
-		//	})
-		//
-		//	Context("with [succeeded:false, succeeded:false] conditions", func() {
-		//		It("returns no output", func() {})
-		//	})
-		//
-		//	Context("with [succeeded:true, succeeded:false] conditions", func() {
-		//		Context("with no output specified in the template", func() {
-		//			It("returns the succeeded output and the matched object", func() {})
-		//		})
-		//
-		//		Context("that do not match the outputs", func() {
-		//			It("returns an error", func() {})
-		//		})
-		//
-		//		Context("that matches the outputs", func() {
-		//			It("returns the earliest matched outputs and the earliest matched object", func() {})
-		//		})
-		//
-		//	})
-		//
-		//	Context("with [succeeded:true, succeeded:true] conditions", func() {
-		//		Context("with no output specified in the template", func() {
-		//			It("returns an empty output and the matched object", func() {})
-		//		})
-		//
-		//		Context("neither match the outputs", func() {
-		//			It("returns an error", func() {})
-		//		})
-		//
-		//		Context("both match the outputs", func() {
-		//			It("returns the latest matched outputs and the latest matched object", func() {})
-		//		})
-		//
-		//		Context("the earliest matches the outputs, the latest does not", func() {
-		//			It("returns the earliest matched outputs and the earliest matched object", func() {})
-		//		})
-		//	})
-		//})
+		Context("two stamped objects", func() {
+			Context("with no conditions", func() {
+				BeforeEach(func() {
+					firstObject := &unstructured.Unstructured{}
+					firstObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: first-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T16:02:30Z"
+						status: 
+						  conditions: {}
+					`)
+					_, _, err := serializer.Decode([]byte(firstObjectYaml), nil, firstObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					secondObject := &unstructured.Unstructured{}
+					secondObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: second-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T17:02:30Z"
+						status: 
+						  conditions: {}
+					`)
+					_, _, err = serializer.Decode([]byte(secondObjectYaml), nil, secondObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Out of order deliberately
+					stampedObjects = []*unstructured.Unstructured{secondObject, firstObject}
+				})
+
+				It("returns no output", func() {
+					outputs, outputSourceObject, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs).To(BeEmpty())
+					Expect(outputSourceObject).To(BeNil())
+				})
+			})
+
+			Context("with [succeeded:false, succeeded:false] conditions", func() {
+				BeforeEach(func() {
+					firstObject := &unstructured.Unstructured{}
+					firstObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: first-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T16:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "False"
+						  simple-result: first result
+					`)
+					_, _, err := serializer.Decode([]byte(firstObjectYaml), nil, firstObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					secondObject := &unstructured.Unstructured{}
+					secondObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: second-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T17:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "False"
+						  simple-result: second result
+					`)
+					_, _, err = serializer.Decode([]byte(secondObjectYaml), nil, secondObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Out of order deliberately
+					stampedObjects = []*unstructured.Unstructured{secondObject, firstObject}
+				})
+
+				It("returns no output", func() {
+					outputs, outputSourceObject, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs).To(BeEmpty())
+					Expect(outputSourceObject).To(BeNil())
+				})
+			})
+
+			Context("with [succeeded:true, succeeded:false] conditions", func() {
+				var firstObject, secondObject *unstructured.Unstructured
+				BeforeEach(func() {
+					firstObject = &unstructured.Unstructured{}
+					firstObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: first-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T16:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "True"
+						  simple-result: first result
+					`)
+					_, _, err := serializer.Decode([]byte(firstObjectYaml), nil, firstObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					secondObject = &unstructured.Unstructured{}
+					secondObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: second-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T17:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "False"
+						  simple-result: second result
+					`)
+					_, _, err = serializer.Decode([]byte(secondObjectYaml), nil, secondObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Out of order deliberately
+					stampedObjects = []*unstructured.Unstructured{secondObject, firstObject}
+				})
+
+				Context("with no output specified in the template", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{})
+					})
+
+					It("returns the no outputs and the matched object", func() {
+						outputs, outputSourceObject, err := template.GetOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs).To(BeEmpty())
+						Expect(outputSourceObject).To(Equal(firstObject))
+					})
+				})
+
+				//Context("that do not match the outputs in the template", func() {
+				//	It("returns an error", func() {})
+				//})
+				//
+				Context("that matches the outputs in the template", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{
+							"an-output": "status.simple-result",
+						})
+						stampedObjects = []*unstructured.Unstructured{}
+					})
+					It("returns the earliest matched outputs and the earliest matched object", func() {
+						outputs, outputSourceObject, err := template.GetOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"first result"`)}))
+						Expect(outputSourceObject).To(Equal(firstObject))
+					})
+				})
+
+			})
+			//
+			//Context("with [succeeded:true, succeeded:true] conditions", func() {
+			//	Context("with no output specified in the template", func() {
+			//		It("returns an empty output and the matched object", func() {})
+			//	})
+			//
+			//	Context("neither match the outputs", func() {
+			//		It("returns an error", func() {})
+			//	})
+			//
+			//	Context("both match the outputs", func() {
+			//		It("returns the latest matched outputs and the latest matched object", func() {})
+			//	})
+			//
+			//	Context("the earliest matches the outputs, the latest does not", func() {
+			//		It("returns the earliest matched outputs and the earliest matched object", func() {})
+			//	})
+			//})
+		})
 	})
 })

@@ -53,7 +53,6 @@ func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Out
 	outputs := Outputs{}
 
 	for _, so := range stampedObjects {
-		// get status
 		status, err := evaluator.EvaluateJsonPath(StatusPath, so.UnstructuredContent())
 		if err != nil {
 			return outputs, nil, nil
