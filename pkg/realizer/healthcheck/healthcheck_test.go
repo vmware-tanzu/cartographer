@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,7 +43,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 
 	It("is always healthy for no rule on ClusterTemplates", func() {
 		realizedResource := &v1alpha1.RealizedResource{
-			TemplateRef: &v1.ObjectReference{
+			TemplateRef: &corev1.ObjectReference{
 				Kind:       "ClusterTemplate",
 				APIVersion: "carto.run/v1alpha1",
 			},
@@ -173,7 +173,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 		It("returns Unknown status if the condition status on the stamped object is not True or False", func() {
 			stampedObject := &unstructured.Unstructured{}
 			stampedObjectYaml := utils.HereYamlF(`
-				apiVersion: thing/v1
+				apiVersion: thing/corev1
 				kind: Thing
 				metadata:
 				  name: named-thing
