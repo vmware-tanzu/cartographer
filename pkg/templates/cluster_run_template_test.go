@@ -629,7 +629,6 @@ var _ = Describe("ClusterRunTemplate", func() {
 						template = makeTemplate(map[string]string{
 							"an-output": "status.simple-result",
 						})
-						stampedObjects = []*unstructured.Unstructured{}
 					})
 					It("returns the earliest matched outputs and the earliest matched object", func() {
 						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)

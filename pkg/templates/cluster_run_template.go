@@ -58,7 +58,6 @@ func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Un
 	latestOutputs := Outputs{}
 
 	for _, stampedObject := range stampedObjects {
-
 		matched, currentOutputs := t.matchOutputs(stampedObject)
 		if !matched {
 			continue
