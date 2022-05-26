@@ -43,7 +43,7 @@ func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Out
 		updateError                        error
 		everyObjectErrored                 bool
 		mostRecentlySubmittedSuccesfulTime *time.Time
-		evaluatedStampedObject             *unstructured.Unstructured
+		outputSourceObject                 *unstructured.Unstructured
 	)
 
 	outputs := Outputs{}
@@ -77,7 +77,7 @@ func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Out
 			}
 
 			outputs = provisionalOutputs
-			evaluatedStampedObject = stampedObject
+			outputSourceObject = stampedObject
 		}
 
 		if objectErr != nil {
@@ -91,7 +91,7 @@ func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Out
 		return nil, nil, updateError
 	}
 
-	return outputs, evaluatedStampedObject, nil
+	return outputs, outputSourceObject, nil
 }
 
 func getCreationTimestamp(stampedObject *unstructured.Unstructured, evaluator evaluator) (*time.Time, error) {

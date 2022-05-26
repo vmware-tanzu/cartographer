@@ -32,6 +32,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 	Describe("GetOutput", func() {
 		var (
 			apiTemplate                                                         *v1alpha1.ClusterRunTemplate
+			template                                                            templates.ClusterRunTemplate
 			firstStampedObject, secondStampedObject, unconditionedStampedObject *unstructured.Unstructured
 			stampedObjects                                                      []*unstructured.Unstructured
 			serializer                                                          runtime.Serializer
@@ -322,21 +323,42 @@ var _ = Describe("ClusterRunTemplate", func() {
 		// ----- reworking
 
 		Context("No stamped objects", func() {
-			It("returns no output", func() {})
+			It("returns no output", func() {
+				outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(outputs).To(BeEmpty())
+				Expect(evaluatedStampedObject).To(BeNil())
+			})
 		})
 
 		Context("One stamped object", func() {
 			Context("with no succeeded condition", func() {
-				It("returns no output", func() {})
+				It("returns no output", func() {
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs).To(BeEmpty())
+					Expect(evaluatedStampedObject).To(BeNil())
+				})
 			})
 
 			Context("with a succeeded:false condition", func() {
-				It("returns no output", func() {})
+				It("returns no output", func() {
+					outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(outputs).To(BeEmpty())
+					Expect(evaluatedStampedObject).To(BeNil())
+				})
 			})
 
 			Context("with a succeeded:true condition", func() {
 				Context("that does not match the outputs", func() {
-					It("returns an error", func() {})
+					It("returns an error", func() {
+						outputs, evaluatedStampedObject, err := template.GetOutput(stampedObjects)
+						Expect(err).To(MatchError(CouldNotFindOutputsError))
+						Expect(outputs).To(BeEmpty())
+						Expect(evaluatedStampedObject).To(Equal(stampedObjects[0]))
+
+					})
 				})
 
 				Context("no output specified in the template", func() {
@@ -362,7 +384,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 
 			Context("with [succeeded:true, succeeded:false] conditions", func() {
 				Context("with no output specified in the template", func() {
-					It("returns an empty output and the matched object", func() {})
+					It("returns the succeeded output and the matched object", func() {})
 				})
 
 				Context("that do not match the outputs", func() {
