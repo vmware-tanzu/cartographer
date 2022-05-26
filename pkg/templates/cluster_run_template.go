@@ -38,60 +38,83 @@ type runTemplate struct {
 	template *v1alpha1.ClusterRunTemplate
 }
 
+const StatusPath = `status.conditions[?(@.type=="Succeeded")].status`
+
 func (t runTemplate) GetOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
 	var (
-		updateError                        error
-		everyObjectErrored                 bool
-		mostRecentlySubmittedSuccesfulTime *time.Time
-		outputSourceObject                 *unstructured.Unstructured
+	//updateError                        error
+	//everyObjectErrored                 bool
+	//mostRecentlySubmittedSuccesfulTime *time.Time
+	//outputSourceObject                 *unstructured.Unstructured
 	)
-
-	outputs := Outputs{}
 
 	evaluator := eval.EvaluatorBuilder()
 
-	everyObjectErrored = true
+	outputs := Outputs{}
 
-	for _, stampedObject := range stampedObjects {
-		objectErr, provisionalOutputs := t.getOutputsOfSingleObject(evaluator, *stampedObject)
-
-		statusPath := `status.conditions[?(@.type=="Succeeded")].status`
-		status, err := evaluator.EvaluateJsonPath(statusPath, stampedObject.UnstructuredContent())
+	for _, so := range stampedObjects {
+		// get status
+		status, err := evaluator.EvaluateJsonPath(StatusPath, so.UnstructuredContent())
 		if err != nil {
-			updateError = objectErr
-			continue
+			return outputs, nil, nil
 		}
 
-		if status == "True" && objectErr == nil {
-			objectCreationTimestamp, err := getCreationTimestamp(stampedObject, evaluator)
-			if err != nil {
-				continue
+		if status == "True" {
+			outputError, currentOutputs := t.getOutputsOfSingleObject(evaluator, *so)
+			if outputError != nil {
+				return outputs, so, outputError
 			}
 
-			if mostRecentlySubmittedSuccesfulTime == nil {
-				mostRecentlySubmittedSuccesfulTime = objectCreationTimestamp
-			} else if objectCreationTimestamp.After(*mostRecentlySubmittedSuccesfulTime) {
-				mostRecentlySubmittedSuccesfulTime = objectCreationTimestamp
-			} else {
-				continue
-			}
-
-			outputs = provisionalOutputs
-			outputSourceObject = stampedObject
+			return currentOutputs, so, nil
 		}
 
-		if objectErr != nil {
-			updateError = objectErr
-		} else {
-			everyObjectErrored = false
-		}
 	}
 
-	if everyObjectErrored {
-		return nil, nil, updateError
-	}
+	return outputs, nil, nil
 
-	return outputs, outputSourceObject, nil
+	//
+	//everyObjectErrored = true
+	//
+	//for _, stampedObject := range stampedObjects {
+	//	objectErr, provisionalOutputs := t.getOutputsOfSingleObject(evaluator, *stampedObject)
+	//
+	//	statusPath := `status.conditions[?(@.type=="Succeeded")].status`
+	//	status, err := evaluator.EvaluateJsonPath(statusPath, stampedObject.UnstructuredContent())
+	//	if err != nil {
+	//		updateError = objectErr
+	//		continue
+	//	}
+	//
+	//	if status == "True" && objectErr == nil {
+	//		objectCreationTimestamp, err := getCreationTimestamp(stampedObject, evaluator)
+	//		if err != nil {
+	//			continue
+	//		}
+	//
+	//		if mostRecentlySubmittedSuccesfulTime == nil {
+	//			mostRecentlySubmittedSuccesfulTime = objectCreationTimestamp
+	//		} else if objectCreationTimestamp.After(*mostRecentlySubmittedSuccesfulTime) {
+	//			mostRecentlySubmittedSuccesfulTime = objectCreationTimestamp
+	//		} else {
+	//			continue
+	//		}
+	//
+	//		outputs = provisionalOutputs
+	//		outputSourceObject = stampedObject
+	//	}
+	//
+	//	if objectErr != nil {
+	//		updateError = objectErr
+	//	} else {
+	//		everyObjectErrored = false
+	//	}
+	//}
+	//
+	//if everyObjectErrored {
+	//	return nil, nil, updateError
+	//}
+
+	return outputs, nil, nil
 }
 
 func getCreationTimestamp(stampedObject *unstructured.Unstructured, evaluator evaluator) (*time.Time, error) {
