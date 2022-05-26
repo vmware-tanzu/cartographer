@@ -39,6 +39,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -131,6 +132,8 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
+
+	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), deliverable.Status.Conditions))
 
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")

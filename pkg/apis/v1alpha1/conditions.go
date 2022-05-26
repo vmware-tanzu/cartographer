@@ -26,6 +26,7 @@ package v1alpha1
 
 const (
 	OwnerReady               = "Ready"
+	ResourcesHealthy         = "ResourcesHealthy"
 	WorkloadSupplyChainReady = "SupplyChainReady"
 	DeliverableDeliveryReady = "DeliveryReady"
 	OwnerResourcesSubmitted  = "ResourcesSubmitted"
@@ -128,6 +129,7 @@ const (
 const (
 	NoResourceResourcesHealthyReason         = "NoResource"
 	OutputNotAvailableResourcesHealthyReason = "OutputNotAvailable"
+	NoStampedObjectHealthyReason             = "NoStampedObject"
 )
 
 // -- BLUEPRINT ConditionType - ResourcesHealthy False ConditionReasons

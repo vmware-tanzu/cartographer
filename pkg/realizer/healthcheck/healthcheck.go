@@ -36,6 +36,27 @@ func IsClusterTemplate(reference *corev1.ObjectReference) bool {
 	return false
 }
 
+func OwnerHealthCondition(resourceStatuses []v1alpha1.ResourceStatus, previousConditions []metav1.Condition) metav1.Condition {
+	var previousHealthCondition []metav1.Condition
+	condition := conditions.ConditionList(previousConditions).ConditionWithType(v1alpha1.ResourceHealthy)
+	if condition != nil {
+		previousHealthCondition = append(previousHealthCondition, *condition)
+	}
+	healthyConditionManager := conditions.NewConditionManager(v1alpha1.ResourcesHealthy, previousHealthCondition)
+
+	for _, resourceStatus := range resourceStatuses {
+		resourceHealthyCondition := conditions.ConditionList(resourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy)
+		if resourceHealthyCondition != nil {
+			healthyConditionManager.AddPositive(*resourceHealthyCondition)
+		}
+	}
+
+	healthyConditionResult, _ := healthyConditionManager.Finalize()
+	healthyCondition := healthyConditionResult[len(healthyConditionResult)-1]
+	healthyCondition.Reason = "HealthyConditionRule"
+	return healthyCondition
+}
+
 func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition {
 	if rule == nil {
 		if realizedResource == nil {
@@ -43,7 +64,11 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 		} else if len(realizedResource.Outputs) > 0 {
 			return conditions.OutputAvailableResourcesHealthyCondition()
 		} else if IsClusterTemplate(realizedResource.TemplateRef) {
-			return conditions.AlwaysHealthyResourcesHealthyCondition()
+			if realizedResource.StampedRef != nil {
+				return conditions.AlwaysHealthyResourcesHealthyCondition()
+			} else {
+				return conditions.NoStampedObjectResourcesHealthyCondition()
+			}
 		}
 		return conditions.OutputNotAvailableResourcesHealthyCondition()
 	} else {

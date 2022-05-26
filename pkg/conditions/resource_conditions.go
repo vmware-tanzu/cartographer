@@ -50,10 +50,19 @@ func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName 
 
 // -- Resource.Conditions - ResourcesHealthy - Unknown
 
+func NoStampedObjectResourcesHealthyCondition() metav1.Condition {
+	return metav1.Condition{
+		Type:   v1alpha1.ResourceHealthy,
+		Status: metav1.ConditionUnknown,
+		Reason: v1alpha1.NoStampedObjectHealthyReason,
+	}
+}
+
 func UnknownResourcesHealthyCondition() metav1.Condition {
 	return metav1.Condition{
 		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionUnknown,
+		Reason: "Unknokwn",
 	}
 }
 

@@ -26,6 +26,9 @@ status:
       status: Unknown
       reason: ConditionNotMet
       message: "resource [deployer] condition not met: input [spec.value.some-key] and output [spec.value.bad-key] do not match: https://github.com/ekcasey/hello-world-ops != some-mismatching-value"
+    - type: ResourcesHealthy
+      status: "Unknown"
+      reason: HealthyConditionRule
     - type: Ready
       status: "Unknown"
       reason: ConditionNotMet
