@@ -34,7 +34,7 @@ func makeTemplate(outputs map[string]string) templates.ClusterRunTemplate {
 }
 
 var _ = Describe("ClusterRunTemplate", func() {
-	FDescribe("GetLatestSuccessfulOutput", func() {
+	Describe("GetLatestSuccessfulOutput", func() {
 		var (
 			serializer     runtime.Serializer
 			template       templates.ClusterRunTemplate
