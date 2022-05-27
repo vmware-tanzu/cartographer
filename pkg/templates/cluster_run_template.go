@@ -46,7 +46,7 @@ type runTemplate struct {
 	evaluator eval.Evaluator
 }
 
-const StatusPath = `status.conditions[?(@.type=="Succeeded")].status`
+const SuccessStatusPath = `status.conditions[?(@.type=="Succeeded")].status`
 
 // GetLatestSuccessfulOutput returns the most recent condition:Succeeded=True stamped object.
 // If no output paths are specified, then you only receive the object and empty outputs.
@@ -72,7 +72,7 @@ func (t *runTemplate) getLatestSuccessfulObject(stampedObjects []*unstructured.U
 	)
 
 	for _, stampedObject := range stampedObjects {
-		status, err := t.evaluator.EvaluateJsonPath(StatusPath, stampedObject.UnstructuredContent())
+		status, err := t.evaluator.EvaluateJsonPath(SuccessStatusPath, stampedObject.UnstructuredContent())
 		if !(err == nil && status == "True") {
 			continue
 		}

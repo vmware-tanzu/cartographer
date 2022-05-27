@@ -34,7 +34,7 @@ func makeTemplate(outputs map[string]string) templates.ClusterRunTemplate {
 	return templates.NewRunTemplateModel(apiTemplate)
 }
 
-var _ = FDescribe("ClusterRunTemplate", func() {
+var _ = Describe("ClusterRunTemplate", func() {
 	Describe("GetLatestSuccessfulOutput", func() {
 		var (
 			serializer     runtime.Serializer
@@ -519,7 +519,7 @@ var _ = FDescribe("ClusterRunTemplate", func() {
 				outputs, _, err := template.GetLatestSuccessfulOutput(stampedObjects)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(outputs["my-complex-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"[{\"name\":\"item1\",\"value\":{\"field1\":\"one\",\"field2\":\"two\"}},{\"name\":\"item2\",\"value\":\"a string\"}]"`)}))
+				Expect(outputs["my-complex-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"[{"name":"item1","value":{"field1":"one","field2":"two"}},{"name":"item2","value":"a string"}]"`)}))
 			})
 
 		})
