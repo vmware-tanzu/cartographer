@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -920,6 +921,158 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					Equal("this is generation 2"),
 					Not(Equal("but this is earlier generation 1"))),
 			}))
+		})
+	})
+
+	FDescribe("when a ClusterRunTemplate selects for available outputs", func() {
+		BeforeEach(func() {
+			runTemplateYaml := HereYamlF(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterRunTemplate
+				metadata:
+				  namespace: %s
+				  name: my-run-template
+				spec:
+				  outputs:
+					test-status: spec.foo
+				  template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  name: test-crd
+					spec:
+					  foo: bar
+				`,
+				testNS,
+			)
+
+			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
+
+			runnableYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Runnable
+					metadata:
+					  namespace: %s
+					  name: my-runnable
+					  labels:
+					    some-val: first
+					spec:
+					  serviceAccountName: %s
+					  runTemplateRef:
+					    name: my-run-template
+					    namespace: %s
+					    kind: ClusterRunTemplate
+					`,
+				testNS, serviceAccountName, testNS)
+
+			runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+		})
+
+		AfterEach(func() {
+			err := c.Delete(ctx, runTemplateDefinition)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Delete(ctx, runnableDefinition)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		getStatus := func() (v1alpha1.RunnableStatus, error) {
+
+			runnable := &v1alpha1.Runnable{}
+			err := c.Get(ctx, client.ObjectKey{Name: "my-runnable", Namespace: testNS}, runnable)
+
+			if err != nil {
+				return v1alpha1.RunnableStatus{}, err
+			}
+
+			return runnable.Status, nil
+		}
+
+		Context("when the stamped object is not successful", func() {
+			It("does not display an output on the runnable", func() {
+				Eventually(getStatus).Should(MatchFields(IgnoreExtras, Fields{
+					"ObservedGeneration": BeEquivalentTo(1),
+				}))
+
+				Consistently(getStatus, "1s").Should(MatchFields(IgnoreExtras, Fields{
+					"Outputs": BeEmpty(),
+				}))
+			})
+
+			FIt("displays a ready false condition on the runnable", func() {
+				Eventually(getStatus).Should(
+					MatchFields(IgnoreExtras, Fields{
+						"ObservedGeneration": BeEquivalentTo(1),
+						"Conditions": ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionFalse),
+							}),
+						),
+					}),
+				)
+			})
+		})
+
+		Context("when the stamped object is successful", func() {
+			BeforeEach(func() {
+				opts := []client.ListOption{
+					client.InNamespace(testNS),
+					client.MatchingLabels(map[string]string{"carto.run/runnable-name": "my-runnable"}),
+				}
+
+				testsList := &resources.TestObjList{}
+
+				Eventually(func() ([]resources.TestObj, error) {
+					err := c.List(ctx, testsList, opts...)
+					return testsList.Items, err
+				}).Should(HaveLen(1))
+
+				By("reflecting status when succeeded is true")
+				testToUpdate := &testsList.Items[0]
+				testToUpdate.Status.Conditions = []metav1.Condition{
+					{
+						Type:               "Ready",
+						Status:             "True",
+						Reason:             "LifeIsGood",
+						LastTransitionTime: metav1.Now(),
+					},
+					{
+						Type:               "Succeeded",
+						Status:             "True",
+						Reason:             "Success",
+						LastTransitionTime: metav1.Now(),
+					},
+				}
+				err := c.Status().Update(ctx, testToUpdate)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("display an output on the runnable", func() {
+				Eventually(getStatus).Should(
+					MatchFields(IgnoreExtras, Fields{
+						"ObservedGeneration": BeEquivalentTo(1),
+						"Outputs": MatchAllKeys(Keys{
+							"test-status": Equal(apiextensionsv1.JSON{Raw: []byte(`"bar"`)}),
+						}),
+					}),
+				)
+			})
+
+			It("displays a ready true condition on the runnable", func() {
+				Eventually(getStatus).Should(
+					MatchFields(IgnoreExtras, Fields{
+						"ObservedGeneration": BeEquivalentTo(1),
+						"Conditions": ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+						),
+					}),
+				)
+			})
 		})
 	})
 })
