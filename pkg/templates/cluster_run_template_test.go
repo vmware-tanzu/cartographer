@@ -519,7 +519,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 				outputs, _, err := template.GetLatestSuccessfulOutput(stampedObjects)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(outputs["my-complex-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"[{"name":"item1","value":{"field1":"one","field2":"two"}},{"name":"item2","value":"a string"}]"`)}))
+				Expect(outputs["my-complex-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`[{"name":"item1","value":{"field1":"one","field2":"two"}},{"name":"item2","value":"a string"}]`)}))
 			})
 
 		})
