@@ -41,8 +41,12 @@ var _ = Describe("DetermineHealthCondition", func() {
 		))
 	})
 
-	It("is always healthy for no rule on ClusterTemplates", func() {
+	It("is always healthy for no rule on ClusterTemplates if a stamped object exists", func() {
 		realizedResource := &v1alpha1.RealizedResource{
+			StampedRef: &corev1.ObjectReference{
+				Kind:       "Anything",
+				APIVersion: "of-any/kind",
+			},
 			TemplateRef: &corev1.ObjectReference{
 				Kind:       "ClusterTemplate",
 				APIVersion: "carto.run/v1alpha1",
@@ -54,6 +58,23 @@ var _ = Describe("DetermineHealthCondition", func() {
 				"Type":   Equal("Healthy"),
 				"Status": Equal(metav1.ConditionTrue),
 				"Reason": Equal(v1alpha1.AlwaysHealthyResourcesHealthyReason),
+			},
+		))
+	})
+
+	It("is always unknown for no rule on ClusterTemplates if no stamped object exists", func() {
+		realizedResource := &v1alpha1.RealizedResource{
+			TemplateRef: &corev1.ObjectReference{
+				Kind:       "ClusterTemplate",
+				APIVersion: "carto.run/v1alpha1",
+			},
+		}
+
+		Expect(healthcheck.DetermineHealthCondition(nil, realizedResource, nil)).To(MatchFields(IgnoreExtras,
+			Fields{
+				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionUnknown),
+				"Reason": Equal(v1alpha1.NoStampedObjectHealthyReason),
 			},
 		))
 	})
