@@ -17,6 +17,7 @@ package healthcheck
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -25,13 +26,23 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
+func IsClusterTemplate(reference *corev1.ObjectReference) bool {
+	apiVersion := v1alpha1.SchemeGroupVersion.Group + "/" + v1alpha1.SchemeGroupVersion.Version
+	if reference != nil &&
+		reference.Kind == "ClusterTemplate" &&
+		reference.APIVersion == apiVersion {
+		return true
+	}
+	return false
+}
+
 func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition {
 	if rule == nil {
 		if realizedResource == nil {
 			return conditions.NoResourceResourcesHealthyCondition()
 		} else if len(realizedResource.Outputs) > 0 {
 			return conditions.OutputAvailableResourcesHealthyCondition()
-		} else if realizedResource.TemplateRef != nil && realizedResource.TemplateRef.Kind == "ClusterTemplate" && realizedResource.TemplateRef.APIVersion == "carto.run/v1alpha1" {
+		} else if IsClusterTemplate(realizedResource.TemplateRef) {
 			return conditions.AlwaysHealthyResourcesHealthyCondition()
 		}
 		return conditions.OutputNotAvailableResourcesHealthyCondition()
