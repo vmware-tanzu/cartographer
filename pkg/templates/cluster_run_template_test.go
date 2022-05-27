@@ -26,311 +26,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 )
 
+func makeTemplate(outputs map[string]string) templates.ClusterRunTemplate {
+	apiTemplate := &v1alpha1.ClusterRunTemplate{}
+	apiTemplate.Spec.Outputs = outputs
+
+	return templates.NewRunTemplateModel(apiTemplate)
+}
+
 var _ = Describe("ClusterRunTemplate", func() {
 	FDescribe("GetLatestSuccessfulOutput", func() {
 		var (
-			//	apiTemplate                                                         *v1alpha1.ClusterRunTemplate
-			//	template                                                            templates.ClusterRunTemplate
-			//	firstStampedObject, secondStampedObject, unconditionedStampedObject *unstructured.Unstructured
-			//	stampedObjects                                                      []*unstructured.Unstructured
-			serializer runtime.Serializer
-		)
-		//
-		BeforeEach(func() {
-			serializer = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-			//
-			//	apiTemplate = &v1alpha1.ClusterRunTemplate{}
-			//
-			//	firstStampedObject = &unstructured.Unstructured{}
-			//	firstStampedObjectManifest := utils.HereYamlF(`
-			//		apiVersion: thing/v1
-			//		kind: Thing
-			//		metadata:
-			//		  name: named-thing
-			//		  namespace: somens
-			//		  creationTimestamp: "2021-09-17T16:02:30Z"
-			//		spec:
-			//		  simple: is a string
-			//		  complex:
-			//			type: object
-			//			name: complex object
-			//		  only-exists-on-first-object: populated
-			//		status:
-			//		  conditions:
-			//		    - type: Succeeded
-			//		      status: "True"
-			//	`)
-			//
-			//	_, _, err := serializer.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
-			//	Expect(err).NotTo(HaveOccurred())
-			//
-			//	secondStampedObject = &unstructured.Unstructured{}
-			//	secondStampedObjectManifest := utils.HereYamlF(`
-			//		apiVersion: thing/v1
-			//		kind: Thing
-			//		metadata:
-			//		  name: named-thing
-			//		  namespace: somens
-			//		  creationTimestamp: "2021-09-17T16:02:40Z"
-			//		spec:
-			//		  simple: 2nd-simple
-			//		  complex: 2nd-complex
-			//		status:
-			//		  conditions:
-			//		    - type: Succeeded
-			//		      status: "True"
-			//	`)
-			//
-			//	_, _, err = serializer.Decode([]byte(secondStampedObjectManifest), nil, secondStampedObject)
-			//	Expect(err).NotTo(HaveOccurred())
-			//
-			//	unconditionedStampedObject = &unstructured.Unstructured{}
-			//	unconditionedStampedObjectManifest := utils.HereYamlF(`
-			//		apiVersion: thing/v1
-			//		kind: Thing
-			//		metadata:
-			//		  name: named-thing
-			//		  namespace: somens
-			//		spec:
-			//		  simple: val
-			//		  complex: other-val
-			//	`)
-			//
-			//	_, _, err = serializer.Decode([]byte(unconditionedStampedObjectManifest), nil, unconditionedStampedObject)
-			//	Expect(err).NotTo(HaveOccurred())
-		})
-
-		//Context("when there is one object", func() {
-		//	BeforeEach(func() {
-		//		stampedObjects = []*unstructured.Unstructured{firstStampedObject}
-		//	})
-		//
-		//	Context("with no outputs", func() {
-		//		It("returns an empty list", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).NotTo(HaveOccurred())
-		//			Expect(outputs).To(BeEmpty())
-		//			Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
-		//		})
-		//	})
-		//
-		//	Context("with valid output paths defined", func() {
-		//		BeforeEach(func() {
-		//			apiTemplate.Spec.Outputs = map[string]string{
-		//				"simplistic": "spec.simple",
-		//				"complexish": "spec.complex",
-		//			}
-		//		})
-		//
-		//		Context("when the object has not succeeded", func() {
-		//			BeforeEach(func() {
-		//				Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed()) // TODO: fix this notation or start using a jsonpath parser
-		//			})
-		//			It("returns empty outputs", func() {
-		//				template := templates.NewRunTemplateModel(apiTemplate)
-		//				outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//				Expect(err).NotTo(HaveOccurred())
-		//				Expect(outputs).To(BeEmpty())
-		//				Expect(evaluatedStampedObject).To(BeNil())
-		//			})
-		//		})
-		//		Context("when the object has no conditions", func() {
-		//			BeforeEach(func() {
-		//				firstStampedObject = &unstructured.Unstructured{}
-		//				firstStampedObjectManifest := utils.HereYamlF(`
-		//					apiVersion: thing/v1
-		//					kind: Thing
-		//					metadata:
-		//					  name: named-thing
-		//					  namespace: somens
-		//					  creationTimestamp: "2021-09-17T16:02:30Z"
-		//					spec:
-		//					  simple: is a string
-		//					  complex:
-		//						type: object
-		//						name: complex object
-		//					  only-exists-on-first-object: populated
-		//					status: {}
-		//				`)
-		//
-		//				_, _, err := serializer.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
-		//				Expect(err).NotTo(HaveOccurred())
-		//			})
-		//			It("returns empty outputs", func() {
-		//				template := templates.NewRunTemplateModel(apiTemplate)
-		//				outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//				Expect(err).NotTo(HaveOccurred())
-		//				Expect(outputs).To(BeEmpty())
-		//				Expect(evaluatedStampedObject).To(BeNil())
-		//			})
-		//		})
-		//
-		//		Context("when the object has no succeeded condition", func() {
-		//			BeforeEach(func() {
-		//				firstStampedObject = &unstructured.Unstructured{}
-		//				firstStampedObjectManifest := utils.HereYamlF(`
-		//					apiVersion: thing/v1
-		//					kind: Thing
-		//					metadata:
-		//					  name: named-thing
-		//					  namespace: somens
-		//					  creationTimestamp: "2021-09-17T16:02:30Z"
-		//					spec:
-		//					  simple: is a string
-		//					  complex:
-		//						type: object
-		//						name: complex object
-		//					  only-exists-on-first-object: populated
-		//					status:
-		//				      conditions:
-		//						- type: Fredded
-		//						  status: True
-		//				`)
-		//
-		//				_, _, err := serializer.Decode([]byte(firstStampedObjectManifest), nil, firstStampedObject)
-		//				Expect(err).NotTo(HaveOccurred())
-		//			})
-		//			It("returns empty outputs", func() {
-		//				template := templates.NewRunTemplateModel(apiTemplate)
-		//				outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//				Expect(err).NotTo(HaveOccurred())
-		//				Expect(outputs).To(BeEmpty())
-		//				Expect(evaluatedStampedObject).To(BeNil())
-		//			})
-		//		})
-		//
-		//		It("returns the new outputs", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).NotTo(HaveOccurred())
-		//			Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
-		//			Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
-		//			Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
-		//		})
-		//	})
-		//
-		//	Context("with invalid output paths defined", func() {
-		//		BeforeEach(func() {
-		//			apiTemplate.Spec.Outputs = map[string]string{
-		//				"complexish": "spec.nonexistant",
-		//			}
-		//		})
-		//		It("returns an error", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			_, _, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).To(HaveOccurred())
-		//			Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: jsonpath returned empty list: spec.nonexistant"))
-		//		})
-		//
-		//		It("has no outputs", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, _, _ := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(outputs).To(BeEmpty())
-		//		})
-		//	})
-		//})
-		//
-		//Context("when there are multiple objects", func() {
-		//	BeforeEach(func() {
-		//		stampedObjects = []*unstructured.Unstructured{secondStampedObject, firstStampedObject}
-		//
-		//		apiTemplate.Spec.Outputs = map[string]string{
-		//			"simplistic": "spec.simple",
-		//			"complexish": "spec.complex",
-		//		}
-		//	})
-		//
-		//	Context("when none have succeeded", func() {
-		//		BeforeEach(func() {
-		//			Expect(utils.AlterFieldOfNestedStringMaps(firstStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
-		//			Expect(utils.AlterFieldOfNestedStringMaps(secondStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
-		//		})
-		//		It("returns empty outputs", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).NotTo(HaveOccurred())
-		//			Expect(outputs).To(BeEmpty())
-		//			Expect(evaluatedStampedObject).To(BeNil())
-		//		})
-		//	})
-		//	Context("when only the least recently has succeeded", func() {
-		//		BeforeEach(func() {
-		//			Expect(utils.AlterFieldOfNestedStringMaps(secondStampedObject.Object, "status.conditions.[0]status", "False")).To(Succeed())
-		//		})
-		//		It("returns the output of the earlier submitted and successful object", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).NotTo(HaveOccurred())
-		//			Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}))
-		//			Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`{"name":"complex object","type":"object"}`)}))
-		//			Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
-		//		})
-		//	})
-		//	Context("when all have succeeded", func() {
-		//		It("returns the output of the most recently submitted and successful object", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).NotTo(HaveOccurred())
-		//			Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-simple"`)}))
-		//			Expect(outputs["complexish"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"2nd-complex"`)}))
-		//			Expect(evaluatedStampedObject).To(Equal(secondStampedObject))
-		//		})
-		//	})
-		//	Context("when the field of one object don't match the declared output fields", func() {
-		//		BeforeEach(func() {
-		//			apiTemplate.Spec.Outputs = map[string]string{
-		//				"simplistic": "spec.only-exists-on-first-object",
-		//			}
-		//		})
-		//
-		//		It("returns the output of the most recently submitted, successful, non-error inducing object", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			outputs, evaluatedStampedObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).NotTo(HaveOccurred())
-		//			Expect(outputs["simplistic"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"populated"`)}))
-		//			Expect(evaluatedStampedObject).To(Equal(firstStampedObject))
-		//		})
-		//	})
-		//	Context("when the fields of all objects don't match the declared output fields", func() {
-		//		BeforeEach(func() {
-		//			apiTemplate.Spec.Outputs = map[string]string{
-		//				"simplistic": "spec.nonexistant",
-		//			}
-		//		})
-		//		It("returns a helpful error", func() {
-		//			template := templates.NewRunTemplateModel(apiTemplate)
-		//			_, _, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//			Expect(err).To(HaveOccurred())
-		//			Expect(err.Error()).To(Equal("failed to evaluate path [spec.nonexistant]: jsonpath returned empty list: spec.nonexistant"))
-		//		})
-		//
-		//		Context("and one does not have succeeded condition", func() {
-		//			BeforeEach(func() {
-		//				stampedObjects = []*unstructured.Unstructured{unconditionedStampedObject, firstStampedObject}
-		//			})
-		//			It("returns a helpful error", func() {
-		//				template := templates.NewRunTemplateModel(apiTemplate)
-		//				_, _, err := template.GetLatestSuccessfulOutput(stampedObjects)
-		//				Expect(err).To(HaveOccurred())
-		//				Expect(err.Error()).To(ContainSubstring("failed to evaluate path [spec.nonexistant]: jsonpath returned empty list: spec.nonexistant"))
-		//			})
-		//		})
-		//	})
-		//})
-
-		// ----- reworking
-		var (
+			serializer     runtime.Serializer
 			template       templates.ClusterRunTemplate
 			stampedObjects []*unstructured.Unstructured
 		)
-
-		var makeTemplate = func(outputs map[string]string) templates.ClusterRunTemplate {
-			apiTemplate := &v1alpha1.ClusterRunTemplate{}
-			apiTemplate.Spec.Outputs = outputs
-
-			return templates.NewRunTemplateModel(apiTemplate)
-		}
+		BeforeEach(func() {
+			serializer = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+		})
 
 		Context("No stamped objects", func() {
 			BeforeEach(func() {
@@ -441,10 +153,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 						})
 					})
 
-					// You might expect an error here, but you cant
-					// it's always possible that the spec in the template changed, and so the latest output
-					// becomes invalid until the latest stamped object is success: true
-					It("returns no output, but the matching object", func() {
+					It("returns no output, the matching object and an error", func() {
 						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
 						Expect(err).To(MatchError("failed to evaluate path [status.nonexistant]: jsonpath returned empty list: status.nonexistant"))
 						Expect(outputs).To(BeEmpty())
@@ -620,16 +329,29 @@ var _ = Describe("ClusterRunTemplate", func() {
 					})
 				})
 
-				//Context("that do not match the outputs in the template", func() {
-				//	It("returns an error", func() {})
-				//})
-				//
+				Context("that do not match the outputs in the template", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{
+							"an-output": "status.nonexistant",
+						})
+					})
+
+					It("returns no output, the matching object and an error", func() {
+						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
+						Expect(err).To(MatchError("failed to evaluate path [status.nonexistant]: jsonpath returned empty list: status.nonexistant"))
+						Expect(outputs).To(BeEmpty())
+						Expect(outputSourceObject).To(Equal(firstObject))
+					})
+
+				})
+
 				Context("that matches the outputs in the template", func() {
 					BeforeEach(func() {
 						template = makeTemplate(map[string]string{
 							"an-output": "status.simple-result",
 						})
 					})
+
 					It("returns the earliest matched outputs and the earliest matched object", func() {
 						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
 						Expect(err).NotTo(HaveOccurred())
@@ -639,24 +361,125 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 			})
-			//
-			//Context("with [succeeded:true, succeeded:true] conditions", func() {
-			//	Context("with no output specified in the template", func() {
-			//		It("returns an empty output and the matched object", func() {})
-			//	})
-			//
-			//	Context("neither match the outputs", func() {
-			//		It("returns an error", func() {})
-			//	})
-			//
-			//	Context("both match the outputs", func() {
-			//		It("returns the latest matched outputs and the latest matched object", func() {})
-			//	})
-			//
-			//	Context("the earliest matches the outputs, the latest does not", func() {
-			//		It("returns the earliest matched outputs and the earliest matched object", func() {})
-			//	})
-			//})
+
+			Context("with [succeeded:true, succeeded:true] conditions", func() {
+				var firstObject, secondObject *unstructured.Unstructured
+
+				BeforeEach(func() {
+					firstObject = &unstructured.Unstructured{}
+					firstObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: first-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T16:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "True"
+						  simple-result: first result
+					      first-only: first only result
+					`)
+					_, _, err := serializer.Decode([]byte(firstObjectYaml), nil, firstObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					secondObject = &unstructured.Unstructured{}
+					secondObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: second-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T17:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "True"
+						  simple-result: second result
+					      second-only: second only result
+					`)
+					_, _, err = serializer.Decode([]byte(secondObjectYaml), nil, secondObject)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Out of order deliberately
+					stampedObjects = []*unstructured.Unstructured{secondObject, firstObject}
+
+				})
+				Context("with no output specified in the template", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{})
+					})
+
+					It("returns an empty output and the latest matched object", func() {
+						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs).To(BeEmpty())
+						Expect(outputSourceObject).To(Equal(secondObject))
+					})
+				})
+
+				Context("neither match the outputs", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{
+							"an-output": "status.nonexistant",
+						})
+					})
+
+					It("returns an error and the latest object", func() {
+						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
+						Expect(err).To(MatchError("failed to evaluate path [status.nonexistant]: jsonpath returned empty list: status.nonexistant"))
+						Expect(outputs).To(BeEmpty())
+						Expect(outputSourceObject).To(Equal(secondObject))
+					})
+				})
+
+				Context("later does not match the outputs", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{
+							"an-output": "status.first-only",
+						})
+					})
+					It("returns an error and the latest object", func() {
+						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
+						Expect(err).To(MatchError("failed to evaluate path [status.first-only]: jsonpath returned empty list: status.first-only"))
+						Expect(outputs).To(BeEmpty())
+						Expect(outputSourceObject).To(Equal(secondObject))
+					})
+				})
+
+				Context("earlier does not match the outputs", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{
+							"an-output": "status.second-only",
+						})
+					})
+
+					It("returns the latest", func() {
+						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"second only result"`)}))
+						Expect(outputSourceObject).To(Equal(secondObject))
+					})
+				})
+
+				Context("both match the outputs", func() {
+					BeforeEach(func() {
+						template = makeTemplate(map[string]string{
+							"an-output": "status.simple-result",
+						})
+					})
+
+					It("returns the latest matched output and the latest matched object", func() {
+						outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(outputs["an-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"second result"`)}))
+						Expect(outputSourceObject).To(Equal(secondObject))
+					})
+				})
+			})
 		})
 	})
 })
+
+// Todo: Test complex outputs

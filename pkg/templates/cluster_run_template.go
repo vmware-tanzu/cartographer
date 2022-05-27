@@ -48,10 +48,15 @@ type runTemplate struct {
 
 const StatusPath = `status.conditions[?(@.type=="Succeeded")].status`
 
+// GetLatestSuccessfulOutput returns the most recent condition:Succeeded=True stamped object.
+// If no output paths are specified, then you only receive the object and empty outputs.
+// If the output path is specified but doesn't match anything in the latest "suceeded" object, then an error is returned
+// along with the matched object.
+// if the output paths are all satisfied, then the outputs from the latest object, and the object itself, are returned.
 // Fixme: do we want a ptr receiver?
 func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
 	var (
-		latestTime           time.Time
+		latestTime           time.Time // zero value is used for comparison
 		latestMatchingObject *unstructured.Unstructured
 		latestOutputError    error
 	)
@@ -59,13 +64,14 @@ func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Un
 	latestOutputs := Outputs{}
 
 	for _, stampedObject := range stampedObjects {
-		matched, currentOutputs, outputError := t.matchOutputs(stampedObject)
+		matched, currentOutputs, outputError := t.matchOutputs(stampedObject) // todo: this could be refactored to only find the latest, and after the loop we can test for outputs
 		if !matched {
 			continue
 		}
 
 		currentTime := stampedObject.GetCreationTimestamp().Time
 		if currentTime.After(latestTime) {
+			latestTime = currentTime
 			latestMatchingObject = stampedObject
 			latestOutputs = currentOutputs
 			latestOutputError = outputError
