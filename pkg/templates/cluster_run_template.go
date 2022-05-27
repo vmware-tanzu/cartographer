@@ -53,52 +53,41 @@ const StatusPath = `status.conditions[?(@.type=="Succeeded")].status`
 // If the output path is specified but doesn't match anything in the latest "suceeded" object, then an error is returned
 // along with the matched object.
 // if the output paths are all satisfied, then the outputs from the latest object, and the object itself, are returned.
-// Fixme: do we want a ptr receiver?
-func (t runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
+func (t *runTemplate) GetLatestSuccessfulOutput(stampedObjects []*unstructured.Unstructured) (Outputs, *unstructured.Unstructured, error) {
+	latestMatchingObject := t.getLatestSuccessfulObject(stampedObjects)
+
+	if latestMatchingObject == nil {
+		return Outputs{}, nil, nil
+	}
+
+	outputError, outputs := t.getOutputsOfSingleObject(t.evaluator, *latestMatchingObject)
+
+	return outputs, latestMatchingObject, outputError
+}
+
+func (t *runTemplate) getLatestSuccessfulObject(stampedObjects []*unstructured.Unstructured) *unstructured.Unstructured {
 	var (
 		latestTime           time.Time // zero value is used for comparison
 		latestMatchingObject *unstructured.Unstructured
-		latestOutputError    error
 	)
 
-	latestOutputs := Outputs{}
-
 	for _, stampedObject := range stampedObjects {
-		matched, currentOutputs, outputError := t.matchOutputs(stampedObject) // todo: this could be refactored to only find the latest, and after the loop we can test for outputs
-		if !matched {
+		status, err := t.evaluator.EvaluateJsonPath(StatusPath, stampedObject.UnstructuredContent())
+		if !(err == nil && status == "True") {
 			continue
 		}
 
 		currentTime := stampedObject.GetCreationTimestamp().Time
 		if currentTime.After(latestTime) {
-			latestTime = currentTime
 			latestMatchingObject = stampedObject
-			latestOutputs = currentOutputs
-			latestOutputError = outputError
-		}
-	}
-
-	return latestOutputs, latestMatchingObject, latestOutputError
-}
-
-func (t runTemplate) matchOutputs(stampedObject *unstructured.Unstructured) (bool, Outputs, error) {
-	status, err := t.evaluator.EvaluateJsonPath(StatusPath, stampedObject.UnstructuredContent())
-	if err != nil {
-		return false, Outputs{}, nil
-	}
-
-	if status == "True" {
-		outputError, outputs := t.getOutputsOfSingleObject(t.evaluator, *stampedObject)
-		if outputError != nil {
-			return true, Outputs{}, outputError
+			latestTime = currentTime
 		}
 
-		return true, outputs, nil
 	}
-	return false, Outputs{}, nil
+	return latestMatchingObject
 }
 
-func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedObject unstructured.Unstructured) (error, Outputs) {
+func (t *runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedObject unstructured.Unstructured) (error, Outputs) {
 	var objectErr error
 	provisionalOutputs := Outputs{}
 	for key, path := range t.template.Spec.Outputs {
@@ -121,11 +110,11 @@ func (t runTemplate) getOutputsOfSingleObject(evaluator eval.Evaluator, stampedO
 	return objectErr, provisionalOutputs
 }
 
-func (t runTemplate) GetName() string {
+func (t *runTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t runTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
+func (t *runTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return v1alpha1.TemplateSpec{
 		Template: &t.template.Spec.Template,
 	}
