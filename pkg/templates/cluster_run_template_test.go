@@ -34,7 +34,7 @@ func makeTemplate(outputs map[string]string) templates.ClusterRunTemplate {
 	return templates.NewRunTemplateModel(apiTemplate)
 }
 
-var _ = Describe("ClusterRunTemplate", func() {
+var _ = FDescribe("ClusterRunTemplate", func() {
 	Describe("GetLatestSuccessfulOutput", func() {
 		var (
 			serializer     runtime.Serializer
@@ -88,7 +88,7 @@ var _ = Describe("ClusterRunTemplate", func() {
 					stampedObjects = []*unstructured.Unstructured{stampedObject}
 				})
 
-				It("returns no output", func() { // Todo: returning an error it shouldn't
+				It("returns no output", func() {
 					outputs, outputSourceObject, err := template.GetLatestSuccessfulOutput(stampedObjects)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(outputs).To(BeEmpty())
@@ -480,7 +480,48 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 			})
 		})
+
+		Describe("supports complex output objects", func() {
+			var stampedObject *unstructured.Unstructured
+
+			BeforeEach(func() {
+				template = makeTemplate(map[string]string{
+					"my-complex-output": "status.complex-result",
+				})
+
+				stampedObject = &unstructured.Unstructured{}
+				stampedObjectYaml := utils.HereYamlF(`
+						apiVersion: thing/v1
+						kind: Thing
+						metadata:
+						  name: named-thing
+						  namespace: somens
+						  creationTimestamp: "2021-09-17T16:02:30Z"
+						status: 
+						  conditions:
+							- type: Succeeded
+							  status: "True"
+						  complex-result:
+							- name: item1
+							  value: 
+								field1: one
+								field2: two
+							- name: item2
+							  value: a string
+					`)
+
+				_, _, err := serializer.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+				Expect(err).NotTo(HaveOccurred())
+				stampedObjects = []*unstructured.Unstructured{stampedObject}
+			})
+
+			It("returns the output", func() {
+				outputs, _, err := template.GetLatestSuccessfulOutput(stampedObjects)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(outputs["my-complex-output"]).To(Equal(apiextensionsv1.JSON{Raw: []byte(`"[{\"name\":\"item1\",\"value\":{\"field1\":\"one\",\"field2\":\"two\"}},{\"name\":\"item2\",\"value\":\"a string\"}]"`)}))
+			})
+
+		})
 	})
 })
-
-// Todo: Test complex outputs
