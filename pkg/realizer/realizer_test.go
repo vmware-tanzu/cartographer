@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -38,11 +39,29 @@ import (
 
 var _ = Describe("Realize", func() {
 	var (
-		resourceRealizer *realizerfakes.FakeResourceRealizer
-		rlzr             realizer.Realizer
+		resourceRealizer               *realizerfakes.FakeResourceRealizer
+		rlzr                           realizer.Realizer
+		healthyConditionEvaluator      realizer.HealthyConditionEvaluator
+		evaluatedHealthRules           []*v1alpha1.HealthRule
+		evaluatedRealizedResourceNames []string
+		evaluatedStampedObjectNames    []string
 	)
+
 	BeforeEach(func() {
-		rlzr = realizer.NewRealizer()
+		evaluatedHealthRules = []*v1alpha1.HealthRule{}
+		evaluatedRealizedResourceNames = []string{}
+		evaluatedStampedObjectNames = []string{}
+		healthyConditionEvaluator = func(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition {
+			evaluatedHealthRules = append(evaluatedHealthRules, rule)
+			evaluatedRealizedResourceNames = append(evaluatedRealizedResourceNames, realizedResource.Name)
+			evaluatedStampedObjectNames = append(evaluatedStampedObjectNames, stampedObject.GetName())
+			return metav1.Condition{
+				Type:   "Healthy",
+				Status: "True",
+				Reason: "EvaluatorSaysSo",
+			}
+		}
+		rlzr = realizer.NewRealizer(healthyConditionEvaluator)
 		resourceRealizer = &realizerfakes.FakeResourceRealizer{}
 	})
 
@@ -73,11 +92,23 @@ var _ = Describe("Realize", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-image-template",
 				},
+				Spec: v1alpha1.ImageTemplateSpec{
+					TemplateSpec: v1alpha1.TemplateSpec{
+						HealthRule: &v1alpha1.HealthRule{
+							SingleConditionType: "Happy",
+						},
+					},
+				},
 			}
 			template2 = &v1alpha1.ClusterTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-cluster-template",
+				},
+				Spec: v1alpha1.TemplateSpec{
+					HealthRule: &v1alpha1.HealthRule{
+						AlwaysHealthy: &runtime.RawExtension{Raw: []byte(`{}`)},
+					},
 				},
 			}
 			supplyChain = &v1alpha1.ClusterSupplyChain{
@@ -123,6 +154,11 @@ var _ = Describe("Realize", func() {
 			currentResourceStatuses := resourceStatuses.GetCurrent()
 			Expect(executedResourceOrder).To(Equal([]string{"resource1", "resource2"}))
 
+			Expect(evaluatedHealthRules).To(Equal([]*v1alpha1.HealthRule{template1.Spec.HealthRule, template2.Spec.HealthRule}))
+
+			Expect(evaluatedRealizedResourceNames).To(Equal([]string{"resource1", "resource2"}))
+			Expect(evaluatedStampedObjectNames).To(Equal([]string{"obj1", "obj2"}))
+
 			Expect(currentResourceStatuses).To(HaveLen(2))
 
 			Expect(currentResourceStatuses[0].Name).To(Equal(resource1.Name))
@@ -138,19 +174,20 @@ var _ = Describe("Realize", func() {
 				},
 			))
 			Expect(time.Since(currentResourceStatuses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
-			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
-			Expect(currentResourceStatuses[0].Conditions[0]).To(MatchFields(IgnoreExtras,
-				Fields{
-					"Type":   Equal("ResourceSubmitted"),
-					"Status": Equal(metav1.ConditionTrue),
-				},
-			))
-			Expect(currentResourceStatuses[0].Conditions[1]).To(MatchFields(IgnoreExtras,
-				Fields{
-					"Type":   Equal("Ready"),
-					"Status": Equal(metav1.ConditionTrue),
-				},
-			))
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(3))
+
+			Expect(currentResourceStatuses[0].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("ResourceSubmitted"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+			Expect(currentResourceStatuses[0].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+			Expect(currentResourceStatuses[0].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
 
 			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
 			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
@@ -158,19 +195,20 @@ var _ = Describe("Realize", func() {
 			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
 			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(currentResourceStatuses[1].Outputs).To(BeNil())
-			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(2))
-			Expect(currentResourceStatuses[1].Conditions[0]).To(MatchFields(IgnoreExtras,
-				Fields{
-					"Type":   Equal("ResourceSubmitted"),
-					"Status": Equal(metav1.ConditionTrue),
-				},
-			))
-			Expect(currentResourceStatuses[1].Conditions[1]).To(MatchFields(IgnoreExtras,
-				Fields{
-					"Type":   Equal("Ready"),
-					"Status": Equal(metav1.ConditionTrue),
-				},
-			))
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(3))
+
+			Expect(currentResourceStatuses[1].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("ResourceSubmitted"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+			Expect(currentResourceStatuses[1].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+			Expect(currentResourceStatuses[1].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
 		})
 
 		It("returns the first error encountered realizing a resource and continues to realize", func() {
@@ -232,6 +270,13 @@ var _ = Describe("Realize", func() {
 								Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("whatever\n"))),
 								LastTransitionTime: previousTime,
 							},
+						},
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   "Healthy",
+							Status: metav1.ConditionTrue,
+							Reason: "HealthyReasonFromBefore",
 						},
 					},
 				},
@@ -395,8 +440,11 @@ var _ = Describe("Realize", func() {
 
 			It("the status uses the previous resource for resource 2", func() {
 				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
+
 				err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 				Expect(err).To(MatchError("im in a bad state"))
+
+				Expect(evaluatedRealizedResourceNames).To(Equal([]string{"resource3"}))
 
 				currentStatuses := resourceStatuses.GetCurrent()
 				Expect(currentStatuses).To(HaveLen(3))
@@ -430,37 +478,41 @@ var _ = Describe("Realize", func() {
 				Expect(resource2Status.Inputs).To(Equal(previousResources[0].Inputs))
 				Expect(resource2Status.Outputs).To(Equal(previousResources[0].Outputs))
 				Expect(resource2Status.Conditions).ToNot(Equal(previousResources[0].Conditions))
-				Expect(len(resource2Status.Conditions)).To(Equal(2))
-				Expect(resource2Status.Conditions[0]).To(MatchFields(IgnoreExtras,
-					Fields{
-						"Type":   Equal("ResourceSubmitted"),
-						"Status": Equal(metav1.ConditionFalse),
-					},
-				))
-				Expect(resource2Status.Conditions[1]).To(MatchFields(IgnoreExtras,
-					Fields{
-						"Type":   Equal("Ready"),
-						"Status": Equal(metav1.ConditionFalse),
-					},
-				))
+				Expect(len(resource2Status.Conditions)).To(Equal(3))
+
+				Expect(resource2Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourceSubmitted"),
+					"Status": Equal(metav1.ConditionFalse),
+				})))
+				Expect(resource2Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionTrue),
+					"Reason": Equal("HealthyReasonFromBefore"),
+				})))
+				Expect(resource2Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Status": Equal(metav1.ConditionFalse),
+				})))
 
 				// No error realizing resource3, realizedResource should be a new resource
 				Expect(resource3Status.Name).To(Equal(previousResources[1].Name))
 				Expect(resource3Status.StampedRef).ToNot(Equal(previousResources[1].StampedRef))
 				Expect(resource3Status.TemplateRef).ToNot(Equal(previousResources[1].TemplateRef))
-				Expect(len(resource3Status.Conditions)).To(Equal(2))
-				Expect(resource3Status.Conditions[0]).To(MatchFields(IgnoreExtras,
-					Fields{
-						"Type":   Equal("ResourceSubmitted"),
-						"Status": Equal(metav1.ConditionTrue),
-					},
-				))
-				Expect(resource3Status.Conditions[1]).To(MatchFields(IgnoreExtras,
-					Fields{
-						"Type":   Equal("Ready"),
-						"Status": Equal(metav1.ConditionTrue),
-					},
-				))
+				Expect(len(resource3Status.Conditions)).To(Equal(3))
+
+				Expect(resource3Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourceSubmitted"),
+					"Status": Equal(metav1.ConditionTrue),
+				})))
+				Expect(resource3Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionTrue),
+					"Reason": Equal("EvaluatorSaysSo"),
+				})))
+				Expect(resource3Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				})))
 			})
 		})
 	})

@@ -26,6 +26,7 @@ package v1alpha1
 
 const (
 	OwnerReady               = "Ready"
+	ResourcesHealthy         = "ResourcesHealthy"
 	WorkloadSupplyChainReady = "SupplyChainReady"
 	DeliverableDeliveryReady = "DeliveryReady"
 	OwnerResourcesSubmitted  = "ResourcesSubmitted"
@@ -81,7 +82,7 @@ const (
 // -----------------------------------------
 // -- OWNER.STATUS.RESOURCE[x].CONDITIONS --
 // ConditionTypes
-//   (ResourcesHealthy) - TODO
+//   ResourcesHealthy
 //   ResourcesSubmitted
 //   Ready
 
@@ -90,6 +91,7 @@ const (
 const (
 	ResourceReady     = "Ready"
 	ResourceSubmitted = "ResourceSubmitted"
+	ResourceHealthy   = "Healthy"
 )
 
 // -- RESOURCE ConditionType - ResourceSubmitted ConditionReasons (above)
@@ -113,6 +115,28 @@ const (
 const (
 	ReadyTemplatesReadyReason    = "Ready"
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy True ConditionReasons
+
+const (
+	OutputAvailableResourcesHealthyReason = "OutputsAvailable"
+	AlwaysHealthyResourcesHealthyReason   = "AlwaysHealthy"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy Unknown ConditionReasons
+
+const (
+	NoResourceResourcesHealthyReason         = "NoResource"
+	OutputNotAvailableResourcesHealthyReason = "OutputNotAvailable"
+	NoStampedObjectHealthyReason             = "NoStampedObject"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy False ConditionReasons
+
+const (
+	SingleConditionTypeEvaluationErrorResourcesHealthyReason = "SingleConditionEvaluationError"
+	SingleConditionTypeNoResultResourcesHealthyReason        = "SingleConditionNoResult"
 )
 
 // -----------------------------------------

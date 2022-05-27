@@ -59,6 +59,8 @@ type resourceRealizer struct {
 	resourceLabeler ResourceLabeler
 }
 
+type ResourceLabeler func(resource OwnerResource) templates.Labels
+
 type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
