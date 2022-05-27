@@ -28,6 +28,9 @@ kind create cluster --image kindest/node:v1.21.1
 3. Install [Tekton](https://tekton.dev/docs/getting-started/#installation), which provides a
   mechanism to create pipelines and tasks for application testing, scanning, etc.
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 In order to demonstrate updatable testing, the example has a Tekton Task that will run `go test` on a
@@ -85,7 +88,7 @@ status:
   observedGeneration: 1
   outputs:
     revision: 19769456b6b229b3e78f2b90eced15a353eb4e7c
-    url: https://github.com/kontinue/hello-world
+    url: https://github.com/carto-labs/hello-world
 ```
 
 Now let's update the Runnable with a different SHA, one where the tests fail:
@@ -121,7 +124,7 @@ kubectl logs Pod/test-zctzd-pod
 === RUN   TestDummy
 --- FAIL: TestDummy (0.00s)
 FAIL
-FAIL    github.com/kontinue/hello-world 0.009s
+FAIL    github.com/carto-labs/hello-world 0.009s
 FAIL
 ```
 
@@ -140,7 +143,7 @@ spec: ...
 status:
   outputs:
     revision: 19769456b6b229b3e78f2b90eced15a353eb4e7c  # <=== old sha
-    url: https://github.com/kontinue/hello-world
+    url: https://github.com/carto-labs/hello-world
 ```
 
 Now let's update Runnable with a commit where tests again pass:
@@ -182,7 +185,7 @@ spec: ...
 status:
   outputs:
     revision: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4  # <=== new sha
-    url: https://github.com/kontinue/hello-world
+    url: https://github.com/carto-labs/hello-world
   ...
 ```
 
@@ -248,7 +251,7 @@ spec:
     name: test
   params:
   - name: blob-url
-    value: https://github.com/kontinue/hello-world
+    value: https://github.com/carto-labs/hello-world
   - name: blob-revision
     value: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4
 ```
@@ -263,7 +266,7 @@ metadata:
 spec:
   params:
     - name: blob-url
-      value: https://github.com/kontinue/hello-world
+      value: https://github.com/carto-labs/hello-world
     - name: blob-revision
       value: 3d42c19a618bb8fc13f72178b8b5e214a2f989c4
   ...

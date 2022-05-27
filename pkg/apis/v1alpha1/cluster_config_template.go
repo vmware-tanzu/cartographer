@@ -20,8 +20,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -45,20 +43,6 @@ type ConfigTemplateSpec struct {
 	// components of the deployable image.
 	// ConfigPath is specified in jsonpath format, eg: .data
 	ConfigPath string `json:"configPath"`
-}
-
-var _ webhook.Validator = &ClusterConfigTemplate{}
-
-func (c *ClusterConfigTemplate) ValidateCreate() error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterConfigTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.TemplateSpec.validate()
-}
-
-func (c *ClusterConfigTemplate) ValidateDelete() error {
-	return nil
 }
 
 // +kubebuilder:object:root=true

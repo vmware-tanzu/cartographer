@@ -19,13 +19,8 @@
 package v1alpha1
 
 import (
-	"errors"
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/json"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // +kubebuilder:object:root=true
@@ -68,39 +63,45 @@ type TemplateSpec struct {
 	// See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy
 	// +optional
 	Params TemplateParams `json:"params,omitempty"`
+
+	// HealthRule specifies rubric for determining the health of a resource
+	// stamped by this template
+	// +optional
+	HealthRule *HealthRule `json:"healthRule,omitempty"`
 }
 
-var _ webhook.Validator = &ClusterTemplate{}
+// HealthRule specifies rubric for determining the health of a resource.
+// One of AlwaysHealthy, SingleConditionType must be specified.
+type HealthRule struct {
+	// AlwaysHealthy being set indicates the resource should always be considered healthy
+	// +optional
+	AlwaysHealthy *runtime.RawExtension `json:"alwaysHealthy,omitempty"`
 
-func (c *ClusterTemplate) ValidateCreate() error {
-	return c.Spec.validate()
+	// SingleConditionType names a single condition which, when True indicates the resource
+	// is healthy. When False it is unhealthy. Otherwise, healthiness is Unknown.
+	// +optional
+	SingleConditionType string `json:"singleConditionType,omitempty"`
 }
 
-func (c *ClusterTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.validate()
+// HealthMatchRule specifies a rule for determining the health of a resource
+type HealthMatchRule struct {
+	// MatchConditions are the conditions and statuses to read
+	MatchConditions []ConditionRequirement `json:"matchConditions"`
+	// MatchFields stipulates a FieldSelectorRequirement and how to locate context relevant to it
+	MatchFields []HealthMatchFieldSelectorRequirement `json:"matchFields"`
 }
 
-func (c *ClusterTemplate) ValidateDelete() error {
-	return nil
+type HealthMatchFieldSelectorRequirement struct {
+	FieldSelectorRequirement `json:",inline"`
+	MessagePath              string `json:"messagePath,omitempty"`
 }
 
-func (t *TemplateSpec) validate() error {
-	if t.Template == nil && t.Ytt == "" {
-		return fmt.Errorf("invalid template: must specify one of template or ytt, found neither")
-	}
-	if t.Template != nil && t.Ytt != "" {
-		return fmt.Errorf("invalid template: must specify one of template or ytt, found both")
-	}
-	if t.Template != nil {
-		obj := metav1.PartialObjectMetadata{}
-		if err := json.Unmarshal(t.Template.Raw, &obj); err != nil {
-			return fmt.Errorf("invalid template: failed to parse object metadata: %w", err)
-		}
-		if obj.Namespace != metav1.NamespaceNone {
-			return errors.New("invalid template: template should not set metadata.namespace on the child object")
-		}
-	}
-	return nil
+// ConditionRequirement specifies the condition and type and status of the condition to read
+type ConditionRequirement struct {
+	// Type is the type of the condition
+	Type string `json:"type"`
+	// Status is the status of the condition
+	Status metav1.ConditionStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true

@@ -30,7 +30,7 @@ var _ = Describe("Selector", func() {
 		BeforeEach(func() {
 			context = map[string]interface{}{
 				"hello": "world",
-				"bad":   nil,
+				"empty": nil,
 			}
 		})
 
@@ -50,7 +50,7 @@ var _ = Describe("Selector", func() {
 			Context("when the key is valid but returns a nil value", func() {
 				It("returns false and does not error", func() {
 					req := v1alpha1.FieldSelectorRequirement{
-						Key:      "bad",
+						Key:      "empty",
 						Operator: v1alpha1.FieldSelectorOpExists,
 					}
 					ret, err := selector.Matches(req, context)

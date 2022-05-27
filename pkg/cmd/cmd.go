@@ -20,13 +20,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/registrar"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type Command struct {
@@ -45,7 +45,7 @@ func (cmd *Command) Execute(ctx context.Context) error {
 	}
 
 	scheme := runtime.NewScheme()
-	if err := registrar.AddToScheme(scheme); err != nil {
+	if err := utils.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("add to scheme: %w", err)
 	}
 
@@ -55,61 +55,84 @@ func (cmd *Command) Execute(ctx context.Context) error {
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
 	})
-
 	if err != nil {
-		return fmt.Errorf("manager new: %w", err)
+		return fmt.Errorf("failed to create new manager: %w", err)
 	}
 
-	if err := registrar.RegisterControllers(mgr); err != nil {
-		return fmt.Errorf("register controllers: %w", err)
+	if err := registerControllers(mgr); err != nil {
+		return fmt.Errorf("failed to register controllers: %w", err)
 	}
 
-	if err := registrar.IndexResources(ctx, mgr); err != nil {
-		return fmt.Errorf("index resources: %w", err)
-	}
-
-	if cmd.CertDir == "" {
-		l.Info("Not registering the webhook server. Must pass a directory containing tls.crt and tls.key to --cert-dir")
+	if cmd.CertDir != "" {
+		if err := registerWebhooks(mgr); err != nil {
+			return fmt.Errorf("failed to register webhooks: %w", err)
+		}
 	} else {
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterSupplyChain{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clustersupplychain webhook: %w", err)
-		}
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterConfigTemplate{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clusterconfigtemplate webhook: %w", err)
-		}
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterImageTemplate{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clusterimagetemplate webhook: %w", err)
-		}
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterSourceTemplate{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clustersourcetemplate webhook: %w", err)
-		}
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterTemplate{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clustertemplate webhook: %w", err)
-		}
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterDelivery{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clusterdelivery webhook: %w", err)
-		}
-		if err := controllerruntime.NewWebhookManagedBy(mgr).
-			For(&v1alpha1.ClusterDeploymentTemplate{}).
-			Complete(); err != nil {
-			return fmt.Errorf("clusterdeploymenttemplate webhook: %w", err)
-		}
+		l.Info("Not registering the webhook server. Must pass a directory containing tls.crt and tls.key to --cert-dir")
 	}
 
 	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("manager start: %w", err)
+	}
+
+	return nil
+}
+
+func registerControllers(mgr manager.Manager) error {
+	if err := (&controllers.WorkloadReconciler{}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to register workload controller: %w", err)
+	}
+
+	if err := (&controllers.SupplyChainReconciler{}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to register supply chain controller: %w", err)
+	}
+
+	if err := (&controllers.DeliverableReconciler{}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to register deliverable controller: %w", err)
+	}
+
+	if err := (&controllers.DeliveryReconiler{}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to register delivery controller: %w", err)
+	}
+
+	if err := (&controllers.RunnableReconciler{}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to register runnable controller: %w", err)
+	}
+
+	return nil
+}
+
+func registerWebhooks(mgr manager.Manager) error {
+	if err := (&v1alpha1.ClusterSupplyChain{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster supply chain webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterDelivery{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster delivery webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterConfigTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster config template webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterDeploymentTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster deployment template webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterImageTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster image template webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterRunTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster run template webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterSourceTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster source template webhook: %w", err)
+	}
+
+	if err := (&v1alpha1.ClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("failed to setup cluster template webhook: %w", err)
 	}
 
 	return nil

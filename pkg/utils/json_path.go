@@ -29,6 +29,7 @@ func SinglePathEvaluate(jsonpathExpression string, obj interface{}) ([]interface
 	)
 
 	parser := jsonpath.New("")
+	parser.AllowMissingKeys(true)
 
 	err := parser.Parse(jsonpathExpression)
 	if err != nil {

@@ -19,21 +19,8 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	DeliveryReady          = "Ready"
-	DeliveryTemplatesReady = "TemplatesReady"
-)
-
-const (
-	ReadyDeliveryTemplatesReadyReason    = "Ready"
-	NotFoundDeliveryTemplatesReadyReason = "TemplatesNotFound"
 )
 
 var ValidDeliveryTemplates = []client.Object{
@@ -161,26 +148,6 @@ type ClusterDeliveryList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterDelivery `json:"items"`
-}
-
-func (c *ClusterDelivery) ValidateCreate() error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
-	err := c.validateNewState()
-	if err != nil {
-		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
-	}
-	return nil
-}
-
-func (c *ClusterDelivery) ValidateDelete() error {
-	return nil
 }
 
 func (c *ClusterDelivery) GetSelectors() LegacySelector {

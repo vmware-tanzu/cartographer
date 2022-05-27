@@ -48,6 +48,9 @@ objects would be set by the different personas in the system:
 
 2. Install [Tekton](https://tekton.dev/docs/getting-started/#installation)
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 ### Location of files
@@ -144,7 +147,7 @@ spec:
     name: go-builder
   source:
     git:
-      url: https://github.com/kontinue/hello-world
+      url: https://github.com/carto-labs/hello-world
       revision: main
 ```
 
@@ -168,7 +171,7 @@ metadata:
 spec:
   source:
     git:
-      url: https://github.com/kontinue/hello-world
+      url: https://github.com/carto-labs/hello-world
       revision: $(commit_that_passed_tests)$
   ...
 ```

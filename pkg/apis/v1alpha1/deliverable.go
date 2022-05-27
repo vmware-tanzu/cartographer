@@ -18,30 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	DeliverableReady              = "Ready"
-	DeliverableDeliveryReady      = "DeliveryReady"
-	DeliverableResourcesSubmitted = "ResourcesSubmitted"
-)
-
-const (
-	ReadyDeliveryReason                    = "Ready"
-	DeliverableLabelsMissingDeliveryReason = "DeliverableLabelsMissing"
-	NotFoundDeliveryReadyReason            = "DeliveryNotFound"
-	MultipleMatchesDeliveryReadyReason     = "MultipleDeliveryMatches"
-)
-
-const (
-	CompleteResourcesSubmittedReason                       = "ResourceSubmissionComplete"
-	TemplateObjectRetrievalFailureResourcesSubmittedReason = "TemplateObjectRetrievalFailure"
-	MissingValueAtPathResourcesSubmittedReason             = "MissingValueAtPath"
-	TemplateStampFailureResourcesSubmittedReason           = "TemplateStampFailure"
-	TemplateRejectedByAPIServerResourcesSubmittedReason    = "TemplateRejectedByAPIServer"
-	UnknownErrorResourcesSubmittedReason                   = "UnknownError"
-	DeploymentConditionNotMetResourcesSubmittedReason      = "ConditionNotMet"
-	DeploymentFailedConditionMetResourcesSubmittedReason   = "FailedConditionMet"
-)
-
 var ValidDeliverablePaths = map[string]bool{
 	"spec.source":                true,
 	"spec.source.git":            true,
@@ -112,7 +88,7 @@ type DeliverableStatus struct {
 
 	// Resources contain references to the objects created by the Delivery and the templates used to create them.
 	// It also contains Inputs and Outputs that were passed between the templates as the Delivery was processed.
-	Resources []RealizedResource `json:"resources,omitempty"`
+	Resources []ResourceStatus `json:"resources,omitempty"`
 }
 
 // +kubebuilder:object:root=true

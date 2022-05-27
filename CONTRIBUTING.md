@@ -7,7 +7,7 @@ The Cartographer project team welcomes contributions from the community. If you 
 ## Development Dependencies
 
 - [`ctlptl`]: for deploying local changes to a local registry
-- [`go`]: for compiling the controllers as well as other dependencies - 1.17+
+- [`go`]: for compiling the controllers as well as other dependencies - 1.18+
 - [`kapp`]: for managing groups of kubernetes objects in a cluster (like our CRDs etc)
 - [`kbld`]: for resolving image references to absolute ones
 - [`kind`]: to run a local cluster
@@ -247,13 +247,13 @@ the necessary bits.
 Although `2` is automated, it's still possible to do the procedure manually.
 
 ### Automatic release
-1. Check the previous release - https://github.com/vmware-tanzu/cartographer/releases
+1. Check the previous release - [https://github.com/vmware-tanzu/cartographer/releases](https://github.com/vmware-tanzu/cartographer/releases)
 2. Create a tag for the new release
 ```bash
 git tag v0.0.x # or v0.0.x-rc.n
 git push origin <tag-name>
 ```
-3. Ensure workflow has kicked off - https://github.com/vmware-tanzu/cartographer/actions
+3. Ensure workflow has kicked off - [https://github.com/vmware-tanzu/cartographer/actions](https://github.com/vmware-tanzu/cartographer/actions)
 
 
 ### Manually building and pushing release assets to GitHub

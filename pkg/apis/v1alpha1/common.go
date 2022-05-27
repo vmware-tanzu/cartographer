@@ -216,6 +216,15 @@ type RealizedResource struct {
 	Outputs []Output `json:"outputs,omitempty"`
 }
 
+type ResourceStatus struct {
+	RealizedResource `json:",inline"`
+
+	// Conditions describing this resource's reconcile state. The top level condition is
+	// of type `Ready`, and follows these Kubernetes conventions:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
 type Input struct {
 	// Name is the name of the resource in the blueprint whose output the resource consumes as an input
 	Name string `json:"name"`

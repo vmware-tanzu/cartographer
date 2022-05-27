@@ -35,11 +35,20 @@ config/crd/bases/*.yaml &: $(crd_sources)
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
 
+config/webhook/manifests.yaml: $(crd_sources)
+	$(CONTROLLER_GEN) \
+		webhook \
+		paths=./pkg/apis/v1alpha1 \
+		output:webhook:dir=config/webhook
+	$(ADDLICENSE) \
+		-f ./hack/boilerplate.go.txt \
+		config/webhook/manifests.yaml
+
 .PHONY: gen-objects
 gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
 
 .PHONY: gen-manifests
-gen-manifests: config/crd/bases/*.yaml
+gen-manifests: config/crd/bases/*.yaml config/webhook/manifests.yaml
 
 test_crd_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(wildcard tests/resources/*.go))
 
@@ -130,17 +139,11 @@ lint: copyright
 	$(GCI_LINT) --local github.com/vmware-tanzu/cartographer --write $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
-	$(MAKE) -C site lint
 
 .PHONY: copyright
 copyright:
 	$(ADDLICENSE) \
-		-f ./hack/boilerplate.go.txt \
-		-ignore site/static/\*\* \
-		-ignore site/content/docs/\*/crds/\*.yaml \
-		-ignore site/themes/\*\* \
-		-ignore experimental/live-editor/node_modules/\*\* \
-		.
+		-f ./hack/boilerplate.go.txt .
 
 .PHONY: pre-push .pre-push-check
 .pre-push-check: copyright lint gen-manifests gen-objects test-gen-manifests test-gen-objects generate
@@ -156,15 +159,3 @@ pre-push:
 	[ -z "$$(git status --porcelain)" ] || (echo "not everything is committed, failing" && exit 1)
 	$(MAKE) .pre-push-check
 	[ -z "$$(git status --porcelain)" ] || (echo "changes occurred during pre-push check" && git diff HEAD --exit-code)
-
-.PHONY: docs-serve
-docs-serve:
-	$(MAKE) -C site serve
-
-.PHONY: docs-release
-docs-release:
-	$(MAKE) -C site release
-
-.PHONY: docs-gen-crds
-docs-gen-crds: gen-manifests
-	$(MAKE) -C site gen-crd-reference

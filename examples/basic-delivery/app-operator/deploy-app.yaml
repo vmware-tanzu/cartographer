@@ -37,6 +37,29 @@ spec:
         - http:
             url: $(deployment.url)$
       template:
-        - ytt: {}
+        - ytt:
+            inline:
+              paths:
+                config.yaml: |
+                  apiVersion: kapp.k14s.io/v1alpha1
+                  kind: Config
+                  rebaseRules:
+                    - path:
+                        - metadata
+                        - annotations
+                        - serving.knative.dev/creator
+                      type: copy
+                      sources: [new, existing]
+                      resourceMatchers: &matchers
+                        - apiVersionKindMatcher:
+                            apiVersion: serving.knative.dev/v1
+                            kind: Service
+                    - path:
+                        - metadata
+                        - annotations
+                        - serving.knative.dev/lastModifier
+                      type: copy
+                      sources: [new, existing]
+                      resourceMatchers: *matchers
       deploy:
         - kapp: {}

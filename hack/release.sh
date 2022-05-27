@@ -73,6 +73,8 @@ download_ytt_to_kodata() {
 generate_release() {
         mkdir -p ./release
         ytt --ignore-unknown-comments -f ./config \
+                -f ./hack/overlays/webhook-configuration.yaml \
+                -f ./hack/overlays/component-labels.yaml \
                 --data-value version=$RELEASE_VERSION |
                 KO_DOCKER_REPO=$REGISTRY ko resolve -B -f- > \
                         ./release/cartographer.yaml
