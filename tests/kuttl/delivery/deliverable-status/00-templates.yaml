@@ -65,6 +65,8 @@ spec:
       player_loves: "knitting"
   urlPath: data.player_initial_lives
   revisionPath: data.player_loves
+  healthRule:
+    alwaysHealthy: {}
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -80,6 +82,8 @@ spec:
     data:
       favorite_color: $(source.url)$
   configPath: data.favorite_color
+  healthRule:
+    alwaysHealthy: {}
 
 ---
 apiVersion: carto.run/v1alpha1

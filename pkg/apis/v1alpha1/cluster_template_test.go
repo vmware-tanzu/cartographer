@@ -64,6 +64,54 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 			})
 
+			Describe("Health Rule validation", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(&ArbitraryObject{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "some-kind",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-name",
+						},
+						Spec: ArbitrarySpec{
+							SomeKey: "some-val",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
+					template.Spec.HealthRule = &v1alpha1.HealthRule{}
+				})
+
+				It("returns an error if no types are specified", func() {
+					Expect(template.ValidateCreate()).
+						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found neither"))
+				})
+
+				It("returns an error if multiple types are specified", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						AlwaysHealthy:       &runtime.RawExtension{Raw: []byte{}},
+						SingleConditionType: "CantHaveThisToo",
+					}
+					Expect(template.ValidateCreate()).
+						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found both"))
+				})
+
+				It("succeeds when AlwaysHealthy is set", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}},
+					}
+					Expect(template.ValidateCreate()).To(Succeed())
+				})
+
+				It("succeeds when SingleConditionType is set", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						SingleConditionType: "ThisWorksAlone",
+					}
+					Expect(template.ValidateCreate()).To(Succeed())
+				})
+			})
+
 			Context("template sets object namespace", func() {
 				BeforeEach(func() {
 					raw, err := json.Marshal(&ArbitraryObject{
@@ -142,6 +190,54 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("succeeds", func() {
+					Expect(template.ValidateUpdate(nil)).To(Succeed())
+				})
+			})
+
+			Describe("Health Rule validation", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(&ArbitraryObject{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "some-kind",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-name",
+						},
+						Spec: ArbitrarySpec{
+							SomeKey: "some-val",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
+					template.Spec.HealthRule = &v1alpha1.HealthRule{}
+				})
+
+				It("returns an error if no types are specified", func() {
+					Expect(template.ValidateUpdate(nil)).
+						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found neither"))
+				})
+
+				It("returns an error if multiple types are specified", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						AlwaysHealthy:       &runtime.RawExtension{Raw: []byte{}},
+						SingleConditionType: "CantHaveThisToo",
+					}
+					Expect(template.ValidateUpdate(nil)).
+						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found both"))
+				})
+
+				It("succeeds when AlwaysHealthy is set", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}},
+					}
+					Expect(template.ValidateUpdate(nil)).To(Succeed())
+				})
+
+				It("succeeds when SingleConditionType is set", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						SingleConditionType: "ThisWorksAlone",
+					}
 					Expect(template.ValidateUpdate(nil)).To(Succeed())
 				})
 			})

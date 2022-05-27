@@ -50,6 +50,20 @@ spec:
           spec:
             description: 'Spec describes the source template. More info: https://cartographer.sh/docs/latest/reference/template/#clustersourcetemplate'
             properties:
+              healthRule:
+                description: HealthRule specifies rubric for determining the health
+                  of a resource stamped by this template
+                properties:
+                  alwaysHealthy:
+                    description: AlwaysHealthy being set indicates the resource should
+                      always be considered healthy
+                    type: object
+                  singleConditionType:
+                    description: SingleConditionType names a single condition which,
+                      when True indicates the resource is healthy. When False it is
+                      unhealthy. Otherwise, healthiness is Unknown.
+                    type: string
+                type: object
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
