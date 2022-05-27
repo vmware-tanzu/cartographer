@@ -24,8 +24,8 @@ import (
 )
 
 type ResourceStatuses interface {
-	GetPreviousRealizedResource(name string) *v1alpha1.RealizedResource
-	Add(status *v1alpha1.RealizedResource, err error)
+	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
+	Add(status *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition)
 	GetCurrent() []v1alpha1.ResourceStatus
 	IsChanged() bool
 }
@@ -91,17 +91,17 @@ func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
 	return currentStatuses
 }
 
-func (r *resourceStatuses) GetPreviousRealizedResource(name string) *v1alpha1.RealizedResource {
+func (r *resourceStatuses) GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus {
 	for _, status := range r.statuses {
-		if status.name == name {
-			return &status.previous.RealizedResource
+		if status.name == realizedResourceName {
+			return status.previous
 		}
 	}
 
 	return nil
 }
 
-func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err error) {
+func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition) {
 	name := realizedResource.Name
 
 	var existingStatus *resourceStatus
@@ -121,11 +121,11 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 
 	existingStatus.current = &v1alpha1.ResourceStatus{
 		RealizedResource: *realizedResource,
-		Conditions:       r.createConditions(name, err),
+		Conditions:       r.createConditions(name, err, furtherConditions...),
 	}
 }
 
-func (r *resourceStatuses) createConditions(name string, err error) []metav1.Condition {
+func (r *resourceStatuses) createConditions(name string, err error, furtherConditions ...metav1.Condition) []metav1.Condition {
 	var existingStatus *resourceStatus
 	for _, status := range r.statuses {
 		if status.name == name {
@@ -140,10 +140,14 @@ func (r *resourceStatuses) createConditions(name string, err error) []metav1.Con
 	}
 
 	conditionManager := conditions.NewConditionManager(v1alpha1.ResourceReady, previousConditions)
+
 	if err != nil {
 		r.addConditionsFunc(&conditionManager, false, err)
 	} else {
 		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
+	}
+	for _, condition := range furtherConditions {
+		conditionManager.AddPositive(condition)
 	}
 
 	resourceConditions, changed := conditionManager.Finalize()

@@ -45,6 +45,9 @@ status:
     - type: ResourcesSubmitted
       status: "True"
       reason: ResourceSubmissionComplete
+    - type: ResourcesHealthy
+      status: "True"
+      reason: HealthyConditionRule
     - type: Ready
       status: "True"
       reason: Ready

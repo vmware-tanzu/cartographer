@@ -29,6 +29,7 @@ const PREVIEW_CHARACTER_LIMIT = 1024
 type Template interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetDefaultParams() v1alpha1.TemplateParams
+	GetHealthRule() *v1alpha1.HealthRule
 	GetOutput() (*Output, error)
 	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
 	SetInputs(*Inputs)
