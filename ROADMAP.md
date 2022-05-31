@@ -29,7 +29,7 @@ April to June 2022
 | Adoption | Improve documentation site UX | Users have a great experience learning Cartographer - lots of great first-issues here! | [#17](https://github.com/vmware-tanzu/cartographer/issues/17), [#566](https://github.com/vmware-tanzu/cartographer/issues/566), [#610](https://github.com/vmware-tanzu/cartographer/issues/610), [#438](https://github.com/vmware-tanzu/cartographer/issues/438), [#544](https://github.com/vmware-tanzu/cartographer/issues/544) |N/A|
 |Quality |Blueprint architecture / API evolution: Simplify architecture for our users | Reduce the number of Cartographer specific objects and YAMLs needed to set up a supply chain (Proposal only for this quarter) | [#731](https://github.com/vmware-tanzu/cartographer/issues/731) |[#766](https://github.com/vmware-tanzu/cartographer/issues/766) |
 | Quality |Reduce duplication in core code | Make our implementation more elegant, lightweight, and secure |
-|Quality |Define ways to improve the release process | [#15](https://github.com/vmware-tanzu/cartographer/issues/15)|
+|Quality |Define ways to improve the release process | |[#15](https://github.com/vmware-tanzu/cartographer/issues/15)|
 |<Next> |<Your suggestion here!>| | | 
 
  
