@@ -23,9 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// ClusterRunTemplate defines how to build a runnable's stamped object
+// See https://cartographer.sh/docs/latest/runnable/architecture/#clusterruntemplate
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=clusterruntemplates, scope=Cluster, shortName=crt
-
+// +die:object=true
 type ClusterRunTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`

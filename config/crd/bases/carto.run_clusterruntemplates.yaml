@@ -34,6 +34,8 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: ClusterRunTemplate defines how to build a runnable's stamped
+          object See https://cartographer.sh/docs/latest/runnable/architecture/#clusterruntemplate
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

@@ -23,9 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// TestObj A crd for our tests.
+// this is a basic one, to avoid coupling, you can also build for-purpose objects in this directory
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
+// +die:object=true
 type TestObj struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -44,8 +46,8 @@ type TestSpec struct {
 	Value runtime.RawExtension `json:"value,omitempty"`
 }
 
+// TestObjList is a list of our TestObj CRD
 // +kubebuilder:object:root=true
-
 type TestObjList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
