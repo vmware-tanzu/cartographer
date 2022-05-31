@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -49,6 +50,14 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 
 		It("Changes Status and Outputs over time", func() {
 			By("creating a ClusterRunTemplate that copies an input param to the output")
+			runTemplate := dies.Clu
+			//runTemplate :=
+			//	CR.
+			//		MetadataDie(func(d *v1.ObjectMetaDie) {
+			//			d.Name("my-run-template")
+			//			d.Namespace(testNS)
+			//		}).
+
 			runTemplateYaml := HereYamlF(`
 			---
 			apiVersion: carto.run/v1alpha1
@@ -71,20 +80,20 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				testNS)
 
 			By("creating the first runnable", func() {
-				runnableYaml = HereYamlF(`
-			    kind: Runnable
-				metadata:
-				  name: my-runnable
-				spec:
-				  serviceAccountName: // Todo need a SA
-			
-				  runTemplateRef:
-					name: my-run-template
-					kind: ClusterRunTemplate
-			
-				  inputs:
-					source-url: https://scm.com/my-org/my-proj/commits/my-first-commit
-			`)
+				//	runnableYaml = HereYamlF(`
+				//    kind: Runnable
+				//	metadata:
+				//	  name: my-runnable
+				//	spec:
+				//	  serviceAccountName: // Todo need a SA
+				//
+				//	  runTemplateRef:
+				//		name: my-run-template
+				//		kind: ClusterRunTemplate
+				//
+				//	  inputs:
+				//		source-url: https://scm.com/my-org/my-proj/commits/my-first-commit
+				//`)
 
 			})
 		})

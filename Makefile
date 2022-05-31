@@ -70,21 +70,16 @@ tests/resources/crds/*.yaml: $(test_crd_sources)
 		-f ./hack/boilerplate.go.txt \
 		tests/resources/crds
 
-tests/resources/zz_generated.die.go: $(test_crd_sources)
+tests/resources/dies/zz_generated.die.go: $(filter-out $(wildcard tests/resources/dies/zz_generated.*.go),$(wildcard tests/resources/dies/*.go))
 	$(DIE_GEN) \
 		die \
-		paths="./tests/resources/..."
-
-pkg/apis/v1alpha1/zz_generated.die.go: $(crd_sources)
-	$(DIE_GEN) \
-		die \
-		paths="./pkg/apis/v1alpha1/..."
+		paths="./tests/resources/dies/..."
 
 .PHONY: test-gen-manifests
 test-gen-manifests: tests/resources/crds/*.yaml
 
 .PHONY: test-gen-dies
-test-gen-dies: pkg/apis/v1alpha1/zz_generated.die.go tests/resources/zz_generated.die.go copyright
+test-gen-dies: tests/resources/dies/zz_generated.die.go copyright
 
 .PHONY: clean-fakes
 clean-fakes:

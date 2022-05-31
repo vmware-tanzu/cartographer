@@ -27,7 +27,6 @@ import (
 // this is a basic one, to avoid coupling, you can also build for-purpose objects in this directory
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +die:object=true
 type TestObj struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
