@@ -70,7 +70,7 @@ tests/resources/crds/*.yaml: $(test_crd_sources)
 		-f ./hack/boilerplate.go.txt \
 		tests/resources/crds
 
-tests/resources/dies/zz_generated.die.go: $(filter-out $(wildcard tests/resources/dies/zz_generated.*.go),$(wildcard tests/resources/dies/*.go))
+tests/resources/dies/zz_generated.die.go: $(filter-out $(wildcard tests/resources/dies/zz_generated.*.go),$(wildcard tests/resources/dies/*.go)) $(crd_sources) $(test_crd_sources)
 	$(DIE_GEN) \
 		die \
 		paths="./tests/resources/dies/..."

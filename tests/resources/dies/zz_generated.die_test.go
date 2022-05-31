@@ -39,7 +39,7 @@ func TestRunnableDie_MissingMethods(t *testingx.T) {
 
 func TestRunnableSpecDie_MissingMethods(t *testingx.T) {
 	die := RunnableSpecBlank
-	ignore := []string{}
+	ignore := []string{"Inputs"}
 	diff := testing.DieFieldDiff(die).Delete(ignore...)
 	if diff.Len() != 0 {
 		t.Errorf("found missing fields for RunnableSpecDie: %s", diff.List())
@@ -48,7 +48,7 @@ func TestRunnableSpecDie_MissingMethods(t *testingx.T) {
 
 func TestRunnableStatusDie_MissingMethods(t *testingx.T) {
 	die := RunnableStatusBlank
-	ignore := []string{}
+	ignore := []string{"Outputs"}
 	diff := testing.DieFieldDiff(die).Delete(ignore...)
 	if diff.Len() != 0 {
 		t.Errorf("found missing fields for RunnableStatusDie: %s", diff.List())

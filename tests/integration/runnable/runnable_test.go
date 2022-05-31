@@ -17,14 +17,13 @@ package runnable_test
 import (
 	"context"
 
+	v1 "dies.dev/apis/meta/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-
-	. "github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 func createNamespacedObject(ctx context.Context, objYaml, namespace string) *unstructured.Unstructured {
@@ -50,34 +49,32 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 
 		It("Changes Status and Outputs over time", func() {
 			By("creating a ClusterRunTemplate that copies an input param to the output")
-			runTemplate := dies.Clu
-			//runTemplate :=
-			//	CR.
-			//		MetadataDie(func(d *v1.ObjectMetaDie) {
-			//			d.Name("my-run-template")
-			//			d.Namespace(testNS)
-			//		}).
+			runTemplate := dies.ClusterRunTemplateBlank.
+				MetadataDie(func(d *v1.ObjectMetaDie) {
+					d.Name("my-run-template")
+					d.Namespace(testNS)
+				})
 
-			runTemplateYaml := HereYamlF(`
-			---
-			apiVersion: carto.run/v1alpha1
-			kind: ClusterRunTemplate
-			metadata:
-			  namespace: %s
-			  name: my-run-template
-			spec:
-		      outputs:
-		        first-output: spec.foo
-			  template:
-				apiVersion: v1
-				kind: Test
-				metadata:
-				  generateName: $(runnable.metadata.name)$-
-				  labels: $(runnable.metadata.labels)$
-				spec:
-				  foo: $(runnable.spec.inputs.source-url)$
-			`,
-				testNS)
+			//runTemplateYaml := HereYamlF(`
+			//---
+			//apiVersion: carto.run/v1alpha1
+			//kind: ClusterRunTemplate
+			//metadata:
+			//  namespace: %s
+			//  name: my-run-template
+			//spec:
+			//  outputs:
+			//    first-output: spec.foo
+			//  template:
+			//	apiVersion: v1
+			//	kind: Test
+			//	metadata:
+			//	  generateName: $(runnable.metadata.name)$-
+			//	  labels: $(runnable.metadata.labels)$
+			//	spec:
+			//	  foo: $(runnable.spec.inputs.source-url)$
+			//`,
+			//	testNS)
 
 			By("creating the first runnable", func() {
 				//	runnableYaml = HereYamlF(`

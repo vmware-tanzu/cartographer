@@ -16,13 +16,26 @@ package dies
 
 import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 // +die:object=true
 type _ = v1alpha1.Runnable
 
-// +die
+// +die:ignore={Inputs}
 type _ = v1alpha1.RunnableSpec
 
-// +die
+func (d *RunnableSpecDie) Inputs(v map[string]apiextensionsv1.JSON) *RunnableSpecDie {
+	return d.DieStamp(func(r *v1alpha1.RunnableSpec) {
+		r.Inputs = v
+	})
+}
+
+// +die:ignore={Outputs}
 type _ = v1alpha1.RunnableStatus
+
+func (d *RunnableStatusDie) Inputs(v map[string]apiextensionsv1.JSON) *RunnableStatusDie {
+	return d.DieStamp(func(r *v1alpha1.RunnableStatus) {
+		r.Outputs = v
+	})
+}
