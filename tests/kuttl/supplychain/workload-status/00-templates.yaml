@@ -101,7 +101,17 @@ spec:
       favorite_color: $(image)$
   configPath: data.favorite_color
   healthRule:
-    alwaysHealthy: {}
+    multiMatch:
+      healthy:
+        matchFields:
+          - key: .data.favorite_color
+            operator: Exists
+            messagePath: .metadata.name
+      unhealthy:
+        matchFields:
+          - key: .data.kill_switch
+            operator: Exists
+            messagePath: .metadata.name
 
 ---
 apiVersion: carto.run/v1alpha1

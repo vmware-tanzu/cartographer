@@ -218,4 +218,326 @@ var _ = Describe("DetermineHealthCondition", func() {
 			))
 		})
 	})
+
+	Context("HealthRule is MultiMatch", func() {
+		var healthRule *v1alpha1.HealthRule
+
+		BeforeEach(func() {
+			healthRule = &v1alpha1.HealthRule{
+				MultiMatch: &v1alpha1.MultiMatchHealthRule{
+					Healthy: v1alpha1.HealthMatchRule{
+						MatchConditions: []v1alpha1.ConditionRequirement{
+							{
+								Type:   "HealthyCond1",
+								Status: "True",
+							},
+							{
+								Type:   "HealthyCond2",
+								Status: "VeryHealthy",
+							},
+						},
+						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.howgood`,
+									Operator: "In",
+									Values:   []string{"VeryGood"},
+								},
+							},
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.greenlight`,
+									Operator: "Exists",
+								},
+							},
+						},
+					},
+					Unhealthy: v1alpha1.HealthMatchRule{
+						MatchConditions: []v1alpha1.ConditionRequirement{
+							{
+								Type:   "UnhealthyCond1",
+								Status: "VeryUnhealthy",
+							},
+							{
+								Type:   "UnhealthyCond2",
+								Status: "True",
+							},
+						},
+						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.killswitch`,
+									Operator: "Exists",
+								},
+								MessagePath: "status.usefulErrorMessage",
+							},
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `status.conditions[?(@.type=="DoesntMatterJustPassingOneIsEnoughToBeUnhealthy")].status`,
+									Operator: "In",
+									Values:   []string{"True"},
+								},
+								MessagePath: "status.usefulErrorMessage",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("returns unknown if there is no stamped object", func() {
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, nil)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionUnknown),
+				},
+			))
+		})
+
+		It("returns True if all healthy condition and field expectations are met", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  howgood: VeryGood
+                  greenlight: true
+				  conditions:
+				    - type: HealthyCond1
+				      status: "True"
+				      message: "here is my message"
+				    - type: HealthyCond2
+				      status: "VeryHealthy"
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionTrue),
+					"Reason":  Equal("MatchedCondition"),
+					"Message": Equal("condition status: True, message: here is my message"),
+				},
+			))
+		})
+
+		It("uses the first matching field messagePath if no condition matches occur", func() {
+			healthRule = &v1alpha1.HealthRule{
+				MultiMatch: &v1alpha1.MultiMatchHealthRule{
+					Healthy: v1alpha1.HealthMatchRule{
+						MatchConditions: []v1alpha1.ConditionRequirement{},
+						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.greenlight`,
+									Operator: "Exists",
+								},
+								MessagePath: "status.infoMessage",
+							},
+						},
+					},
+					Unhealthy: v1alpha1.HealthMatchRule{
+						MatchConditions: []v1alpha1.ConditionRequirement{},
+						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.killswitch`,
+									Operator: "Exists",
+								},
+								MessagePath: "status.usefulErrorMessage",
+							},
+						},
+					},
+				},
+			}
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  greenlight: chartreuse
+                  infoMessage: "did everything successfully in 3.14159 seconds"
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionTrue),
+					"Reason":  Equal("MatchedField"),
+					"Message": Equal("field value: chartreuse, message: did everything successfully in 3.14159 seconds"),
+				},
+			))
+		})
+
+		It("returns Unknown if not all condition expectations are met", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  howgood: VeryGood
+                  greenlight: true
+				  conditions:
+				    - type: HealthyCond1
+				      status: "True"
+				    - type: HealthyCond2
+				      status: "NoSoMuch"
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionUnknown),
+					"Reason": Equal("NoMatchesFulfilled"),
+				},
+			))
+		})
+
+		It("returns Unknown if not all field expectations are met", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  howgood: NotThatGreatHonestly
+                  greenlight: true
+				  conditions:
+				    - type: HealthyCond1
+				      status: "True"
+				    - type: HealthyCond2
+				      status: "VeryHealthy"
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":   Equal("Healthy"),
+					"Status": Equal(metav1.ConditionUnknown),
+					"Reason": Equal("NoMatchesFulfilled"),
+				},
+			))
+		})
+
+		It("returns False if any unhealthy condition expectation is met", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  howgood: VeryGood
+                  greenlight: true
+				  conditions:
+				    - type: HealthyCond1
+				      status: "True"
+				    - type: HealthyCond2
+				      status: "VeryHealthy"
+				    - type: UnhealthyCond2
+                      status: "True"
+                      message: "looks like a case of the flu"
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Reason":  Equal("MatchedCondition"),
+					"Message": Equal("condition status: True, message: looks like a case of the flu"),
+				},
+			))
+		})
+
+		It("returns False if any unhealthy field expectations is met", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  howgood: VeryGood
+                  greenlight: true
+                  killswitch: true
+                  usefulErrorMessage: "this would contain some useful context for the reader"
+				  conditions:
+				    - type: HealthyCond1
+				      status: "True"
+				    - type: HealthyCond2
+				      status: "VeryHealthy"
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Reason":  Equal("MatchedField"),
+					"Message": Equal("field value: true, message: this would contain some useful context for the reader"),
+				},
+			))
+		})
+
+		It("surfaces errors evaluating message path into the message", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+                  killswitch: true
+				  conditions: []
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Reason":  Equal("MatchedField"),
+					"Message": Equal("field value: true, message: unknown, error retrieving message path [status.usefulErrorMessage]"),
+				},
+			))
+		})
+	})
 })

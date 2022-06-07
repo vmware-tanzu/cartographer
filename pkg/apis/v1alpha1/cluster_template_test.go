@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -85,17 +86,55 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("returns an error if no types are specified", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found neither"))
+						To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found neither"))
 				})
 
-				It("returns an error if multiple types are specified", func() {
-					template.Spec.HealthRule = &v1alpha1.HealthRule{
-						AlwaysHealthy:       &runtime.RawExtension{Raw: []byte{}},
-						SingleConditionType: "CantHaveThisToo",
-					}
-					Expect(template.ValidateCreate()).
-						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found both"))
-				})
+				DescribeTable("returns an error if multiple types are specified",
+					func(alwaysHealthy, singleConditionType, multiMatchRule bool) {
+						if alwaysHealthy {
+							template.Spec.HealthRule.AlwaysHealthy = &runtime.RawExtension{Raw: []byte{}}
+						} else {
+							template.Spec.HealthRule.AlwaysHealthy = nil
+						}
+						if singleConditionType {
+							template.Spec.HealthRule.SingleConditionType = "CantHaveThisToo"
+						} else {
+							template.Spec.HealthRule.SingleConditionType = ""
+						}
+						if multiMatchRule {
+							template.Spec.HealthRule.MultiMatch = &v1alpha1.MultiMatchHealthRule{
+								Healthy: v1alpha1.HealthMatchRule{
+									MatchConditions: []v1alpha1.ConditionRequirement{
+										{
+											Type:   "BuildStatus",
+											Status: "Succeeded",
+										},
+									},
+								},
+								Unhealthy: v1alpha1.HealthMatchRule{
+									MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+										{
+											FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+												Key:      ".status.greenlight",
+												Operator: "Exists",
+											},
+											MessagePath: ".somewhere.out.there",
+										},
+									},
+								},
+							}
+						} else {
+							template.Spec.HealthRule.MultiMatch = nil
+						}
+						Expect(template.ValidateCreate()).
+							To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found multiple"))
+
+					},
+					Entry("All types", true, true, true),
+					Entry("AlwaysHealthy and SingleConditionType", true, true, false),
+					Entry("AlwaysHealthy and MultiMatch", true, false, true),
+					Entry("SingleConditionType and MultiMatch", false, true, true),
+				)
 
 				It("succeeds when AlwaysHealthy is set", func() {
 					template.Spec.HealthRule = &v1alpha1.HealthRule{
@@ -109,6 +148,79 @@ var _ = Describe("ClusterTemplate", func() {
 						SingleConditionType: "ThisWorksAlone",
 					}
 					Expect(template.ValidateCreate()).To(Succeed())
+				})
+
+				It("succeeds when MultiMatch is set", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						MultiMatch: &v1alpha1.MultiMatchHealthRule{
+							Healthy: v1alpha1.HealthMatchRule{
+								MatchConditions: []v1alpha1.ConditionRequirement{
+									{
+										Type:   "BuildStatus",
+										Status: "Succeeded",
+									},
+								},
+							},
+							Unhealthy: v1alpha1.HealthMatchRule{
+								MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+									{
+										FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+											Key:      ".status.greenlight",
+											Operator: "Exists",
+										},
+										MessagePath: ".somewhere.out.there",
+									},
+								},
+							},
+						},
+					}
+					Expect(template.ValidateCreate()).To(Succeed())
+				})
+
+				Context("Invalid MultiMatch rules", func() {
+					BeforeEach(func() {
+						template.Spec.HealthRule = &v1alpha1.HealthRule{
+							MultiMatch: &v1alpha1.MultiMatchHealthRule{
+								Healthy: v1alpha1.HealthMatchRule{
+									MatchConditions: []v1alpha1.ConditionRequirement{
+										{
+											Type:   "BuildStatus",
+											Status: "Succeeded",
+										},
+									},
+								},
+								Unhealthy: v1alpha1.HealthMatchRule{
+									MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+										{
+											FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+												Key:      ".status.greenlight",
+												Operator: "Exists",
+											},
+											MessagePath: ".somewhere.out.there",
+										},
+									},
+								},
+							},
+						}
+					})
+
+					It("returns an error if Unhealthy has no condition or field requirements", func() {
+						template.Spec.HealthRule.MultiMatch.Unhealthy = v1alpha1.HealthMatchRule{
+							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
+							MatchConditions: []v1alpha1.ConditionRequirement{},
+						}
+						Expect(template.ValidateCreate()).
+							To(MatchError("invalid multi match health rule: unhealthy rule has no matchFields or matchConditions"))
+					})
+
+					It("returns an error if Healthy has no condition or field requirements", func() {
+						template.Spec.HealthRule.MultiMatch.Healthy = v1alpha1.HealthMatchRule{
+							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
+							MatchConditions: []v1alpha1.ConditionRequirement{},
+						}
+						Expect(template.ValidateCreate()).
+							To(MatchError("invalid multi match health rule: healthy rule has no matchFields or matchConditions"))
+					})
 				})
 			})
 
@@ -215,17 +327,55 @@ var _ = Describe("ClusterTemplate", func() {
 
 				It("returns an error if no types are specified", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found neither"))
+						To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found neither"))
 				})
 
-				It("returns an error if multiple types are specified", func() {
-					template.Spec.HealthRule = &v1alpha1.HealthRule{
-						AlwaysHealthy:       &runtime.RawExtension{Raw: []byte{}},
-						SingleConditionType: "CantHaveThisToo",
-					}
-					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid health rule: must specify one of alwaysHealthy or singleConditionType, found both"))
-				})
+				DescribeTable("returns an error if multiple types are specified",
+					func(alwaysHealthy, singleConditionType, multiMatchRule bool) {
+						if alwaysHealthy {
+							template.Spec.HealthRule.AlwaysHealthy = &runtime.RawExtension{Raw: []byte{}}
+						} else {
+							template.Spec.HealthRule.AlwaysHealthy = nil
+						}
+						if singleConditionType {
+							template.Spec.HealthRule.SingleConditionType = "CantHaveThisToo"
+						} else {
+							template.Spec.HealthRule.SingleConditionType = ""
+						}
+						if multiMatchRule {
+							template.Spec.HealthRule.MultiMatch = &v1alpha1.MultiMatchHealthRule{
+								Healthy: v1alpha1.HealthMatchRule{
+									MatchConditions: []v1alpha1.ConditionRequirement{
+										{
+											Type:   "BuildStatus",
+											Status: "Succeeded",
+										},
+									},
+								},
+								Unhealthy: v1alpha1.HealthMatchRule{
+									MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+										{
+											FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+												Key:      ".status.greenlight",
+												Operator: "Exists",
+											},
+											MessagePath: ".somewhere.out.there",
+										},
+									},
+								},
+							}
+						} else {
+							template.Spec.HealthRule.MultiMatch = nil
+						}
+						Expect(template.ValidateUpdate(nil)).
+							To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found multiple"))
+
+					},
+					Entry("All types", true, true, true),
+					Entry("AlwaysHealthy and SingleConditionType", true, true, false),
+					Entry("AlwaysHealthy and MultiMatch", true, false, true),
+					Entry("SingleConditionType and MultiMatch", false, true, true),
+				)
 
 				It("succeeds when AlwaysHealthy is set", func() {
 					template.Spec.HealthRule = &v1alpha1.HealthRule{
@@ -239,6 +389,79 @@ var _ = Describe("ClusterTemplate", func() {
 						SingleConditionType: "ThisWorksAlone",
 					}
 					Expect(template.ValidateUpdate(nil)).To(Succeed())
+				})
+
+				It("succeeds when MultiMatch is set", func() {
+					template.Spec.HealthRule = &v1alpha1.HealthRule{
+						MultiMatch: &v1alpha1.MultiMatchHealthRule{
+							Healthy: v1alpha1.HealthMatchRule{
+								MatchConditions: []v1alpha1.ConditionRequirement{
+									{
+										Type:   "BuildStatus",
+										Status: "Succeeded",
+									},
+								},
+							},
+							Unhealthy: v1alpha1.HealthMatchRule{
+								MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+									{
+										FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+											Key:      ".status.greenlight",
+											Operator: "Exists",
+										},
+										MessagePath: ".somewhere.out.there",
+									},
+								},
+							},
+						},
+					}
+					Expect(template.ValidateUpdate(nil)).To(Succeed())
+				})
+
+				Context("Invalid MultiMatch rules", func() {
+					BeforeEach(func() {
+						template.Spec.HealthRule = &v1alpha1.HealthRule{
+							MultiMatch: &v1alpha1.MultiMatchHealthRule{
+								Healthy: v1alpha1.HealthMatchRule{
+									MatchConditions: []v1alpha1.ConditionRequirement{
+										{
+											Type:   "BuildStatus",
+											Status: "Succeeded",
+										},
+									},
+								},
+								Unhealthy: v1alpha1.HealthMatchRule{
+									MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+										{
+											FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+												Key:      ".status.greenlight",
+												Operator: "Exists",
+											},
+											MessagePath: ".somewhere.out.there",
+										},
+									},
+								},
+							},
+						}
+					})
+
+					It("returns an error if Unhealthy has no condition or field requirements", func() {
+						template.Spec.HealthRule.MultiMatch.Unhealthy = v1alpha1.HealthMatchRule{
+							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
+							MatchConditions: []v1alpha1.ConditionRequirement{},
+						}
+						Expect(template.ValidateUpdate(nil)).
+							To(MatchError("invalid multi match health rule: unhealthy rule has no matchFields or matchConditions"))
+					})
+
+					It("returns an error if Healthy has no condition or field requirements", func() {
+						template.Spec.HealthRule.MultiMatch.Healthy = v1alpha1.HealthMatchRule{
+							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
+							MatchConditions: []v1alpha1.ConditionRequirement{},
+						}
+						Expect(template.ValidateUpdate(nil)).
+							To(MatchError("invalid multi match health rule: healthy rule has no matchFields or matchConditions"))
+					})
 				})
 			})
 

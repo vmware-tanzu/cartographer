@@ -71,7 +71,7 @@ type TemplateSpec struct {
 }
 
 // HealthRule specifies rubric for determining the health of a resource.
-// One of AlwaysHealthy, SingleConditionType must be specified.
+// One of AlwaysHealthy, SingleConditionType or MultiMatch must be specified.
 type HealthRule struct {
 	// AlwaysHealthy being set indicates the resource should always be considered healthy
 	// +optional
@@ -81,19 +81,39 @@ type HealthRule struct {
 	// is healthy. When False it is unhealthy. Otherwise, healthiness is Unknown.
 	// +optional
 	SingleConditionType string `json:"singleConditionType,omitempty"`
+
+	// MultiMatch specifies explicitly which conditions and/or fields should be used
+	// to determine healthiness.
+	// +optional
+	MultiMatch *MultiMatchHealthRule `json:"multiMatch,omitempty"`
+}
+
+// MultiMatchHealthRule is a pair of HealthMatchRule defining when a resource should be considered healthy or unhealthy
+type MultiMatchHealthRule struct {
+	// Healthy is a HealthMatchRule which stipulates requirements, ALL of which must be met for the resource to be
+	// considered healthy.
+	Healthy HealthMatchRule `json:"healthy"`
+	// Unhealthy is a HealthMatchRule which stipulates requirements, ANY of which, when met, indicate that the resource
+	// should be considered unhealthy.
+	Unhealthy HealthMatchRule `json:"unhealthy"`
 }
 
 // HealthMatchRule specifies a rule for determining the health of a resource
 type HealthMatchRule struct {
-	// MatchConditions are the conditions and statuses to read
-	MatchConditions []ConditionRequirement `json:"matchConditions"`
-	// MatchFields stipulates a FieldSelectorRequirement and how to locate context relevant to it
-	MatchFields []HealthMatchFieldSelectorRequirement `json:"matchFields"`
+	// MatchConditions are the conditions and statuses to read.
+	// +optional
+	MatchConditions []ConditionRequirement `json:"matchConditions,omitempty"`
+	// MatchFields stipulates a FieldSelectorRequirement for this rule.
+	// +optional
+	MatchFields []HealthMatchFieldSelectorRequirement `json:"matchFields,omitempty"`
 }
 
 type HealthMatchFieldSelectorRequirement struct {
 	FieldSelectorRequirement `json:",inline"`
-	MessagePath              string `json:"messagePath,omitempty"`
+	// MessagePath is specified in jsonpath format. It is evaluated against the resource to provide a message in the
+	// owner's resource condition if it is the first matching requirement that determine the current ResourcesHealthy
+	// condition status.
+	MessagePath string `json:"messagePath,omitempty"`
 }
 
 // ConditionRequirement specifies the condition and type and status of the condition to read
