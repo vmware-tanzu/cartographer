@@ -2,7 +2,7 @@
 
 [meta]: #meta
 
-- Name: Tracing with Health Rules
+- Name: Artifact Tracing with Health Rules
 - Start Date: 2022-06-08
 - Author(s): waciumawanjohi
 - Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
@@ -283,16 +283,20 @@ because the object is still reconciling the previous definition of the object. I
 rogue definitions, Cartographer will have to keep a cache of the most recent definition applied to the cluster and refer
 to it before reading any values. The flow will then become:
 
-Determine if the cached definition of the object is currently applied to the cluster. If so:
-
-1. Read the object that is on the cluster.
-2. Pass forward any specified fields.
-3. Determine if the state of the object. - [If it is healthy/unhealthy](#behavior-when-unhealthy)
-   - [If it is unknown](#behavior-when-in-unknown-state)
+Determine if the cached definition of the object is currently applied to the cluster.
 
 If the cached definition of the object is NOT currently applied to the cluster, that indicates that an outside actor has
 changed the object definition. As Cartographer will always read, this is dangerous. The most appropriate step is to
 delete the object and apply the proper definition to the cluster.
+
+If the cached definition of the object IS currently applied to the cluster:
+
+1. Read the object that is on the cluster.
+2. Pass forward any specified fields.
+3. Determine the state of the object:
+
+- [If it is healthy/unhealthy](#behavior-when-unhealthy)
+- [If it is unknown](#behavior-when-in-unknown-state)
 
 ## Behavior when (un)healthy
 
