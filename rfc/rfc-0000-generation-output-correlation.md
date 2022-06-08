@@ -51,23 +51,136 @@ Reasonable question, "Isn't this the same as Input-Output Correlation?" No, for 
 
 [what-it-is]: #what-it-is
 
+## Definitions
 
+### artifact tracing
 
-This provides a high level overview of the feature.
+[artifact tracing]: #artifact-tracing
+the ability to determine which update of the object definition led to the presence of a particular field in the object
+status. e.g. after submitting 5 updates to the definition of a kpack Image object, an observer sees the `latestImage`
+field in the status of the Image object. When the observer can definitively say which update was responsible for that
+latestImage, the observer has achieved artifact tracing.
 
-- Define any new terminology.
-- Define the target persona: application developer, supply chain/delivery author, template author, and/or project
-  contributor.
-- Explaining the feature largely in terms of examples.
+### output generation
+
+[output generation]: #output-generation
+this refers to an `observedGeneration` value that is tied to a particular field in an object's status. To be clear, this
+is almost certainly not the status' top level `observedGeneration` field, as the conventions around its use do not meet
+the expectations here. An example would be the `observedGeneration` field in `metav1.Conditions`, where each condition
+may have its own `observedGeneration` pointing to the generation that first caused its current value. If such a
+condition were an output, we would call the `observedGeneration` field an "
+output generation".
+
+### stamp
+
+[stamp]: #stamp
+an object definition. Cartographer stamps an object based on a template and inputs from a workload and previous steps in
+a supply chain. This stamp is then submitted to the cluster.
+
+### output path
+
+[output path]: #output-path
+the path specified in the template where an object's output can be found. This is a generic term for
+`imagePath`, `configPath` and the pair `urlPath` and `revisionPath`.
+
+### monotonically increasing
+[monotonically increasing]: #monotonically-increasing
+A series which always increases or remaining constant, and never decreases.
+- Example: 1, 2, 3, 3, 6, 7
+- Counter Example: 1, 2, 5, 4
+
+## Example
+
+Template authors will be able to specify the field in an object that corresponds to the output generation and thereby
+enable artifact tracing. In other words, given a resource with output generations (that reports outputs alongside the
+spec generation that led to the output), users will be able to write a template that specifies the location of this
+generation field and to enable artifact tracing* in Cartographer.
+
+Let us hypothesize a new kpack image which reports its latest image in the following manner:
+
+```yaml
+status:
+  ...
+  latestImage:
+    imageLocation: some-image-uri
+    observedGeneration: 6
+```
+
+Template authors will be able to write a template thusly:
+
+```yaml
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: image
+spec:
+  imagePath: .status.latestImage.imageLocation
+  artifactTracing:
+    observedGenerationPath: .status.latestImage.observedGeneration
+
+  template:
+    apiVersion: kpack.io/v1alpha2
+    kind: Image
+    ...
+```
 
 # How it Works
 
 [how-it-works]: #how-it-works
 
-This is the technical portion of the RFC, where you explain the design in sufficient detail.
+## Nest observedGenerationPath in artifactTracing field
 
-The section should return to the examples given in the previous section, and explain more fully how the detailed
-proposal makes those examples work.
+There have been two proposals for artifact tracing. Previous discussions have led to a growing consensus that both will
+be valuable. One innovation in this proposal is the template field `artifactTracing`, under which any of the proposed
+new fields should nest. E.g. the `correlationRules` field from
+the [Input-Output Correlation RFC](https://github.com/vmware-tanzu/cartographer/pull/799) and the
+`observedGenerationPath` from this proposal will both be fields nested under the `artifactTracing` field. Any additional
+approach adopted for artifact tracing should be similarly nested.
+
+## Implementation
+
+When a template author specifies an `observedGenerationPath`, Cartographer will determine what input led to the
+specified outputs:
+
+When Cartographer stamps an object, it fills fields in a template with values from the workload and supply chain. Upon
+submitting this object to the cluster, the apiServer will return the new object definition to Cartographer. This
+definition will include `.metadata.generation`. Cartographer will be responsible for caching this generation value along
+with the inputs that were used in the stamp.
+
+When reading an object, Carto will read both the value at the output path and the value at
+the `.artifactTracing. observedGenerationPath`. Cartographer will look up the reported generation in the cache to
+determine which inputs were involved in the creation of that generation definition. Cartographer will then report to
+users that these inputs led to the given output.
+
+### Not described: reporting information to users
+
+When a template author specifies an `observedGenerationPath`, Cartographer will report what input led to a given output
+for each object in a supply chain. The implementation of that reporting (where and how that reporting is done) will be
+handled in a separate RFC. For an idea of what that might look like, the reader is directed
+to [Workload Report Artifact Provenance](https://github.com/vmware-tanzu/cartographer/pull/519).
+
+### Caching
+
+There are broadly three approaches to caching such a value:
+
+1. Write the value in the workload status.
+2. Write the value in some other object on the cluster.
+3. Write the value in some database to which Cartographer has credentials.
+
+These lead to a variety of concerns including the size limit of the workload object (1MB), managing objects on the
+cluster (naming, garbage collecting, etc), deploying and managing a service on the cluster (given an on cluster
+database) or documenting required external dependencies (given a database outside of the server).
+
+Balancing these concerns, Cartographer should write the generation and input values for each stamp submitted to the
+cluster in a different object in the cluster. This is intermediary information and not necessary to expose to users.
+Implementers of this RFC are welcome to determine if 1 such data object per Carto controller, 1 per supply chain, 1 per
+step/object or 1 per stamp is most reasonable. (Presumably one of the middle approaches will win out).
+
+#### Garbage collection of the cache
+
+Cartographer may assume that object status reflects [monotonically increasing] generations. Therefore, when output
+generation N has been observed, the cache of all input-generation tuples for gen 1 to N-1 may be discarded. (i.e.
+no earlier generation cached value will be seen or used).
 
 # Migration
 
@@ -79,7 +192,7 @@ This is additive work and has no implications for migration.
 
 [drawbacks]: #drawbacks
 
-- This would represent a third manner of determining the source of outputs. Documentation will be harder for that.
+- This would represent an additional manner of determining the source of outputs. Documentation will be harder for that.
 - This hypothesizes how resource authors may choose to write their resources. If we are incorrect, that will be wasted
   effort on our part.
 
@@ -95,6 +208,8 @@ purpose (though it entails a performance penalty on Cartographer) and could be u
 
 [prior-art]: #prior-art
 
+## observedGeneration
+
 Reporting conditions as part of outputs is a growing pattern. There is a convention to report `observedGeneration`
 at the top level of an object's status (to be clear, this is not a value that can be relied upon in this proposal). In
 addition, `metav1.Conditions` contain an optional field `ObservedGeneration`. They are described as such:
@@ -106,18 +221,46 @@ addition, `metav1.Conditions` contain an optional field `ObservedGeneration`. Th
 It is reasonable to suggest to resource authors that as they implement observedGeneration in of their conditions, so
 should they implement an observedGeneration of their outputs.
 
+## artifact tracing
+
+There have been two proposals for artifact tracing. Previous discussions have led to a growing consensus that both will
+be valuable. One innovation in this proposal is the template field `artifactTracing`, under which any of the proposed
+new fields should nest.
+
 # Unresolved Questions
 
 [unresolved-questions]: #unresolved-questions
 
-- What parts of the design do you expect to be resolved before this gets merged?
-- What parts of the design do you expect to be resolved through implementation of the feature?
-- What related issues do you consider out of scope for this RFC that could be addressed in the future independently of
-  the solution that comes out of this RFC?
+- How will Cartographer report the connection of inputs and outputs to end
+  users? [Read more](#not-described-reporting-information-to-users)
+- How will Cartographer cache? [Read more](#caching)
+- How will Cartographer handle resources that do not report an output generation?
 
 # Spec. Changes (OPTIONAL)
 
 [spec-changes]: #spec-changes
-Does this RFC entail any proposed changes to CRD specs? If so, please document changes here. This section is not
-intended to be binding, but as discussion of an RFC unfolds, if spec changes are necessary, they should be documented
-here.
+
+All templates will have an additional top level field in their spec `artifactTracing` with the nested field
+`observedGenerationPath`.
+
+e.g.
+
+```yaml
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata: {}
+spec:
+  # Artifact Tracing is the behavior of Cartographer reporting which inputs
+  # for an object were responsible for a particular output.
+  # In order to enable this behavior, a subfield of Artifact Tracing must be
+  # specified.
+  artifactTracing:
+
+    # Observed Generation Path is the path on the object where an output's
+    # observed generation is observed.
+    # Note: it is very unlikely that .status.observedGeneration is the correct
+    # value for this field. Likely candidates will be observedGeneration fields
+    # on subfields of the status.
+    observedGenerationPath: <string>
+```
