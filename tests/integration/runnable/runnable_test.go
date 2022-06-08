@@ -18,10 +18,12 @@ import (
 	"context"
 
 	v1 "dies.dev/apis/meta/v1"
+	. "github.com/MakeNowJust/heredoc/dot"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -49,32 +51,32 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 
 		It("Changes Status and Outputs over time", func() {
 			By("creating a ClusterRunTemplate that copies an input param to the output")
-			runTemplate := dies.ClusterRunTemplateBlank.
-				MetadataDie(func(d *v1.ObjectMetaDie) {
-					d.Name("my-run-template")
-					d.Namespace(testNS)
-				})
 
-			//runTemplateYaml := HereYamlF(`
-			//---
-			//apiVersion: carto.run/v1alpha1
-			//kind: ClusterRunTemplate
-			//metadata:
-			//  namespace: %s
-			//  name: my-run-template
-			//spec:
-			//  outputs:
-			//    first-output: spec.foo
-			//  template:
-			//	apiVersion: v1
-			//	kind: Test
-			//	metadata:
-			//	  generateName: $(runnable.metadata.name)$-
-			//	  labels: $(runnable.metadata.labels)$
-			//	spec:
-			//	  foo: $(runnable.spec.inputs.source-url)$
-			//`,
-			//	testNS)
+			templateContent := D(`
+				"apiVersion": "v1",
+			    "kind": "Test",
+				"metadata": {
+					"generateName": "$(runnable.metadata.name)$-",
+					"labels": "$(runnable.metadata.labels)$"
+				},
+				"spec": {
+					"foo": "$(runnable.spec.inputs.source-url)$"
+				}
+			`)
+
+			runTemplate := dies.ClusterRunTemplateBlank.
+				MetadataDie(func(meta *v1.ObjectMetaDie) {
+					meta.
+						Name("my-run-template").
+						Namespace(testNS)
+				}).
+				SpecDie(func(spec *dies.RunTemplateSpecDie) {
+					spec.
+						Outputs(map[string]string{"first-output": "spec.foo"}).
+						Template(runtime.RawExtension{
+							Raw: []byte(templateContent),
+						})
+				})
 
 			By("creating the first runnable", func() {
 				//	runnableYaml = HereYamlF(`

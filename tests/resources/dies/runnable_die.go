@@ -19,7 +19,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
-// +die:object=true
+// +die:object=true,spec=RunnableSpec,status=RunnableStatus
 type _ = v1alpha1.Runnable
 
 // +die:ignore={Inputs}

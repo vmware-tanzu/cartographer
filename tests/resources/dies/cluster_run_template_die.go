@@ -18,7 +18,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-// +die:object=true
+// +die:object=true,spec=RunTemplateSpec
 type _ = v1alpha1.ClusterRunTemplate
 
 // +die

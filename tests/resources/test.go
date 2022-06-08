@@ -27,6 +27,7 @@ import (
 // this is a basic one, to avoid coupling, you can also build for-purpose objects in this directory
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +die:object=true,spec=TestSpec,status=TestStatus
 type TestObj struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -34,11 +35,13 @@ type TestObj struct {
 	Status            TestStatus `json:"status,omitempty"`
 }
 
+// +die
 type TestStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// +die
 type TestSpec struct {
 	Foo string `json:"foo,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields

@@ -134,6 +134,15 @@ func (d *ClusterRunTemplateDie) MetadataDie(fn func(d *v1.ObjectMetaDie)) *Clust
 	})
 }
 
+// SpecDie stamps the resource's spec field with a mutable die.
+func (d *ClusterRunTemplateDie) SpecDie(fn func(d *RunTemplateSpecDie)) *ClusterRunTemplateDie {
+	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {
+		d := RunTemplateSpecBlank.DieImmutable(false).DieFeed(r.Spec)
+		fn(d)
+		r.Spec = d.DieRelease()
+	})
+}
+
 // Spec describes the run template. More info: https://cartographer.sh/docs/latest/reference/runnable/#clusterruntemplate
 func (d *ClusterRunTemplateDie) Spec(v v1alpha1.RunTemplateSpec) *ClusterRunTemplateDie {
 	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {

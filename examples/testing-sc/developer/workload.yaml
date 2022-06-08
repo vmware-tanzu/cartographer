@@ -17,11 +17,11 @@
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
-  name: #@ data.values.workload_name
+  name: my-workload
   labels:
     app.tanzu.vmware.com/workload-type: web
 spec:
-  serviceAccountName: #@ data.values.service_account_name
+  serviceAccountName:
   source:
     git:
       url: https://github.com/carto-labs/hello-world
