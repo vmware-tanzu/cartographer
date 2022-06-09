@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -24,6 +25,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/controllers/external"
@@ -133,8 +135,15 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		r.conditionManager.AddPositive(conditions.RunTemplateReadyCondition())
 	}
 
+	var stampedObjectStatusPresent = false
 	var trackingError error
+
 	if stampedObject != nil {
+		stampedCondition := extractConditions(stampedObject).ConditionWithType("Succeeded")
+		if stampedCondition != nil {
+			r.conditionManager.AddPositive(conditions.StampedObjectConditionKnown(stampedCondition))
+			stampedObjectStatusPresent = true
+		}
 		trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object", "object", stampedObject)
@@ -142,6 +151,9 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object", "object", stampedObject)
 		}
+	}
+	if !stampedObjectStatusPresent {
+		r.conditionManager.AddPositive(conditions.StampedObjectConditionUnknown())
 	}
 
 	return r.completeReconciliation(ctx, runnable, outputs, err)
@@ -170,6 +182,23 @@ func (r *RunnableReconciler) completeReconciliation(ctx context.Context, runnabl
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// todo: dedupe from healthcheck.go
+func extractConditions(stampedObject *unstructured.Unstructured) conditions.ConditionList {
+	var conditionList conditions.ConditionList
+	maybeStatus := stampedObject.UnstructuredContent()["status"]
+	if unstructuredStatus, statusOk := maybeStatus.(map[string]interface{}); statusOk {
+		maybeConditions := unstructuredStatus["conditions"]
+		maybeConditionsJSON, err := json.Marshal(maybeConditions)
+		if err == nil {
+			err = json.Unmarshal(maybeConditionsJSON, &conditionList)
+			if err != nil {
+				return conditions.ConditionList{}
+			}
+		}
+	}
+	return conditionList
 }
 
 func (r *RunnableReconciler) trackDependencies(runnable *v1alpha1.Runnable, serviceAccountName string) {
