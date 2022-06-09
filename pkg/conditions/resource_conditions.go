@@ -40,11 +40,12 @@ func AlwaysHealthyResourcesHealthyCondition() metav1.Condition {
 	}
 }
 
-func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName string) metav1.Condition {
+func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName, message string) metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.ResourceHealthy,
-		Status: status,
-		Reason: fmt.Sprintf("%sCondition", conditionName),
+		Type:    v1alpha1.ResourceHealthy,
+		Status:  status,
+		Reason:  fmt.Sprintf("%sCondition", conditionName),
+		Message: message,
 	}
 }
 

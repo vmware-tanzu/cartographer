@@ -93,12 +93,12 @@ func singleConditionTypeCondition(singleConditionType string, stampedObject *uns
 	singleCondition := extractConditions(stampedObject).ConditionWithType(singleConditionType)
 	if singleCondition != nil {
 		if singleCondition.Status == metav1.ConditionFalse || singleCondition.Status == metav1.ConditionTrue {
-			return conditions.SingleConditionMatchCondition(singleCondition.Status, singleConditionType)
+			return conditions.SingleConditionMatchCondition(singleCondition.Status, singleConditionType, singleCondition.Message)
 		} else {
-			return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, singleConditionType)
+			return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, singleConditionType, singleCondition.Message)
 		}
 	}
-	return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, "")
+	return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, singleConditionType, fmt.Sprintf("condition with type [%s] not found on resource status", singleConditionType))
 }
 
 func multiMatchCondition(multiMatchRule *v1alpha1.MultiMatchHealthRule, stampedObject *unstructured.Unstructured) metav1.Condition {

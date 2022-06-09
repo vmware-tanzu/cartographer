@@ -150,6 +150,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 				  conditions:
 				    - type: OhSoWonderful
 				      status: "True"
+				      message: "congratulations on your clean bill of health!"
 			`)
 
 			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -157,9 +158,10 @@ var _ = Describe("DetermineHealthCondition", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
 				Fields{
-					"Type":   Equal("Healthy"),
-					"Status": Equal(metav1.ConditionTrue),
-					"Reason": Equal("OhSoWonderfulCondition"),
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionTrue),
+					"Reason":  Equal("OhSoWonderfulCondition"),
+					"Message": Equal("congratulations on your clean bill of health!"),
 				},
 			))
 		})
@@ -177,6 +179,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 				  conditions:
 				    - type: OhSoWonderful
 				      status: "False"
+				      message: "sorry we're all our of wonderful. please check back later."
 			`)
 
 			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -184,9 +187,10 @@ var _ = Describe("DetermineHealthCondition", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
 				Fields{
-					"Type":   Equal("Healthy"),
-					"Status": Equal(metav1.ConditionFalse),
-					"Reason": Equal("OhSoWonderfulCondition"),
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionFalse),
+					"Reason":  Equal("OhSoWonderfulCondition"),
+					"Message": Equal("sorry we're all our of wonderful. please check back later."),
 				},
 			))
 		})
@@ -204,6 +208,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 				  conditions:
 				    - type: OhSoWonderful
 				      status: "SomethingElse"
+				      message: "an exciting message about our condition"
 			`)
 
 			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -211,9 +216,34 @@ var _ = Describe("DetermineHealthCondition", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
 				Fields{
-					"Type":   Equal("Healthy"),
-					"Status": Equal(metav1.ConditionUnknown),
-					"Reason": Equal("OhSoWonderfulCondition"),
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionUnknown),
+					"Reason":  Equal("OhSoWonderfulCondition"),
+					"Message": Equal("an exciting message about our condition"),
+				},
+			))
+		})
+
+		It("returns Unknown status if the condition is not present on the stamped object", func() {
+			stampedObject := &unstructured.Unstructured{}
+			stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/corev1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+			`)
+
+			dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+			_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthcheck.DetermineHealthCondition(healthRule, nil, stampedObject)).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Type":    Equal("Healthy"),
+					"Status":  Equal(metav1.ConditionUnknown),
+					"Reason":  Equal("OhSoWonderfulCondition"),
+					"Message": Equal("condition with type [OhSoWonderful] not found on resource status"),
 				},
 			))
 		})
