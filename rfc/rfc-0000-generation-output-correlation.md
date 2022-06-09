@@ -2,7 +2,7 @@
 
 [meta]: #meta
 
-- Name: Generation-Output Correlation
+- Name: Artifact Tracing with Generation-Output Correlation
 - Start Date: 2022-06-06
 - Author(s): waciumawanjohi
 - Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
@@ -24,10 +24,12 @@ output. Cartographer should be able to handle that pattern.
 
 There exist two proposals for correlating the output of a resource to the input that led to it:
 
-- [Input-Output Correlation](https://github.com/vmware-tanzu/cartographer/pull/799) specifies how Cartographer can
-  reason about resources which report a set of inputs in their outputs.
-- [Read Resources Only When In Success State](https://github.com/vmware-tanzu/cartographer/pull/556) specifies how
-  Cartographer can reason about resources which provide no such information.
+- [Artifact Tracing with Correlation Rules](https://github.com/vmware-tanzu/cartographer/pull/892) specifies how
+  Cartographer can reason about resources which report a set of inputs in their outputs. (This
+  supersedes [Input-Output Correlation](https://github.com/vmware-tanzu/cartographer/pull/799))
+- [Artifact Tracing with Health Rules](https://github.com/vmware-tanzu/cartographer/pull/891) specifies how Cartographer
+  can reason about resources which provide no such information. (This
+  supersedes [Read Resources Only When In Success State](https://github.com/vmware-tanzu/cartographer/pull/556))
 
 But there is a third, reasonable set of resources to consider: those which report the generation of the object
 definition that led to the outputs.
@@ -84,8 +86,10 @@ the path specified in the template where an object's output can be found. This i
 `imagePath`, `configPath` and the pair `urlPath` and `revisionPath`.
 
 ### monotonically increasing
+
 [monotonically increasing]: #monotonically-increasing
 A series which always increases or remaining constant, and never decreases.
+
 - Example: 1, 2, 3, 3, 6, 7
 - Counter Example: 1, 2, 5, 4
 
@@ -179,8 +183,8 @@ step/object or 1 per stamp is most reasonable. (Presumably one of the middle app
 #### Garbage collection of the cache
 
 Cartographer may assume that object status reflects [monotonically increasing] generations. Therefore, when output
-generation N has been observed, the cache of all input-generation tuples for gen 1 to N-1 may be discarded. (i.e.
-no earlier generation cached value will be seen or used).
+generation N has been observed, the cache of all input-generation tuples for gen 1 to N-1 may be discarded. (i.e. no
+earlier generation cached value will be seen or used).
 
 # Migration
 
@@ -249,7 +253,7 @@ e.g.
 ---
 apiVersion: carto.run/v1alpha1
 kind: ClusterSourceTemplate
-metadata: {}
+metadata: { }
 spec:
   # Artifact Tracing is the behavior of Cartographer reporting which inputs
   # for an object were responsible for a particular output.
