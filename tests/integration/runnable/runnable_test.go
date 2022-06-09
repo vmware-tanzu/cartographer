@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd/api"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -37,32 +38,27 @@ func TestRunnableReconciler(t *testing.T) {
 	rts := ReconcilerTestSuite{
 		{
 			Name: "first test",
-			Metadata: map[string]interface{}{
-				"userConfig": ExpectConfig{
+			AdditionalConfigs: map[string]ExpectConfig{
+				"userExpects": {
+					Name:   "userExpectsTest", // ummm?
 					Scheme: scheme,
 				},
 			},
+			ShouldErr:      false,
+			ExpectedResult: ctrl.Result{},
+			Verify:         nil,
+			Prepare:        nil,
+			CleanUp:        nil,
 		},
 	}
 
 	rts.Run(t, scheme, func(t *testing.T, rtc *ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
-		discoveryExpects, ok := rtc.Metadata["discoveryExpects"].(ExpectConfig)
-		if !ok {
-			t.Fatal("metadata 'discoveryExpects' is not an ExpectConfig")
-		}
-
 		userExpects, ok := rtc.Metadata["userExpects"].(ExpectConfig)
 		if !ok {
 			t.Fatal("metadata 'userExpects' is not an ExpectConfig")
 		}
 
-		rtc.CleanUp = func(t *testing.T) error {
-			discoveryExpects.AssertExpectations(t)
-			userExpects.AssertExpectations(t)
-			return nil
-		}
-
-		return controllers.RunnableReconciler{userExpect.Config(t)}
+		return controllers.RunnableReconciler{userExpects.Config(t).Client}
 	})
 
 }
