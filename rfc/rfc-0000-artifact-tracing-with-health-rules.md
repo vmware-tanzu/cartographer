@@ -14,10 +14,8 @@
 [summary]: #summary
 
 Tracing allows cartographer to determine which set of inputs (which update) of a stamped object led to a given output (
-status) of the object. There are separate RFCs for tracing
-through [a resource which reports some inputs alongside outputs](https://github.com/vmware-tanzu/cartographer/pull/799)
-or [a resource that reports the generation that led to an output](https://github.com/vmware-tanzu/cartographer/pull/886)
-. This RFC specifies how tracing can be accomplished when no such fields can be leveraged in the resource.
+status) of the object. Some resources may explicitly provide this information, but many do not. This RFC specifies how
+tracing can be accomplished when no such fields can be leveraged in the resource.
 
 In a template's `.spec.artifactTracing` users may specify `healthRule`. This rule will the same structure as the top
 level `.spec.healthRule`. The `.spec.artifactTracing.healthRule` will have an optional nested `observedGenerationPath`.
@@ -33,8 +31,15 @@ RFC [Allow Resources to Report Status](https://github.com/vmware-tanzu/cartograp
 
 Connecting an output of a resource to an input is necessary for establishing tracing. That is to state, "The app
 currently running on the cluster is a result of resource X producing Y which was fed into resource Z which produced..."
-it is necessary to tie a resource output to the input that produced it. Waiting for success/failure before update
+it is necessary to tie a resource output to the input that produced it. Waiting for success/failure before updating
 achieves this.
+
+There are separate RFCs for tracing when resources report:
+
+- a set of inputs which produced an
+  output: [Artifact Tracing with Correlation Rules](https://github.com/vmware-tanzu/cartographer/pull/894)
+- the spec generation that produced an
+  output: [Artifact tracing with Generation Output Correlation](https://github.com/vmware-tanzu/cartographer/pull/893)
 
 # What it is
 
