@@ -116,7 +116,6 @@ type HealthMatchFieldSelectorRequirement struct {
 	MessagePath string `json:"messagePath,omitempty"`
 }
 
-// ConditionRequirement specifies the condition and type and status of the condition to read
 type ConditionRequirement struct {
 	// Type is the type of the condition
 	Type string `json:"type"`

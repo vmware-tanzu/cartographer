@@ -71,8 +71,6 @@ spec:
                             description: MatchConditions are the conditions and statuses
                               to read.
                             items:
-                              description: ConditionRequirement specifies the condition
-                                and type and status of the condition to read
                               properties:
                                 status:
                                   description: Status is the status of the condition
@@ -136,8 +134,6 @@ spec:
                             description: MatchConditions are the conditions and statuses
                               to read.
                             items:
-                              description: ConditionRequirement specifies the condition
-                                and type and status of the condition to read
                               properties:
                                 status:
                                   description: Status is the status of the condition
