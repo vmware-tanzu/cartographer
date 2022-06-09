@@ -19,7 +19,7 @@ alongside outputs. Template authors write a set of correlation rules pointing to
 
 There are separate RFCs for correlation for other types of resources:
 
-- [a resource which reports an observed-generation alongside outputs](https://github.com/vmware-tanzu/cartographer/pull/886)
+- [a resource which reports an observed-generation alongside outputs](https://github.com/vmware-tanzu/cartographer/pull/893)
 - [a resource that provides no information about inputs with outputs](https://github.com/vmware-tanzu/cartographer/pull/891)
 
 # Motivation
