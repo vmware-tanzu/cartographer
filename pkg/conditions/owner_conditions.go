@@ -44,15 +44,6 @@ func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 	}
 }
 
-// -- Owner.Status.Conditions - ResourcesHealthy - True/False/Unknown
-
-func ResourcesHealthyCondition(status metav1.ConditionStatus) metav1.Condition {
-	return metav1.Condition{
-		Type:   v1alpha1.ResourcesHealthy,
-		Status: status,
-	}
-}
-
 // -- Owner.Status.Resource[x].Conditions - ResourceSubmitted &&
 // -- Owner.Status.Conditions - ResourcesSubmitted
 
