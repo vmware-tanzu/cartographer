@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly local_registry=$(ip route get 8.8.8.8 | grep src | awk '{print $7}'):5000
+readonly local_registry=$(ip route get 8.8.8.8 | grep src | awk '{print $7}'):5001
 readonly config_file=/etc/docker/daemon.json
 
 echo "$(jq ". + {\"insecure-registries\": [\"$local_registry\"]}" $config_file)" >$config_file
