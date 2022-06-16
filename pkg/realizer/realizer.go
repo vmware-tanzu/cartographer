@@ -21,12 +21,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
@@ -125,7 +125,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		var additionalConditions []metav1.Condition
 		if (stampedObject == nil || template == nil) && previousResourceStatus != nil {
 			realizedResource = &previousResourceStatus.RealizedResource
-			if previousResourceStatusHealthyCondition := conditions.ConditionList(previousResourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy); previousResourceStatusHealthyCondition != nil {
+			if previousResourceStatusHealthyCondition := utils.ConditionList(previousResourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy); previousResourceStatusHealthyCondition != nil {
 				additionalConditions = []metav1.Condition{*previousResourceStatusHealthyCondition}
 			}
 		} else {
