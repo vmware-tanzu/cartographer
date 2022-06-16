@@ -123,20 +123,10 @@ spec:
   sourceRevision: abc123
 ```
 
-When doing this, Cartographer must now cache the templating context (to save space, Cartographer may choose to only
-store the fields of the templating context referenced in the Correlation Rules). This may be accomplished by storing in
-a configmap, the status of the workload, an external datastore or some other manner.
-
 At some later point, Cartographer will read the object on the cluster. At that point there will be some output
 (from the example above `ghcr.io/some-project/some-repo:xyz`). There will also be a set of input values at paths
-determined in the correlationRules (e.g. the value `abc123` and `https://github.com/some-project/some-repo`). At that
-point the cached templating contexts will be searched for the given inputs. If they are found:
-
-1. Cartographer has determined that the output is the result of the inputs
-2. The output is a valid product of a Cartographer stamp and may be passed forward.
-
-If the inputs on the object are not found in the cache then the output is not the result of a Cartographer definition,
-it is the result of an update from another actor. In that case, Cartographer should not pass forward the value.
+determined in the correlationRules (e.g. the value `abc123` and `https://github.com/some-project/some-repo`).
+Cartographer relies on this information to establish that the output is the result of the indicated inputs.
 
 # Migration
 
@@ -166,13 +156,13 @@ purpose (though it entails a performance penalty on Cartographer) and could be u
 [prior-art]: #prior-art
 
 This RFC draws heavily on the RFC [Input-Output correlation](https://github.com/vmware-tanzu/cartographer/pull/799). An
-important difference is in the question of what value is cached. In the earlier RFC, the currently stamped input is
-compared to the currently read output. If the values match, the output is cached and passed forward. If the values do
-not match, the cached value is passed forward. This has the effect of waiting for the object to finish reconciling the
-most recent commit before passing forward (or caching) an output. This can lead to starvation of the supply chain in the
-case that the object is updated at a rate faster than it can reconcile.
+important difference is the matter of caching. In the earlier RFC, the currently stamped input is compared to the
+currently read output. If the values match, the output is cached and passed forward. If the values do not match, the
+cached value is passed forward. This has the effect of waiting for the object to finish reconciling the most recent
+commit before passing forward (or caching) an output. This can lead to starvation of the supply chain in the case that
+the object is updated at a rate faster than it can reconcile.
 
-We can call the above practice `cache at read`. By contrast, in this RFC we `cache at write`.
+By contrast, in this RFC no caching is done and reads/writes are never held.
 
 # Unresolved Questions
 
