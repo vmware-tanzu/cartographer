@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,6 +30,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 func MakeSupplychainOwnerResources(supplyChain *v1alpha1.ClusterSupplyChain) []OwnerResource {
