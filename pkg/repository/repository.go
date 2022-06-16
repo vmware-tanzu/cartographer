@@ -245,11 +245,10 @@ func (r *repository) ListUnstructured(ctx context.Context, gvk schema.GroupVersi
 
 	pointersToUnstructureds := make([]*unstructured.Unstructured, len(unstructuredList.Items))
 
-	//FIXME: why are we taking a deep copy?
 	for i, item := range unstructuredList.Items {
 		log.V(logger.DEBUG).Info("unstructured that matched",
 			"namespace", namespace, "labels", labels, "unstructured", item)
-		pointersToUnstructureds[i] = item.DeepCopy()
+		pointersToUnstructureds[i] = &item
 	}
 	return pointersToUnstructureds, nil
 }
