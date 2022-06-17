@@ -49,11 +49,3 @@ spec:
       targetPort: 9443
   selector:
     app: cartographer-controller
-
----
-kind: Secret
-apiVersion: v1
-metadata:
-  name: cartographer-webhook
-  namespace: cartographer-system
-type: Opaque
