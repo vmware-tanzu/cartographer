@@ -1,4 +1,5 @@
 CONTROLLER_GEN ?= go run -modfile hack/tools/go.mod sigs.k8s.io/controller-tools/cmd/controller-gen
+DIE_GEN ?= go run -modfile hack/tools/go.mod dies.dev/diegen
 ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
 GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
@@ -18,7 +19,7 @@ build: gen-objects gen-manifests
 run: build
 	build/cartographer
 
-crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
+crd_non_sources := $(wildcard pkg/apis/v1alpha1/zz_generated.*.go) $(wildcard pkg/apis/v1alpha1/*_test.go)
 crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
 
 pkg/apis/v1alpha1/zz_generated.deepcopy.go: $(crd_sources)
@@ -50,7 +51,7 @@ gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
 .PHONY: gen-manifests
 gen-manifests: config/crd/bases/*.yaml config/webhook/manifests.yaml
 
-test_crd_sources := $(filter-out tests/resources/zz_generated.deepcopy.go,$(wildcard tests/resources/*.go))
+test_crd_sources := $(filter-out $(wildcard tests/resources/zz_generated.*.go),$(wildcard tests/resources/*.go))
 
 tests/resources/zz_generated.deepcopy.go: $(test_crd_sources)
 	$(CONTROLLER_GEN) \
@@ -69,8 +70,17 @@ tests/resources/crds/*.yaml: $(test_crd_sources)
 		-f ./hack/boilerplate.go.txt \
 		tests/resources/crds
 
+tests/resources/dies/zz_generated.die.go: $(filter-out $(wildcard tests/resources/dies/zz_generated.*.go),$(wildcard tests/resources/dies/*.go)) $(crd_sources) $(test_crd_sources)
+	$(DIE_GEN) \
+		die \
+		paths="./tests/resources/dies/..."
+
+
 .PHONY: test-gen-manifests
 test-gen-manifests: tests/resources/crds/*.yaml
+
+.PHONY: test-gen-dies
+test-gen-dies: tests/resources/dies/zz_generated.die.go copyright
 
 .PHONY: clean-fakes
 clean-fakes:
@@ -81,7 +91,7 @@ generate: clean-fakes
 	go generate ./...
 
 .PHONY: test-unit
-test-unit: test-gen-objects
+test-unit: test-gen-objects test-gen-dies
 	$(GINKGO) -r pkg
 
 .PHONY: test-integration
@@ -89,7 +99,7 @@ ifeq ($(CI), true)
 test-integration: export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT = 10s
 test-integration: export GOMEGA_DEFAULT_CONSISTENTLY_DURATION = 2s
 endif
-test-integration: test-gen-manifests test-gen-objects
+test-integration: test-gen-manifests test-gen-objects test-gen-dies
 	$(GINKGO) -r tests/integration
 
 .PHONY: test-kuttl
