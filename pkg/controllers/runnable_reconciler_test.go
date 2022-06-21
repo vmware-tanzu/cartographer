@@ -17,24 +17,34 @@ package controllers_test
 import (
 	"context"
 	"errors"
+	"testing"
 
+	diesv1 "dies.dev/apis/meta/v1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-labs/reconciler-runtime/reconcilers"
+	rtesting "github.com/vmware-labs/reconciler-runtime/testing"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -48,6 +58,64 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 )
+
+func createTestableReconciler(client client.Client, l logr.Logger) reconcile.Reconciler {
+	controllerRepo := repository.NewRepository(client, repository.NewCache(l.WithName("cache-logger")))
+	dependencyTracker := dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		l.WithName("dependency-tracker-logger"),
+	)
+
+	return &controllers.RunnableReconciler{
+		Repo:                    controllerRepo,
+		DependencyTracker:       dependencyTracker,
+		ConditionManagerBuilder: conditions.NewConditionManager,
+	}
+}
+
+func TestInMemoryGatewayReconciler(t *testing.T) {
+	runnableNamespace := "test-ns"
+	runnableName := "my-runnable"
+	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
+
+	baseRunnable := dies.RunnableBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(runnableName).
+				Namespace(runnableNamespace).
+				AddLabel("some-val", "first")
+		}).
+		SpecDie(func(d *dies.RunnableSpecDie) {
+			d.
+				RetentionPolicy(v1alpha1.RetentionPolicy{
+					MaxFailedRuns:     10,
+					MaxSuccessfulRuns: 10,
+				}).
+				RunTemplateRef(v1alpha1.TemplateReference{
+					Kind: "ClusterRunTemplate",
+					Name: "my-run-template",
+				})
+		})
+
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
+
+	rts := rtesting.ReconcilerTestSuite{
+		{
+			Name:              "stamps first valid template",
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseRunnable,
+			},
+		},
+	}
+
+	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
+		return createTestableReconciler(c, c.Log)
+	})
+}
 
 var _ = Describe("Reconcile", func() {
 	var (

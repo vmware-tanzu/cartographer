@@ -33,6 +33,7 @@ type RepoCache interface {
 	UnchangedSinceCachedFromList(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
 }
 
+// fixme: get loggers from contexts (per request)
 func NewCache(l Logger) RepoCache {
 	return &cache{
 		logger:         l,
