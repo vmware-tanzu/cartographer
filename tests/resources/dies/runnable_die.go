@@ -15,8 +15,10 @@
 package dies
 
 import (
+	v1 "dies.dev/apis/meta/v1"
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +die:object=true,spec=RunnableSpec,status=RunnableStatus
@@ -37,3 +39,17 @@ func (d *RunnableSpecDie) SetInputString(key string, value string) *RunnableSpec
 
 // +die
 type _ = v1alpha1.RunnableStatus
+
+func (d *RunnableStatusDie) ConditionsDie(conditions ...*v1.ConditionDie) *RunnableStatusDie {
+	return d.DieStamp(func(r *v1alpha1.RunnableStatus) {
+		r.Conditions = make([]metav1.Condition, len(conditions))
+		for i := range conditions {
+			r.Conditions[i] = conditions[i].DieRelease()
+		}
+	})
+}
+
+//var (
+//	RunnableRunTemplateReadyConditionBlank = v1.ConditionBlank.Type(v1alpha1.RunTemplateReady)
+//	RunnableReadyConditionBlank            = v1.ConditionBlank.Type(v1alpha1.RunnableReady)
+//)

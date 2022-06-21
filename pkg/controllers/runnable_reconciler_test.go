@@ -27,9 +27,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/vmware-labs/reconciler-runtime/reconcilers"
 	rtesting "github.com/vmware-labs/reconciler-runtime/testing"
-	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
-	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -55,8 +52,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 )
 
 func createTestableReconciler(client client.Client, l logr.Logger) reconcile.Reconciler {
@@ -73,7 +73,8 @@ func createTestableReconciler(client client.Client, l logr.Logger) reconcile.Rec
 	}
 }
 
-func TestInMemoryGatewayReconciler(t *testing.T) {
+// These tests are still in flux. So grouping by context is still up in the air
+func TestMissingServiceAccount(t *testing.T) {
 	runnableNamespace := "test-ns"
 	runnableName := "my-runnable"
 	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
@@ -101,13 +102,55 @@ func TestInMemoryGatewayReconciler(t *testing.T) {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = v1alpha1.AddToScheme(scheme)
 
-	rts := rtesting.ReconcilerTestSuite{
-		{
-			Name:              "stamps first valid template",
+	rts := rtesting.ReconcilerTests{
+		"default service account missing": {
 			Request:           runnableRequest,
 			AdditionalConfigs: nil,
 			GivenObjects: []client.Object{
 				baseRunnable,
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/default]: failed to get object [test-ns/default] from api server: serviceaccounts "default" not found`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/default]: failed to get object [test-ns/default] from api server: serviceaccounts "default" not found`),
+						)
+					}),
+			},
+		},
+		"provided service account missing": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName("my-service-account")
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/my-service-account]: failed to get object [test-ns/my-service-account] from api server: serviceaccounts "my-service-account" not found`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/my-service-account]: failed to get object [test-ns/my-service-account] from api server: serviceaccounts "my-service-account" not found`),
+						)
+					}),
 			},
 		},
 	}
