@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 
+	diesv1 "dies.dev/apis/meta/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -25,8 +26,8 @@ import (
 	. "github.com/vmware-tanzu/cartographer/pkg/utils"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
+	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 	v1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -742,38 +743,37 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("populates the runnable.Status.outputs properly", func() {
+		FIt("populates the runnable.Status.outputs properly", func() {
+			var latestRunnable *v1alpha1.Runnable
 			listOpts := []client.ListOption{
 				client.InNamespace(testNS),
 				client.MatchingLabels(map[string]string{"carto.run/runnable-name": "my-runnable"}),
 			}
+			baseRunnable := dies.RunnableBlank.
+				MetadataDie(func(d *diesv1.ObjectMetaDie) {
+					d.
+						Name("my-runnable").
+						Namespace(testNS).
+						AddLabel("some-val", "first")
+				}).
+				SpecDie(func(d *dies.RunnableSpecDie) {
+					d.
+						RetentionPolicy(v1alpha1.RetentionPolicy{
+							MaxFailedRuns:     10,
+							MaxSuccessfulRuns: 10,
+						}).
+						ServiceAccountName(serviceAccountName).
+						RunTemplateRef(v1alpha1.TemplateReference{
+							Kind: "ClusterRunTemplate",
+							Name: "my-run-template",
+						})
+				})
 
-			var runnableObject = &v1alpha1.Runnable{}
 			By("creating the runnable", func() {
-				runnableYaml := HereYamlF(`---
-					apiVersion: carto.run/v1alpha1
-					kind: Runnable
-					metadata:
-					  namespace: %s
-					  name: my-runnable
-					  labels:
-					    some-val: first
-					spec:
-				      retentionPolicy: {maxFailedRuns: 10, maxSuccessfulRuns: 10}
-					  serviceAccountName: %s
-					  inputs:
-				        foo: input-at-time-1
-					  runTemplateRef: 
-					    name: my-run-template
-					    namespace: %s
-					    kind: ClusterRunTemplate
-					`,
-					testNS, serviceAccountName, testNS)
-
-				err := yaml.Unmarshal([]byte(runnableYaml), runnableObject)
-				Expect(err).NotTo(HaveOccurred())
-
-				err = c.Create(ctx, runnableObject, &client.CreateOptions{})
+				latestRunnable = baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.SetInputString("foo", "input-at-time-1")
+				}).DieReleasePtr()
+				err := c.Create(ctx, latestRunnable, &client.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 			By("showing that the Runnable status is unknown", func() {
@@ -873,20 +873,11 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 
 			By("changing the input for the Runnable", func() {
 				Eventually(func() error {
-					err := c.Get(ctx, client.ObjectKey{
-						Namespace: runnableObject.GetNamespace(),
-						Name:      runnableObject.GetName(),
-					}, runnableObject)
+					latestRunnable.Spec = baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+						d.SetInputString("foo", "input-at-time-2")
+					}).DieReleasePtr().Spec
 
-					if err != nil {
-						return err
-					}
-
-					runnableObject.Spec.Inputs["foo"] = apiextensionsv1.JSON{
-						Raw: []byte(`"input-at-time-2"`),
-					}
-
-					return c.Update(ctx, runnableObject, &client.UpdateOptions{})
+					return c.Update(ctx, latestRunnable, &client.UpdateOptions{})
 				}).ShouldNot(HaveOccurred())
 			})
 			By("seeing that there is a new stampedObject", func() {
@@ -984,20 +975,11 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 
 			By("changing the input for the Runnable", func() {
 				Eventually(func() error {
-					err := c.Get(ctx, client.ObjectKey{
-						Namespace: runnableObject.GetNamespace(),
-						Name:      runnableObject.GetName(),
-					}, runnableObject)
+					runnable := baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+						d.SetInputString("foo", "input-at-time-3")
+					})
 
-					if err != nil {
-						return err
-					}
-
-					runnableObject.Spec.Inputs["foo"] = apiextensionsv1.JSON{
-						Raw: []byte(`"input-at-time-3"`),
-					}
-
-					return c.Update(ctx, runnableObject, &client.UpdateOptions{})
+					return c.Update(ctx, runnable.DieReleasePtr(), &client.UpdateOptions{})
 				}).ShouldNot(HaveOccurred())
 
 			})
