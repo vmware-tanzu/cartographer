@@ -19,6 +19,7 @@ import (
 	"errors"
 	"testing"
 
+	v1 "dies.dev/apis/core/v1"
 	diesv1 "dies.dev/apis/meta/v1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -74,10 +75,22 @@ func createTestableReconciler(client client.Client, l logr.Logger) reconcile.Rec
 }
 
 // These tests are still in flux. So grouping by context is still up in the air
+// Todo: need to test present service account by default and by param
 func TestMissingServiceAccount(t *testing.T) {
 	runnableNamespace := "test-ns"
 	runnableName := "my-runnable"
 	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
+
+	serviceAccountName := "my-service-account"
+
+	now := metav1.Now()
+
+	baseServiceAccount := v1.ServiceAccountBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.Namespace(runnableNamespace)
+			d.Name(serviceAccountName)
+			d.CreationTimestamp(now)
+		})
 
 	baseRunnable := dies.RunnableBlank.
 		MetadataDie(func(d *diesv1.ObjectMetaDie) {
@@ -153,12 +166,109 @@ func TestMissingServiceAccount(t *testing.T) {
 					}),
 			},
 		},
+
+		"service account must have secrets": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseServiceAccount,
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName(serviceAccountName)
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any secrets`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any secrets`),
+						)
+					}),
+			},
+		},
 	}
 
 	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
 		return createTestableReconciler(c, c.Log)
 	})
 }
+
+// func TestRando(t *testing.T) {
+//	runnableNamespace := "test-ns"
+//	runnableName := "my-runnable"
+//	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
+//
+//	serviceAccountName := "my-service-account"
+//
+//	now := metav1.Now()
+//
+//	serviceAccount := v1.ServiceAccountBlank.
+//		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+//			d.Namespace(runnableNamespace)
+//			d.Name(serviceAccountName)
+//			d.CreationTimestamp(now)
+//		})
+//
+//	baseRunnable := dies.RunnableBlank.
+//		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+//			d.
+//				Name(runnableName).
+//				Namespace(runnableNamespace).
+//				AddLabel("some-val", "first")
+//		}).
+//		SpecDie(func(d *dies.RunnableSpecDie) {
+//			d.
+//				RetentionPolicy(v1alpha1.RetentionPolicy{
+//					MaxFailedRuns:     10,
+//					MaxSuccessfulRuns: 10,
+//				}).
+//				RunTemplateRef(v1alpha1.TemplateReference{
+//					Kind: "ClusterRunTemplate",
+//					Name: "my-run-template",
+//				}).
+//				ServiceAccountName(serviceAccountName)
+//		})
+//
+//	scheme := runtime.NewScheme()
+//	_ = clientgoscheme.AddToScheme(scheme)
+//	_ = v1alpha1.AddToScheme(scheme)
+//
+//	rts := rtesting.ReconcilerTests{
+//		"blah blah": {
+//			Request:           runnableRequest,
+//			AdditionalConfigs: nil,
+//			GivenObjects: []client.Object{
+//				serviceAccount,
+//				baseRunnable,
+//			},
+//			ExpectStatusUpdates: []client.Object{
+//				baseRunnable.
+//					StatusDie(func(d *dies.RunnableStatusDie) {
+//						d.ConditionsDie(
+//							diesv1.ConditionBlank.
+//								Type("RunTemplateReady").
+//								Status(metav1.ConditionTrue),
+//							diesv1.ConditionBlank.
+//								Type("Ready").
+//								Status(metav1.ConditionTrue),
+//						)
+//					}),
+//			},
+//		},
+//	}
+//
+//	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
+//		return createTestableReconciler(c, c.Log)
+//	})
+//}
 
 var _ = Describe("Reconcile", func() {
 	var (
