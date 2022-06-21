@@ -111,6 +111,8 @@ func TestMissingServiceAccount(t *testing.T) {
 				})
 		})
 
+	secretName := "my-secret"
+
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = v1alpha1.AddToScheme(scheme)
@@ -166,8 +168,7 @@ func TestMissingServiceAccount(t *testing.T) {
 					}),
 			},
 		},
-
-		"service account must have secrets": {
+		"service account must have secret refs": {
 			Request:           runnableRequest,
 			AdditionalConfigs: nil,
 			GivenObjects: []client.Object{
@@ -194,6 +195,33 @@ func TestMissingServiceAccount(t *testing.T) {
 					}),
 			},
 		},
+		"service account must ref existing secrets": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseServiceAccount.SecretsDie(v1.ObjectReferenceBlank.Name(secretName)),
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName(serviceAccountName)
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get secret object from api server: failed to get object [test-ns/my-secret] from api server: secrets "my-secret" not found`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get secret object from api server: failed to get object [test-ns/my-secret] from api server: secrets "my-secret" not found`),
+						)
+					}),
+			},
+		},
 	}
 
 	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
@@ -201,7 +229,7 @@ func TestMissingServiceAccount(t *testing.T) {
 	})
 }
 
-// func TestRando(t *testing.T) {
+//func TestRando(t *testing.T) {
 //	runnableNamespace := "test-ns"
 //	runnableName := "my-runnable"
 //	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
@@ -215,7 +243,8 @@ func TestMissingServiceAccount(t *testing.T) {
 //			d.Namespace(runnableNamespace)
 //			d.Name(serviceAccountName)
 //			d.CreationTimestamp(now)
-//		})
+//		}).
+//		SecretsDie(v1.ObjectReferenceBlank.Name("my-secret"))
 //
 //	baseRunnable := dies.RunnableBlank.
 //		MetadataDie(func(d *diesv1.ObjectMetaDie) {
