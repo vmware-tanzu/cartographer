@@ -17,6 +17,7 @@ package controllers_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	v1 "dies.dev/apis/core/v1"
@@ -60,17 +61,27 @@ import (
 	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 )
 
-func createTestableReconciler(client client.Client, l logr.Logger) reconcile.Reconciler {
-	controllerRepo := repository.NewRepository(client, repository.NewCache(l.WithName("cache-logger")))
+func createTestableReconciler(controllerClient, ownerClient client.Client, l logr.Logger) reconcile.Reconciler {
+	controllerRepo := repository.NewRepository(controllerClient, repository.NewCache(l.WithName("cache-logger")))
 	dependencyTracker := dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		l.WithName("dependency-tracker-logger"),
 	)
 
+	clientBuilder := func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
+		var discoveryClient discovery.DiscoveryInterface
+		if needDiscovery {
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(ownerClient.)
+		}
+		return ownerClient, discoveryClient, nil
+	}
+
+
 	return &controllers.RunnableReconciler{
 		Repo:                    controllerRepo,
 		DependencyTracker:       dependencyTracker,
 		ConditionManagerBuilder: conditions.NewConditionManager,
+		ClientBuilder: clientBuilder
 	}
 }
 
@@ -112,6 +123,13 @@ func TestMissingServiceAccount(t *testing.T) {
 		})
 
 	secretName := "my-secret"
+
+	baseSecret := v1.SecretBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(secretName).
+				Namespace(runnableNamespace)
+		})
 
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
@@ -222,6 +240,34 @@ func TestMissingServiceAccount(t *testing.T) {
 					}),
 			},
 		},
+		"service account must ref a token secret": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseServiceAccount.SecretsDie(v1.ObjectReferenceBlank.Name(secretName)),
+				baseSecret,
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName(serviceAccountName)
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any token secrets`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any token secrets`),
+						)
+					}),
+			},
+		},
 	}
 
 	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
@@ -229,75 +275,87 @@ func TestMissingServiceAccount(t *testing.T) {
 	})
 }
 
-//func TestRando(t *testing.T) {
-//	runnableNamespace := "test-ns"
-//	runnableName := "my-runnable"
-//	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
-//
-//	serviceAccountName := "my-service-account"
-//
-//	now := metav1.Now()
-//
-//	serviceAccount := v1.ServiceAccountBlank.
-//		MetadataDie(func(d *diesv1.ObjectMetaDie) {
-//			d.Namespace(runnableNamespace)
-//			d.Name(serviceAccountName)
-//			d.CreationTimestamp(now)
-//		}).
-//		SecretsDie(v1.ObjectReferenceBlank.Name("my-secret"))
-//
-//	baseRunnable := dies.RunnableBlank.
-//		MetadataDie(func(d *diesv1.ObjectMetaDie) {
-//			d.
-//				Name(runnableName).
-//				Namespace(runnableNamespace).
-//				AddLabel("some-val", "first")
-//		}).
-//		SpecDie(func(d *dies.RunnableSpecDie) {
-//			d.
-//				RetentionPolicy(v1alpha1.RetentionPolicy{
-//					MaxFailedRuns:     10,
-//					MaxSuccessfulRuns: 10,
-//				}).
-//				RunTemplateRef(v1alpha1.TemplateReference{
-//					Kind: "ClusterRunTemplate",
-//					Name: "my-run-template",
-//				}).
-//				ServiceAccountName(serviceAccountName)
-//		})
-//
-//	scheme := runtime.NewScheme()
-//	_ = clientgoscheme.AddToScheme(scheme)
-//	_ = v1alpha1.AddToScheme(scheme)
-//
-//	rts := rtesting.ReconcilerTests{
-//		"blah blah": {
-//			Request:           runnableRequest,
-//			AdditionalConfigs: nil,
-//			GivenObjects: []client.Object{
-//				serviceAccount,
-//				baseRunnable,
-//			},
-//			ExpectStatusUpdates: []client.Object{
-//				baseRunnable.
-//					StatusDie(func(d *dies.RunnableStatusDie) {
-//						d.ConditionsDie(
-//							diesv1.ConditionBlank.
-//								Type("RunTemplateReady").
-//								Status(metav1.ConditionTrue),
-//							diesv1.ConditionBlank.
-//								Type("Ready").
-//								Status(metav1.ConditionTrue),
-//						)
-//					}),
-//			},
-//		},
-//	}
-//
-//	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
-//		return createTestableReconciler(c, c.Log)
-//	})
-//}
+func TestRando(t *testing.T) {
+	//t.SkipNow()
+	runnableNamespace := "test-ns"
+	runnableName := "my-runnable"
+	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
+
+	serviceAccountName := "my-service-account"
+
+	now := metav1.Now()
+
+	secretName := "my-secret"
+
+	secret := v1.SecretBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(secretName).
+				Namespace(runnableNamespace)
+		}).
+		Type(corev1.SecretTypeServiceAccountToken)
+
+	serviceAccount := v1.ServiceAccountBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.Namespace(runnableNamespace)
+			d.Name(serviceAccountName)
+			d.CreationTimestamp(now)
+		}).
+		SecretsDie(v1.ObjectReferenceBlank.Name(secretName))
+
+	baseRunnable := dies.RunnableBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(runnableName).
+				Namespace(runnableNamespace).
+				AddLabel("some-val", "first")
+		}).
+		SpecDie(func(d *dies.RunnableSpecDie) {
+			d.
+				RetentionPolicy(v1alpha1.RetentionPolicy{
+					MaxFailedRuns:     10,
+					MaxSuccessfulRuns: 10,
+				}).
+				RunTemplateRef(v1alpha1.TemplateReference{
+					Kind: "ClusterRunTemplate",
+					Name: "my-run-template",
+				}).
+				ServiceAccountName(serviceAccountName)
+		})
+
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
+
+	rts := rtesting.ReconcilerTests{
+		"blah blah": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				serviceAccount,
+				secret,
+				baseRunnable,
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionTrue),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionTrue),
+						)
+					}),
+			},
+		},
+	}
+
+	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
+		return createTestableReconciler(c, c.Log)
+	})
+}
 
 var _ = Describe("Reconcile", func() {
 	var (
