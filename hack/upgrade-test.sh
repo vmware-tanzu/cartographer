@@ -20,7 +20,7 @@ set -o pipefail
 # shellcheck disable=SC2155
 readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
-readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
+readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}

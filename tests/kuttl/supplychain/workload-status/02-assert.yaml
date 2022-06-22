@@ -181,7 +181,8 @@ status:
           reason: ResourceSubmissionComplete
         - type: Healthy
           status: "True"
-          reason: AlwaysHealthy
+          reason: MatchedField
+          message: "field value: knitting, message: example-config-configmap"
         - type: Ready
           status: "True"
           reason: Ready

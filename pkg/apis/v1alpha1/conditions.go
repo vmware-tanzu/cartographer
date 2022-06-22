@@ -130,13 +130,14 @@ const (
 	NoResourceResourcesHealthyReason         = "NoResource"
 	OutputNotAvailableResourcesHealthyReason = "OutputNotAvailable"
 	NoStampedObjectHealthyReason             = "NoStampedObject"
+	NoMatchesFulfilledReason                 = "NoMatchesFulfilled"
 )
 
-// -- BLUEPRINT ConditionType - ResourcesHealthy False ConditionReasons
+// -- BLUEPRINT ConditionType - ResourcesHealthy MultiMatch ConditionReasons
 
 const (
-	SingleConditionTypeEvaluationErrorResourcesHealthyReason = "SingleConditionEvaluationError"
-	SingleConditionTypeNoResultResourcesHealthyReason        = "SingleConditionNoResult"
+	MultiMatchConditionHealthyReason = "MatchedCondition"
+	MultiMatchFieldHealthyReason     = "MatchedField"
 )
 
 // -----------------------------------------
