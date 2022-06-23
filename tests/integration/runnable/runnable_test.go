@@ -17,22 +17,21 @@ package runnable_test
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	. "github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/helpers"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 	v1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apiserver/pkg/storage/names"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	. "github.com/vmware-tanzu/cartographer/pkg/utils"
-	"github.com/vmware-tanzu/cartographer/tests/helpers"
-	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Stamping a resource on Runnable Creation", func() {
@@ -708,71 +707,8 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 		})
 	})
 
-	Describe("when a ClusterRunTemplate that produces a Resource leverages a Selected field", func() {
+	Describe("Latest stampedObject is the status", func() {
 		BeforeEach(func() {
-			runTemplateYaml := HereYamlF(`
-				---
-				apiVersion: carto.run/v1alpha1
-				kind: ClusterRunTemplate
-				metadata:
-				  name: my-run-template
-				spec:
-				  template:
-					apiVersion: v1
-					kind: ResourceQuota
-					metadata:
-					  generateName: my-stamped-resource-
-					  labels:
-					    focus: something-useful
-					spec:
-					  hard:
-						cpu: "1000"
-						memory: 200Gi
-						pods: "10"
-					  scopeSelector:
-						matchExpressions:
-						- operator : In
-						  scopeName: PriorityClass
-						  values: [$(selected.spec.inputs.key)$]
-				`,
-				testNS,
-			)
-
-			runTemplateDefinition = &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-
-	Describe("Multiple objects created", func() {
-		BeforeEach(func() {
-			runnableYaml := HereYamlF(`---
-					apiVersion: carto.run/v1alpha1
-					kind: Runnable
-					metadata:
-					  namespace: %s
-					  name: my-runnable
-					  labels:
-					    some-val: first
-					spec:
-					  serviceAccountName: %s
-					  runTemplateRef: 
-					    name: my-run-template
-					    namespace: %s
-					    kind: ClusterRunTemplate
-					`,
-				testNS, serviceAccountName, testNS)
-
-			runnableDefinition = &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(runnableYaml), runnableDefinition)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, runnableDefinition, &client.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
 			runTemplateYaml := HereYamlF(`
 				---
 				apiVersion: carto.run/v1alpha1
@@ -781,7 +717,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				  name: my-run-template
 				spec:
 				  outputs:
-					test-status: status.conditions[?(@.type=="Ready")]
+					test-status: status.conditions[?(@.type=="Succeeded")]
 				  template:
 					apiVersion: test.run/v1alpha1
 					kind: TestObj
@@ -790,136 +726,317 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					  labels:
 					    gen: "1"
 					spec:
-					  foo: "bar"
+					  foo: $(runnable.spec.inputs.foo)$
 				`)
 
 			runTemplateDefinition = &unstructured.Unstructured{}
-			err = yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
+			err := yaml.Unmarshal([]byte(runTemplateYaml), runTemplateDefinition)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = c.Create(ctx, runTemplateDefinition, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-
-			opts := []client.ListOption{
-				client.InNamespace(testNS),
-				client.MatchingLabels(map[string]string{"carto.run/runnable-name": "my-runnable"}),
-			}
-
-			testsList := &resources.TestObjList{}
-
-			Eventually(func() ([]resources.TestObj, error) {
-				err := c.List(ctx, testsList, opts...)
-				return testsList.Items, err
-			}).Should(HaveLen(1))
-
-			// This is in order to ensure gen 1 object and gen 2 object have different creationTimestamps
-			time.Sleep(time.Second)
-
-			Expect(AlterFieldOfNestedStringMaps(runTemplateDefinition.Object, "spec.template.metadata.labels.gen", "2")).To(Succeed())
-
-			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(func() ([]resources.TestObj, error) {
-				err := c.List(ctx, testsList, opts...)
-				return testsList.Items, err
-			}).Should(HaveLen(2))
-
-			// This is in order to ensure gen 2 object and gen 3 object have different creationTimestamps
-			// Gen 3 object is needed to demonstrate behaviour when the most recently submitted is not successful
-			time.Sleep(time.Second)
-
-			Expect(AlterFieldOfNestedStringMaps(runTemplateDefinition.Object, "spec.template.metadata.labels.gen", "3")).To(Succeed())
-
-			err = c.Update(ctx, runTemplateDefinition, &client.UpdateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(func() ([]resources.TestObj, error) {
-				err := c.List(ctx, testsList, opts...)
-				return testsList.Items, err
-			}).Should(HaveLen(3))
 		})
 
 		AfterEach(func() {
-			err := c.Delete(ctx, runnableDefinition)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Delete(ctx, runTemplateDefinition)
+			err := c.Delete(ctx, runTemplateDefinition)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("populates the runnable.Status.outputs properly", func() {
-			By("updating runnable status based on the most recently submitted and successful object")
-			opts := []client.ListOption{
+			listOpts := []client.ListOption{
 				client.InNamespace(testNS),
-				client.MatchingLabels(map[string]string{"gen": "2"}),
+				client.MatchingLabels(map[string]string{"carto.run/runnable-name": "my-runnable"}),
 			}
 
-			testsList := &resources.TestObjList{}
+			var runnableObject = &v1alpha1.Runnable{}
+			By("creating the runnable", func() {
+				runnableYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Runnable
+					metadata:
+					  namespace: %s
+					  name: my-runnable
+					  labels:
+					    some-val: first
+					spec:
+				      retentionPolicy: {maxFailedRuns: 10, maxSuccessfulRuns: 10}
+					  serviceAccountName: %s
+					  inputs:
+				        foo: input-at-time-1
+					  runTemplateRef: 
+					    name: my-run-template
+					    namespace: %s
+					    kind: ClusterRunTemplate
+					`,
+					testNS, serviceAccountName, testNS)
 
-			Eventually(func() ([]resources.TestObj, error) {
-				err := c.List(ctx, testsList, opts...)
-				return testsList.Items, err
-			}).Should(HaveLen(1))
+				err := yaml.Unmarshal([]byte(runnableYaml), runnableObject)
+				Expect(err).NotTo(HaveOccurred())
 
-			testToUpdate := &testsList.Items[0]
-			testToUpdate.Status.Conditions = []metav1.Condition{
-				{
-					Type:               "Ready",
-					Status:             "True",
-					Reason:             "LifeIsGood",
-					LastTransitionTime: metav1.Now(),
-					Message:            "this is generation 2",
-				},
-				{
-					Type:               "Succeeded",
-					Status:             "True",
-					Reason:             "Success",
-					LastTransitionTime: metav1.Now(),
-				},
-			}
-			err := c.Status().Update(ctx, testToUpdate)
-			Expect(err).NotTo(HaveOccurred())
+				err = c.Create(ctx, runnableObject, &client.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+			By("showing that the Runnable status is unknown", func() {
+				Eventually(func() (v1alpha1.RunnableStatus, error) {
+					runnable := &v1alpha1.Runnable{}
+					err := c.Get(ctx, client.ObjectKey{Namespace: testNS, Name: "my-runnable"}, runnable)
+					return runnable.Status, err
+				}).Should(
+					MatchFields(IgnoreExtras,
+						Fields{
+							"Conditions": ContainElements(
+								MatchFields(IgnoreExtras,
+									Fields{
+										"Type":   Equal("Ready"),
+										"Status": Equal(metav1.ConditionUnknown),
+									},
+								),
+								MatchFields(IgnoreExtras,
+									Fields{
+										"Type":   Equal("StampedObjectCondition"),
+										"Status": Equal(metav1.ConditionUnknown),
+									},
+								),
+								MatchFields(IgnoreExtras,
+									Fields{
+										"Type":   Equal("RunTemplateReady"),
+										"Status": Equal(metav1.ConditionTrue),
+									},
+								),
+							),
+						},
+					),
+				)
+			})
 
-			Eventually(getRunnableTestStatus).Should(MatchFields(IgnoreExtras, Fields{
-				"Message": Equal("this is generation 2"),
-			}))
+			var firstStampedObject resources.TestObj
+			var secondStampedObject resources.TestObj
 
-			By("not updating runnable status based on the less recently submitted and successful objects")
-			opts = []client.ListOption{
-				client.InNamespace(testNS),
-				client.MatchingLabels(map[string]string{"gen": "1"}),
-			}
+			By("seeing one stamped object", func() {
+				testsList := &resources.TestObjList{}
 
-			Eventually(func() ([]resources.TestObj, error) {
-				err := c.List(ctx, testsList, opts...)
-				return testsList.Items, err
-			}).Should(HaveLen(1))
+				Eventually(func() ([]resources.TestObj, error) {
+					err := c.List(ctx, testsList, listOpts...)
+					return testsList.Items, err
+				}).Should(HaveLen(1))
 
-			testToUpdate = &testsList.Items[0]
-			testToUpdate.Status.Conditions = []metav1.Condition{
-				{
-					Type:               "Ready",
-					Status:             "True",
-					Reason:             "LifeIsGood",
-					LastTransitionTime: metav1.Now(),
-					Message:            "but this is earlier generation 1",
-				},
-				{
-					Type:               "Succeeded",
-					Status:             "True",
-					Reason:             "Success",
-					LastTransitionTime: metav1.Now(),
-				},
-			}
-			err = c.Status().Update(ctx, testToUpdate)
-			Expect(err).NotTo(HaveOccurred())
+				firstStampedObject = testsList.Items[0]
+			})
+			By("changing the first stamped object's status to false", func() {
+				firstStampedObject.Status = resources.TestStatus{
+					ObservedGeneration: 1,
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Succeeded",
+							Status:             "False",
+							ObservedGeneration: 1,
+							LastTransitionTime: metav1.Now(),
+							Reason:             "FirstStampFailed",
+							Message:            "not a happy first stamped object",
+						},
+					},
+				}
 
-			Consistently(getRunnableTestStatus, "1s").Should(MatchFields(IgnoreExtras, Fields{
-				"Message": And(
-					Equal("this is generation 2"),
-					Not(Equal("but this is earlier generation 1"))),
-			}))
+				Eventually(func() error {
+					return c.Status().Update(ctx, &firstStampedObject)
+				}).ShouldNot(HaveOccurred())
+			})
+			By("seeing that the runnable status is false", func() {
+				Eventually(func() ([]metav1.Condition, error) {
+					runnable := &v1alpha1.Runnable{}
+					err := c.Get(ctx, client.ObjectKey{Namespace: testNS, Name: "my-runnable"}, runnable)
+					return runnable.Status.Conditions, err
+				}).Should(
+					ContainElements(
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionFalse),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("StampedObjectCondition"),
+								"Status": Equal(metav1.ConditionFalse),
+								"Reason": Equal("SucceededCondition"),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("RunTemplateReady"),
+								"Status": Equal(metav1.ConditionTrue),
+							},
+						),
+					),
+				)
+			})
+
+			By("changing the input for the Runnable", func() {
+				Eventually(func() error {
+					err := c.Get(ctx, client.ObjectKey{
+						Namespace: runnableObject.GetNamespace(),
+						Name:      runnableObject.GetName(),
+					}, runnableObject)
+
+					if err != nil {
+						return err
+					}
+
+					runnableObject.Spec.Inputs["foo"] = apiextensionsv1.JSON{
+						Raw: []byte(`"input-at-time-2"`),
+					}
+
+					return c.Update(ctx, runnableObject, &client.UpdateOptions{})
+				}).ShouldNot(HaveOccurred())
+			})
+			By("seeing that there is a new stampedObject", func() {
+				testsList := &resources.TestObjList{}
+				Eventually(func() ([]resources.TestObj, error) {
+					err := c.List(ctx, testsList, listOpts...)
+					return testsList.Items, err
+				}).Should(HaveLen(2))
+
+				for _, so := range testsList.Items {
+					if so.Spec.Foo == "input-at-time-2" {
+						secondStampedObject = so
+						continue
+					}
+				}
+			})
+			By("seeing that the runnable status is unknown", func() {
+				Eventually(func() ([]metav1.Condition, error) {
+					runnable := &v1alpha1.Runnable{}
+					err := c.Get(ctx, client.ObjectKey{Namespace: testNS, Name: "my-runnable"}, runnable)
+					return runnable.Status.Conditions, err
+				}).Should(
+					ContainElements(
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionUnknown),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("StampedObjectCondition"),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal("Unknown"),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("RunTemplateReady"),
+								"Status": Equal(metav1.ConditionTrue),
+							},
+						),
+					),
+				)
+			})
+			By("changing the second stampedObject's status to True", func() {
+				secondStampedObject.Status = resources.TestStatus{
+					ObservedGeneration: 1,
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Succeeded",
+							Status:             "True",
+							ObservedGeneration: 1,
+							LastTransitionTime: metav1.Now(),
+							Reason:             "SecondStampWorked",
+							Message:            "happy second stamped object",
+						},
+					},
+				}
+
+				Eventually(func() error {
+					return c.Status().Update(ctx, &secondStampedObject)
+				}).ShouldNot(HaveOccurred())
+			})
+			By("seeing that the runnable status is true", func() {
+				Eventually(func() ([]metav1.Condition, error) {
+					runnable := &v1alpha1.Runnable{}
+					err := c.Get(ctx, client.ObjectKey{Namespace: testNS, Name: "my-runnable"}, runnable)
+					return runnable.Status.Conditions, err
+				}).Should(
+					ContainElements(
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionTrue),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("StampedObjectCondition"),
+								"Status": Equal(metav1.ConditionTrue),
+								"Reason": Equal("SucceededCondition"),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("RunTemplateReady"),
+								"Status": Equal(metav1.ConditionTrue),
+							},
+						),
+					),
+				)
+
+			})
+
+			By("changing the input for the Runnable", func() {
+				Eventually(func() error {
+					err := c.Get(ctx, client.ObjectKey{
+						Namespace: runnableObject.GetNamespace(),
+						Name:      runnableObject.GetName(),
+					}, runnableObject)
+
+					if err != nil {
+						return err
+					}
+
+					runnableObject.Spec.Inputs["foo"] = apiextensionsv1.JSON{
+						Raw: []byte(`"input-at-time-3"`),
+					}
+
+					return c.Update(ctx, runnableObject, &client.UpdateOptions{})
+				}).ShouldNot(HaveOccurred())
+
+			})
+			By("seeing that there is a new stampedObject", func() {
+				testsList := &resources.TestObjList{}
+				Eventually(func() ([]resources.TestObj, error) {
+					err := c.List(ctx, testsList, listOpts...)
+					return testsList.Items, err
+				}).Should(HaveLen(3))
+			})
+			By("seeing that the runnable status is unknown", func() {
+				Eventually(func() ([]metav1.Condition, error) {
+					runnable := &v1alpha1.Runnable{}
+					err := c.Get(ctx, client.ObjectKey{Namespace: testNS, Name: "my-runnable"}, runnable)
+					return runnable.Status.Conditions, err
+				}).Should(
+					ContainElements(
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionUnknown),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("StampedObjectCondition"),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal("Unknown"),
+							},
+						),
+						MatchFields(IgnoreExtras,
+							Fields{
+								"Type":   Equal("RunTemplateReady"),
+								"Status": Equal(metav1.ConditionTrue),
+							},
+						),
+					),
+				)
+			})
 		})
 	})
 })
