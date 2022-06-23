@@ -144,8 +144,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	}
 
 	stampContext := templates.StamperBuilder(r.owner, ownerTemplatingContext, labels)
+
+	fmt.Printf(">>>>>>>> Stamping Context for %s: %+v\n", resource.Name, stampContext)
+
 	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
+		fmt.Printf(">>>>>>>> Error for %s: %w\n", resource.Name, err)
 		log.Error(err, "failed to stamp resource")
 		return template, nil, nil, errors.StampError{
 			Err:           err,

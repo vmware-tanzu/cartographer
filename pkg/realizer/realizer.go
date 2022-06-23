@@ -18,6 +18,7 @@ package realizer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -117,6 +118,10 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		}
 
 		outs.AddOutput(resource.Name, out)
+
+		fmt.Println("---------------------------------")
+		fmt.Printf("out: %s: %+v\n", resource.Name, out)
+		fmt.Println("/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\")
 
 		previousResourceStatus := resourceStatuses.GetPreviousResourceStatus(resource.Name)
 
