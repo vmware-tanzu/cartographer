@@ -1,0 +1,14 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: early-stamp-sc
+status:
+  conditions:
+  - reason: Ready
+    status: "True"
+    type: TemplatesReady
+  - reason: Ready
+    status: "True"
+    type: Ready
+
