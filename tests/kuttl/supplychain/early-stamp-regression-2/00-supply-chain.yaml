@@ -1,0 +1,20 @@
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
+metadata:
+  name: early-stamp-sc-2
+spec:
+  selector:
+    integration-test: "early-stamp"
+  resources:
+    - name: first
+      templateRef:
+        kind: ClusterSourceTemplate
+        name: early-stamp-template-first-2
+
+    - name: second
+      templateRef:
+        kind: ClusterTemplate
+        name: early-stamp-template-second-2
+      sources:
+        - resource: first
+          name: source

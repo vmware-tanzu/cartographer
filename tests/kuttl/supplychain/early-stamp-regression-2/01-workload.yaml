@@ -1,0 +1,8 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: early-stamp-workload-2
+  labels:
+    integration-test: "early-stamp"
+spec:
+  serviceAccountName: my-service-account

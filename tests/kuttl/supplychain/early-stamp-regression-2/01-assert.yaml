@@ -1,0 +1,8 @@
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: early-stamped-object-first-2
+spec:
+  value:
+    a: thing
