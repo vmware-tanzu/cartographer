@@ -15,7 +15,6 @@
 package healthcheck
 
 import (
-	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +25,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 func IsClusterTemplate(reference *corev1.ObjectReference) bool {
@@ -40,14 +40,14 @@ func IsClusterTemplate(reference *corev1.ObjectReference) bool {
 
 func OwnerHealthCondition(resourceStatuses []v1alpha1.ResourceStatus, previousConditions []metav1.Condition) metav1.Condition {
 	var previousHealthCondition []metav1.Condition
-	condition := conditions.ConditionList(previousConditions).ConditionWithType(v1alpha1.ResourceHealthy)
+	condition := utils.ConditionList(previousConditions).ConditionWithType(v1alpha1.ResourceHealthy)
 	if condition != nil {
 		previousHealthCondition = append(previousHealthCondition, *condition)
 	}
 	healthyConditionManager := conditions.NewConditionManager(v1alpha1.ResourcesHealthy, previousHealthCondition)
 
 	for _, resourceStatus := range resourceStatuses {
-		resourceHealthyCondition := conditions.ConditionList(resourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy)
+		resourceHealthyCondition := utils.ConditionList(resourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy)
 		if resourceHealthyCondition != nil {
 			healthyConditionManager.AddPositive(*resourceHealthyCondition)
 		}
@@ -90,7 +90,7 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 }
 
 func singleConditionTypeCondition(singleConditionType string, stampedObject *unstructured.Unstructured) metav1.Condition {
-	singleCondition := extractConditions(stampedObject).ConditionWithType(singleConditionType)
+	singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(singleConditionType)
 	if singleCondition != nil {
 		if singleCondition.Status == metav1.ConditionFalse || singleCondition.Status == metav1.ConditionTrue {
 			return conditions.SingleConditionMatchCondition(singleCondition.Status, singleConditionType, singleCondition.Message)
@@ -113,22 +113,6 @@ func multiMatchCondition(multiMatchRule *v1alpha1.MultiMatchHealthRule, stampedO
 	return conditions.MultiMatchNoMatchesCondition()
 }
 
-func extractConditions(stampedObject *unstructured.Unstructured) conditions.ConditionList {
-	var conditionList conditions.ConditionList
-	maybeStatus := stampedObject.UnstructuredContent()["status"]
-	if unstructuredStatus, statusOk := maybeStatus.(map[string]interface{}); statusOk {
-		maybeConditions := unstructuredStatus["conditions"]
-		maybeConditionsJSON, err := json.Marshal(maybeConditions)
-		if err == nil {
-			err = json.Unmarshal(maybeConditionsJSON, &conditionList)
-			if err != nil {
-				return conditions.ConditionList{}
-			}
-		}
-	}
-	return conditionList
-}
-
 func messageForMatchingFieldRequirement(requirement v1alpha1.HealthMatchFieldSelectorRequirement, stampedObject *unstructured.Unstructured) string {
 	evaluator := eval.EvaluatorBuilder()
 	fieldValue, fieldErr := evaluator.EvaluateJsonPath(requirement.Key, stampedObject.UnstructuredContent())
@@ -145,7 +129,7 @@ func messageForMatchingFieldRequirement(requirement v1alpha1.HealthMatchFieldSel
 
 func anyUnhealthyMatchCondition(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) *metav1.Condition {
 	for _, conditionRule := range rule.MatchConditions {
-		singleCondition := extractConditions(stampedObject).ConditionWithType(conditionRule.Type)
+		singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(conditionRule.Type)
 		if singleCondition != nil && singleCondition.Status == conditionRule.Status {
 			condition := conditions.MultiMatchResourcesHealthyCondition(metav1.ConditionFalse,
 				v1alpha1.MultiMatchConditionHealthyReason,
@@ -169,7 +153,7 @@ func allHealthyMatchCondition(rule v1alpha1.HealthMatchRule, stampedObject *unst
 	var firstReason string
 	var message string
 	for _, conditionRule := range rule.MatchConditions {
-		resourceCondition := extractConditions(stampedObject).ConditionWithType(conditionRule.Type)
+		resourceCondition := utils.ExtractConditions(stampedObject).ConditionWithType(conditionRule.Type)
 		if resourceCondition == nil || resourceCondition.Status != conditionRule.Status {
 			return nil
 		}

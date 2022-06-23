@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package conditions
+package utils
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"encoding/json"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
 
 type ConditionList []metav1.Condition
 
@@ -25,4 +30,20 @@ func (c ConditionList) ConditionWithType(conditionType string) *metav1.Condition
 		}
 	}
 	return nil
+}
+
+func ExtractConditions(stampedObject *unstructured.Unstructured) ConditionList {
+	var conditionList ConditionList
+	maybeStatus := stampedObject.UnstructuredContent()["status"]
+	if unstructuredStatus, statusOk := maybeStatus.(map[string]interface{}); statusOk {
+		maybeConditions := unstructuredStatus["conditions"]
+		maybeConditionsJSON, err := json.Marshal(maybeConditions)
+		if err == nil {
+			err = json.Unmarshal(maybeConditionsJSON, &conditionList)
+			if err != nil {
+				return ConditionList{}
+			}
+		}
+	}
+	return conditionList
 }
