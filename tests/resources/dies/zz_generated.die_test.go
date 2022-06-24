@@ -10,6 +10,24 @@ import (
 	testingx "testing"
 )
 
+func TestClusterRunTemplateDie_MissingMethods(t *testingx.T) {
+	die := ClusterRunTemplateBlank
+	ignore := []string{"TypeMeta", "ObjectMeta"}
+	diff := testing.DieFieldDiff(die).Delete(ignore...)
+	if diff.Len() != 0 {
+		t.Errorf("found missing fields for ClusterRunTemplateDie: %s", diff.List())
+	}
+}
+
+func TestRunTemplateSpecDie_MissingMethods(t *testingx.T) {
+	die := RunTemplateSpecBlank
+	ignore := []string{}
+	diff := testing.DieFieldDiff(die).Delete(ignore...)
+	if diff.Len() != 0 {
+		t.Errorf("found missing fields for RunTemplateSpecDie: %s", diff.List())
+	}
+}
+
 func TestRunnableDie_MissingMethods(t *testingx.T) {
 	die := RunnableBlank
 	ignore := []string{"TypeMeta", "ObjectMeta"}

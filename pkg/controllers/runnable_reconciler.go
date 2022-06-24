@@ -50,12 +50,12 @@ type RunnableReconciler struct {
 	Repo                    repository.Repository
 	Realizer                realizer.Realizer
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
-	conditionManager        conditions.ConditionManager
 	RepositoryBuilder       repository.RepositoryBuilder
 	ClientBuilder           realizerclient.ClientBuilder
 	RunnableCache           repository.RepoCache
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
+	conditionManager        conditions.ConditionManager
 }
 
 func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

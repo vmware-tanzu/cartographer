@@ -6,7 +6,7 @@
 package dies
 
 import (
-	v1 "dies.dev/apis/meta/v1"
+	"dies.dev/apis/meta/v1"
 	json "encoding/json"
 	fmtx "fmt"
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -15,6 +15,268 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+var ClusterRunTemplateBlank = (&ClusterRunTemplateDie{}).DieFeed(v1alpha1.ClusterRunTemplate{})
+
+type ClusterRunTemplateDie struct {
+	v1.FrozenObjectMeta
+	mutable bool
+	r       v1alpha1.ClusterRunTemplate
+}
+
+// DieImmutable returns a new die for the current die's state that is either mutable (`false`) or immutable (`true`).
+func (d *ClusterRunTemplateDie) DieImmutable(immutable bool) *ClusterRunTemplateDie {
+	if d.mutable == !immutable {
+		return d
+	}
+	d = d.DeepCopy()
+	d.mutable = !immutable
+	return d
+}
+
+// DieFeed returns a new die with the provided resource.
+func (d *ClusterRunTemplateDie) DieFeed(r v1alpha1.ClusterRunTemplate) *ClusterRunTemplateDie {
+	if d.mutable {
+		d.FrozenObjectMeta = v1.FreezeObjectMeta(r.ObjectMeta)
+		d.r = r
+		return d
+	}
+	return &ClusterRunTemplateDie{
+		FrozenObjectMeta: v1.FreezeObjectMeta(r.ObjectMeta),
+		mutable:          d.mutable,
+		r:                r,
+	}
+}
+
+// DieFeedPtr returns a new die with the provided resource pointer. If the resource is nil, the empty value is used instead.
+func (d *ClusterRunTemplateDie) DieFeedPtr(r *v1alpha1.ClusterRunTemplate) *ClusterRunTemplateDie {
+	if r == nil {
+		r = &v1alpha1.ClusterRunTemplate{}
+	}
+	return d.DieFeed(*r)
+}
+
+// DieFeedRawExtension returns the resource managed by the die as an raw extension.
+func (d *ClusterRunTemplateDie) DieFeedRawExtension(raw runtime.RawExtension) *ClusterRunTemplateDie {
+	b, _ := json.Marshal(raw)
+	r := v1alpha1.ClusterRunTemplate{}
+	_ = json.Unmarshal(b, &r)
+	return d.DieFeed(r)
+}
+
+// DieRelease returns the resource managed by the die.
+func (d *ClusterRunTemplateDie) DieRelease() v1alpha1.ClusterRunTemplate {
+	if d.mutable {
+		return d.r
+	}
+	return *d.r.DeepCopy()
+}
+
+// DieReleasePtr returns a pointer to the resource managed by the die.
+func (d *ClusterRunTemplateDie) DieReleasePtr() *v1alpha1.ClusterRunTemplate {
+	r := d.DieRelease()
+	return &r
+}
+
+// DieReleaseUnstructured returns the resource managed by the die as an unstructured object.
+func (d *ClusterRunTemplateDie) DieReleaseUnstructured() runtime.Unstructured {
+	r := d.DieReleasePtr()
+	u, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
+	return &unstructured.Unstructured{
+		Object: u,
+	}
+}
+
+// DieReleaseRawExtension returns the resource managed by the die as an raw extension.
+func (d *ClusterRunTemplateDie) DieReleaseRawExtension() runtime.RawExtension {
+	r := d.DieReleasePtr()
+	b, _ := json.Marshal(r)
+	raw := runtime.RawExtension{}
+	_ = json.Unmarshal(b, &raw)
+	return raw
+}
+
+// DieStamp returns a new die with the resource passed to the callback function. The resource is mutable.
+func (d *ClusterRunTemplateDie) DieStamp(fn func(r *v1alpha1.ClusterRunTemplate)) *ClusterRunTemplateDie {
+	r := d.DieRelease()
+	fn(&r)
+	return d.DieFeed(r)
+}
+
+// DeepCopy returns a new die with equivalent state. Useful for snapshotting a mutable die.
+func (d *ClusterRunTemplateDie) DeepCopy() *ClusterRunTemplateDie {
+	r := *d.r.DeepCopy()
+	return &ClusterRunTemplateDie{
+		FrozenObjectMeta: v1.FreezeObjectMeta(r.ObjectMeta),
+		mutable:          d.mutable,
+		r:                r,
+	}
+}
+
+var _ runtime.Object = (*ClusterRunTemplateDie)(nil)
+
+func (d *ClusterRunTemplateDie) DeepCopyObject() runtime.Object {
+	return d.r.DeepCopy()
+}
+
+func (d *ClusterRunTemplateDie) GetObjectKind() schema.ObjectKind {
+	r := d.DieRelease()
+	return r.GetObjectKind()
+}
+
+func (d *ClusterRunTemplateDie) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.r)
+}
+
+func (d *ClusterRunTemplateDie) UnmarshalJSON(b []byte) error {
+	if d == ClusterRunTemplateBlank {
+		return fmtx.Errorf("cannot unmarshal into the blank die, create a copy first")
+	}
+	if !d.mutable {
+		return fmtx.Errorf("cannot unmarshal into immutable dies, create a mutable version first")
+	}
+	r := &v1alpha1.ClusterRunTemplate{}
+	err := json.Unmarshal(b, r)
+	*d = *d.DieFeed(*r)
+	return err
+}
+
+// APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+func (d *ClusterRunTemplateDie) APIVersion(v string) *ClusterRunTemplateDie {
+	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {
+		r.APIVersion = v
+	})
+}
+
+// Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+func (d *ClusterRunTemplateDie) Kind(v string) *ClusterRunTemplateDie {
+	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {
+		r.Kind = v
+	})
+}
+
+// MetadataDie stamps the resource's ObjectMeta field with a mutable die.
+func (d *ClusterRunTemplateDie) MetadataDie(fn func(d *v1.ObjectMetaDie)) *ClusterRunTemplateDie {
+	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {
+		d := v1.ObjectMetaBlank.DieImmutable(false).DieFeed(r.ObjectMeta)
+		fn(d)
+		r.ObjectMeta = d.DieRelease()
+	})
+}
+
+// SpecDie stamps the resource's spec field with a mutable die.
+func (d *ClusterRunTemplateDie) SpecDie(fn func(d *RunTemplateSpecDie)) *ClusterRunTemplateDie {
+	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {
+		d := RunTemplateSpecBlank.DieImmutable(false).DieFeed(r.Spec)
+		fn(d)
+		r.Spec = d.DieRelease()
+	})
+}
+
+// Spec describes the run template. More info: https://cartographer.sh/docs/latest/reference/runnable/#clusterruntemplate
+func (d *ClusterRunTemplateDie) Spec(v v1alpha1.RunTemplateSpec) *ClusterRunTemplateDie {
+	return d.DieStamp(func(r *v1alpha1.ClusterRunTemplate) {
+		r.Spec = v
+	})
+}
+
+var RunTemplateSpecBlank = (&RunTemplateSpecDie{}).DieFeed(v1alpha1.RunTemplateSpec{})
+
+type RunTemplateSpecDie struct {
+	mutable bool
+	r       v1alpha1.RunTemplateSpec
+}
+
+// DieImmutable returns a new die for the current die's state that is either mutable (`false`) or immutable (`true`).
+func (d *RunTemplateSpecDie) DieImmutable(immutable bool) *RunTemplateSpecDie {
+	if d.mutable == !immutable {
+		return d
+	}
+	d = d.DeepCopy()
+	d.mutable = !immutable
+	return d
+}
+
+// DieFeed returns a new die with the provided resource.
+func (d *RunTemplateSpecDie) DieFeed(r v1alpha1.RunTemplateSpec) *RunTemplateSpecDie {
+	if d.mutable {
+		d.r = r
+		return d
+	}
+	return &RunTemplateSpecDie{
+		mutable: d.mutable,
+		r:       r,
+	}
+}
+
+// DieFeedPtr returns a new die with the provided resource pointer. If the resource is nil, the empty value is used instead.
+func (d *RunTemplateSpecDie) DieFeedPtr(r *v1alpha1.RunTemplateSpec) *RunTemplateSpecDie {
+	if r == nil {
+		r = &v1alpha1.RunTemplateSpec{}
+	}
+	return d.DieFeed(*r)
+}
+
+// DieFeedRawExtension returns the resource managed by the die as an raw extension.
+func (d *RunTemplateSpecDie) DieFeedRawExtension(raw runtime.RawExtension) *RunTemplateSpecDie {
+	b, _ := json.Marshal(raw)
+	r := v1alpha1.RunTemplateSpec{}
+	_ = json.Unmarshal(b, &r)
+	return d.DieFeed(r)
+}
+
+// DieRelease returns the resource managed by the die.
+func (d *RunTemplateSpecDie) DieRelease() v1alpha1.RunTemplateSpec {
+	if d.mutable {
+		return d.r
+	}
+	return *d.r.DeepCopy()
+}
+
+// DieReleasePtr returns a pointer to the resource managed by the die.
+func (d *RunTemplateSpecDie) DieReleasePtr() *v1alpha1.RunTemplateSpec {
+	r := d.DieRelease()
+	return &r
+}
+
+// DieReleaseRawExtension returns the resource managed by the die as an raw extension.
+func (d *RunTemplateSpecDie) DieReleaseRawExtension() runtime.RawExtension {
+	r := d.DieReleasePtr()
+	b, _ := json.Marshal(r)
+	raw := runtime.RawExtension{}
+	_ = json.Unmarshal(b, &raw)
+	return raw
+}
+
+// DieStamp returns a new die with the resource passed to the callback function. The resource is mutable.
+func (d *RunTemplateSpecDie) DieStamp(fn func(r *v1alpha1.RunTemplateSpec)) *RunTemplateSpecDie {
+	r := d.DieRelease()
+	fn(&r)
+	return d.DieFeed(r)
+}
+
+// DeepCopy returns a new die with equivalent state. Useful for snapshotting a mutable die.
+func (d *RunTemplateSpecDie) DeepCopy() *RunTemplateSpecDie {
+	r := *d.r.DeepCopy()
+	return &RunTemplateSpecDie{
+		mutable: d.mutable,
+		r:       r,
+	}
+}
+
+// Template defines a resource template for a Kubernetes Resource or Custom Resource which is applied to the server each time the blueprint is applied. Templates support simple value interpolation using the $()$ marker format. For more information, see: https://cartographer.sh/docs/latest/templating/ You should not define the namespace for the resource - it will automatically be created in the owner namespace. If the namespace is specified and is not the owner namespace, the resource will fail to be created.
+func (d *RunTemplateSpecDie) Template(v runtime.RawExtension) *RunTemplateSpecDie {
+	return d.DieStamp(func(r *v1alpha1.RunTemplateSpec) {
+		r.Template = v
+	})
+}
+
+// Outputs are a named list of jsonPaths that are used to gather results from the last successful object stamped by the template. E.g: 	my-output: .status.results[?(@.name=="IMAGE-DIGEST")].value Note: outputs are only filled on the runnable when the templated object has a Succeeded condition with a Status of True E.g:     status.conditions[?(@.type=="Succeeded")].status == True a runnable creating an object without a Succeeded condition (like a Job or ConfigMap) will never display an output
+func (d *RunTemplateSpecDie) Outputs(v map[string]string) *RunTemplateSpecDie {
+	return d.DieStamp(func(r *v1alpha1.RunTemplateSpec) {
+		r.Outputs = v
+	})
+}
 
 var RunnableBlank = (&RunnableDie{}).DieFeed(v1alpha1.Runnable{})
 

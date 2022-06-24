@@ -37,7 +37,7 @@ func (d *RunnableSpecDie) SetInputString(key string, value string) *RunnableSpec
 	})
 }
 
-// +die
+// +die:ignore={Outputs}
 type _ = v1alpha1.RunnableStatus
 
 func (d *RunnableStatusDie) ConditionsDie(conditions ...*v1.ConditionDie) *RunnableStatusDie {
@@ -48,8 +48,3 @@ func (d *RunnableStatusDie) ConditionsDie(conditions ...*v1.ConditionDie) *Runna
 		}
 	})
 }
-
-//var (
-//	RunnableRunTemplateReadyConditionBlank = v1.ConditionBlank.Type(v1alpha1.RunTemplateReady)
-//	RunnableReadyConditionBlank            = v1.ConditionBlank.Type(v1alpha1.RunnableReady)
-//)

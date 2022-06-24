@@ -17,7 +17,6 @@ package controllers_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	v1 "dies.dev/apis/core/v1"
@@ -29,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/vmware-labs/reconciler-runtime/reconcilers"
 	rtesting "github.com/vmware-labs/reconciler-runtime/testing"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,7 +61,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 )
 
-func createTestableReconciler(controllerClient, ownerClient client.Client, l logr.Logger) reconcile.Reconciler {
+//func createTestableReconciler(controllerClient, ownerClient client.Client, l logr.Logger) reconcile.Reconciler {
+func createTestableReconciler(controllerClient client.Client, l logr.Logger) reconcile.Reconciler {
 	controllerRepo := repository.NewRepository(controllerClient, repository.NewCache(l.WithName("cache-logger")))
 	dependencyTracker := dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
@@ -69,19 +70,20 @@ func createTestableReconciler(controllerClient, ownerClient client.Client, l log
 	)
 
 	clientBuilder := func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
-		var discoveryClient discovery.DiscoveryInterface
-		if needDiscovery {
-			discoveryClient, err := discovery.NewDiscoveryClientForConfig(ownerClient.)
-		}
-		return ownerClient, discoveryClient, nil
+		//var discoveryClient discovery.DiscoveryInterface
+		//if needDiscovery {
+		//	discoveryClient, err := discovery.NewDiscoveryClientForConfig(ownerClient.)
+		//}
+		return nil, nil, nil
 	}
-
 
 	return &controllers.RunnableReconciler{
 		Repo:                    controllerRepo,
 		DependencyTracker:       dependencyTracker,
 		ConditionManagerBuilder: conditions.NewConditionManager,
-		ClientBuilder: clientBuilder
+		ClientBuilder:           clientBuilder,
+		RepositoryBuilder:       repository.NewRepository,
+		Realizer:                runnable.NewRealizer(),
 	}
 }
 
@@ -137,8 +139,7 @@ func TestMissingServiceAccount(t *testing.T) {
 
 	rts := rtesting.ReconcilerTests{
 		"default service account missing": {
-			Request:           runnableRequest,
-			AdditionalConfigs: nil,
+			Request: runnableRequest,
 			GivenObjects: []client.Object{
 				baseRunnable,
 			},
@@ -275,7 +276,9 @@ func TestMissingServiceAccount(t *testing.T) {
 	})
 }
 
-func TestRando(t *testing.T) {
+// todo what happens when the ClientBuilder errors out
+
+func TestTemplateReads(t *testing.T) {
 	//t.SkipNow()
 	runnableNamespace := "test-ns"
 	runnableName := "my-runnable"
@@ -303,6 +306,16 @@ func TestRando(t *testing.T) {
 		}).
 		SecretsDie(v1.ObjectReferenceBlank.Name(secretName))
 
+	template := ""
+
+	baseRunTemplate := dies.ClusterRunTemplateBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.Name("my-run-template")
+		})
+	//SpecDie(func(d *dies.RunTemplateSpecDie) {
+	//	d.Template()
+	//})
+
 	baseRunnable := dies.RunnableBlank.
 		MetadataDie(func(d *diesv1.ObjectMetaDie) {
 			d.
@@ -328,13 +341,13 @@ func TestRando(t *testing.T) {
 	_ = v1alpha1.AddToScheme(scheme)
 
 	rts := rtesting.ReconcilerTests{
-		"blah blah": {
-			Request:           runnableRequest,
-			AdditionalConfigs: nil,
+		"template contains no data": {
+			Request: runnableRequest,
 			GivenObjects: []client.Object{
 				serviceAccount,
 				secret,
 				baseRunnable,
+				baseRunTemplate,
 			},
 			ExpectStatusUpdates: []client.Object{
 				baseRunnable.
