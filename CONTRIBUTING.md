@@ -172,7 +172,8 @@ and can download them with:
 
 ```
 K8S_VERSION=1.19.2
-curl -sSLo envtest-bins.tar.gz "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-${K8S_VERSION}-$(go env GOOS)-$(go env GOARCH).tar.gz"
+if [[ "$(go env GOARCH)" == "arm64" ]] && [[ "$(go env GOOS)" == "darwin" ]]; then ENV_TEST_ARCH="amd64"; else ENV_TEST_ARCH="$(go env GOARCH)"; fi # use Rosetta on M1 macs
+curl -sSLo envtest-bins.tar.gz "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-${K8S_VERSION}-$(go env GOOS)-${ENV_TEST_ARCH}.tar.gz"
 ```
 
 **Note:** `envTest` cannot run pods, so is limited, but is typically all that's needed to test controllers and webhooks.
@@ -247,13 +248,13 @@ the necessary bits.
 Although `2` is automated, it's still possible to do the procedure manually.
 
 ### Automatic release
-1. Check the previous release - https://github.com/vmware-tanzu/cartographer/releases
+1. Check the previous release - [https://github.com/vmware-tanzu/cartographer/releases](https://github.com/vmware-tanzu/cartographer/releases)
 2. Create a tag for the new release
 ```bash
 git tag v0.0.x # or v0.0.x-rc.n
 git push origin <tag-name>
 ```
-3. Ensure workflow has kicked off - https://github.com/vmware-tanzu/cartographer/actions
+3. Ensure workflow has kicked off - [https://github.com/vmware-tanzu/cartographer/actions](https://github.com/vmware-tanzu/cartographer/actions)
 
 
 ### Manually building and pushing release assets to GitHub

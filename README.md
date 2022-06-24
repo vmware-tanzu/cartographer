@@ -1,7 +1,10 @@
 # Cartographer
 
-<img src="site/themes/template/static/img/cartographer-logo.png">
-<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="site/themes/template/static/img/passing.svg"></a>
+<img src="assets/cartographer-logo.png">
+<a href="https://bestpractices.coreinfrastructure.org/en/projects/5329"> <img src="assets/passing.svg"></a> 
+
+![Validations](https://github.com/vmware-tanzu/cartographer/actions/workflows/validation.yaml/badge.svg?branch=main)
+![Upgrade Test](https://github.com/vmware-tanzu/cartographer/actions/workflows/upgrade-test.yaml/badge.svg?branch=main)
 
 Cartographer is a Kubernetes-native [Choreographer] providing higher modularity and scalability for the software supply chain.
 
@@ -36,7 +39,7 @@ kubectl apply -f https://github.com/vmware-tanzu/cartographer/releases/latest/do
 ```
 And you're done!
 
-<img src="site/themes/template/static/img/Carto-install-yaml-v2.gif">
+<img src="assets/Carto-install-yaml-v2.gif">
 
 ## Documentation
 
@@ -67,12 +70,12 @@ If you have questions or want to get the latest project news, you can connect wi
   and calendars
 - Join our weekly community meetings where we share the latest project news, demos, answer questions, among other
   topics:
-    - Every Wednesday @ 8:00 AM PT on [Zoom](https://VMware.zoom.us/j/93284305373?pwd=UnJKL0ZaN0pqeXVMczk1WThOSUp6QT09)
+    - Every Wednesday @ 8:00 AM PT/11:00AM ET on [Zoom](https://VMware.zoom.us/j/93284305373?pwd=UnJKL0ZaN0pqeXVMczk1WThOSUp6QT09)
     - Previous
-      meetings: [[notes](https://docs.google.com/document/d/1HwsjzxpsNI0l1sVAUia4A65lhrkfSF-_XfKoZUHI120/edit?usp=sharing) | [recordings](https://www.youtube.com/playlist?list=PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8)]
+      meetings: [[notes](https://hackmd.io/g5EjHok9SiKqlwV846QlvA?view) | [recordings](https://www.youtube.com/playlist?list=PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8)]
 - Do you have ideas to improve the project? Explore the [RFC process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) we currently follow and join the weekly Office Hours meeting where the maintainers team discuss RFCs  with users and contributors:
     - Every Monday @ 2:00PM ET on [Zoom](https://VMware.zoom.us/j/94592229106?pwd=eEtpekxsSERoOVNlemJWZGJTK3hvdz09)
-    - Previous meetings: [[notes](https://docs.google.com/document/d/1ImIh7qBrOLOvGMCzY6AURhE-a68IE9_EbCf0g5s18vc/edit?usp=sharing) | [recordings](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)]  
+    - Previous meetings: [[notes](https://hackmd.io/g5EjHok9SiKqlwV846QlvA?view) | [recordings](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)]  
 ## Contributing
 
 Pull Requests and feedback on issues are very welcome! See

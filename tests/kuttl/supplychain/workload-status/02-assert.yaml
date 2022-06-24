@@ -50,6 +50,9 @@ status:
     - type: ResourcesSubmitted
       status: "True"
       reason: ResourceSubmissionComplete
+    - type: ResourcesHealthy
+      status: "True"
+      reason: HealthyConditionRule
     - type: Ready
       status: "True"
       reason: Ready
@@ -92,6 +95,16 @@ status:
                         ff: bar....................................................................................................
                         gg: bar........................................................................you can see me
           digest: sha256:868a6f6b23762ce221f64bee95aacb0d431b6f0900bb2d23cce6f1f02224a56a
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: OutputsAvailable
+        - type: Ready
+          status: "True"
+          reason: Ready
     - name: source-provider-second
       stampedRef:
         apiVersion: v1
@@ -110,6 +123,16 @@ status:
           preview: |
             knitting
           digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
+        - type: Ready
+          status: "True"
+          reason: Ready
     - name: built-image-provider
       stampedRef:
         apiVersion: v1
@@ -126,6 +149,16 @@ status:
           preview: |
             knitting
           digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
+        - type: Ready
+          status: "True"
+          reason: Ready
     - name: config
       stampedRef:
         apiVersion: v1
@@ -142,6 +175,17 @@ status:
           preview: |
             knitting
           digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: MatchedField
+          message: "field value: knitting, message: example-config-configmap"
+        - type: Ready
+          status: "True"
+          reason: Ready
     - name: config-2
       stampedRef:
         apiVersion: v1
@@ -153,3 +197,14 @@ status:
         name: example-config---workload-status-2
       inputs:
         - name: config
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
+        - type: Ready
+          status: "True"
+          reason: Ready
+

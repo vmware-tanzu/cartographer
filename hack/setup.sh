@@ -20,7 +20,7 @@ set -o pipefail
 # shellcheck disable=SC2155
 readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
-readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
+readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.21.1}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
@@ -32,10 +32,9 @@ readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
 readonly CERT_MANAGER_VERSION=1.5.3
-readonly KAPP_CONTROLLER_VERSION=0.32.0
+readonly KAPP_CONTROLLER_VERSION=0.36.1
 readonly KNATIVE_SERVING_VERSION=0.26.0
 readonly KPACK_VERSION=0.5.1
-readonly SECRETGEN_CONTROLLER_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.30.0
 readonly GIT_SERVE_VERSION=0.0.5
@@ -55,7 +54,6 @@ main() {
                         start_local_cluster
                         install_cert_manager
                         install_kapp_controller
-                        install_secretgen_controller
                         ;;
 
                 cartographer)
@@ -125,8 +123,7 @@ install_cartographer() {
                 ./hack/release.sh
 
         ytt --ignore-unknown-comments \
-                --data-value registry="$REGISTRY" \
-                -f ./hack/registry-auth |
+                --data-value registry="$REGISTRY" |
                 kapp deploy -a cartographer --yes \
                         -f ./release \
                         -f-
@@ -178,17 +175,6 @@ display_vars() {
 start_registry() {
         log "starting registry"
 
-        echo -e "\n\nregistry credentials:\n
-        username: admin
-        password: admin
-        "
-
-        env DOCKER_USERNAME=admin \
-                DOCKER_PASSWORD=admin \
-                DOCKER_REGISTRY="$REGISTRY" \
-                DOCKER_CONFIG="$DOCKER_CONFIG" \
-                "$DIR/docker-login.sh"
-
         docker container inspect $REGISTRY_CONTAINER_NAME &>/dev/null && {
                 echo "registry already exists"
                 return
@@ -196,10 +182,6 @@ start_registry() {
 
         docker run \
                 --detach \
-                -v "$DIR/registry-auth:/auth" \
-                -e "REGISTRY_AUTH=htpasswd" \
-                -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
-                -e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
                 --name "$REGISTRY_CONTAINER_NAME" \
                 --publish "${REGISTRY_PORT}":5000 \
                 registry:2
@@ -280,13 +262,6 @@ install_kapp_controller() {
                 kapp deploy --yes -a kapp-controller -f-
 }
 
-install_secretgen_controller() {
-        ytt --ignore-unknown-comments \
-                -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
-                -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v$SECRETGEN_CONTROLLER_VERSION/release.yml |
-                kapp deploy --yes -a secretgen-controller -f-
-}
-
 install_knative_serving() {
         ytt --ignore-unknown-comments \
                 -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml \
@@ -313,15 +288,11 @@ setup_example_sc() {
                 -f "$DIR/../examples/shared" \
                 -f "$DIR/../examples/$test_name/values.yaml" \
                 --data-value registry.server="$REGISTRY" \
-                --data-value registry.username=admin \
-                --data-value registry.password=admin \
                 --data-value image_prefix="$REGISTRY/example-$test_name-")
         kapp deploy --yes -a "example-$test_name" \
             -f <(ytt --ignore-unknown-comments \
                 -f "$DIR/../examples/$test_name" \
                 --data-value registry.server="$REGISTRY" \
-                --data-value registry.username=admin \
-                --data-value registry.password=admin \
                 --data-value workload_name="$test_name" \
                 --data-value image_prefix="$REGISTRY/example-$test_name-")
 }
@@ -471,19 +442,15 @@ setup_source_to_gitops() {
           -f "$DIR/../examples/shared" \
           -f "$DIR/../examples/$test_name/values.yaml" \
           --data-value registry.server="$REGISTRY" \
-          --data-value registry.username=admin \
-          --data-value registry.password=admin \
           --data-value image_prefix="$REGISTRY/example-$test_name-")
 
       kapp deploy --yes -a "example-$test_name" \
         -f <(ytt --ignore-unknown-comments \
           -f "$DIR/../examples/$test_name" \
           --data-value registry.server="$REGISTRY" \
-          --data-value registry.username=admin \
-          --data-value registry.password=admin \
           --data-value workload_name="$test_name" \
           --data-value image_prefix="$REGISTRY/example-$test_name-" \
-          --data-value source_repo.url="https://github.com/kontinue/hello-world" \
+          --data-value source_repo.url="https://github.com/carto-labs/hello-world" \
           --data-value source_repo.branch="main" \
           --data-value git_repository="$GITOPS_REPO" \
           --data-value git_branch="$GITOPS_BRANCH" \

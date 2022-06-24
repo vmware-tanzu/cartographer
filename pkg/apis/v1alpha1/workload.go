@@ -23,23 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	WorkloadReady             = "Ready"
-	WorkloadSupplyChainReady  = "SupplyChainReady"
-	WorkloadResourceSubmitted = "ResourcesSubmitted"
-)
-
-const (
-	ReadySupplyChainReason                               = "Ready"
-	WorkloadLabelsMissingSupplyChainReason               = "WorkloadLabelsMissing"
-	NotFoundSupplyChainReadyReason                       = "SupplyChainNotFound"
-	MultipleMatchesSupplyChainReadyReason                = "MultipleSupplyChainMatches"
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
-	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
-	ResolveTemplateOptionsErrorResourcesSubmittedReason  = "ResolveTemplateOptionsError"
-	TemplateOptionsMatchErrorResourcesSubmittedReason    = "TemplateOptionsMatchError"
-)
-
 // ValidWorkloadPaths Note: this needs to be updated anytime the spec changes
 var ValidWorkloadPaths = map[string]bool{
 	"spec.source":                true,
@@ -161,7 +144,7 @@ type WorkloadStatus struct {
 
 	// Resources contain references to the objects created by the Supply Chain and the templates used to create them.
 	// It also contains Inputs and Outputs that were passed between the templates as the Supply Chain was processed.
-	Resources []RealizedResource `json:"resources,omitempty"`
+	Resources []ResourceStatus `json:"resources,omitempty"`
 }
 
 // +kubebuilder:object:root=true

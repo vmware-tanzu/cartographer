@@ -60,6 +60,9 @@ TEKTON_VERSION=0.30.0 kubectl apply -f https://storage.googleapis.com/tekton-rel
 kapp deploy --yes -a tekton-git-cli -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
 ```
 
+### Resource Requirements
+Read [here](../README.md#resource-requirements)
+
 ## Running the example in this directory
 
 ### Location of files

@@ -508,7 +508,7 @@ var _ = Describe("DeliverableReconciler", func() {
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Reason":  Equal("ConditionNotMet"),
-								"Message": ContainSubstring(`resource [deployer] condition not met: failed to evaluate succeededCondition.Key [status.conditions[?(@.type=="Succeeded")].status]: evaluate: failed to find results: conditions is not found`),
+								"Message": ContainSubstring(`resource [deployer] condition not met: failed to evaluate succeededCondition.Key [status.conditions[?(@.type=="Succeeded")].status]: jsonpath returned empty list: status.conditions[?(@.type=="Succeeded")].status`),
 							}),
 						}))
 					})

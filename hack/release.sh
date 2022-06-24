@@ -21,7 +21,7 @@ ROOT=$(cd "$(dirname $0)"/.. && pwd)
 readonly ROOT
 
 readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
-readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5000"}
+readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5001"}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
 readonly YTT_VERSION=0.39.0
@@ -74,6 +74,7 @@ generate_release() {
         mkdir -p ./release
         ytt --ignore-unknown-comments -f ./config \
                 -f ./hack/overlays/webhook-configuration.yaml \
+                -f ./hack/overlays/component-labels.yaml \
                 --data-value version=$RELEASE_VERSION |
                 KO_DOCKER_REPO=$REGISTRY ko resolve -B -f- > \
                         ./release/cartographer.yaml

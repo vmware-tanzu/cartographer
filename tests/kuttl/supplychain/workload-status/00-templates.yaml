@@ -65,6 +65,8 @@ spec:
       player_loves: "knitting"
   urlPath: data.player_initial_lives
   revisionPath: data.player_loves
+  healthRule:
+    alwaysHealthy: {}
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -81,6 +83,8 @@ spec:
       player_current_lives: $(sources.solo-source-provider.url)$
       some_other_info: $(source.revision)$
   imagePath: data.some_other_info
+  healthRule:
+    alwaysHealthy: {}
 
 ---
 apiVersion: carto.run/v1alpha1
@@ -96,6 +100,18 @@ spec:
     data:
       favorite_color: $(image)$
   configPath: data.favorite_color
+  healthRule:
+    multiMatch:
+      healthy:
+        matchFields:
+          - key: .data.favorite_color
+            operator: Exists
+            messagePath: .metadata.name
+      unhealthy:
+        matchFields:
+          - key: .data.kill_switch
+            operator: Exists
+            messagePath: .metadata.name
 
 ---
 apiVersion: carto.run/v1alpha1

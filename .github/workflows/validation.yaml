@@ -19,6 +19,9 @@ on:
   pull_request:
     branches: [main]
 
+  schedule: # daily run
+    - cron: '0 0 * * *'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,7 +31,7 @@ jobs:
         with: {fetch-depth: 0}
 
       - name: set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with: {go-version: '^1.18'}
 
       - name: setup carvel tooling binaries
@@ -41,6 +44,3 @@ jobs:
         uses: ./.github/actions/create-and-test-release
         with:
           version: v0.0.0-dev
-          docker-registry: projectcartographer
-          docker-username: projectcartographer
-          docker-password: ${{ secrets.DOCKER_PASSWORD }}

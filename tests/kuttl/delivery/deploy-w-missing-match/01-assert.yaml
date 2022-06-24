@@ -25,7 +25,10 @@ status:
     - type: ResourcesSubmitted
       status: Unknown
       reason: ConditionNotMet
-      message: "resource [deployer] condition not met: could not find value on output [spec.value.some-missing-key]: evaluate: failed to find results: some-missing-key is not found"
+      message: "resource [deployer] condition not met: could not find value on output [spec.value.some-missing-key]: jsonpath returned empty list: spec.value.some-missing-key"
+    - type: ResourcesHealthy
+      status: "Unknown"
+      reason: HealthyConditionRule
     - type: Ready
       status: Unknown
       reason: ConditionNotMet

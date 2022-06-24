@@ -175,5 +175,41 @@ func (t *TemplateSpec) validate() error {
 			return fmt.Errorf("invalid template: template should not set metadata.namespace on the child object")
 		}
 	}
+	if t.HealthRule != nil {
+		return t.HealthRule.validate()
+	}
+	return nil
+}
+
+func (r *HealthRule) validate() error {
+	nRules := 0
+	if r.AlwaysHealthy != nil {
+		nRules++
+	}
+	if r.SingleConditionType != "" {
+		nRules++
+	}
+	if r.MultiMatch != nil {
+		nRules++
+	}
+	if nRules == 0 {
+		return fmt.Errorf("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found neither")
+	}
+	if nRules > 1 {
+		return fmt.Errorf("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found multiple")
+	}
+	if r.MultiMatch != nil {
+		return r.MultiMatch.validate()
+	}
+	return nil
+}
+
+func (m *MultiMatchHealthRule) validate() error {
+	if len(m.Unhealthy.MatchConditions) == 0 && len(m.Unhealthy.MatchFields) == 0 {
+		return fmt.Errorf("invalid multi match health rule: unhealthy rule has no matchFields or matchConditions")
+	}
+	if len(m.Healthy.MatchConditions) == 0 && len(m.Healthy.MatchFields) == 0 {
+		return fmt.Errorf("invalid multi match health rule: healthy rule has no matchFields or matchConditions")
+	}
 	return nil
 }

@@ -20,7 +20,7 @@ set -o pipefail
 # shellcheck disable=SC2155
 readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
-readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
+readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
@@ -79,7 +79,6 @@ install_cartographer_from_current_commit() {
 
   ytt --ignore-unknown-comments \
     --data-value registry="$REGISTRY" \
-    -f "$DIR/registry-auth" \
     -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" \
     -f release/cartographer.yaml |
     kapp deploy --yes -a cartographer -f-
@@ -112,7 +111,7 @@ setup_source_repo() {
   pushd "$source_dir"
     git clone "http://localhost:$port/$SOURCE_REPO.git"
     pushd "$SOURCE_REPO"
-      git pull https://github.com/kontinue/hello-world.git
+      git pull https://github.com/carto-labs/hello-world.git
       if [[ $(git branch --show-current) != "$SOURCE_BRANCH" ]]; then
         git checkout -b $SOURCE_BRANCH
       fi
