@@ -133,8 +133,15 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		r.conditionManager.AddPositive(conditions.RunTemplateReadyCondition())
 	}
 
+	var stampedObjectStatusPresent = false
 	var trackingError error
+
 	if stampedObject != nil {
+		stampedCondition := utils.ExtractConditions(stampedObject).ConditionWithType("Succeeded")
+		if stampedCondition != nil {
+			r.conditionManager.AddPositive(conditions.StampedObjectConditionKnown(stampedCondition))
+			stampedObjectStatusPresent = true
+		}
 		trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object", "object", stampedObject)
@@ -142,6 +149,9 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object", "object", stampedObject)
 		}
+	}
+	if !stampedObjectStatusPresent {
+		r.conditionManager.AddPositive(conditions.StampedObjectConditionUnknown())
 	}
 
 	return r.completeReconciliation(ctx, runnable, outputs, err)
