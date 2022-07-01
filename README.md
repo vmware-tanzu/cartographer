@@ -68,12 +68,7 @@ If you have questions or want to get the latest project news, you can connect wi
   the [#cartographer](https://kubernetes.slack.com/archives/C02HKPSEKV1) channel
 - Subscribe to the [Cartographer](https://groups.google.com/g/cartographeross) Google Group for access to discussions
   and calendars
-- Join our weekly community meetings where we share the latest project news, demos, answer questions, among other
-  topics:
-    - Every Wednesday @ 8:00 AM PT/11:00AM ET on [Zoom](https://VMware.zoom.us/j/93284305373?pwd=UnJKL0ZaN0pqeXVMczk1WThOSUp6QT09)
-    - Previous
-      meetings: [[notes](https://hackmd.io/g5EjHok9SiKqlwV846QlvA?view) | [recordings](https://www.youtube.com/playlist?list=PL7bmigfV0EqSZA5OLwrqKsAYXA1GqPtu8)]
-- Do you have ideas to improve the project? Explore the [RFC process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) we currently follow and join the weekly Office Hours meeting where the maintainers team discuss RFCs  with users and contributors:
+- Join our weekly Office Hours meetings where we share the latest project news, answer questions and discuss the ideas to keep improving the project following the [RFC process](https://github.com/vmware-tanzu/cartographer/blob/main/rfc/README.md) :
     - Every Monday @ 2:00PM ET on [Zoom](https://VMware.zoom.us/j/94592229106?pwd=eEtpekxsSERoOVNlemJWZGJTK3hvdz09)
     - Previous meetings: [[notes](https://hackmd.io/g5EjHok9SiKqlwV846QlvA?view) | [recordings](https://youtube.com/playlist?list=PL7bmigfV0EqSkIcCBTr3nQq04hh_EFK2a)]  
 ## Contributing
