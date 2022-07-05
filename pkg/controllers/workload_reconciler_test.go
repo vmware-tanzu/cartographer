@@ -53,10 +53,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("WorkloadReconciler", func() {
+var _ = Describe("OwnerReconciler", func() {
 	var (
 		out                             *Buffer
-		reconciler                      controllers.WorkloadReconciler
+		reconciler                      controllers.OwnerReconciler
 		ctx                             context.Context
 		req                             ctrl.Request
 		repo                            *repositoryfakes.FakeRepository
@@ -114,7 +114,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			return builtResourceRealizer, nil
 		}
 
-		reconciler = controllers.WorkloadReconciler{
+		reconciler = controllers.OwnerReconciler{
 			Repo:                    repo,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,

@@ -79,7 +79,7 @@ func (cmd *Command) Execute(ctx context.Context) error {
 }
 
 func registerControllers(mgr manager.Manager) error {
-	if err := (&controllers.WorkloadReconciler{}).SetupWithManager(mgr); err != nil {
+	if err := (&controllers.OwnerReconciler{}).SetupWithManager(mgr, "workload"); err != nil {
 		return fmt.Errorf("failed to register workload controller: %w", err)
 	}
 
@@ -87,9 +87,12 @@ func registerControllers(mgr manager.Manager) error {
 		return fmt.Errorf("failed to register supply chain controller: %w", err)
 	}
 
-	if err := (&controllers.DeliverableReconciler{}).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("failed to register deliverable controller: %w", err)
+	if err := (&controllers.OwnerReconciler{}).SetupWithManager(mgr, "deliverable"); err != nil {
+		return fmt.Errorf("failed to register workload controller: %w", err)
 	}
+	//if err := (&controllers.DeliverableReconciler{}).SetupWithManager(mgr); err != nil {
+	//	return fmt.Errorf("failed to register deliverable controller: %w", err)
+	//}
 
 	if err := (&controllers.DeliveryReconiler{}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("failed to register delivery controller: %w", err)
