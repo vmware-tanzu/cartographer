@@ -413,6 +413,7 @@ func (r *repository) deleteObject(ctx context.Context, unstructuredObj *unstruct
 	return err
 }
 
+// TODO this should be in the OwnerBuilder(Fetcher, whatever)
 func (r *repository) GetWorkload(ctx context.Context, name string, namespace string) (*v1alpha1.Workload, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetWorkload")

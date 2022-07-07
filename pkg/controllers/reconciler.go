@@ -48,14 +48,37 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
+type ServiceAccountName string
+
+type OwnerModel interface {
+	ConditionManager() conditions.ConditionManager
+	ResourceStatuses() statuses.ResourceStatuses
+	ServiceAccountName() *ServiceAccountName
+	Commit(blueprintRef v1alpha1.ObjectReference)
+}
+
+type OwnerBuilder interface {
+	GVK() metav1.GroupVersionKind
+	Get(ctx context.Context, name string, namespace string) (OwnerModel, error)
+}
+
+type BlueprintModel interface {
+	ServiceAccountRef()
+	Resources()
+}
+
+type BlueprintGetError error
+
+type BlueprintSelector interface {
+	Select() (BlueprintModel, BlueprintGetError)
+}
+
 type OwnerReconciler struct {
-	ownerTypeName           string
-	ownerType               interface{}
+	OwnerBuilder            OwnerBuilder
+	BlueprintSelector        BlueprintSelector
 	Repo                    repository.Repository
-	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                realizer.Realizer
-	conditionManager        conditions.ConditionManager
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
 }
@@ -66,9 +89,10 @@ func (r *OwnerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	defer log.Info("finished")
 
 	log = log.
-		WithValues("owner", req.NamespacedName).
-		WithValues(r.ownerTypeName, req.NamespacedName) // legacy support
+		WithValues("owner", req.NamespacedName)
 	ctx = logr.NewContext(ctx, log)
+
+	owner := r.OwnerBuilder.Get(ctx, req.Name, req.Namespace)
 
 	workload, err := r.Repo.GetWorkload(ctx, req.Name, req.Namespace)
 	if err != nil {
@@ -87,6 +111,10 @@ func (r *OwnerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
+
+
+	blueprint, err  := r.BlueprintSelector.Select(owner)
+	switch(err)
 
 	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
