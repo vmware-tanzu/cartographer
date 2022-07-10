@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -204,7 +205,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "fred-resource",
-						TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						TemplateRef: v2alpha1.SupplyChainTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Name: "proper-template-bob",
 						},

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -321,7 +322,7 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(logger.DEBUG).Info("GetSupplyChainsForWorkload")
 
-	list := &v1alpha1.ClusterSupplyChainList{}
+	list := &v2alpha1.ClusterSupplyChainList{}
 	if err := r.cl.List(ctx, list); err != nil {
 		log.Error(err, "unable to list supply chains from api server")
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)

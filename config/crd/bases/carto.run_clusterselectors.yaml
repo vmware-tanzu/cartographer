@@ -1,0 +1,109 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: clusterselectors.carto.run
+spec:
+  group: carto.run
+  names:
+    kind: ClusterSelector
+    listKind: ClusterSelectorList
+    plural: clusterselectors
+    shortNames:
+    - cs
+    singular: clusterselector
+  scope: Cluster
+  versions:
+  - name: v2alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterSelector represents a mechanism to bind a Blueprint to
+          an OwnerObject
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                type: string
+              blueprintRef:
+                properties:
+                  name:
+                    description: 'Name of the blueprint Only one of Name and Options
+                      can be specified.  // todo: options'
+                    minLength: 1
+                    type: string
+                type: object
+              kind:
+                description: 'Kind is a string value representing the REST resource
+                  this object represents. Servers may infer this from the endpoint
+                  the client submits requests to. Cannot be updated. In CamelCase.
+                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                type: string
+              paramMap:
+                items:
+                  properties:
+                    defaultValue:
+                      description: DefaultValue makes this parameter optional if already
+                        optional, overrides the default value
+                      type: string
+                    name:
+                      type: string
+                    ownerPath:
+                      description: OwnerPath defines where in the Owner object this
+                        parameter is sourced from Follow JSONPath Syntax
+                      type: string
+                    value:
+                      description: 'Value set''s the value. You cannot map an ownerObject
+                        value at the same time Using this field lets you configure
+                        blueprints on a per "Mapping" basis. This is the best place
+                        for operator configuration to live. Todo: Validate this'
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            required:
+            - blueprintRef
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

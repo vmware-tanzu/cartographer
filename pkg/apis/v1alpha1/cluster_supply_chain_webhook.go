@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -159,7 +160,7 @@ func (c *ClusterSupplyChain) validateResourceRefs(references []ResourceReference
 	return nil
 }
 
-func validateSupplyChainTemplateRef(ref SupplyChainTemplateReference) error {
+func validateSupplyChainTemplateRef(ref v2alpha1.SupplyChainTemplateReference) error {
 	if ref.Name != "" && len(ref.Options) > 0 {
 		return fmt.Errorf("exactly one of templateRef.Name or templateRef.Options must be specified, found both")
 	}

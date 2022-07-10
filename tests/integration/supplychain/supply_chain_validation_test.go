@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -50,7 +51,7 @@ var _ = Describe("SupplyChainValidation", func() {
 		result.Spec.Resources = []v1alpha1.SupplyChainResource{
 			{
 				Name: "funky-resource",
-				TemplateRef: v1alpha1.SupplyChainTemplateReference{
+				TemplateRef: v2alpha1.SupplyChainTemplateReference{
 					Kind: templateKind,
 					Name: templateName,
 				},
@@ -98,7 +99,7 @@ var _ = Describe("SupplyChainValidation", func() {
 				supplyChain.Spec.Resources = []v1alpha1.SupplyChainResource{
 					{
 						Name: "source-provider",
-						TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						TemplateRef: v2alpha1.SupplyChainTemplateReference{
 							Kind: "ClusterSourceTemplate",
 							Options: []v1alpha1.TemplateOption{
 								{

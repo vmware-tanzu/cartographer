@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -923,7 +924,7 @@ spec:
 			})
 
 			It("gets the template successfully", func() {
-				templateRef := v1alpha1.SupplyChainTemplateReference{
+				templateRef := v2alpha1.SupplyChainTemplateReference{
 					Kind: "ClusterSourceTemplate",
 					Name: "some-name",
 				}

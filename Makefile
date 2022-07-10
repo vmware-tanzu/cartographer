@@ -26,14 +26,20 @@ pkg/apis/v1alpha1/zz_generated.deepcopy.go: $(crd_sources)
                 object \
                 paths=./pkg/apis/v1alpha1
 
+pkg/apis/v2alpha1/zz_generated.deepcopy.go: $(crd_sources)
+	$(CONTROLLER_GEN) \
+                object \
+                paths=./pkg/apis/v2alpha1
+
 config/crd/bases/*.yaml &: $(crd_sources)
 	$(CONTROLLER_GEN) \
 		crd \
-		paths=./pkg/apis/v1alpha1 \
+		paths=./pkg/apis/... \
 		output:crd:artifacts:config=config/crd/bases
 	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt \
 		config/crd/bases
+
 
 config/webhook/manifests.yaml: $(crd_sources)
 	$(CONTROLLER_GEN) \
@@ -45,7 +51,7 @@ config/webhook/manifests.yaml: $(crd_sources)
 		config/webhook/manifests.yaml
 
 .PHONY: gen-objects
-gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go
+gen-objects: pkg/apis/v1alpha1/zz_generated.deepcopy.go pkg/apis/v2alpha1/zz_generated.deepcopy.go
 
 .PHONY: gen-manifests
 gen-manifests: config/crd/bases/*.yaml config/webhook/manifests.yaml

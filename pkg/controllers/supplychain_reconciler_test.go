@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -203,14 +204,14 @@ var _ = Describe("SupplyChainReconciler", func() {
 			sc.Spec.Resources = []v1alpha1.SupplyChainResource{
 				{
 					Name: "first-resource",
-					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					TemplateRef: v2alpha1.SupplyChainTemplateReference{
 						Kind: "ClusterSourceTemplate",
 						Name: "my-source-template",
 					},
 				},
 				{
 					Name: "second-resource",
-					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					TemplateRef: v2alpha1.SupplyChainTemplateReference{
 						Kind: "ClusterTemplate",
 						Options: []v1alpha1.TemplateOption{
 							{
@@ -248,7 +249,7 @@ var _ = Describe("SupplyChainReconciler", func() {
 			sc.Spec.Resources = []v1alpha1.SupplyChainResource{
 				{
 					Name: "first name",
-					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					TemplateRef: v2alpha1.SupplyChainTemplateReference{
 						Kind: "some-kind",
 						Name: "some-name",
 					},
@@ -268,7 +269,7 @@ var _ = Describe("SupplyChainReconciler", func() {
 			sc.Spec.Resources = []v1alpha1.SupplyChainResource{
 				{
 					Name: "first name",
-					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					TemplateRef: v2alpha1.SupplyChainTemplateReference{
 						Kind: "some-kind",
 						Name: "some-name",
 					},
