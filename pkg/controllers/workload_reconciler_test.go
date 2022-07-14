@@ -68,7 +68,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		dependencyTracker               *dependencyfakes.FakeDependencyTracker
 		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
 		labelerForBuiltResourceRealizer realizer.ResourceLabeler
-		resourceRealizerSecret          *corev1.Secret
+		resourceRealizerAuthToken       string
 		serviceAccountSecret            *corev1.Secret
 		serviceAccountName              string
 		resourceRealizerBuilderError    error
@@ -104,12 +104,12 @@ var _ = Describe("WorkloadReconciler", func() {
 
 		resourceRealizerBuilderError = nil
 
-		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
-			resourceRealizerSecret = secret
+			resourceRealizerAuthToken = authToken
 			builtResourceRealizer = &realizerfakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
@@ -353,7 +353,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+			Expect(resourceRealizerAuthToken).To(Equal(serviceAccountSecret))
 		})
 
 		Context("the workload does not specify a service account", func() {
@@ -379,7 +379,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
+					Expect(resourceRealizerAuthToken).To(Equal(supplyChainServiceAccountSecret))
 				})
 
 				Context("the supply chain specifies a namespace", func() {
@@ -395,7 +395,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
 						Expect(serviceAccountNS).To(Equal("some-supply-chain-namespace"))
 
-						Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
+						Expect(resourceRealizerAuthToken).To(Equal(supplyChainServiceAccountSecret))
 					})
 				})
 			})
@@ -416,7 +416,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					Expect(serviceAccountNameArg).To(Equal("default"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
+					Expect(resourceRealizerAuthToken).To(Equal(defaultServiceAccountSecret))
 				})
 			})
 		})

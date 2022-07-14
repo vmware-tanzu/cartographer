@@ -24,16 +24,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ClientBuilder func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error)
+type ClientBuilder func(authToken string, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error)
 
 func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
-	return func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
-		config, err := AddBearerToken(secret, restConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("adding bearer token: %w", err)
-		}
+	return func(authToken string, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
+		restConfig.BearerToken = authToken
+		restConfig.BearerTokenFile = ""
+		//config, err := AddBearerToken(authToken, restConfig)
+		//if err != nil {
+		//	return nil, nil, fmt.Errorf("adding bearer token: %w", err)
+		//}
 
-		cl, err := client.New(config, client.Options{})
+		cl, err := client.New(restConfig, client.Options{})
 		if err != nil {
 			return nil, nil, fmt.Errorf("creating client: %w", err)
 		}

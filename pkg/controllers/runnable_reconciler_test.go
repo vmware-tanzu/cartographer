@@ -66,7 +66,7 @@ var _ = Describe("Reconcile", func() {
 		fakeCache                *repositoryfakes.FakeRepoCache
 		fakeRunnabeRepo          *repositoryfakes.FakeRepository
 		serviceAccountSecret     *corev1.Secret
-		secretForBuiltClient     *corev1.Secret
+		authTokenForBuiltClient  string
 		serviceAccountName       string
 		fakeDiscoveryClient      *runnablefakes.FakeDiscoveryInterface
 	)
@@ -98,8 +98,8 @@ var _ = Describe("Reconcile", func() {
 		}
 
 		builtClient = &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
-			secretForBuiltClient = secret
+		clientBuilder := func(authToken string, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
+			authTokenForBuiltClient = authToken
 			return builtClient, fakeDiscoveryClient, nil
 		}
 
@@ -186,7 +186,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
 			Expect(*clientForBuiltRepository).To(Equal(builtClient))
-			Expect(secretForBuiltClient).To(Equal(serviceAccountSecret))
+			Expect(authTokenForBuiltClient).To(Equal(serviceAccountSecret))
 			Expect(*cacheForBuiltRepository).To(Equal(reconciler.RunnableCache))
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))

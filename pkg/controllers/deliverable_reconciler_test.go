@@ -69,7 +69,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
 		labelerForBuiltResourceRealizer realizer.ResourceLabeler
-		resourceRealizerSecret          *corev1.Secret
+		resourceRealizerAuthToken       string
 		serviceAccountSecret            *corev1.Secret
 		serviceAccountName              string
 		resourceRealizerBuilderError    error
@@ -107,12 +107,12 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		resourceRealizerBuilderError = nil
 
-		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
-			resourceRealizerSecret = secret
+			resourceRealizerAuthToken = authToken
 			return builtResourceRealizer, nil
 		}
 
@@ -355,7 +355,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+			Expect(resourceRealizerAuthToken).To(Equal(serviceAccountSecret))
 		})
 
 		Context("the deliverable does not specify a service account", func() {
@@ -381,7 +381,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
+					Expect(resourceRealizerAuthToken).To(Equal(deliveryServiceAccountSecret))
 				})
 
 				Context("the delivery specifies a namespace", func() {
@@ -397,7 +397,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
 						Expect(serviceAccountNS).To(Equal("some-delivery-namespace"))
 
-						Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
+						Expect(resourceRealizerAuthToken).To(Equal(deliveryServiceAccountSecret))
 					})
 				})
 			})
@@ -418,7 +418,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					Expect(serviceAccountNameArg).To(Equal("default"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
+					Expect(resourceRealizerAuthToken).To(Equal(defaultServiceAccountSecret))
 				})
 			})
 		})

@@ -17,6 +17,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken"
+	authenticationv1 "k8s.io/api/authentication/v1"
+	"k8s.io/client-go/kubernetes"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -49,6 +53,7 @@ import (
 )
 
 type DeliverableReconciler struct {
+	TokenManager            *satoken.Manager
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
@@ -111,13 +116,24 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForDeliverable(deliverable, delivery)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	expiration := int64((time.Hour * 2).Seconds())
+	saTokenRequest, err := r.TokenManager.GetServiceAccountToken(serviceAccountName, serviceAccountNS, &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{
+			ExpirationSeconds: &expiration,
+		}})
 	if err != nil {
+		//TODO ratify this error handling cargo-culted from the Repo.GetServiceAccountSecret path
 		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
+	//secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	//if err != nil {
+	//	r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
+	//	return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+	//}
+
+	resourceRealizer, err := r.ResourceRealizerBuilder(saTokenRequest.Status.Token, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
@@ -379,6 +395,12 @@ func getServiceAccountNameAndNamespaceForDeliverable(deliverable *v1alpha1.Deliv
 }
 
 func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"))
+
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),

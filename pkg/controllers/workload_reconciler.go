@@ -17,19 +17,22 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -49,6 +52,7 @@ import (
 )
 
 type WorkloadReconciler struct {
+	TokenManager            *satoken.Manager
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
@@ -112,14 +116,26 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForWorkload(workload, supplyChain)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	expiration := int64((time.Hour * 2).Seconds())
+	saTokenRequest, err := r.TokenManager.GetServiceAccountToken(serviceAccountName, serviceAccountNS, &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{
+			ExpirationSeconds: &expiration,
+		}})
 	if err != nil {
+		//TODO ratify this error handling cargo-culted from the Repo.GetServiceAccountSecret path
 		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
 		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
 		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
+	//secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	//if err != nil {
+	//	r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
+	//	log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
+	//	return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+	//}
+
+	resourceRealizer, err := r.ResourceRealizerBuilder(saTokenRequest.Status.Token, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
@@ -385,6 +401,12 @@ func getServiceAccountNameAndNamespaceForWorkload(workload *v1alpha1.Workload, s
 
 // TODO: kubebuilder:rbac
 func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"))
+
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
