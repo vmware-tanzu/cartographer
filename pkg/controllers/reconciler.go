@@ -63,19 +63,21 @@ type OwnerBuilder interface {
 }
 
 type BlueprintModel interface {
+	client.Object
 	ServiceAccountRef()
 	Resources()
+	Conditions() []metav1.Condition
 }
 
 type BlueprintGetError error
 
 type BlueprintSelector interface {
-	Select() (BlueprintModel, BlueprintGetError)
+	Select(model OwnerModel) (BlueprintModel, BlueprintGetError)
 }
 
 type OwnerReconciler struct {
 	OwnerBuilder            OwnerBuilder
-	BlueprintSelector        BlueprintSelector
+	BlueprintSelector       BlueprintSelector
 	Repo                    repository.Repository
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                realizer.Realizer
@@ -89,19 +91,19 @@ func (r *OwnerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	defer log.Info("finished")
 
 	log = log.
-		WithValues("owner", req.NamespacedName)
+		WithValues("owner", req.NamespacedName).
+		WithValues("owner gvk", r.OwnerBuilder.GVK()) // todo test this is readable
 	ctx = logr.NewContext(ctx, log)
 
-	owner := r.OwnerBuilder.Get(ctx, req.Name, req.Namespace)
+	owner, err := r.OwnerBuilder.Get(ctx, req.Name, req.Namespace)
 
-	workload, err := r.Repo.GetWorkload(ctx, req.Name, req.Namespace)
 	if err != nil {
-		log.Error(err, "failed to get workload")
-		return ctrl.Result{}, fmt.Errorf("failed to get workload [%s]: %w", req.NamespacedName, err)
+		log.Error(err, "failed to get owner")
+		return ctrl.Result{}, fmt.Errorf("failed to get owner [%s/%s]: %w", r.OwnerBuilder.GVK(), req.NamespacedName, err) // todo check formatting
 	}
 
-	if workload == nil {
-		log.Info("workload no longer exists")
+	if owner == nil {
+		log.Info("owner no longer exists")
 		r.DependencyTracker.ClearTracked(types.NamespacedName{
 			Namespace: req.Namespace,
 			Name:      req.Name,
@@ -110,37 +112,45 @@ func (r *OwnerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
+	//r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
 
+	blueprint, err := r.BlueprintSelector.Select(owner)
 
-	blueprint, err  := r.BlueprintSelector.Select(owner)
-	switch(err)
-
-	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
 	if err != nil {
-		return r.completeReconciliation(ctx, workload, nil, err)
+		// todo handle error types
 	}
 
-	log = log.WithValues("supply chain", supplyChain.Name)
+	//supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
+	//if err != nil {
+	//	return r.completeReconciliation(ctx, workload, nil, err)
+	//}
+
+	log = log.WithValues("blueprint", blueprint.GetName())
 	ctx = logr.NewContext(ctx, log)
 
-	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
-	if err != nil {
-		log.Error(err, "failed to get object gvk for supply chain")
-		return r.completeReconciliation(ctx, workload, nil, cerrors.NewUnhandledError(
-			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
-		)
+	//supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
+	//if err != nil {
+	//	log.Error(err, "failed to get object gvk for supply chain")
+	//	return r.completeReconciliation(ctx, workload, nil, cerrors.NewUnhandledError(
+	//		fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
+	//	)
+	//}
+
+	blueprintGVK := blueprint.GetObjectKind().GroupVersionKind()
+
+	blueprintRef := v1alpha1.ObjectReference{
+		Kind:       blueprintGVK.Kind,
+		Name:       blueprint.GetName(),
+		APIVersion: blueprintGVK.Group + "/" + blueprintGVK.Version,
 	}
 
-	workload.Status.SupplyChainRef.Kind = supplyChainGVK.Kind
-	workload.Status.SupplyChainRef.Name = supplyChain.Name
-
-	if !r.isSupplyChainReady(supplyChain) {
-		r.conditionManager.AddPositive(conditions.MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
-		log.Info("supply chain is not in ready state")
-		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
+	if !r.blueprintReady(blueprint) {
+		owner.ConditionManager().AddPositive(conditions.MissingReadyInSupplyChainCondition(getBlueprintReadyCondition(blueprint)))
+		log.Info("blueprint is not in ready state")
+		//return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name)) // TODO: implement this part
 	}
-	r.conditionManager.AddPositive(conditions.SupplyChainReadyCondition())
+
+	owner.ConditionManager().AddPositive(conditions.SupplyChainReadyCondition())
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForWorkload(workload, supplyChain)
 
@@ -244,9 +254,9 @@ func (r *OwnerReconciler) completeReconciliation(ctx context.Context, workload *
 	return ctrl.Result{}, nil
 }
 
-func (r *OwnerReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSupplyChain) bool {
-	supplyChainReadyCondition := getSupplyChainReadyCondition(supplyChain)
-	return supplyChainReadyCondition.Status == "True"
+func (r *OwnerReconciler) blueprintReady(blueprint BlueprintModel) bool {
+	blueprintReadyCondition := getBlueprintReadyCondition(blueprint)
+	return blueprintReadyCondition.Status == "True"
 }
 
 func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
@@ -262,8 +272,8 @@ func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.Resou
 	}
 }
 
-func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) metav1.Condition {
-	for _, condition := range supplyChain.Status.Conditions {
+func getBlueprintReadyCondition(blueprint BlueprintModel) metav1.Condition {
+	for _, condition := range blueprint.Conditions() {
 		if condition.Type == "Ready" {
 			return condition
 		}
