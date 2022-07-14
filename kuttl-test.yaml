@@ -14,7 +14,8 @@
 
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
-startControlPlane: true
+startControlPlane: false
+startKIND: true
 testDirs:
   - tests/kuttl/runnable
   - tests/kuttl/supplychain

@@ -54,7 +54,7 @@ type Repository interface {
 	ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
-	GetServiceAccountSecret(ctx context.Context, serviceAccountName, ns string) (*corev1.Secret, error)
+	GetServiceAccount(ctx context.Context, serviceAccountName, ns string) (*corev1.ServiceAccount, error)
 	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
 }
 
@@ -87,39 +87,19 @@ func (r *repository) Delete(ctx context.Context, objToDelete *unstructured.Unstr
 	return nil
 }
 
-func (r *repository) GetServiceAccountSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
+func (r *repository) GetServiceAccount(ctx context.Context, name, namespace string) (*corev1.ServiceAccount, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("service account", fmt.Sprintf("%s/%s", namespace, name))
 	ctx = logr.NewContext(ctx, log)
-	log.V(logger.DEBUG).Info("GetServiceAccountSecret")
+	log.V(logger.DEBUG).Info("GetServiceAccount")
 
-	serviceAccount := corev1.ServiceAccount{}
-	err := r.getObject(ctx, name, namespace, &serviceAccount)
+	serviceAccount := &corev1.ServiceAccount{}
+	err := r.getObject(ctx, name, namespace, serviceAccount)
 	if err != nil {
 		log.Error(err, "failed to get service account object from api server")
 		return nil, fmt.Errorf("failed to get service account object from api server [%s/%s]: %w", namespace, name, err)
 	}
 
-	if len(serviceAccount.Secrets) == 0 {
-		log.V(logger.DEBUG).Info("service account does not have any secrets")
-		return nil, fmt.Errorf("service account [%s/%s] does not have any secrets", serviceAccount.Namespace, serviceAccount.Name)
-	}
-
-	for _, secretRef := range serviceAccount.Secrets {
-		secret := corev1.Secret{}
-		err := r.getObject(ctx, secretRef.Name, serviceAccount.Namespace, &secret)
-		if err != nil {
-			log.Error(err, "failed to get secret object from api server",
-				"secret", fmt.Sprintf("%s/%s", serviceAccount.Namespace, secretRef.Name))
-			return nil, fmt.Errorf("failed to get secret object from api server: %w", err)
-		}
-
-		if secret.Type == corev1.SecretTypeServiceAccountToken {
-			return &secret, nil
-		}
-	}
-
-	log.V(logger.DEBUG).Info("service account does not have any token secrets")
-	return nil, fmt.Errorf("service account [%s/%s] does not have any token secrets", serviceAccount.Namespace, serviceAccount.Name)
+	return serviceAccount, nil
 }
 
 func (r *repository) GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error) {

@@ -75,7 +75,8 @@ const (
 // -- OWNER ConditionType - ResourcesSubmitted ConditionReasons
 
 const (
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ServiceAccountErrorResourcesSubmittedReason          = "ServiceAccountError"
+	ServiceAccountTokenErrorResourcesSubmittedReason     = "ServiceAccountTokenError"
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )
 
