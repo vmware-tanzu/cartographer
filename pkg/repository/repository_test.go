@@ -174,14 +174,15 @@ spec:
 						Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 					})
 
-					It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+					It("caches the submitted and persisted objects with no ownerDiscriminant, as the persisted one may be modified by mutating webhooks", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
 						Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(1))
-						submitted, persisted := cache.SetArgsForCall(0)
+						submitted, persisted, ownerDiscriminant := cache.SetArgsForCall(0)
 						Expect(*submitted).To(Equal(*originalStampedObj))
 						Expect(*persisted).To(Equal(*returnedCreatedObj))
+						Expect(ownerDiscriminant).To(Equal(""))
 					})
 				})
 			})
@@ -272,14 +273,15 @@ spec:
 									Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 								})
 
-								It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+								It("caches the submitted and persisted objects with no ownerDiscriminant, as the persisted one may be modified by mutating webhooks", func() {
 									originalStampedObj := stampedObj.DeepCopy()
 
 									Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 									Expect(cache.SetCallCount()).To(Equal(1))
-									submitted, persisted := cache.SetArgsForCall(0)
+									submitted, persisted, ownerDiscriminant := cache.SetArgsForCall(0)
 									Expect(*submitted).To(Equal(*originalStampedObj))
 									Expect(*persisted).To(Equal(*returnedPatchedObj))
+									Expect(ownerDiscriminant).To(Equal(""))
 								})
 							})
 
@@ -310,7 +312,7 @@ spec:
 			)
 
 			BeforeEach(func() {
-				labels = map[string]string{"foo": "bar"}
+				labels = map[string]string{"quux": "xyzzy", "foo": "bar", "waldo": "fred"}
 				stampedObj = &unstructured.Unstructured{}
 				stampedObjManifest := `
 apiVersion: batch/v1
@@ -359,13 +361,14 @@ spec:
 					}
 				})
 
-				It("the cache is consulted to see if there was a change since the last time the cache was updated", func() {
+				It("the cache is consulted (with an ownerDiscriminant of the labels) to see if there was a change since the last time the cache was updated", func() {
 					Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
 					Expect(cache.UnchangedSinceCachedFromListCallCount()).To(Equal(1))
 
-					submitted, persisted := cache.UnchangedSinceCachedFromListArgsForCall(0)
+					submitted, persisted, ownerDiscriminant := cache.UnchangedSinceCachedFromListArgsForCall(0)
 					Expect(*submitted).To(Equal(*stampedObj))
 					Expect(persisted[0]).To(Equal(existingObj))
+					Expect(ownerDiscriminant).To(Equal("{foo:bar}{quux:xyzzy}{waldo:fred}"))
 				})
 
 				Context("and the cache determines there has been no change since the last update", func() {
@@ -422,14 +425,15 @@ spec:
 							Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
 						})
 
-						It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+						It("caches the submitted and persisted objects with an ownerDiscriminant of the labels, as the persisted one may be modified by mutating webhooks", func() {
 							originalStampedObj := stampedObj.DeepCopy()
 
 							Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
 							Expect(cache.SetCallCount()).To(Equal(1))
-							submitted, persisted := cache.SetArgsForCall(0)
+							submitted, persisted, ownerDiscriminant := cache.SetArgsForCall(0)
 							Expect(*submitted).To(Equal(*originalStampedObj))
 							Expect(*persisted).To(Equal(*returnedCreatedObj))
+							Expect(ownerDiscriminant).To(Equal("{foo:bar}{quux:xyzzy}{waldo:fred}"))
 						})
 					})
 

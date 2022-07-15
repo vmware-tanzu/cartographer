@@ -17,6 +17,8 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -165,7 +167,7 @@ func (r *repository) EnsureMutableObjectExistsOnCluster(ctx context.Context, obj
 		return r.patchUnstructured(ctx, existingObj, obj)
 	} else {
 		log.Info("creating object", "object", obj)
-		return r.createUnstructured(ctx, obj)
+		return r.createUnstructured(ctx, obj, "")
 	}
 }
 
@@ -184,14 +186,16 @@ func (r *repository) EnsureImmutableObjectExistsOnCluster(ctx context.Context, o
 		return err
 	}
 
-	cacheHit := r.rc.UnchangedSinceCachedFromList(obj, unstructuredList)
+	ownerDiscriminant := buildOwnerDiscriminant(labels)
+
+	cacheHit := r.rc.UnchangedSinceCachedFromList(obj, unstructuredList, ownerDiscriminant)
 	if cacheHit != nil {
 		*obj = *cacheHit
 		return nil
 	}
 
 	log.Info("creating object", "object", obj)
-	return r.createUnstructured(ctx, obj)
+	return r.createUnstructured(ctx, obj, ownerDiscriminant)
 }
 
 func (r *repository) GetUnstructured(ctx context.Context, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -295,13 +299,13 @@ func (r *repository) GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateRe
 	return runTemplate, nil
 }
 
-func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.Unstructured) error {
+func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.Unstructured, ownerDiscriminant string) error {
 	submitted := obj.DeepCopy()
 	if err := r.cl.Create(ctx, obj); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 
-	r.rc.Set(submitted, obj.DeepCopy())
+	r.rc.Set(submitted, obj.DeepCopy(), ownerDiscriminant)
 	return nil
 }
 
@@ -313,7 +317,7 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 		return fmt.Errorf("patch: %w", err)
 	}
 
-	r.rc.Set(submitted, obj.DeepCopy())
+	r.rc.Set(submitted, obj.DeepCopy(), "")
 	return nil
 }
 
@@ -493,4 +497,20 @@ func (r *repository) StatusUpdate(ctx context.Context, object client.Object) err
 
 func (r *repository) GetScheme() *runtime.Scheme {
 	return r.cl.Scheme()
+}
+
+func buildOwnerDiscriminant(labels map[string]string) string {
+	var discriminantComponents []string
+	for key, value := range labels {
+		discriminantComponents = insertSorted(discriminantComponents, fmt.Sprintf("{%s:%s}", key, value))
+	}
+	return strings.Join(discriminantComponents, "")
+}
+
+func insertSorted(ss []string, s string) []string {
+	i := sort.SearchStrings(ss, s)
+	ss = append(ss, "")
+	copy(ss[i+1:], ss[i:])
+	ss[i] = s
+	return ss
 }
