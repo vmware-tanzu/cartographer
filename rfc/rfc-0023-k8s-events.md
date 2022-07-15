@@ -5,8 +5,8 @@
 - Name: Introduce Kubernetes Events
 - Start Date: 2022-03-28
 - Author(s): [Rasheed Abdul-Aziz](https://github.com/squeedee)
-- Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
-- RFC Pull Request: (leave blank)
+- Status: Approved
+- RFC Pull Request: https://github.com/vmware-tanzu/cartographer/pull/756
 - Supersedes: N/A
 
 # Summary
