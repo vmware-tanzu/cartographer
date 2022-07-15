@@ -53,7 +53,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
-var _ = Describe("DeliverableReconciler", func() {
+var _ = XDescribe("DeliverableReconciler", func() {
 	var (
 		out               *Buffer
 		reconciler        controllers.DeliverableReconciler

@@ -49,7 +49,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
 )
 
-var _ = Describe("Reconcile", func() {
+var _ = XDescribe("Reconcile", func() {
 	var (
 		out                      *Buffer
 		ctx                      context.Context
