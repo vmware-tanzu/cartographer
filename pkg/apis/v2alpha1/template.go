@@ -33,6 +33,13 @@ type TemplateSpec struct {
 	// stamped by this template
 	// +optional
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
+
+	Outputs []OutputMapping `json:"outputs,omitempty"`
+}
+
+type OutputMapping struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // HealthRule specifies rubric for determining the health of a resource.

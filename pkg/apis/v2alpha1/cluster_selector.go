@@ -16,13 +16,21 @@ type ClusterSelector struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec SelectorSpec `json:"spec"`
+	Spec ClusterSelectorSpec `json:"spec"`
 }
 
-type SelectorSpec struct {
+type ClusterSelectorSpec struct {
 	metav1.TypeMeta `json:",inline"`
 	BlueprintRef    BlueprintRef       `json:"blueprintRef"`
 	ParamMap        []ParameterMapping `json:"paramMap,omitempty"` // Todo Does this want to be an externally referenced CRD?
+
+	// ServiceAccountName refers to the Service account with permissions to create resources
+	// submitted by the supply chain.
+	// TODO: fixme docs.
+	// If that is also not set, Cartographer will use the default service account in the
+	// owner object's namespace.
+	// +optional
+	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
 }
 
 type ParameterMapping struct {

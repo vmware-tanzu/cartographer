@@ -8,10 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TODO
+// TODO:
 //	 * Outputs!
-//   * Add options back!
+//		* discuss: for a single output with structured content (fields), the current design says it must match one JSONPath in the
+//		  stamped object. Is that sufficient?
+//   * Inputs!
 //	 * Implement health rules for blueprints - also think about how this impacts our new status object
+//	 * What to do with Field matchers... can we nuke them?
 //   * Discuss Duck Typing vs OutputType
 //		* Duck typing requires no extra CRDS
 //		* Duck typing makes it easier to proliferate useless contracts
@@ -33,28 +36,24 @@ type ClusterBlueprint struct {
 }
 
 type BlueprintSpec struct {
-	OutputTypeRef OutputTypeRef `json:"outputTypeRef"`
+	// Description of the blueprint
+	// If not set, this does not reflect descriptions in child blueprints or templates
+	Description string `json:"description,omitempty"`
 
-	// Components are a list of sub-blueprints and templates this blueprint
+	// OutputTypeRef refers to an object describing the contract this blueprint can fulfill
+	// This is optional, however without an output, this Blueprint cannot be the cause of
+	// a reconciliation of sibling components in a parent blueprint.
+	OutputTypeRef OutputTypeRef `json:"outputTypeRef,omitempty"`
+
+	// Params for templates and overrides for sub-blueprints.
+	Params []Param `json:"params,omitempty"`
+
+	// Components are a list of sub-blueprints and templates which this blueprint
 	// creates and maintains during the lifetime of the OwnerObject.
-	// This cannot be specified alongside Template
 	Components []Component `json:"components,omitempty"`
 
 	// Todo: opinions about template.template? resource.template instead?
 	Template TemplateSpec `json:"template,omitempty"`
-
-	// Params overrides for sub-blueprints and templates.
-	Params []BlueprintParam `json:"params,omitempty"`
-
-	// ServiceAccountName refers to the Service account with permissions to create resources
-	// submitted by the supply chain.
-	//
-	// If not set, Cartographer will use serviceAccountName from supply chain.
-	//
-	// If that is also not set, Cartographer will use the default service account in the
-	// workload's namespace.
-	// +optional
-	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
 }
 
 type OutputTypeRef struct {
@@ -72,8 +71,8 @@ type BlueprintStatus struct {
 	Calculated []CalculatedParam `json:"calculated,omitempty"`
 }
 
-// Component represents a subcomponent
-// Note: There are no params specified at this level. See BlueprintSpec.Params
+// Component to a subcomponent
+// Note: There are no params specified at this level. See BlueprintSpec.Params and TemplateSpec.Params
 type Component struct {
 	// Name of the component. Used as a reference for inputs.
 	// Template components are identified by this name in the BlueprintStatus
@@ -96,6 +95,9 @@ type BlueprintRef struct {
 	// Only one of Name and Options can be specified.  // todo: options
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
+
+	// +kubebuilder:validation:Enum=ClusterBlueprint;ClusterTemplate
+	Kind string ``
 }
 
 // +kubebuilder:object:root=true

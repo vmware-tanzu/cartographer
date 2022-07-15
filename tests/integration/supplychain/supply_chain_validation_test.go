@@ -71,7 +71,7 @@ var _ = Describe("SupplyChainValidation", func() {
 	})
 
 	Describe("Template reference kind field", func() {
-		DescribeTable("Reference a valid Template Kind", func(kind string) {
+		DescribeTable("Component a valid Template Kind", func(kind string) {
 			supplyChain = SupplyChainWithTemplateReference("my-template", kind)
 			err := c.Create(ctx, supplyChain)
 			Expect(err).NotTo(HaveOccurred())
@@ -82,7 +82,7 @@ var _ = Describe("SupplyChainValidation", func() {
 			Entry("ClusterTemplate reference", "ClusterTemplate"),
 		)
 
-		DescribeTable("Reference an invalid kind", func(kind string) {
+		DescribeTable("Component an invalid kind", func(kind string) {
 			supplyChain = SupplyChainWithTemplateReference("my-template", kind)
 			err := c.Create(ctx, supplyChain)
 			Expect(err).To(HaveOccurred())
