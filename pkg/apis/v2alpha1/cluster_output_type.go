@@ -31,6 +31,7 @@ type ClusterBlueprintType struct {
 	// any valid JSON, however the validation will fail if it's not
 	// JSONSchema as per apiextensions.JSONSchemaProps
 	// (see: https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions@v0.24.2#JSONSchemaProps)
+	// Todo: explain the problem with the absence of schema here, and semantic error checking
 	Schema apiextensions.JSON `json:"schema"`
 
 	// Description describes this output to provide documentation to consumers.

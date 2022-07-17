@@ -9,20 +9,15 @@ import (
 )
 
 // TODO:
-//	 * Outputs!
-//		* discuss: for a single output with structured content (fields), the current design says it must match one JSONPath in the
-//		  stamped object. Is that sufficient?
 //   * Inputs!
 //	 * Implement health rules for blueprints - also think about how this impacts our new status object
 //	 * What to do with Field matchers... can we nuke them?
-//   * Nested Params
-//   * Discuss Duck Typing vs OutputType
+//   * Nested Params/Param rewriting?
+//   * Document Duck Typing vs OutputType
 //		* Duck typing requires no extra CRDS
-//		* Duck typing makes it easier to proliferate useless contracts
-//	 * Discuss Param behavior, especially collisions
-//   * Discuss Template's being one variation of a Blueprint vs being their own CRD
-//   * Discuss Resource->Component
-//   * Discuss lack of oneOf validation today (for spec.Components vs spec.Template)
+//		* Duck typing makes it easier to proliferate useless contracts <<< and this is why we wont do it
+//	 * Document Param behavior
+//   * Document Resource->Component
 
 // ClusterBlueprint represents a component within Cartographer Todo: be less asinine
 // +kubebuilder:object:root=true
@@ -58,6 +53,7 @@ type BlueprintSpec struct {
 
 	// Template is a definition of a resource this component stamps onto the cluster
 	// One of Components or Template can be specified exclusively.
+	// Todo: explain the problem with the absence of oneOf and semantic error checking
 	// Todo: opinions about template.template? resource.template instead?
 	Template TemplateSpec `json:"template,omitempty"`
 }
