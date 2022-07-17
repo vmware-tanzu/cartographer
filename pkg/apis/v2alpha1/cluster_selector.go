@@ -20,9 +20,25 @@ type ClusterSelector struct {
 }
 
 type ClusterSelectorSpec struct {
-	metav1.TypeMeta `json:",inline"`
-	BlueprintRef    BlueprintRef       `json:"blueprintRef"`
-	ParamMap        []ParameterMapping `json:"paramMap,omitempty"` // Todo Does this want to be an externally referenced CRD?
+	// OwnerSelector is the criteria used to match an Owner to the BlueprintRef
+	// todo: explain selection criteria, precedence and how version is only used for representation
+	OwnerSelector `json:"ownerSelector"`
+
+	// BlueprintRef selects a specific blueprint for the matched OwnerSelector
+	BlueprintRef BlueprintRef `json:"blueprintRef"`
+
+	// ParamMap maps Blueprint parameters to the specific Owner specified in OwnerSelector's TypeMeta.
+	ParamMap []ParameterMapping `json:"paramMap,omitempty"`
+
+	// StatusMapping represents the mechanism used to record the status of the Blueprint's imprint back
+	// to the Owner.
+	// If omitted, the Owner is not updated by Cartographer
+	OwnerStatusMapping StatusMapping `json:"statusMapping,omitempty"`
+
+	// AdditionalStatusMappings provide a mechanism to add additional status objects per matched owner object.
+	// Note: We can perhaps implement this at a later date if OwnerStatusMapping proves to be insufficient for all
+	// use cases.
+	AdditionalStatusMappings []AdditionalStatusMapping `json:"additionalStatusMappings,omitempty"`
 
 	// ServiceAccountName refers to the Service account with permissions to create resources
 	// submitted by the ClusterBlueprint.
@@ -31,8 +47,11 @@ type ClusterSelectorSpec struct {
 	// owner object's namespace.
 	// +optional
 	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
+}
 
-	Selector
+type OwnerSelector struct {
+	metav1.TypeMeta `json:",inline"`
+	Selector        `json:",inline"`
 }
 
 type ParameterMapping struct {
@@ -45,12 +64,30 @@ type ParameterMapping struct {
 	// Value set's the value. You cannot map an ownerObject value at the same time
 	// Using this field lets you configure blueprints on a per "Mapping" basis.
 	// This is the best place for operator configuration to live.
-	// Todo: Validate this
 	Value string `json:"value,omitempty"`
 
 	// OwnerPath defines where in the Owner object this parameter is sourced from
-	// Follow JSONPath Syntax
+	// using JSONPath syntax.
 	OwnerPath string `json:"ownerPath,omitempty"`
+}
+
+// AdditionalStatusMapping provides a mechanism to create other status objects
+// as a result of
+type AdditionalStatusMapping struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// TODO: we can always update .status, or we can let the template decide (make it a root template)
+	// if we only template .status, then the new objects metadata.name/namespace could either match the
+	// ownerObject's, or also have templating to generate them.
+	StatusMapping `json:"inline"`
+}
+
+// StatusMapping is the template used to create the `status` field of the owner object
+// or other object.
+type StatusMapping struct {
+	Templateable `json:",inline"`
+
+	// TODO: we need some kind of reverse reference for condition's lastUpdatedAt
 }
 
 // ClusterSelectorList

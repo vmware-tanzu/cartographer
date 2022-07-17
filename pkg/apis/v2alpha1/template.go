@@ -6,29 +6,7 @@ import (
 )
 
 type TemplateSpec struct {
-
-	// Template defines a resource template for a Kubernetes Resource or
-	// Custom Resource which is applied to the server each time
-	// the blueprint is applied. Templates support simple value
-	// interpolation using the $()$ marker format. For more
-	// information, see: https://cartographer.sh/docs/latest/templating/
-	// You cannot define both Template and Ytt at the same time.
-	// You should not define the namespace for the resource - it will automatically
-	// be created in the owner namespace. If the namespace is specified and is not
-	// the owner namespace, the resource will fail to be created.
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Template *runtime.RawExtension `json:"template,omitempty"`
-
-	// Ytt defines a resource template written in `ytt` for a Kubernetes Resource or
-	// Custom Resource which is applied to the server each time
-	// the blueprint is applied. Templates support simple value
-	// interpolation using the $()$ marker format. For more
-	// information, see: https://cartographer.sh/docs/latest/templating/
-	// You cannot define both Template and Ytt at the same time.
-	// You should not define the namespace for the resource - it will automatically
-	// be created in the owner namespace. If the namespace is specified and is not
-	// the owner namespace, the resource will fail to be created.
-	Ytt string `json:"ytt,omitempty"`
+	Templateable
 
 	// HealthRule specifies rubric for determining the health of a resource
 	// stamped by this template

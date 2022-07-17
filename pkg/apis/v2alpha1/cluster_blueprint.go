@@ -96,12 +96,6 @@ type Component struct {
 	Options []TemplateOption `json:"options,omitempty"`
 }
 
-type BlueprintRef struct {
-	// Name of the blueprint
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name,omitempty"`
-}
-
 // ClusterBlueprintList is a list of ClusterBlueprint
 // +kubebuilder:object:root=true
 type ClusterBlueprintList struct {
