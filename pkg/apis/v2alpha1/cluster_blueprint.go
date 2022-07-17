@@ -88,6 +88,7 @@ type Component struct {
 	Name string `json:"name"`
 
 	// BlueprintRef identifies the template used to produce this resource
+	// Only one of BlueprintRef and Options can be specified.
 	BlueprintRef BlueprintRef `json:"blueprintRef"`
 
 	// Options is a list of template names and Selector.
@@ -101,16 +102,12 @@ type Component struct {
 
 type BlueprintRef struct {
 	// Name of the blueprint
-	// Only one of Name and Options can be specified.  // todo: options
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty"`
-
-	// +kubebuilder:validation:Enum=ClusterBlueprint;ClusterTemplate
-	Kind string ``
 }
 
+// ClusterBlueprintList is a list of ClusterBlueprint
 // +kubebuilder:object:root=true
-
 type ClusterBlueprintList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
