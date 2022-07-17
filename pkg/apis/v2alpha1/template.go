@@ -6,6 +6,7 @@ import (
 )
 
 type TemplateSpec struct {
+
 	// Template defines a resource template for a Kubernetes Resource or
 	// Custom Resource which is applied to the server each time
 	// the blueprint is applied. Templates support simple value

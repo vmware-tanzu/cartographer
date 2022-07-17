@@ -25,12 +25,14 @@ type ClusterSelectorSpec struct {
 	ParamMap        []ParameterMapping `json:"paramMap,omitempty"` // Todo Does this want to be an externally referenced CRD?
 
 	// ServiceAccountName refers to the Service account with permissions to create resources
-	// submitted by the supply chain.
+	// submitted by the ClusterBlueprint.
 	// TODO: fixme docs.
 	// If that is also not set, Cartographer will use the default service account in the
 	// owner object's namespace.
 	// +optional
 	ServiceAccountRef ServiceAccountRef `json:"serviceAccountRef,omitempty"`
+
+	Selector
 }
 
 type ParameterMapping struct {

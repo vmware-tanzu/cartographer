@@ -2,10 +2,8 @@ package v2alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// Selector is the collection of selection fields used congruously to specify
-// the selection of a template Option. In a future API revision, it will also
-// be used to specify selection of a target Owner.
-// See: LegacySelector
+// Selector is the collection of selection fields used to specify
+// an owner object
 type Selector struct {
 	metav1.LabelSelector `json:",inline"`
 
