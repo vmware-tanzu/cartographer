@@ -5,60 +5,49 @@
 package v2alpha1
 
 import (
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ClusterBlueprintType defines a valid output/input between Components
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=clusteroutputtypes,scope=Cluster,shortName=cb
-
-// FIXME: just Type?
-type ClusterOutputType struct {
+type ClusterBlueprintType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	// Default qualifier is "default"
-	// Validation rule, metadata.name must be on the form: <qualifier>-<name> (or <qualifier>.<name>)
+	// Qualifier is provided to avoid name collisions when blueprint authors
+	// start creating new types on a platform.
+	// There is a validation rule that metadata.name must be of
+	// the form: <qualifier>.<name> or <qualifier>-<name>.
+	// If the qualifier is omitted, then just <name> will suffice.
+	// Note: For TAP, this should be "tap" to avoid collisions with blueprint
+	// authors. We recommend other platforms follow this pattern also.
 	Qualifier string `json:"qualifier,omitempty"`
 
 	// Schema a JSON schema that is a valid representation of a type.
-	// Although json schema is deep and complex, it's usually best to keep to a simple type definition
-	// for consumers of your component
-	//
-	Schema SimpleJSONSchema `json:"schema"`
+	// Due to a limitation in k8s CRD definitions, this field accepts
+	// any valid JSON, however the validation will fail if it's not
+	// JSONSchema as per apiextensions.JSONSchemaProps
+	// (see: https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions@v0.24.2#JSONSchemaProps)
+	Schema apiextensions.JSON `json:"schema"`
 
-	// Description describes this output to ease consumption by others.
+	// Description describes this output to provide documentation to consumers.
 	Description string `json:"description,omitempty"`
 }
 
-// SimpleJSONSchema is meant to represent something like a json schema
-// Todo: I'm not all that happy with this - definitely incomplete.
-// Need a validation hook because nesting explodes in k8s crds
-type SimpleJSONSchema struct {
-	// Type is the kind of object expected
-	// +kubebuilder:validation:Enum=Object;String;Number;integer;array;boolean
-	Type string `json:"type"`
-
-	// Properties of a complex kind
-	Properties *SimpleJSONSchemaProps `json:"properties,omitempty"`
-}
-
-type SimpleJSONSchemaProps struct {
-	Name   string           `json:"name"`
-	Schema SimpleJSONSchema `json:"schema"`
-
-
-// ClusterOutputTypeList is a collection of ClusterOutputType
+// ClusterOutputTypeList is a collection of ClusterBlueprintType
 // +kubebuilder:object:root=true
 type ClusterOutputTypeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterOutputType `json:"items"`
+	Items           []ClusterBlueprintType `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(
-		&ClusterOutputType{},
+		&ClusterBlueprintType{},
 		&ClusterOutputTypeList{},
 	)
 }

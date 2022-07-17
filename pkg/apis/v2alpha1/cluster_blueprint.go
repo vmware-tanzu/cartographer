@@ -46,25 +46,24 @@ type BlueprintSpec struct {
 	// a reconciliation of sibling components in a parent blueprint.
 	OutputTypeRef OutputTypeRef `json:"outputTypeRef,omitempty"`
 
-	// Params for templates and overrides for sub-blueprints.
+	// Params for templates and overrides for child blueprints.
 	Params []Param `json:"params,omitempty"`
 
-	// Components are a list of sub-blueprints and templates which this blueprint
+	// Components are a list of child blueprints which this blueprint
 	// creates and maintains during the lifetime of the OwnerObject.
 	// If OutputTypeRef is specified, the last item in this list must emit that type.
 	// If it doesn't, the condition (todo: document condition here)
 	// One of Components or Template can be specified exclusively.
-	Components []Component `json:"components,omitempty"`
+	Components Components `json:"components,omitempty"`
 
 	// Template is a definition of a resource this component stamps onto the cluster
 	// One of Components or Template can be specified exclusively.
 	// Todo: opinions about template.template? resource.template instead?
-
 	Template TemplateSpec `json:"template,omitempty"`
 }
 
 type OutputTypeRef struct {
-	// Name of the ClusterOutputType that defines the output type of this blueprint.
+	// Name of the ClusterBlueprintType that defines the output type of this blueprint.
 	Name string `json:"name"`
 }
 
@@ -77,6 +76,9 @@ type BlueprintStatus struct {
 	// Calculated list of input params based on templates and overrides
 	Calculated []CalculatedParam `json:"calculated,omitempty"`
 }
+
+// Components are a list of child blueprints
+type Components []Component
 
 // Component to a subcomponent
 // Note: There are no params specified at this level. See BlueprintSpec.Params and TemplateSpec.Params
