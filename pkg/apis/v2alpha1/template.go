@@ -6,7 +6,7 @@ import (
 )
 
 type TemplateSpec struct {
-	Templateable
+	Templateable `json:",inline"`
 
 	// HealthRule specifies rubric for determining the health of a resource
 	// stamped by this template
