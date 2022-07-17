@@ -59,8 +59,7 @@ spec:
               blueprintRef:
                 properties:
                   name:
-                    description: 'Name of the blueprint Only one of Name and Options
-                      can be specified.  // todo: options'
+                    description: Name of the blueprint
                     minLength: 1
                     type: string
                 type: object
@@ -93,6 +92,22 @@ spec:
                   - name
                   type: object
                 type: array
+              serviceAccountRef:
+                description: 'ServiceAccountName refers to the Service account with
+                  permissions to create resources submitted by the supply chain. TODO:
+                  fixme docs. If that is also not set, Cartographer will use the default
+                  service account in the owner object''s namespace.'
+                properties:
+                  name:
+                    description: Name of the service account being referred to
+                    type: string
+                  namespace:
+                    description: Namespace of the service account being referred to
+                      if omitted, the Owner's namespace is used.
+                    type: string
+                required:
+                - name
+                type: object
             required:
             - blueprintRef
             type: object

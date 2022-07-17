@@ -23,22 +23,27 @@ metadata:
 spec:
   group: carto.run
   names:
-    kind: ClusterOutputType
-    listKind: ClusterOutputTypeList
+    kind: ClusterBlueprintType
+    listKind: ClusterBlueprintTypeList
     plural: clusteroutputtypes
     shortNames:
     - cb
-    singular: clusteroutputtype
+    singular: clusterblueprinttype
   scope: Cluster
   versions:
   - name: v2alpha1
     schema:
       openAPIV3Schema:
+        description: ClusterBlueprintType defines a valid output/input between Components
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          description:
+            description: Description describes this output to provide documentation
+              to consumers.
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -47,34 +52,22 @@ spec:
             type: string
           metadata:
             type: object
+          qualifier:
+            description: 'Qualifier is provided to avoid name collisions when blueprint
+              authors start creating new types on a platform. There is a validation
+              rule that metadata.name must be of the form: <qualifier>.<name> or <qualifier>-<name>.
+              If the qualifier is omitted, then just <name> will suffice. Note: For
+              TAP, this should be "tap" to avoid collisions with blueprint authors.
+              We recommend other platforms follow this pattern also.'
+            type: string
           schema:
-            description: Schema a JSON schema that is a valid representation of a
-              type. Although json schema is deep and complex, it's usually best to
-              keep to a simple type definition for consumers of your component
-            properties:
-              properties:
-                description: Properties of a complex kind
-                properties:
-                  name:
-                    type: string
-                  schema: {}
-                required:
-                - name
-                - schema
-                type: object
-              type:
-                description: Type is the kind of object expected
-                enum:
-                - Object
-                - String
-                - Number
-                - integer
-                - array
-                - boolean
-                type: string
-            required:
-            - type
-            type: object
+            description: 'Schema a JSON schema that is a valid representation of a
+              type. Due to a limitation in k8s CRD definitions, this field accepts
+              any valid JSON, however the validation will fail if it''s not JSONSchema
+              as per apiextensions.JSONSchemaProps (see: https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions@v0.24.2#JSONSchemaProps)
+              Todo: explain the problem with the absence of schema here, and semantic
+              error checking'
+            x-kubernetes-preserve-unknown-fields: true
         required:
         - metadata
         - schema
