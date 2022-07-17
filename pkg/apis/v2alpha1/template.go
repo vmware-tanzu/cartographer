@@ -34,12 +34,24 @@ type TemplateSpec struct {
 	// +optional
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
 
-	Outputs []OutputMapping `json:"outputs,omitempty"`
+	// An output mapping connects fields in the stamped resource with the
+	// structure of the OutputTypeRef specified for this Component.
+	// With only one entry in the mapping, it's possible to map a simple value
+	// onto a simple type, or a complex, value onto a complex type (a one to one mapping).
+	// When the resource's results do not match the exact shape of the OutputTypeRef,
+	// you can use multiple mappings to coerce the correct shape.
+	// Todo: examples in docs and a link.
+	OutputMapping OutputMapping `json:"outputMapping,omitempty"`
 }
 
-type OutputMapping struct {
-	Name string `json:"name"`
+type OutputMapping []OutputReference
+
+type OutputReference struct {
+	// Path is a JSONPath that represents the field in the OutputType that is fulfilled by Path
 	Path string `json:"path"`
+	// ResourcePath	is a JSONPath that represents where to find the value in the stamped resource.
+	// ResourcePath can refer to a simple or complex type,
+	ResourcePath string `json:"resourcePath"`
 }
 
 // HealthRule specifies rubric for determining the health of a resource.

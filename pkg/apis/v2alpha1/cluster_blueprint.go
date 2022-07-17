@@ -15,6 +15,7 @@ import (
 //   * Inputs!
 //	 * Implement health rules for blueprints - also think about how this impacts our new status object
 //	 * What to do with Field matchers... can we nuke them?
+//   * Nested Params
 //   * Discuss Duck Typing vs OutputType
 //		* Duck typing requires no extra CRDS
 //		* Duck typing makes it easier to proliferate useless contracts
@@ -50,9 +51,15 @@ type BlueprintSpec struct {
 
 	// Components are a list of sub-blueprints and templates which this blueprint
 	// creates and maintains during the lifetime of the OwnerObject.
+	// If OutputTypeRef is specified, the last item in this list must emit that type.
+	// If it doesn't, the condition (todo: document condition here)
+	// One of Components or Template can be specified exclusively.
 	Components []Component `json:"components,omitempty"`
 
+	// Template is a definition of a resource this component stamps onto the cluster
+	// One of Components or Template can be specified exclusively.
 	// Todo: opinions about template.template? resource.template instead?
+
 	Template TemplateSpec `json:"template,omitempty"`
 }
 
