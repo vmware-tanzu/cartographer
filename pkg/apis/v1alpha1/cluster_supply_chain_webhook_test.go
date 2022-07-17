@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v2alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -44,14 +43,14 @@ var _ = Describe("Webhook Validation", func() {
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v2alpha1.SupplyChainTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
 						},
 						{
 							Name: "other-source-provider",
-							TemplateRef: v2alpha1.SupplyChainTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
@@ -261,13 +260,13 @@ var _ = Describe("Webhook Validation", func() {
 						Resources: []v1alpha1.SupplyChainResource{
 							{
 								Name: "input-provider",
-								TemplateRef: v2alpha1.SupplyChainTemplateReference{
+								TemplateRef: v1alpha1.SupplyChainTemplateReference{
 									Name: "output-template",
 								},
 							},
 							{
 								Name: "input-consumer",
-								TemplateRef: v2alpha1.SupplyChainTemplateReference{
+								TemplateRef: v1alpha1.SupplyChainTemplateReference{
 									Kind: "ClusterTemplate",
 									Name: "consuming-template",
 								},
@@ -355,7 +354,7 @@ var _ = Describe("Webhook Validation", func() {
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v2alpha1.SupplyChainTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Name: "git-template---default-params",
 							},
@@ -482,7 +481,7 @@ var _ = Describe("Webhook Validation", func() {
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v2alpha1.SupplyChainTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Options: []v1alpha1.TemplateOption{
 									{
@@ -648,7 +647,7 @@ var _ = Describe("Webhook Validation", func() {
 					Resources: []v1alpha1.SupplyChainResource{
 						{
 							Name: "source-provider",
-							TemplateRef: v2alpha1.SupplyChainTemplateReference{
+							TemplateRef: v1alpha1.SupplyChainTemplateReference{
 								Kind: "ClusterSourceTemplate",
 								Options: []v1alpha1.TemplateOption{
 									{
