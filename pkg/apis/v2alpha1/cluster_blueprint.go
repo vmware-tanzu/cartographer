@@ -10,7 +10,7 @@ import (
 
 // TODO:
 //   * Inputs!
-//	 * Implement health rules for blueprints - also think about how this impacts our new status object
+//	 * Document how the last resource is the source of a Healthrule and the output type
 //	 * What to do with Field matchers... can we nuke them?
 //   * Nested Params/Param rewriting?
 //   * Document Duck Typing vs OutputType
