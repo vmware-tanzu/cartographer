@@ -38,13 +38,12 @@ type BlueprintSpec struct {
 
 	// Inputs specifies the input types and names required by this blueprint
 	//
-	//A Template may reference the inputs by name and then follow the input's
+	// A Template may reference the inputs by name and then follow the input's
 	// schema, eg: $(inputs.my-source.url)$
 	//
-	// A blueprint can map
 	// Note: If your compound blueprint does not expect any inputs, it can not be used as a
 	// component to a parent blueprint.
-	//Inputs Inputs `json:"inputs,omitempty"`
+	Inputs BlueprintInputs `json:"inputs,omitempty"`
 
 	// TypeRef refers to an object describing the contract this blueprint can fulfill
 	// This is optional, however without an output, this Blueprint cannot be the cause of
@@ -52,7 +51,7 @@ type BlueprintSpec struct {
 	// Templates can specify an output mapping via TemplateSpec.OutputMapping.
 	// The last component in Components must match the type of TypeRef, as this is the
 	// component that is used for this blueprint's output.
-	TypeRef BlueTypeRef `json:"typeRef,omitempty"`
+	TypeRef BlueprintTypeRef `json:"typeRef,omitempty"`
 
 	// Components are a list of child blueprints managed by this blueprint.
 	// If TypeRef is specified, the last item in this list must emit that type.
@@ -66,7 +65,17 @@ type BlueprintSpec struct {
 	Template TemplateSpec `json:"template,omitempty"`
 }
 
-type BlueTypeRef struct {
+type BlueprintInputs []BlueprintInput
+
+type BlueprintInput struct {
+	// Name is used to reference this input in templates and component definitions
+	Name string `json:"name"`
+
+	// Ref is the name of the ClusterBlueprintType that must be provided
+	Ref string `json:"ref"`
+}
+
+type BlueprintTypeRef struct {
 	// Name of the ClusterBlueprintType that defines the output type of this blueprint.
 	Name string `json:"name"`
 }
@@ -100,6 +109,9 @@ type Component struct {
 	// then use a param rename.
 	ParamRenames ParamRename `json:"paramRenames,omitempty"`
 
+	// Inputs specifies the input mapping from other components and Blueprint.Inputs
+	Inputs ComponentInputs `json:"inputs,omitempty"`
+
 	// Options is a list of template names and Selector.
 	// A template will be selected if the workload matches the specified selector.
 	// Only one template can be selected.
@@ -107,6 +119,26 @@ type Component struct {
 	// Minimum number of items in list is two.
 	// +kubebuilder:validation:MinItems=2
 	Options []TemplateOption `json:"options,omitempty"`
+}
+
+type ComponentInputs []ComponentInput
+
+type ComponentInput struct {
+	// Name of this input. It must match with an input in the child component.
+	Name string `json:"name"`
+
+	// ValueFrom specifies which input to use.
+	ValueFrom InputValueFrom `json:"valueFrom"`
+}
+
+// InputValueFrom describes the source of an input
+// You can not specify both Component and Input at the same time.
+type InputValueFrom struct {
+	// Component specifies a sibling component's name as the input.
+	Component string `json:"component,omitempty"`
+
+	// Input names a top level ClusterBlueprintSpec.Inputs as the input.
+	Input string `json:"input,omitempty"`
 }
 
 type ParamRename struct {

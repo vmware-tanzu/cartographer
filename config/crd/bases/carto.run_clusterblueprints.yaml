@@ -71,6 +71,32 @@ spec:
                           minLength: 1
                           type: string
                       type: object
+                    inputs:
+                      description: Inputs specifies the input mapping from other components
+                        and Blueprint.Inputs
+                      items:
+                        properties:
+                          name:
+                            description: Name of this input. It must match with an
+                              input in the child component.
+                            type: string
+                          valueFrom:
+                            description: ValueFrom specifies which input to use.
+                            properties:
+                              component:
+                                description: Component specifies a sibling component's
+                                  name as the input.
+                                type: string
+                              input:
+                                description: Input names a top level ClusterBlueprintSpec.Inputs
+                                  as the input.
+                                type: string
+                            type: object
+                        required:
+                        - name
+                        - valueFrom
+                        type: object
+                      type: array
                     name:
                       description: Name of the component. Used as a reference for
                         inputs. Template components are identified by this name in
@@ -202,6 +228,27 @@ spec:
                 description: Description of the blueprint If not set, this does not
                   reflect descriptions in child blueprints or templates
                 type: string
+              inputs:
+                description: "Inputs specifies the input types and names required
+                  by this blueprint \n A Template may reference the inputs by name
+                  and then follow the input's schema, eg: $(inputs.my-source.url)$
+                  \n Note: If your compound blueprint does not expect any inputs,
+                  it can not be used as a component to a parent blueprint."
+                items:
+                  properties:
+                    name:
+                      description: Name is used to reference this input in templates
+                        and component definitions
+                      type: string
+                    ref:
+                      description: Ref is the name of the ClusterBlueprintType that
+                        must be provided
+                      type: string
+                  required:
+                  - name
+                  - ref
+                  type: object
+                type: array
               params:
                 description: Params specifies accepted parameters for the template.
                   Any parameter consumed in the template MUST be specified as a Param
