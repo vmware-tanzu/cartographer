@@ -10,6 +10,7 @@ import (
 
 // TODO:
 //   * Inputs!
+//   * Options can't select on Owner, only parameters
 //	 * Match the thris param design: https://gist.github.com/squeedee/7a5bce7f52147afc5c9ba37a061685d6#file-2-all-components-define-their-params-yaml
 //	 * Document how the last resource is the source of a Healthrule and the output type
 
@@ -29,6 +30,11 @@ type BlueprintSpec struct {
 	// Description of the blueprint
 	// If not set, this does not reflect descriptions in child blueprints or templates
 	Description string `json:"description,omitempty"`
+
+	// Params specifies accepted parameters for the template.
+	// Any parameter consumed in the template MUST be specified
+	// as a Param
+	Params []Param `json:"params,omitempty"`
 
 	// OutputTypeRef refers to an object describing the contract this blueprint can fulfill
 	// This is optional, however without an output, this Blueprint cannot be the cause of
@@ -65,12 +71,7 @@ type BlueprintStatus struct {
 }
 
 // Components are a list of child blueprints
-type Components struct {
-	Items []Component `json:"items"`
-
-	// Params specifies overrides or remapping
-	Params []ComponentParam `json:"params,omitempty"`
-}
+type Components []Component
 
 // Component to a subcomponent
 // Note: There are no params specified at this level. See BlueprintSpec.Params and TemplateSpec.Params
