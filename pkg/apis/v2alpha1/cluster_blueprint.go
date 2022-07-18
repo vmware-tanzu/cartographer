@@ -11,8 +11,7 @@ import (
 // TODO:
 //   * Inputs!
 //   * Options can't select on Owner, only parameters
-//	 * Match the thris param design: https://gist.github.com/squeedee/7a5bce7f52147afc5c9ba37a061685d6#file-2-all-components-define-their-params-yaml
-//	 * Document how the last resource is the source of a Healthrule and the output type
+//	 * What to do with healthrules for a compound blueprint.
 
 // ClusterBlueprint represents a component within Cartographer Todo: be less asinine
 // +kubebuilder:object:root=true
