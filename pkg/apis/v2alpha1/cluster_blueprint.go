@@ -10,14 +10,8 @@ import (
 
 // TODO:
 //   * Inputs!
+//	 * Match the thris param design: https://gist.github.com/squeedee/7a5bce7f52147afc5c9ba37a061685d6#file-2-all-components-define-their-params-yaml
 //	 * Document how the last resource is the source of a Healthrule and the output type
-//	 * What to do with Field matchers... can we nuke them?
-//   * Nested Params/Param rewriting?
-//   * Document Duck Typing vs OutputType
-//		* Duck typing requires no extra CRDS
-//		* Duck typing makes it easier to proliferate useless contracts <<< and this is why we wont do it
-//	 * Document Param behavior
-//   * Document Resource->Component
 
 // ClusterBlueprint represents a component within Cartographer Todo: be less asinine
 // +kubebuilder:object:root=true
