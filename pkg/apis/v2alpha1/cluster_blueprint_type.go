@@ -12,7 +12,7 @@ import (
 // ClusterBlueprintType defines a valid output/input between Components
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=clusteroutputtypes,scope=Cluster,shortName=cb
+// +kubebuilder:resource:path=clusterblueprinttypes,scope=Cluster,shortName=cb
 type ClusterBlueprintType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`

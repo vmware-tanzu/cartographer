@@ -235,6 +235,9 @@ spec:
                   - name
                   type: object
                 type: array
+              priority:
+                description: TODO enum type
+                type: string
               serviceAccountRef:
                 description: 'ServiceAccountName refers to the Service account with
                   permissions to create resources submitted by the ClusterBlueprint.
