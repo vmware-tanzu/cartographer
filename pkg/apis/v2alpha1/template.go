@@ -8,6 +8,11 @@ import (
 type TemplateSpec struct {
 	Templateable `json:",inline"`
 
+	// Params specifies accepted parameters for the template.
+	// Any parameter consumed in the template MUST be specified
+	// as a Param
+	Params []Param `json:"params,omitempty"`
+
 	// HealthRule specifies rubric for determining the health of a resource
 	// stamped by this template
 	// +optional

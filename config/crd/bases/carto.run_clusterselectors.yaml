@@ -73,8 +73,8 @@ spec:
                         could either match the ownerObject''s, or also have templating
                         to generate them.'
                       properties:
-                        template:
-                          description: 'Template defines a resource template for a
+                        jsonPath:
+                          description: 'JSONPath defines a resource template for a
                             Kubernetes Resource or Custom Resource which is applied
                             to the server each time the blueprint is applied. Templates
                             support simple value interpolation using the $()$ marker
@@ -215,15 +215,15 @@ spec:
                   specified in OwnerSelector's TypeMeta.
                 items:
                   properties:
-                    defaultValue:
-                      description: DefaultValue makes this parameter optional if already
+                    default:
+                      description: Default makes this parameter optional if already
                         optional, overrides the default value
                       type: string
                     name:
                       type: string
-                    ownerPath:
-                      description: OwnerPath defines where in the Owner object this
-                        parameter is sourced from using JSONPath syntax.
+                    path:
+                      description: Path defines where in the Owner object this parameter
+                        is sourced from using JSONPath syntax.
                       type: string
                     value:
                       description: Value set's the value. You cannot map an ownerObject
@@ -256,8 +256,8 @@ spec:
                   the status of the Blueprint's imprint back to the Owner. If omitted,
                   the Owner is not updated by Cartographer
                 properties:
-                  template:
-                    description: 'Template defines a resource template for a Kubernetes
+                  jsonPath:
+                    description: 'JSONPath defines a resource template for a Kubernetes
                       Resource or Custom Resource which is applied to the server each
                       time the blueprint is applied. Templates support simple value
                       interpolation using the $()$ marker format. For more information,

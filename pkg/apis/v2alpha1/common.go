@@ -29,6 +29,8 @@ type CalculatedParam struct {
 
 	// Description(s) of this parameter.
 	// if multiple children exist, then they are joined with newlines
+	// if this parameter is optional, or required, the description will be
+	// prepended with "(optional)" or "(required)"
 	Description string `json:"description,omitempty"`
 }
 
@@ -39,7 +41,7 @@ type BlueprintRef struct {
 }
 
 type Templateable struct {
-	// Template defines a resource template for a Kubernetes Resource or
+	// JSONPath defines a resource template for a Kubernetes Resource or
 	// Custom Resource which is applied to the server each time
 	// the blueprint is applied. Templates support simple value
 	// interpolation using the $()$ marker format. For more
@@ -49,7 +51,7 @@ type Templateable struct {
 	// be created in the owner namespace. If the namespace is specified and is not
 	// the owner namespace, the resource will fail to be created.
 	// +kubebuilder:pruning:PreserveUnknownFields
-	Template *runtime.RawExtension `json:"template,omitempty"`
+	JSONPath *runtime.RawExtension `json:"jsonPath,omitempty"`
 
 	// Ytt defines a resource template written in `ytt` for a Kubernetes Resource or
 	// Custom Resource which is applied to the server each time

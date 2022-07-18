@@ -41,9 +41,6 @@ type BlueprintSpec struct {
 	// a reconciliation of sibling components in a parent blueprint.
 	OutputTypeRef OutputTypeRef `json:"outputTypeRef,omitempty"`
 
-	// Params for templates and overrides for child blueprints.
-	Params []Param `json:"params,omitempty"`
-
 	// Components are a list of child blueprints which this blueprint
 	// creates and maintains during the lifetime of the OwnerObject.
 	// If OutputTypeRef is specified, the last item in this list must emit that type.
@@ -74,7 +71,12 @@ type BlueprintStatus struct {
 }
 
 // Components are a list of child blueprints
-type Components []Component
+type Components struct {
+	Items []Component `json:"items"`
+
+	// Params specifies overrides or remapping
+	Params []ComponentParam `json:"params,omitempty"`
+}
 
 // Component to a subcomponent
 // Note: There are no params specified at this level. See BlueprintSpec.Params and TemplateSpec.Params

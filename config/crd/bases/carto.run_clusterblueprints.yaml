@@ -57,129 +57,169 @@ spec:
                   If OutputTypeRef is specified, the last item in this list must emit
                   that type. If it doesn''t, the condition (todo: document condition
                   here) One of Components or Template can be specified exclusively.'
-                items:
-                  description: 'Component to a subcomponent Note: There are no params
-                    specified at this level. See BlueprintSpec.Params and TemplateSpec.Params'
-                  properties:
-                    blueprintRef:
-                      description: BlueprintRef identifies the template used to produce
-                        this resource Only one of BlueprintRef and Options can be
-                        specified.
+                properties:
+                  items:
+                    items:
+                      description: 'Component to a subcomponent Note: There are no
+                        params specified at this level. See BlueprintSpec.Params and
+                        TemplateSpec.Params'
                       properties:
+                        blueprintRef:
+                          description: BlueprintRef identifies the template used to
+                            produce this resource Only one of BlueprintRef and Options
+                            can be specified.
+                          properties:
+                            name:
+                              description: Name of the blueprint
+                              minLength: 1
+                              type: string
+                          type: object
                         name:
-                          description: Name of the blueprint
-                          minLength: 1
+                          description: Name of the component. Used as a reference
+                            for inputs. Template components are identified by this
+                            name in the BlueprintStatus
                           type: string
-                      type: object
-                    name:
-                      description: Name of the component. Used as a reference for
-                        inputs. Template components are identified by this name in
-                        the BlueprintStatus
-                      type: string
-                    options:
-                      description: Options is a list of template names and Selector.
-                        A template will be selected if the workload matches the specified
-                        selector. Only one template can be selected. Only one of BlueprintRef
-                        and Options can be specified. Minimum number of items in list
-                        is two.
-                      items:
-                        properties:
-                          name:
-                            description: Name of the template to apply
-                            minLength: 1
-                            type: string
-                          selector:
-                            description: Selector is a criteria to match against  a
-                              workload or deliverable resource.
+                        options:
+                          description: Options is a list of template names and Selector.
+                            A template will be selected if the workload matches the
+                            specified selector. Only one template can be selected.
+                            Only one of BlueprintRef and Options can be specified.
+                            Minimum number of items in list is two.
+                          items:
                             properties:
-                              matchExpressions:
-                                description: matchExpressions is a list of label selector
-                                  requirements. The requirements are ANDed.
-                                items:
-                                  description: A label selector requirement is a selector
-                                    that contains values, a key, and an operator that
-                                    relates the key and values.
-                                  properties:
-                                    key:
-                                      description: key is the label key that the selector
-                                        applies to.
+                              name:
+                                description: Name of the template to apply
+                                minLength: 1
+                                type: string
+                              selector:
+                                description: Selector is a criteria to match against  a
+                                  workload or deliverable resource.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchFields:
+                                    description: MatchFields is a list of field selector
+                                      requirements. The requirements are ANDed.
+                                    items:
+                                      properties:
+                                        key:
+                                          description: 'Key is the JSON path in the
+                                            workload to match against. e.g. for workload:
+                                            "workload.spec.source.git.url", e.g. for
+                                            deliverable: "deliverable.spec.source.git.url"'
+                                          minLength: 1
+                                          type: string
+                                        operator:
+                                          description: Operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          enum:
+                                          - In
+                                          - NotIn
+                                          - Exists
+                                          - DoesNotExist
+                                          type: string
+                                        values:
+                                          description: Values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
                                       type: string
-                                    operator:
-                                      description: operator represents a key's relationship
-                                        to a set of values. Valid operators are In,
-                                        NotIn, Exists and DoesNotExist.
-                                      type: string
-                                    values:
-                                      description: values is an array of string values.
-                                        If the operator is In or NotIn, the values
-                                        array must be non-empty. If the operator is
-                                        Exists or DoesNotExist, the values array must
-                                        be empty. This array is replaced during a
-                                        strategic merge patch.
-                                      items:
-                                        type: string
-                                      type: array
-                                  required:
-                                  - key
-                                  - operator
-                                  type: object
-                                type: array
-                              matchFields:
-                                description: MatchFields is a list of field selector
-                                  requirements. The requirements are ANDed.
-                                items:
-                                  properties:
-                                    key:
-                                      description: 'Key is the JSON path in the workload
-                                        to match against. e.g. for workload: "workload.spec.source.git.url",
-                                        e.g. for deliverable: "deliverable.spec.source.git.url"'
-                                      minLength: 1
-                                      type: string
-                                    operator:
-                                      description: Operator represents a key's relationship
-                                        to a set of values. Valid operators are In,
-                                        NotIn, Exists and DoesNotExist.
-                                      enum:
-                                      - In
-                                      - NotIn
-                                      - Exists
-                                      - DoesNotExist
-                                      type: string
-                                    values:
-                                      description: Values is an array of string values.
-                                        If the operator is In or NotIn, the values
-                                        array must be non-empty. If the operator is
-                                        Exists or DoesNotExist, the values array must
-                                        be empty.
-                                      items:
-                                        type: string
-                                      type: array
-                                  required:
-                                  - key
-                                  - operator
-                                  type: object
-                                type: array
-                              matchLabels:
-                                additionalProperties:
-                                  type: string
-                                description: matchLabels is a map of {key,value} pairs.
-                                  A single {key,value} in the matchLabels map is equivalent
-                                  to an element of matchExpressions, whose key field
-                                  is "key", the operator is "In", and the values array
-                                  contains only "value". The requirements are ANDed.
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
                                 type: object
+                            required:
+                            - name
+                            - selector
                             type: object
-                        required:
-                        - name
-                        - selector
-                        type: object
-                      minItems: 2
-                      type: array
-                  required:
-                  - blueprintRef
-                  - name
-                  type: object
-                type: array
+                          minItems: 2
+                          type: array
+                      required:
+                      - blueprintRef
+                      - name
+                      type: object
+                    type: array
+                  params:
+                    description: Params specifies overrides or remapping
+                    items:
+                      properties:
+                        default:
+                          description: 'DefaultValue of the parameter. Causes the
+                            parameter to be optional If multiple children exist that
+                            specify DefaultValue, and Value is not set, this must
+                            be set. Otherwise a "ParametersReady:False, Reason: ParameterDefaultValueCollision"
+                            condition occurs.'
+                          x-kubernetes-preserve-unknown-fields: true
+                        description:
+                          description: Description of the parameter If a children
+                            exist, will hide child descriptions Otherwise, child descriptions
+                            are joined with newlines and that result is used
+                          type: string
+                        name:
+                          description: Name of the parameter. Template blueprints
+                            must specify params to use them Non-Template blueprints
+                            can modify template parameters by specifying parameters
+                          type: string
+                        value:
+                          description: 'Value of the parameter. If specified, parent
+                            properties are ignored. If multiple children exist that
+                            specify Value, this must be set, otherwise a "ParametersReady:False,
+                            Reason: ParameterValueCollision" condition occurs.'
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      type: object
+                    type: array
+                required:
+                - items
+                type: object
               description:
                 description: Description of the blueprint If not set, this does not
                   reflect descriptions in child blueprints or templates
@@ -197,36 +237,6 @@ spec:
                 required:
                 - name
                 type: object
-              params:
-                description: Params for templates and overrides for child blueprints.
-                items:
-                  properties:
-                    default:
-                      description: 'DefaultValue of the parameter. Causes the parameter
-                        to be optional If multiple children exist that specify DefaultValue,
-                        and Value is not set, this must be set. Otherwise a "ParametersReady:False,
-                        Reason: ParameterDefaultValueCollision" condition occurs.'
-                      x-kubernetes-preserve-unknown-fields: true
-                    description:
-                      description: Description of the parameter If a children exist,
-                        will hide child descriptions Otherwise, child descriptions
-                        are joined with newlines and that result is used
-                      type: string
-                    name:
-                      description: Name of the parameter. Template blueprints must
-                        specify params to use them Non-Template blueprints can modify
-                        template parameters by specifying parameters
-                      type: string
-                    value:
-                      description: 'Value of the parameter. If specified, parent properties
-                        are ignored. If multiple children exist that specify Value,
-                        this must be set, otherwise a "ParametersReady:False, Reason:
-                        ParameterValueCollision" condition occurs.'
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - name
-                  type: object
-                type: array
               template:
                 description: 'Template is a definition of a resource this component
                   stamps onto the cluster One of Components or Template can be specified
@@ -386,6 +396,19 @@ spec:
                           False it is unhealthy. Otherwise, healthiness is Unknown.
                         type: string
                     type: object
+                  jsonPath:
+                    description: 'JSONPath defines a resource template for a Kubernetes
+                      Resource or Custom Resource which is applied to the server each
+                      time the blueprint is applied. Templates support simple value
+                      interpolation using the $()$ marker format. For more information,
+                      see: https://cartographer.sh/docs/latest/templating/ You cannot
+                      define both Template and Ytt at the same time. You should not
+                      define the namespace for the resource - it will automatically
+                      be created in the owner namespace. If the namespace is specified
+                      and is not the owner namespace, the resource will fail to be
+                      created.'
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   outputMapping:
                     description: 'An output mapping connects fields in the stamped
                       resource with the structure of the OutputTypeRef specified for
@@ -411,19 +434,39 @@ spec:
                       - resourcePath
                       type: object
                     type: array
-                  template:
-                    description: 'Template defines a resource template for a Kubernetes
-                      Resource or Custom Resource which is applied to the server each
-                      time the blueprint is applied. Templates support simple value
-                      interpolation using the $()$ marker format. For more information,
-                      see: https://cartographer.sh/docs/latest/templating/ You cannot
-                      define both Template and Ytt at the same time. You should not
-                      define the namespace for the resource - it will automatically
-                      be created in the owner namespace. If the namespace is specified
-                      and is not the owner namespace, the resource will fail to be
-                      created.'
-                    type: object
-                    x-kubernetes-preserve-unknown-fields: true
+                  params:
+                    description: Params specifies accepted parameters for the template.
+                      Any parameter consumed in the template MUST be specified as
+                      a Param
+                    items:
+                      properties:
+                        default:
+                          description: 'DefaultValue of the parameter. Causes the
+                            parameter to be optional If multiple children exist that
+                            specify DefaultValue, and Value is not set, this must
+                            be set. Otherwise a "ParametersReady:False, Reason: ParameterDefaultValueCollision"
+                            condition occurs.'
+                          x-kubernetes-preserve-unknown-fields: true
+                        description:
+                          description: Description of the parameter If a children
+                            exist, will hide child descriptions Otherwise, child descriptions
+                            are joined with newlines and that result is used
+                          type: string
+                        name:
+                          description: Name of the parameter. Template blueprints
+                            must specify params to use them Non-Template blueprints
+                            can modify template parameters by specifying parameters
+                          type: string
+                        value:
+                          description: 'Value of the parameter. If specified, parent
+                            properties are ignored. If multiple children exist that
+                            specify Value, this must be set, otherwise a "ParametersReady:False,
+                            Reason: ParameterValueCollision" condition occurs.'
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      type: object
+                    type: array
                   ytt:
                     description: 'Ytt defines a resource template written in `ytt`
                       for a Kubernetes Resource or Custom Resource which is applied
@@ -455,7 +498,9 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                     description:
                       description: Description(s) of this parameter. if multiple children
-                        exist, then they are joined with newlines
+                        exist, then they are joined with newlines if this parameter
+                        is optional, or required, the description will be prepended
+                        with "(optional)" or "(required)"
                       type: string
                     name:
                       description: Name of the parameter

@@ -24,6 +24,9 @@ type ClusterSelectorSpec struct {
 	// todo: explain selection criteria, precedence and how version is only used for representation
 	OwnerSelector `json:"ownerSelector"`
 
+	// TODO enum type
+	Priority string `json:"priority,omitempty"`
+
 	// BlueprintRef selects a specific blueprint for the matched OwnerSelector
 	BlueprintRef BlueprintRef `json:"blueprintRef"`
 
@@ -57,18 +60,18 @@ type OwnerSelector struct {
 type ParameterMapping struct {
 	Name string `json:"name"`
 
-	// DefaultValue makes this parameter optional
+	// Default makes this parameter optional
 	// if already optional, overrides the default value
-	DefaultValue string `json:"defaultValue,omitempty"`
+	Default string `json:"default,omitempty"`
 
 	// Value set's the value. You cannot map an ownerObject value at the same time
 	// Using this field lets you configure blueprints on a per "Mapping" basis.
 	// This is the best place for operator configuration to live.
 	Value string `json:"value,omitempty"`
 
-	// OwnerPath defines where in the Owner object this parameter is sourced from
+	// Path defines where in the Owner object this parameter is sourced from
 	// using JSONPath syntax.
-	OwnerPath string `json:"ownerPath,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 // AdditionalStatusMapping provides a mechanism to create other status objects
