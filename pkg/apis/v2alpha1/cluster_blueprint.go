@@ -9,6 +9,7 @@ import (
 )
 
 // TODO:
+// 	 * ParamRenames!
 //   * Inputs!
 //   * Options can't select on Owner, only parameters
 //	 * What to do with healthrules for a compound blueprint.
@@ -35,16 +36,26 @@ type BlueprintSpec struct {
 	// as a Param
 	Params []Param `json:"params,omitempty"`
 
-	// OutputTypeRef refers to an object describing the contract this blueprint can fulfill
+	// Inputs specifies the input types and names required by this blueprint
+	//
+	//A Template may reference the inputs by name and then follow the input's
+	// schema, eg: $(inputs.my-source.url)$
+	//
+	// A blueprint can map
+	// Note: If your compound blueprint does not expect any inputs, it can not be used as a
+	// component to a parent blueprint.
+	//Inputs Inputs `json:"inputs,omitempty"`
+
+	// TypeRef refers to an object describing the contract this blueprint can fulfill
 	// This is optional, however without an output, this Blueprint cannot be the cause of
 	// a reconciliation of sibling components in a parent blueprint.
 	// Templates can specify an output mapping via TemplateSpec.OutputMapping.
-	// The last component in Components must match the type of OutputTypeRef, as this is the
+	// The last component in Components must match the type of TypeRef, as this is the
 	// component that is used for this blueprint's output.
-	OutputTypeRef OutputTypeRef `json:"outputTypeRef,omitempty"`
+	TypeRef BlueTypeRef `json:"typeRef,omitempty"`
 
 	// Components are a list of child blueprints managed by this blueprint.
-	// If OutputTypeRef is specified, the last item in this list must emit that type.
+	// If TypeRef is specified, the last item in this list must emit that type.
 	// One of Components or Template can be specified exclusively.
 	// The last Component in this list is assumed to be the Output for this blueprint.
 	Components Components `json:"components,omitempty"`
@@ -55,7 +66,7 @@ type BlueprintSpec struct {
 	Template TemplateSpec `json:"template,omitempty"`
 }
 
-type OutputTypeRef struct {
+type BlueTypeRef struct {
 	// Name of the ClusterBlueprintType that defines the output type of this blueprint.
 	Name string `json:"name"`
 }

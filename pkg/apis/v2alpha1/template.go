@@ -26,7 +26,7 @@ type TemplateSpec struct {
 type OutputMapping []OutputReference
 
 type OutputReference struct {
-	// Path is a JSONPath that represents the field in the OutputType that is fulfilled by Path
+	// Path is a JSONPath into the OutputType that receives the value at ResourcePath
 	Path string `json:"path"`
 	// ResourcePath	is a JSONPath that represents where to find the value in the stamped resource.
 	// ResourcePath can refer to a simple or complex type,
