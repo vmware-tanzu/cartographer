@@ -80,6 +80,7 @@ func (k *Key) String() string {
 // register a particular resource as watching a resource for
 // a particular lease duration.  This watch must be refreshed
 // periodically (e.g. by a controller resync) or it will expire.
+// fixme: get loggers from contexts (per request)
 func NewDependencyTracker(lease time.Duration, log logr.Logger) DependencyTracker {
 	return &impl{
 		log:           log,

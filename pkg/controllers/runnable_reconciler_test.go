@@ -17,24 +17,33 @@ package controllers_test
 import (
 	"context"
 	"errors"
+	"testing"
 
+	v1 "dies.dev/apis/core/v1"
+	diesv1 "dies.dev/apis/meta/v1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-labs/reconciler-runtime/reconcilers"
+	rtesting "github.com/vmware-labs/reconciler-runtime/testing"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -45,9 +54,321 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/resources/dies"
 )
+
+//func createTestableReconciler(controllerClient, ownerClient client.Client, l logr.Logger) reconcile.Reconciler {
+func createTestableReconciler(controllerClient client.Client, l logr.Logger) reconcile.Reconciler {
+	controllerRepo := repository.NewRepository(controllerClient, repository.NewCache(l.WithName("cache-logger")))
+	dependencyTracker := dependency.NewDependencyTracker(
+		2*utils.DefaultResyncTime,
+		l.WithName("dependency-tracker-logger"),
+	)
+
+	clientBuilder := func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
+		//var discoveryClient discovery.DiscoveryInterface
+		//if needDiscovery {
+		//	discoveryClient, err := discovery.NewDiscoveryClientForConfig(ownerClient.)
+		//}
+		return nil, nil, nil
+	}
+
+	return &controllers.RunnableReconciler{
+		Repo:                    controllerRepo,
+		DependencyTracker:       dependencyTracker,
+		ConditionManagerBuilder: conditions.NewConditionManager,
+		ClientBuilder:           clientBuilder,
+		RepositoryBuilder:       repository.NewRepository,
+		Realizer:                runnable.NewRealizer(),
+	}
+}
+
+// These tests are still in flux. So grouping by context is still up in the air
+// Todo: need to test present service account by default and by param
+func TestMissingServiceAccount(t *testing.T) {
+	runnableNamespace := "test-ns"
+	runnableName := "my-runnable"
+	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
+
+	serviceAccountName := "my-service-account"
+
+	now := metav1.Now()
+
+	baseServiceAccount := v1.ServiceAccountBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.Namespace(runnableNamespace)
+			d.Name(serviceAccountName)
+			d.CreationTimestamp(now)
+		})
+
+	baseRunnable := dies.RunnableBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(runnableName).
+				Namespace(runnableNamespace).
+				AddLabel("some-val", "first")
+		}).
+		SpecDie(func(d *dies.RunnableSpecDie) {
+			d.
+				RetentionPolicy(v1alpha1.RetentionPolicy{
+					MaxFailedRuns:     10,
+					MaxSuccessfulRuns: 10,
+				}).
+				RunTemplateRef(v1alpha1.TemplateReference{
+					Kind: "ClusterRunTemplate",
+					Name: "my-run-template",
+				})
+		})
+
+	secretName := "my-secret"
+
+	baseSecret := v1.SecretBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(secretName).
+				Namespace(runnableNamespace)
+		})
+
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
+
+	rts := rtesting.ReconcilerTests{
+		"default service account missing": {
+			Request: runnableRequest,
+			GivenObjects: []client.Object{
+				baseRunnable,
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/default]: failed to get object [test-ns/default] from api server: serviceaccounts "default" not found`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/default]: failed to get object [test-ns/default] from api server: serviceaccounts "default" not found`),
+						)
+					}),
+			},
+		},
+		"provided service account missing": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName("my-service-account")
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/my-service-account]: failed to get object [test-ns/my-service-account] from api server: serviceaccounts "my-service-account" not found`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get service account object from api server [test-ns/my-service-account]: failed to get object [test-ns/my-service-account] from api server: serviceaccounts "my-service-account" not found`),
+						)
+					}),
+			},
+		},
+		"service account must have secret refs": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseServiceAccount,
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName(serviceAccountName)
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any secrets`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any secrets`),
+						)
+					}),
+			},
+		},
+		"service account must ref existing secrets": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseServiceAccount.SecretsDie(v1.ObjectReferenceBlank.Name(secretName)),
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName(serviceAccountName)
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get secret object from api server: failed to get object [test-ns/my-secret] from api server: secrets "my-secret" not found`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`failed to get secret object from api server: failed to get object [test-ns/my-secret] from api server: secrets "my-secret" not found`),
+						)
+					}),
+			},
+		},
+		"service account must ref a token secret": {
+			Request:           runnableRequest,
+			AdditionalConfigs: nil,
+			GivenObjects: []client.Object{
+				baseServiceAccount.SecretsDie(v1.ObjectReferenceBlank.Name(secretName)),
+				baseSecret,
+				baseRunnable.SpecDie(func(d *dies.RunnableSpecDie) {
+					d.ServiceAccountName(serviceAccountName)
+				}),
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any token secrets`),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionFalse).
+								Reason("ServiceAccountSecretError").
+								Message(`service account [test-ns/my-service-account] does not have any token secrets`),
+						)
+					}),
+			},
+		},
+	}
+
+	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
+		return createTestableReconciler(c, c.Log)
+	})
+}
+
+// todo what happens when the ClientBuilder errors out
+
+func TestTemplateReads(t *testing.T) {
+	//t.SkipNow()
+	runnableNamespace := "test-ns"
+	runnableName := "my-runnable"
+	runnableRequest := controllerruntime.Request{NamespacedName: types.NamespacedName{Namespace: runnableNamespace, Name: runnableName}}
+
+	serviceAccountName := "my-service-account"
+
+	now := metav1.Now()
+
+	secretName := "my-secret"
+
+	secret := v1.SecretBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(secretName).
+				Namespace(runnableNamespace)
+		}).
+		Type(corev1.SecretTypeServiceAccountToken)
+
+	serviceAccount := v1.ServiceAccountBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.Namespace(runnableNamespace)
+			d.Name(serviceAccountName)
+			d.CreationTimestamp(now)
+		}).
+		SecretsDie(v1.ObjectReferenceBlank.Name(secretName))
+
+	template := ""
+
+	baseRunTemplate := dies.ClusterRunTemplateBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.Name("my-run-template")
+		})
+	//SpecDie(func(d *dies.RunTemplateSpecDie) {
+	//	d.Template()
+	//})
+
+	baseRunnable := dies.RunnableBlank.
+		MetadataDie(func(d *diesv1.ObjectMetaDie) {
+			d.
+				Name(runnableName).
+				Namespace(runnableNamespace).
+				AddLabel("some-val", "first")
+		}).
+		SpecDie(func(d *dies.RunnableSpecDie) {
+			d.
+				RetentionPolicy(v1alpha1.RetentionPolicy{
+					MaxFailedRuns:     10,
+					MaxSuccessfulRuns: 10,
+				}).
+				RunTemplateRef(v1alpha1.TemplateReference{
+					Kind: "ClusterRunTemplate",
+					Name: "my-run-template",
+				}).
+				ServiceAccountName(serviceAccountName)
+		})
+
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
+
+	rts := rtesting.ReconcilerTests{
+		"template contains no data": {
+			Request: runnableRequest,
+			GivenObjects: []client.Object{
+				serviceAccount,
+				secret,
+				baseRunnable,
+				baseRunTemplate,
+			},
+			ExpectStatusUpdates: []client.Object{
+				baseRunnable.
+					StatusDie(func(d *dies.RunnableStatusDie) {
+						d.ConditionsDie(
+							diesv1.ConditionBlank.
+								Type("RunTemplateReady").
+								Status(metav1.ConditionTrue),
+							diesv1.ConditionBlank.
+								Type("Ready").
+								Status(metav1.ConditionTrue),
+						)
+					}),
+			},
+		},
+	}
+
+	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
+		return createTestableReconciler(c, c.Log)
+	})
+}
 
 var _ = Describe("Reconcile", func() {
 	var (
