@@ -175,6 +175,24 @@ spec:
                         type: object
                       minItems: 2
                       type: array
+                    paramRenames:
+                      description: ParamRenames are a list of parameters that need
+                        to be renamed to satisfy the child blueprint Any params specified
+                        in Blueprint.Params are passed to the child, however if the
+                        name doesn't match, then use a param rename.
+                      properties:
+                        from:
+                          description: From is the name of the parameter in the current
+                            blueprint
+                          type: string
+                        to:
+                          description: To is the name of the parameter in the child
+                            component
+                          type: string
+                      required:
+                      - from
+                      - to
+                      type: object
                   required:
                   - blueprintRef
                   - name
@@ -392,8 +410,8 @@ spec:
                     items:
                       properties:
                         path:
-                          description: Path is a JSONPath that represents the field
-                            in the OutputType that is fulfilled by Path
+                          description: Path is a JSONPath into the OutputType that
+                            receives the value at ResourcePath
                           type: string
                         resourcePath:
                           description: "ResourcePath\tis a JSONPath that represents

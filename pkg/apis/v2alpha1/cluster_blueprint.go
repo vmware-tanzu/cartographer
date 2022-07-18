@@ -95,6 +95,11 @@ type Component struct {
 	// Only one of BlueprintRef and Options can be specified.
 	BlueprintRef BlueprintRef `json:"blueprintRef"`
 
+	// ParamRenames are a list of parameters that need to be renamed to satisfy the child blueprint
+	// Any params specified in Blueprint.Params are passed to the child, however if the name doesn't match,
+	// then use a param rename.
+	ParamRenames ParamRename `json:"paramRenames,omitempty"`
+
 	// Options is a list of template names and Selector.
 	// A template will be selected if the workload matches the specified selector.
 	// Only one template can be selected.
@@ -102,6 +107,14 @@ type Component struct {
 	// Minimum number of items in list is two.
 	// +kubebuilder:validation:MinItems=2
 	Options []TemplateOption `json:"options,omitempty"`
+}
+
+type ParamRename struct {
+	// From is the name of the parameter in the current blueprint
+	From string `json:"from"`
+
+	// To is the name of the parameter in the child component
+	To string `json:"to"`
 }
 
 // ClusterBlueprintList is a list of ClusterBlueprint
