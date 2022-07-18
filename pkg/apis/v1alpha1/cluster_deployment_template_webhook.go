@@ -39,7 +39,12 @@ func (c *ClusterDeploymentTemplate) ValidateDelete() error {
 }
 
 func (c *ClusterDeploymentTemplate) validate() error {
-	err := c.Spec.TemplateSpec.validate()
+	err := validateName(c.ObjectMeta)
+	if err != nil {
+		return err
+	}
+
+	err = c.Spec.TemplateSpec.validate()
 	if err != nil {
 		return err
 	}

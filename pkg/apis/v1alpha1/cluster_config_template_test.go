@@ -85,7 +85,7 @@ var _ = Describe("ClusterConfigTemplate", func() {
 
 				It("returns an error", func() {
 					Expect(template.ValidateCreate()).
-						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
+						To(MatchError("error validating clusterconfigtemplate [some-template]: invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
 		})
@@ -135,7 +135,7 @@ var _ = Describe("ClusterConfigTemplate", func() {
 
 				It("returns an error", func() {
 					Expect(template.ValidateUpdate(nil)).
-						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
+						To(MatchError("error validating clusterconfigtemplate [some-template]: invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
 		})

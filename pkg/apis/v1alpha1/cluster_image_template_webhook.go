@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -25,15 +27,30 @@ import (
 var _ webhook.Validator = &ClusterImageTemplate{}
 
 func (c *ClusterImageTemplate) ValidateCreate() error {
-	return c.Spec.TemplateSpec.validate()
+	if err := c.validate(); err != nil {
+		return fmt.Errorf("error validating clusterimagetemplate [%s]: %w", c.Name, err)
+	}
+	return nil
 }
 
 func (c *ClusterImageTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.Spec.TemplateSpec.validate()
+	if err := c.validate(); err != nil {
+		return fmt.Errorf("error validating clusterimagetemplate [%s]: %w", c.Name, err)
+	}
+	return nil
 }
 
 func (c *ClusterImageTemplate) ValidateDelete() error {
 	return nil
+}
+
+func (c *ClusterImageTemplate) validate() error {
+	err := validateName(c.ObjectMeta)
+	if err != nil {
+		return err
+	}
+
+	return c.Spec.TemplateSpec.validate()
 }
 
 func (c *ClusterImageTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {

@@ -47,6 +47,11 @@ func (c *ClusterSupplyChain) ValidateDelete() error {
 }
 
 func (c *ClusterSupplyChain) validateNewState() error {
+	err := validateName(c.ObjectMeta)
+	if err != nil {
+		return err
+	}
+
 	names := make(map[string]bool)
 
 	if len(c.Spec.Selector) == 0 && len(c.Spec.SelectorMatchExpressions) == 0 && len(c.Spec.SelectorMatchFields) == 0 {

@@ -47,6 +47,11 @@ func (c *ClusterDelivery) ValidateDelete() error {
 }
 
 func (c *ClusterDelivery) validateNewState() error {
+	err := validateName(c.ObjectMeta)
+	if err != nil {
+		return err
+	}
+
 	if len(c.Spec.Selector) == 0 && len(c.Spec.SelectorMatchExpressions) == 0 && len(c.Spec.SelectorMatchFields) == 0 {
 		return fmt.Errorf("at least one selector, selectorMatchExpression, selectorMatchField must be specified")
 	}
