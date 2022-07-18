@@ -9,10 +9,8 @@ import (
 )
 
 // TODO:
-// 	 * ParamRenames!
-//   * Inputs!
 //   * Options can't select on Owner, only parameters
-//	 * What to do with healthrules for a compound blueprint.
+//	 * What to do with healthrules for a compound blueprint. (probably roll up just like we do in workload today)
 
 // ClusterBlueprint represents a component within Cartographer Todo: be less asinine
 // +kubebuilder:object:root=true
