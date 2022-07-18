@@ -39,19 +39,20 @@ type BlueprintSpec struct {
 	// OutputTypeRef refers to an object describing the contract this blueprint can fulfill
 	// This is optional, however without an output, this Blueprint cannot be the cause of
 	// a reconciliation of sibling components in a parent blueprint.
+	// Templates can specify an output mapping via TemplateSpec.OutputMapping.
+	// The last component in Components must match the type of OutputTypeRef, as this is the
+	// component that is used for this blueprint's output.
 	OutputTypeRef OutputTypeRef `json:"outputTypeRef,omitempty"`
 
-	// Components are a list of child blueprints which this blueprint
-	// creates and maintains during the lifetime of the OwnerObject.
+	// Components are a list of child blueprints managed by this blueprint.
 	// If OutputTypeRef is specified, the last item in this list must emit that type.
-	// If it doesn't, the condition (todo: document condition here)
 	// One of Components or Template can be specified exclusively.
+	// The last Component in this list is assumed to be the Output for this blueprint.
 	Components Components `json:"components,omitempty"`
 
 	// Template is a definition of a resource this component stamps onto the cluster
 	// One of Components or Template can be specified exclusively.
 	// Todo: explain the problem with the absence of oneOf and semantic error checking
-	// Todo: opinions about template.template? resource.template instead?
 	Template TemplateSpec `json:"template,omitempty"`
 }
 

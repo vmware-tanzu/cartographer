@@ -14,10 +14,10 @@ type TemplateSpec struct {
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
 
 	// An output mapping connects fields in the stamped resource with the
-	// structure of the OutputTypeRef specified for this Component.
+	// structure of the ClusterBlueprintType specified for this Component.
 	// With only one entry in the mapping, it's possible to map a simple value
 	// onto a simple type, or a complex, value onto a complex type (a one to one mapping).
-	// When the resource's results do not match the exact shape of the OutputTypeRef,
+	// When the resource's results do not match the exact shape of the ClusterBlueprintType,
 	// you can use multiple mappings to coerce the correct shape.
 	// Todo: examples in docs and a link.
 	OutputMapping OutputMapping `json:"outputMapping,omitempty"`
