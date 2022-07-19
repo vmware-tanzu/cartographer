@@ -7,19 +7,18 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type Selector struct {
 	metav1.LabelSelector `json:",inline"`
 
-	// MatchFields is a list of field selector requirements. The requirements are ANDed.
+	// MatchParams is a list of param selector requirements. The requirements are ANDed.
 	// +optional
-	MatchFields []FieldSelectorRequirement `json:"matchFields,omitempty"`
+	MatchParams []FieldSelectorRequirement `json:"matchFields,omitempty"`
 }
 
 type FieldSelectorRequirement struct {
-	// Key is the JSON path in the workload to match against.
-	// e.g. for workload: "workload.spec.source.git.url",
-	// e.g. for deliverable: "deliverable.spec.source.git.url"
+	// Name is the parameter's name
+	// A parameter with this name must be specified in BlueprintSpec.Params
 	// +kubebuilder:validation:MinLength=1
-	Key string `json:"key"`
+	Name string `json:"name"`
 
-	// Operator represents a key's relationship to a set of values.
+	// Operator represents a parameter's relationship to a set of values.
 	// Valid operators are In, NotIn, Exists and DoesNotExist.
 	// +kubebuilder:validation:Enum=In;NotIn;Exists;DoesNotExist
 	Operator FieldSelectorOperator `json:"operator"`
