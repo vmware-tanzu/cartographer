@@ -11,12 +11,16 @@ import (
 
 // ClusterBlueprintType defines a valid output/input between Components
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+// +kubebuilder:subresource:spec
 // +kubebuilder:resource:path=clusterblueprinttypes,scope=Cluster,shortName=cb
 type ClusterBlueprintType struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
+	Spec BlueprintTypeSpec `json:"spec"`
+}
+
+type BlueprintTypeSpec struct {
 	// Qualifier is provided to avoid name collisions when blueprint authors
 	// start creating new types on a platform.
 	// There is a validation rule that metadata.name must be of

@@ -41,10 +41,6 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          description:
-            description: Description describes this output to provide documentation
-              to consumers.
-            type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -52,30 +48,38 @@ spec:
             type: string
           metadata:
             type: object
-          qualifier:
-            description: 'Qualifier is provided to avoid name collisions when blueprint
-              authors start creating new types on a platform. There is a validation
-              rule that metadata.name must be of the form: <qualifier>.<name> or <qualifier>-<name>.
-              If the qualifier is omitted, then just <name> will suffice. Note: For
-              TAP, this should be "tap" to avoid collisions with blueprint authors.
-              We recommend other platforms follow this pattern also.'
-            type: string
-          schema:
-            description: 'Schema a JSON schema that is a valid representation of a
-              type. Due to a limitation in k8s CRD definitions, this field accepts
-              any valid JSON, however the validation will fail if it''s not JSONSchema
-              as per apiextensions.JSONSchemaProps (see: https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions@v0.24.2#JSONSchemaProps)
-              Todo: explain the problem with the absence of schema here, and semantic
-              error checking'
-            x-kubernetes-preserve-unknown-fields: true
+          spec:
+            properties:
+              description:
+                description: Description describes this output to provide documentation
+                  to consumers.
+                type: string
+              qualifier:
+                description: 'Qualifier is provided to avoid name collisions when
+                  blueprint authors start creating new types on a platform. There
+                  is a validation rule that metadata.name must be of the form: <qualifier>.<name>
+                  or <qualifier>-<name>. If the qualifier is omitted, then just <name>
+                  will suffice. Note: For TAP, this should be "tap" to avoid collisions
+                  with blueprint authors. We recommend other platforms follow this
+                  pattern also.'
+                type: string
+              schema:
+                description: 'Schema a JSON schema that is a valid representation
+                  of a type. Due to a limitation in k8s CRD definitions, this field
+                  accepts any valid JSON, however the validation will fail if it''s
+                  not JSONSchema as per apiextensions.JSONSchemaProps (see: https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions@v0.24.2#JSONSchemaProps)
+                  Todo: explain the problem with the absence of schema here, and semantic
+                  error checking'
+                x-kubernetes-preserve-unknown-fields: true
+            required:
+            - schema
+            type: object
         required:
         - metadata
-        - schema
+        - spec
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
 status:
   acceptedNames:
     kind: ""
