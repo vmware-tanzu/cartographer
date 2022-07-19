@@ -9,7 +9,7 @@ import (
 )
 
 // TODO:
-//	 * What to do with healthrules for a compound blueprint. (probably roll up just like we do in workload today)
+//  * explain how healthrules are nested and continue to work with this spec
 
 // ClusterBlueprint represents a component within Cartographe
 // +kubebuilder:object:root=true
