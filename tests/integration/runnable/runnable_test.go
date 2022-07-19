@@ -404,7 +404,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					Eventually(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 						return len(resourceList.Items), err
-					}).Should(Equal(1))
+					}, "20s").Should(Equal(1))
 
 					Consistently(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
@@ -463,7 +463,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					Eventually(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 						return len(resourceList.Items), err
-					}).Should(Equal(1))
+					}, "20s").Should(Equal(1))
 
 					Consistently(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
@@ -542,7 +542,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					Eventually(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
 						return len(resourceList.Items), err
-					}).Should(Equal(1))
+					}, "20s").Should(Equal(1))
 
 					Consistently(func() (int, error) {
 						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
