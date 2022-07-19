@@ -16,11 +16,12 @@ type FakeRepoCache struct {
 		arg2 *unstructured.Unstructured
 		arg3 string
 	}
-	UnchangedSinceCachedStub        func(*unstructured.Unstructured, *unstructured.Unstructured) *unstructured.Unstructured
+	UnchangedSinceCachedStub        func(*unstructured.Unstructured, *unstructured.Unstructured, string) *unstructured.Unstructured
 	unchangedSinceCachedMutex       sync.RWMutex
 	unchangedSinceCachedArgsForCall []struct {
 		arg1 *unstructured.Unstructured
 		arg2 *unstructured.Unstructured
+		arg3 string
 	}
 	unchangedSinceCachedReturns struct {
 		result1 *unstructured.Unstructured
@@ -79,19 +80,20 @@ func (fake *FakeRepoCache) SetArgsForCall(i int) (*unstructured.Unstructured, *u
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeRepoCache) UnchangedSinceCached(arg1 *unstructured.Unstructured, arg2 *unstructured.Unstructured) *unstructured.Unstructured {
+func (fake *FakeRepoCache) UnchangedSinceCached(arg1 *unstructured.Unstructured, arg2 *unstructured.Unstructured, arg3 string) *unstructured.Unstructured {
 	fake.unchangedSinceCachedMutex.Lock()
 	ret, specificReturn := fake.unchangedSinceCachedReturnsOnCall[len(fake.unchangedSinceCachedArgsForCall)]
 	fake.unchangedSinceCachedArgsForCall = append(fake.unchangedSinceCachedArgsForCall, struct {
 		arg1 *unstructured.Unstructured
 		arg2 *unstructured.Unstructured
-	}{arg1, arg2})
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.UnchangedSinceCachedStub
 	fakeReturns := fake.unchangedSinceCachedReturns
-	fake.recordInvocation("UnchangedSinceCached", []interface{}{arg1, arg2})
+	fake.recordInvocation("UnchangedSinceCached", []interface{}{arg1, arg2, arg3})
 	fake.unchangedSinceCachedMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -105,17 +107,17 @@ func (fake *FakeRepoCache) UnchangedSinceCachedCallCount() int {
 	return len(fake.unchangedSinceCachedArgsForCall)
 }
 
-func (fake *FakeRepoCache) UnchangedSinceCachedCalls(stub func(*unstructured.Unstructured, *unstructured.Unstructured) *unstructured.Unstructured) {
+func (fake *FakeRepoCache) UnchangedSinceCachedCalls(stub func(*unstructured.Unstructured, *unstructured.Unstructured, string) *unstructured.Unstructured) {
 	fake.unchangedSinceCachedMutex.Lock()
 	defer fake.unchangedSinceCachedMutex.Unlock()
 	fake.UnchangedSinceCachedStub = stub
 }
 
-func (fake *FakeRepoCache) UnchangedSinceCachedArgsForCall(i int) (*unstructured.Unstructured, *unstructured.Unstructured) {
+func (fake *FakeRepoCache) UnchangedSinceCachedArgsForCall(i int) (*unstructured.Unstructured, *unstructured.Unstructured, string) {
 	fake.unchangedSinceCachedMutex.RLock()
 	defer fake.unchangedSinceCachedMutex.RUnlock()
 	argsForCall := fake.unchangedSinceCachedArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeRepoCache) UnchangedSinceCachedReturns(result1 *unstructured.Unstructured) {

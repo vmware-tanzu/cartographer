@@ -157,17 +157,18 @@ func (r *repository) EnsureMutableObjectExistsOnCluster(ctx context.Context, obj
 		return err
 	}
 
+	cacheKey := generateCacheKey(obj, nil)
 	if existingObj != nil {
-		cacheHit := r.rc.UnchangedSinceCached(obj, existingObj)
+		cacheHit := r.rc.UnchangedSinceCached(obj, existingObj, cacheKey)
 		if cacheHit != nil {
 			*obj = *cacheHit
 			return nil
 		}
 		log.Info("patching object", "object", obj)
-		return r.patchUnstructured(ctx, existingObj, obj)
+		return r.patchUnstructured(ctx, existingObj, obj, cacheKey)
 	} else {
 		log.Info("creating object", "object", obj)
-		return r.createUnstructured(ctx, obj, "")
+		return r.createUnstructured(ctx, obj, cacheKey)
 	}
 }
 
@@ -186,16 +187,16 @@ func (r *repository) EnsureImmutableObjectExistsOnCluster(ctx context.Context, o
 		return err
 	}
 
-	ownerDiscriminant := buildOwnerDiscriminant(labels)
+	cacheKey := generateCacheKey(obj, labels)
 
-	cacheHit := r.rc.UnchangedSinceCachedFromList(obj, unstructuredList, ownerDiscriminant)
+	cacheHit := r.rc.UnchangedSinceCachedFromList(obj, unstructuredList, cacheKey)
 	if cacheHit != nil {
 		*obj = *cacheHit
 		return nil
 	}
 
 	log.Info("creating object", "object", obj)
-	return r.createUnstructured(ctx, obj, ownerDiscriminant)
+	return r.createUnstructured(ctx, obj, cacheKey)
 }
 
 func (r *repository) GetUnstructured(ctx context.Context, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -299,17 +300,17 @@ func (r *repository) GetRunTemplate(ctx context.Context, ref v1alpha1.TemplateRe
 	return runTemplate, nil
 }
 
-func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.Unstructured, ownerDiscriminant string) error {
+func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.Unstructured, cacheKey string) error {
 	submitted := obj.DeepCopy()
 	if err := r.cl.Create(ctx, obj); err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 
-	r.rc.Set(submitted, obj.DeepCopy(), ownerDiscriminant)
+	r.rc.Set(submitted, obj.DeepCopy(), cacheKey)
 	return nil
 }
 
-func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstructured.Unstructured, obj *unstructured.Unstructured) error {
+func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstructured.Unstructured, obj *unstructured.Unstructured, cacheKey string) error {
 	submitted := obj.DeepCopy()
 
 	obj.SetResourceVersion(existingObj.GetResourceVersion())
@@ -317,7 +318,7 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 		return fmt.Errorf("patch: %w", err)
 	}
 
-	r.rc.Set(submitted, obj.DeepCopy(), "")
+	r.rc.Set(submitted, obj.DeepCopy(), cacheKey)
 	return nil
 }
 
@@ -499,7 +500,20 @@ func (r *repository) GetScheme() *runtime.Scheme {
 	return r.cl.Scheme()
 }
 
-func buildOwnerDiscriminant(labels map[string]string) string {
+func generateCacheKey(obj *unstructured.Unstructured, labels map[string]string) string {
+	// todo: probably should hash object for key
+	kind := obj.GetObjectKind().GroupVersionKind().Kind
+	var name string
+	if obj.GetName() == "" {
+		name = obj.GetGenerateName()
+	} else {
+		name = obj.GetName()
+	}
+	ns := obj.GetNamespace()
+	return fmt.Sprintf("%s:%s:%s:%s", ns, kind, name, buildLabelDiscriminant(labels))
+}
+
+func buildLabelDiscriminant(labels map[string]string) string {
 	var discriminantComponents []string
 	for key, value := range labels {
 		discriminantComponents = insertSorted(discriminantComponents, fmt.Sprintf("{%s:%s}", key, value))
