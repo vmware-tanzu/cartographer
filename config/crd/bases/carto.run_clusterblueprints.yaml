@@ -34,8 +34,7 @@ spec:
   - name: v2alpha1
     schema:
       openAPIV3Schema:
-        description: 'ClusterBlueprint represents a component within Cartographer
-          Todo: be less asinine'
+        description: ClusterBlueprint represents a component within Cartographe
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -151,20 +150,20 @@ spec:
                                   type: object
                                 type: array
                               matchFields:
-                                description: MatchFields is a list of field selector
+                                description: MatchParams is a list of param selector
                                   requirements. The requirements are ANDed.
                                 items:
                                   properties:
-                                    key:
-                                      description: 'Key is the JSON path in the workload
-                                        to match against. e.g. for workload: "workload.spec.source.git.url",
-                                        e.g. for deliverable: "deliverable.spec.source.git.url"'
+                                    name:
+                                      description: Name is the parameter's name A
+                                        parameter with this name must be specified
+                                        in BlueprintSpec.Params
                                       minLength: 1
                                       type: string
                                     operator:
-                                      description: Operator represents a key's relationship
-                                        to a set of values. Valid operators are In,
-                                        NotIn, Exists and DoesNotExist.
+                                      description: Operator represents a parameter's
+                                        relationship to a set of values. Valid operators
+                                        are In, NotIn, Exists and DoesNotExist.
                                       enum:
                                       - In
                                       - NotIn
@@ -181,7 +180,7 @@ spec:
                                         type: string
                                       type: array
                                   required:
-                                  - key
+                                  - name
                                   - operator
                                   type: object
                                 type: array
@@ -321,12 +320,6 @@ spec:
                                   for this rule.
                                 items:
                                   properties:
-                                    key:
-                                      description: 'Key is the JSON path in the workload
-                                        to match against. e.g. for workload: "workload.spec.source.git.url",
-                                        e.g. for deliverable: "deliverable.spec.source.git.url"'
-                                      minLength: 1
-                                      type: string
                                     messagePath:
                                       description: MessagePath is specified in jsonpath
                                         format. It is evaluated against the resource
@@ -335,10 +328,16 @@ spec:
                                         that determine the current ResourcesHealthy
                                         condition status.
                                       type: string
+                                    name:
+                                      description: Name is the parameter's name A
+                                        parameter with this name must be specified
+                                        in BlueprintSpec.Params
+                                      minLength: 1
+                                      type: string
                                     operator:
-                                      description: Operator represents a key's relationship
-                                        to a set of values. Valid operators are In,
-                                        NotIn, Exists and DoesNotExist.
+                                      description: Operator represents a parameter's
+                                        relationship to a set of values. Valid operators
+                                        are In, NotIn, Exists and DoesNotExist.
                                       enum:
                                       - In
                                       - NotIn
@@ -355,7 +354,7 @@ spec:
                                         type: string
                                       type: array
                                   required:
-                                  - key
+                                  - name
                                   - operator
                                   type: object
                                 type: array
@@ -386,12 +385,6 @@ spec:
                                   for this rule.
                                 items:
                                   properties:
-                                    key:
-                                      description: 'Key is the JSON path in the workload
-                                        to match against. e.g. for workload: "workload.spec.source.git.url",
-                                        e.g. for deliverable: "deliverable.spec.source.git.url"'
-                                      minLength: 1
-                                      type: string
                                     messagePath:
                                       description: MessagePath is specified in jsonpath
                                         format. It is evaluated against the resource
@@ -400,10 +393,16 @@ spec:
                                         that determine the current ResourcesHealthy
                                         condition status.
                                       type: string
+                                    name:
+                                      description: Name is the parameter's name A
+                                        parameter with this name must be specified
+                                        in BlueprintSpec.Params
+                                      minLength: 1
+                                      type: string
                                     operator:
-                                      description: Operator represents a key's relationship
-                                        to a set of values. Valid operators are In,
-                                        NotIn, Exists and DoesNotExist.
+                                      description: Operator represents a parameter's
+                                        relationship to a set of values. Valid operators
+                                        are In, NotIn, Exists and DoesNotExist.
                                       enum:
                                       - In
                                       - NotIn
@@ -420,7 +419,7 @@ spec:
                                         type: string
                                       type: array
                                   required:
-                                  - key
+                                  - name
                                   - operator
                                   type: object
                                 type: array

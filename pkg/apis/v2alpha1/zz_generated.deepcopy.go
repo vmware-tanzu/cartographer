@@ -738,8 +738,8 @@ func (in *ParameterMapping) DeepCopy() *ParameterMapping {
 func (in *Selector) DeepCopyInto(out *Selector) {
 	*out = *in
 	in.LabelSelector.DeepCopyInto(&out.LabelSelector)
-	if in.MatchFields != nil {
-		in, out := &in.MatchFields, &out.MatchFields
+	if in.MatchParams != nil {
+		in, out := &in.MatchParams, &out.MatchParams
 		*out = make([]FieldSelectorRequirement, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
