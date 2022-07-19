@@ -245,7 +245,18 @@ spec:
                     ref:
                       description: Ref is the name of the ClusterBlueprintType that
                         must be provided
-                      type: string
+                      properties:
+                        description:
+                          description: Description allows authors to describe the
+                            output of their blueprint
+                          type: string
+                        name:
+                          description: Name of the ClusterBlueprintType that defines
+                            the output type of this blueprint.
+                          type: string
+                      required:
+                      - name
+                      type: object
                   required:
                   - name
                   - ref

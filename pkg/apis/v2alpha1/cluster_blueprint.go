@@ -10,6 +10,7 @@ import (
 
 // TODO:
 //  * explain how healthrules are nested and continue to work with this spec
+//  * try adding schema to inputs
 
 // ClusterBlueprint represents a component within Cartographe
 // +kubebuilder:object:root=true
@@ -69,7 +70,7 @@ type BlueprintInput struct {
 	Name string `json:"name"`
 
 	// Ref is the name of the ClusterBlueprintType that must be provided
-	Ref string `json:"ref"`
+	Ref BlueprintTypeRef `json:"ref"`
 
 	// Description allows authors to describe this input
 	Description string `json:"description,omitempty"`
