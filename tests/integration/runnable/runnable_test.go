@@ -21,10 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	. "github.com/vmware-tanzu/cartographer/pkg/utils"
-	"github.com/vmware-tanzu/cartographer/tests/helpers"
-	"github.com/vmware-tanzu/cartographer/tests/resources"
 	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +28,11 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	. "github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/helpers"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Stamping a resource on Runnable Creation", func() {
@@ -257,6 +258,55 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						"something-useful": Not(BeNil()),
 						"other-things":     Not(BeNil()),
 					}))
+				})
+			})
+
+			Context("and a second Runnable matches the RunTemplateRef", func() {
+				var secondRunnableDefinition *unstructured.Unstructured
+
+				BeforeEach(func() {
+					runnableYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Runnable
+					metadata:
+					  namespace: %s
+					  name: second-runnable
+					spec:
+					  serviceAccountName: %s
+					  runTemplateRef:
+					    name: my-run-template
+					    namespace: %s
+					    kind: ClusterRunTemplate
+					  inputs:
+					    key: val
+					`,
+						testNS, serviceAccountName, testNS)
+
+					secondRunnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+				})
+
+				AfterEach(func() {
+					err := c.Delete(ctx, secondRunnableDefinition)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("only one additional templated object is stamped", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(2))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(BeNumerically("<=", 2))
+
+					for i := 0; i < 2; i++ {
+						Expect(resourceList.Items[i].Name).To(ContainSubstring("my-stamped-resource-"))
+						Expect(resourceList.Items[i].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("val"))
+					}
 				})
 			})
 		})
