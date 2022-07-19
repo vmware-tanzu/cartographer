@@ -71,11 +71,17 @@ type BlueprintInput struct {
 
 	// Ref is the name of the ClusterBlueprintType that must be provided
 	Ref string `json:"ref"`
+
+	// Description allows authors to describe this input
+	Description string `json:"description,omitempty"`
 }
 
 type BlueprintTypeRef struct {
 	// Name of the ClusterBlueprintType that defines the output type of this blueprint.
 	Name string `json:"name"`
+
+	// Description allows authors to describe the output of their blueprint
+	Description string `json:"description,omitempty"`
 }
 
 type BlueprintStatus struct {

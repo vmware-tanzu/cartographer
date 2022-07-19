@@ -236,6 +236,9 @@ spec:
                   it can not be used as a component to a parent blueprint."
                 items:
                   properties:
+                    description:
+                      description: Description allows authors to describe this input
+                      type: string
                     name:
                       description: Name is used to reference this input in templates
                         and component definitions
@@ -492,6 +495,10 @@ spec:
                   must match the type of TypeRef, as this is the component that is
                   used for this blueprint's output.
                 properties:
+                  description:
+                    description: Description allows authors to describe the output
+                      of their blueprint
+                    type: string
                   name:
                     description: Name of the ClusterBlueprintType that defines the
                       output type of this blueprint.

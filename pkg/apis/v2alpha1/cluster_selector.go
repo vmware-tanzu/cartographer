@@ -24,9 +24,6 @@ type ClusterSelectorSpec struct {
 	// todo: explain selection criteria, precedence and how version is only used for representation
 	OwnerSelector `json:"ownerSelector"`
 
-	// TODO enum type
-	Priority string `json:"priority,omitempty"`
-
 	// BlueprintRef selects a specific blueprint for the matched OwnerSelector
 	BlueprintRef BlueprintRef `json:"blueprintRef"`
 
@@ -91,6 +88,7 @@ type StatusMapping struct {
 	Templateable `json:",inline"`
 
 	// TODO: we need some kind of reverse reference for condition's lastUpdatedAt
+	// or we ensure a complete object is stored and not accessible
 }
 
 // ClusterSelectorList
