@@ -501,16 +501,16 @@ func (r *repository) GetScheme() *runtime.Scheme {
 
 func buildOwnerDiscriminant(labels map[string]string) string {
 	var discriminantComponents []string
-	for key, value := range labels {
-		discriminantComponents = insertSorted(discriminantComponents, fmt.Sprintf("{%s:%s}", key, value))
-	}
-	return strings.Join(discriminantComponents, "")
-}
 
-func insertSorted(ss []string, s string) []string {
-	i := sort.SearchStrings(ss, s)
-	ss = append(ss, "")
-	copy(ss[i+1:], ss[i:])
-	ss[i] = s
-	return ss
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		discriminantComponents = append(discriminantComponents, fmt.Sprintf("{%s:%s}", k, labels[k]))
+	}
+
+	return strings.Join(discriminantComponents, "")
 }
