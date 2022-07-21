@@ -1,3 +1,4 @@
+DIE_GEN ?= go run dies.dev/diegen
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
@@ -127,7 +128,14 @@ controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessar
 $(CONTROLLER_GEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
-.PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+crd_non_sources := $(wildcard pkg/apis/v1alpha1/zz_generated.*.go) $(wildcard pkg/apis/v1alpha1/*_test.go)
+crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
+die_sources := $(filter-out $(wildcard tests/resources/dies/zz_generated.*.go),$(wildcard tests/resources/dies/*.go))
+tests/resources/dies/zz_generated.die.go: $(die_sources) $(crd_sources) $(test_crd_sources)
+	$(DIE_GEN) \
+		die \
+		paths="./tests/resources/dies/..."
+
+.PHONY: test-gen-dies
+test-gen-dies: tests/resources/dies/zz_generated.die.go
