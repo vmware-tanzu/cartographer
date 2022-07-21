@@ -66,15 +66,11 @@ spec:
               ClusterBlueprintType
             properties:
               conditions:
-                description: |
-                  Conditions follow k8s sig-arch guidelines https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-                  
-                  Possible Sub-Conditions are: 
-                    Type:SchemaValid - Describes the validity of the spec.schema field.
-                      You must provide valid [OpenAPI v3 Schema](https://swagger.io/specification/#schema-object)
-                      Reason: InvalidJSONAPISchema - the schema could not be parsed. 
-                        Message: explains the error that the JSONAPIv3Schema validator returned
-
+                description: "Conditions follow k8s sig-arch guidelines: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+                  \n # Possible Sub-Conditions are: ## SchemaValid Describes the validity
+                  of the spec.schema field. A reason \"InvalidJSONAPISchema\" means
+                  the Schema could not be parsed, and the Message will explain the
+                  error. You must provide valid [OpenAPI v3 Schema](https://swagger.io/specification/#schema-object)"
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct

@@ -19,7 +19,9 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
+	"github.com/vmware-labs/reconciler-runtime/reconcilers"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -33,7 +35,6 @@ import (
 
 	blueprintsv1alpha1 "carto.run/blueprints/api/v1alpha1"
 	"carto.run/blueprints/controllers"
-	//+kubebuilder:scaffold:imports
 )
 
 var (
@@ -45,7 +46,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(blueprintsv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -89,14 +89,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ClusterBlueprintTypeReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	ctx := ctrl.SetupSignalHandler()
+
+	if err = controllers.ClusterBlueprintTypeReconciler(
+		reconcilers.NewConfig(mgr, &blueprintsv1alpha1.ClusterBlueprintType{}, 10*time.Hour),
+	).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterBlueprintType")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
@@ -108,7 +108,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
