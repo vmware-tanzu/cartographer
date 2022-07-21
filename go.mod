@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.19.0
+	github.com/onsi/gomega v1.20.0
 	github.com/valyala/fasttemplate v1.2.1
 	go.uber.org/zap v1.21.0
 	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9 // indirect
@@ -26,7 +26,7 @@ require (
 
 require (
 	github.com/google/gnostic v0.6.9
-	gopkg.in/yaml.v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
