@@ -198,7 +198,6 @@ func (d *ClusterBlueprintTypeDie) Status(v v1alpha1.ClusterBlueprintTypeStatus) 
 var ClusterBlueprintTypeSpecBlank = (&ClusterBlueprintTypeSpecDie{}).DieFeed(v1alpha1.ClusterBlueprintTypeSpec{})
 
 type ClusterBlueprintTypeSpecDie struct {
-	v1.FrozenObjectMeta
 	mutable bool
 	r       v1alpha1.ClusterBlueprintTypeSpec
 }
@@ -216,14 +215,12 @@ func (d *ClusterBlueprintTypeSpecDie) DieImmutable(immutable bool) *ClusterBluep
 // DieFeed returns a new die with the provided resource.
 func (d *ClusterBlueprintTypeSpecDie) DieFeed(r v1alpha1.ClusterBlueprintTypeSpec) *ClusterBlueprintTypeSpecDie {
 	if d.mutable {
-		d.FrozenObjectMeta = v1.FreezeObjectMeta(r.ObjectMeta)
 		d.r = r
 		return d
 	}
 	return &ClusterBlueprintTypeSpecDie{
-		FrozenObjectMeta: v1.FreezeObjectMeta(r.ObjectMeta),
-		mutable:          d.mutable,
-		r:                r,
+		mutable: d.mutable,
+		r:       r,
 	}
 }
 
@@ -257,15 +254,6 @@ func (d *ClusterBlueprintTypeSpecDie) DieReleasePtr() *v1alpha1.ClusterBlueprint
 	return &r
 }
 
-// DieReleaseUnstructured returns the resource managed by the die as an unstructured object.
-func (d *ClusterBlueprintTypeSpecDie) DieReleaseUnstructured() runtime.Unstructured {
-	r := d.DieReleasePtr()
-	u, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
-	return &unstructured.Unstructured{
-		Object: u,
-	}
-}
-
 // DieReleaseRawExtension returns the resource managed by the die as an raw extension.
 func (d *ClusterBlueprintTypeSpecDie) DieReleaseRawExtension() runtime.RawExtension {
 	r := d.DieReleasePtr()
@@ -286,61 +274,9 @@ func (d *ClusterBlueprintTypeSpecDie) DieStamp(fn func(r *v1alpha1.ClusterBluepr
 func (d *ClusterBlueprintTypeSpecDie) DeepCopy() *ClusterBlueprintTypeSpecDie {
 	r := *d.r.DeepCopy()
 	return &ClusterBlueprintTypeSpecDie{
-		FrozenObjectMeta: v1.FreezeObjectMeta(r.ObjectMeta),
-		mutable:          d.mutable,
-		r:                r,
+		mutable: d.mutable,
+		r:       r,
 	}
-}
-
-var _ runtime.Object = (*ClusterBlueprintTypeSpecDie)(nil)
-
-func (d *ClusterBlueprintTypeSpecDie) DeepCopyObject() runtime.Object {
-	return d.r.DeepCopy()
-}
-
-func (d *ClusterBlueprintTypeSpecDie) GetObjectKind() schema.ObjectKind {
-	r := d.DieRelease()
-	return r.GetObjectKind()
-}
-
-func (d *ClusterBlueprintTypeSpecDie) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.r)
-}
-
-func (d *ClusterBlueprintTypeSpecDie) UnmarshalJSON(b []byte) error {
-	if d == ClusterBlueprintTypeSpecBlank {
-		return fmtx.Errorf("cannot unmarshal into the blank die, create a copy first")
-	}
-	if !d.mutable {
-		return fmtx.Errorf("cannot unmarshal into immutable dies, create a mutable version first")
-	}
-	r := &v1alpha1.ClusterBlueprintTypeSpec{}
-	err := json.Unmarshal(b, r)
-	*d = *d.DieFeed(*r)
-	return err
-}
-
-// APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-func (d *ClusterBlueprintTypeSpecDie) APIVersion(v string) *ClusterBlueprintTypeSpecDie {
-	return d.DieStamp(func(r *v1alpha1.ClusterBlueprintTypeSpec) {
-		r.APIVersion = v
-	})
-}
-
-// Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-func (d *ClusterBlueprintTypeSpecDie) Kind(v string) *ClusterBlueprintTypeSpecDie {
-	return d.DieStamp(func(r *v1alpha1.ClusterBlueprintTypeSpec) {
-		r.Kind = v
-	})
-}
-
-// MetadataDie stamps the resource's ObjectMeta field with a mutable die.
-func (d *ClusterBlueprintTypeSpecDie) MetadataDie(fn func(d *v1.ObjectMetaDie)) *ClusterBlueprintTypeSpecDie {
-	return d.DieStamp(func(r *v1alpha1.ClusterBlueprintTypeSpec) {
-		d := v1.ObjectMetaBlank.DieImmutable(false).DieFeed(r.ObjectMeta)
-		fn(d)
-		r.ObjectMeta = d.DieRelease()
-	})
 }
 
 // Qualifier is provided to avoid name collisions when blueprint authors start creating new types on a platform. There is a validation rule that metadata.name must be of the form: <qualifier>.<name> or <qualifier>-<name>. If the qualifier is omitted, then just <name> will suffice. Note: For TAP, this should be "tap" to avoid collisions with blueprint authors. We recommend other platforms follow this pattern also.
@@ -367,7 +303,6 @@ func (d *ClusterBlueprintTypeSpecDie) Description(v string) *ClusterBlueprintTyp
 var ClusterBlueprintTypeStatusBlank = (&ClusterBlueprintTypeStatusDie{}).DieFeed(v1alpha1.ClusterBlueprintTypeStatus{})
 
 type ClusterBlueprintTypeStatusDie struct {
-	v1.FrozenObjectMeta
 	mutable bool
 	r       v1alpha1.ClusterBlueprintTypeStatus
 }
@@ -385,14 +320,12 @@ func (d *ClusterBlueprintTypeStatusDie) DieImmutable(immutable bool) *ClusterBlu
 // DieFeed returns a new die with the provided resource.
 func (d *ClusterBlueprintTypeStatusDie) DieFeed(r v1alpha1.ClusterBlueprintTypeStatus) *ClusterBlueprintTypeStatusDie {
 	if d.mutable {
-		d.FrozenObjectMeta = v1.FreezeObjectMeta(r.ObjectMeta)
 		d.r = r
 		return d
 	}
 	return &ClusterBlueprintTypeStatusDie{
-		FrozenObjectMeta: v1.FreezeObjectMeta(r.ObjectMeta),
-		mutable:          d.mutable,
-		r:                r,
+		mutable: d.mutable,
+		r:       r,
 	}
 }
 
@@ -426,15 +359,6 @@ func (d *ClusterBlueprintTypeStatusDie) DieReleasePtr() *v1alpha1.ClusterBluepri
 	return &r
 }
 
-// DieReleaseUnstructured returns the resource managed by the die as an unstructured object.
-func (d *ClusterBlueprintTypeStatusDie) DieReleaseUnstructured() runtime.Unstructured {
-	r := d.DieReleasePtr()
-	u, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
-	return &unstructured.Unstructured{
-		Object: u,
-	}
-}
-
 // DieReleaseRawExtension returns the resource managed by the die as an raw extension.
 func (d *ClusterBlueprintTypeStatusDie) DieReleaseRawExtension() runtime.RawExtension {
 	r := d.DieReleasePtr()
@@ -455,61 +379,9 @@ func (d *ClusterBlueprintTypeStatusDie) DieStamp(fn func(r *v1alpha1.ClusterBlue
 func (d *ClusterBlueprintTypeStatusDie) DeepCopy() *ClusterBlueprintTypeStatusDie {
 	r := *d.r.DeepCopy()
 	return &ClusterBlueprintTypeStatusDie{
-		FrozenObjectMeta: v1.FreezeObjectMeta(r.ObjectMeta),
-		mutable:          d.mutable,
-		r:                r,
+		mutable: d.mutable,
+		r:       r,
 	}
-}
-
-var _ runtime.Object = (*ClusterBlueprintTypeStatusDie)(nil)
-
-func (d *ClusterBlueprintTypeStatusDie) DeepCopyObject() runtime.Object {
-	return d.r.DeepCopy()
-}
-
-func (d *ClusterBlueprintTypeStatusDie) GetObjectKind() schema.ObjectKind {
-	r := d.DieRelease()
-	return r.GetObjectKind()
-}
-
-func (d *ClusterBlueprintTypeStatusDie) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.r)
-}
-
-func (d *ClusterBlueprintTypeStatusDie) UnmarshalJSON(b []byte) error {
-	if d == ClusterBlueprintTypeStatusBlank {
-		return fmtx.Errorf("cannot unmarshal into the blank die, create a copy first")
-	}
-	if !d.mutable {
-		return fmtx.Errorf("cannot unmarshal into immutable dies, create a mutable version first")
-	}
-	r := &v1alpha1.ClusterBlueprintTypeStatus{}
-	err := json.Unmarshal(b, r)
-	*d = *d.DieFeed(*r)
-	return err
-}
-
-// APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-func (d *ClusterBlueprintTypeStatusDie) APIVersion(v string) *ClusterBlueprintTypeStatusDie {
-	return d.DieStamp(func(r *v1alpha1.ClusterBlueprintTypeStatus) {
-		r.APIVersion = v
-	})
-}
-
-// Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-func (d *ClusterBlueprintTypeStatusDie) Kind(v string) *ClusterBlueprintTypeStatusDie {
-	return d.DieStamp(func(r *v1alpha1.ClusterBlueprintTypeStatus) {
-		r.Kind = v
-	})
-}
-
-// MetadataDie stamps the resource's ObjectMeta field with a mutable die.
-func (d *ClusterBlueprintTypeStatusDie) MetadataDie(fn func(d *v1.ObjectMetaDie)) *ClusterBlueprintTypeStatusDie {
-	return d.DieStamp(func(r *v1alpha1.ClusterBlueprintTypeStatus) {
-		d := v1.ObjectMetaBlank.DieImmutable(false).DieFeed(r.ObjectMeta)
-		fn(d)
-		r.ObjectMeta = d.DieRelease()
-	})
 }
 
 // Conditions follow k8s sig-arch guidelines: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties

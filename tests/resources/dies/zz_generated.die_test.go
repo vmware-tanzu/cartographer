@@ -21,7 +21,7 @@ func TestClusterBlueprintTypeDie_MissingMethods(t *testingx.T) {
 
 func TestClusterBlueprintTypeSpecDie_MissingMethods(t *testingx.T) {
 	die := ClusterBlueprintTypeSpecBlank
-	ignore := []string{"TypeMeta", "ObjectMeta"}
+	ignore := []string{}
 	diff := testing.DieFieldDiff(die).Delete(ignore...)
 	if diff.Len() != 0 {
 		t.Errorf("found missing fields for ClusterBlueprintTypeSpecDie: %s", diff.List())
@@ -30,7 +30,7 @@ func TestClusterBlueprintTypeSpecDie_MissingMethods(t *testingx.T) {
 
 func TestClusterBlueprintTypeStatusDie_MissingMethods(t *testingx.T) {
 	die := ClusterBlueprintTypeStatusBlank
-	ignore := []string{"TypeMeta", "ObjectMeta"}
+	ignore := []string{}
 	diff := testing.DieFieldDiff(die).Delete(ignore...)
 	if diff.Len() != 0 {
 		t.Errorf("found missing fields for ClusterBlueprintTypeStatusDie: %s", diff.List())

@@ -7,6 +7,7 @@ import (
 
 // ClusterBlueprintTypeSpec defines the desired state of ClusterBlueprintType
 type ClusterBlueprintTypeSpec struct {
+
 	// Qualifier is provided to avoid name collisions when blueprint authors
 	// start creating new types on a platform.
 	// There is a validation rule that metadata.name must be of

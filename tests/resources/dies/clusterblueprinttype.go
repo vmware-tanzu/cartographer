@@ -7,8 +7,8 @@ import (
 // +die:object=true
 type _ = v1alpha1.ClusterBlueprintType
 
-// +die:object=true
+// +die
 type _ = v1alpha1.ClusterBlueprintTypeSpec
 
-// +die:object=true
+// +die
 type _ = v1alpha1.ClusterBlueprintTypeStatus
