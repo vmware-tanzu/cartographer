@@ -1,0 +1,16 @@
+domain: carto.run
+layout:
+- go.kubebuilder.io/v3
+projectName: blueprints
+repo: carto.run/blueprints
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: carto.run
+  group: blueprints
+  kind: ClusterBlueprintType
+  path: carto.run/blueprints/api/v1alpha1
+  version: v1alpha1
+version: "3"

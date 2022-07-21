@@ -1,0 +1,152 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.0
+  creationTimestamp: null
+  name: clusterblueprinttypes.blueprints.carto.run
+spec:
+  group: blueprints.carto.run
+  names:
+    kind: ClusterBlueprintType
+    listKind: ClusterBlueprintTypeList
+    plural: clusterblueprinttypes
+    shortNames:
+    - cbt
+    singular: clusterblueprinttype
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterBlueprintType defines a valid output/input between Components
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterBlueprintTypeSpec defines the desired state of ClusterBlueprintType
+            properties:
+              description:
+                description: Description describes this output to provide documentation
+                  to consumers.
+                type: string
+              qualifier:
+                description: 'Qualifier is provided to avoid name collisions when
+                  blueprint authors start creating new types on a platform. There
+                  is a validation rule that metadata.name must be of the form: <qualifier>.<name>
+                  or <qualifier>-<name>. If the qualifier is omitted, then just <name>
+                  will suffice. Note: For TAP, this should be "tap" to avoid collisions
+                  with blueprint authors. We recommend other platforms follow this
+                  pattern also.'
+                type: string
+              schema:
+                description: 'Schema a JSON schema that is a valid representation
+                  of a type. Due to a limitation in k8s CRD definitions, this field
+                  accepts any valid JSON, however the validation will fail if it''s
+                  not JSONSchema as per apiextensions.JSONSchemaProps (see: https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions@v0.24.2#JSONSchemaProps)
+                  Todo: explain the problem with the absence of schema here, and semantic
+                  error checking'
+                x-kubernetes-preserve-unknown-fields: true
+            required:
+            - schema
+            type: object
+          status:
+            description: ClusterBlueprintTypeStatus defines the observed state of
+              ClusterBlueprintType
+            properties:
+              conditions:
+                description: |
+                  Conditions follow k8s sig-arch guidelines https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+                  
+                  Possible Sub-Conditions are: 
+                    Type:SchemaValid - Describes the validity of the spec.schema field.
+                      You must provide valid [OpenAPI v3 Schema](https://swagger.io/specification/#schema-object)
+                      Reason: InvalidJSONAPISchema - the schema could not be parsed. 
+                        Message: explains the error that the JSONAPIv3Schema validator returned
+
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+            required:
+            - conditions
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
