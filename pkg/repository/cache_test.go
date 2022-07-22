@@ -59,30 +59,30 @@ var _ = Describe("Cache", func() {
 
 			Context("when the submitted object is not present in the cache", func() {
 				It("is false", func() {
-					Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
+					Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "A")).To(BeNil())
 				})
 			})
 
 			Context("when the submitted object differs from the cached submitted object", func() {
 				BeforeEach(func() {
-					cache.Set(submitted, persisted)
+					cache.Set(submitted, persisted, "A")
 				})
 
 				It("is false", func() {
 					newSubmission := submitted.DeepCopy()
 					newSubmission.SetLabels(map[string]string{"now-with": "funky-labels"})
-					Expect(cache.UnchangedSinceCachedFromList(newSubmission, existingObjsOnAPIServer)).To(BeNil())
+					Expect(cache.UnchangedSinceCachedFromList(newSubmission, existingObjsOnAPIServer, "A")).To(BeNil())
 				})
 			})
 
 			Context("when the submitted object is the same as the cached submitted object", func() {
 				BeforeEach(func() {
-					cache.Set(submitted, persisted)
+					cache.Set(submitted, persisted, "A")
 				})
 
 				Context("when the existing object has no spec", func() {
 					It("is false", func() {
-						Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
+						Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "A")).To(BeNil())
 					})
 				})
 
@@ -93,11 +93,11 @@ var _ = Describe("Cache", func() {
 
 					Context("when the persisted object has no spec", func() {
 						BeforeEach(func() {
-							cache.Set(submitted, persisted)
+							cache.Set(submitted, persisted, "A")
 						})
 
 						It("is false", func() {
-							Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
+							Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "A")).To(BeNil())
 						})
 					})
 
@@ -105,22 +105,26 @@ var _ = Describe("Cache", func() {
 						Context("when the existing object spec is the same as the cached submitted object spec", func() {
 							BeforeEach(func() {
 								persisted.UnstructuredContent()["spec"] = existingObjsOnAPIServer[0].UnstructuredContent()["spec"]
-								cache.Set(submitted, persisted)
+								cache.Set(submitted, persisted, "A")
 							})
 
-							It("is true", func() {
-								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
+							It("is true for the same owner discriminant", func() {
+								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "A")).ToNot(BeNil())
+							})
+
+							It("is false for a different owner discriminant", func() {
+								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "SomethingElse")).To(BeNil())
 							})
 						})
 
 						Context("when the existing object spec differs from the cached submitted object spec", func() {
 							BeforeEach(func() {
 								persisted.UnstructuredContent()["spec"] = map[string]interface{}{"oh-wait": "this-spec-is-different"}
-								cache.Set(submitted, persisted)
+								cache.Set(submitted, persisted, "A")
 							})
 
 							It("is false", func() {
-								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
+								Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "A")).To(BeNil())
 							})
 						})
 					})
@@ -140,14 +144,14 @@ var _ = Describe("Cache", func() {
 				persisted.SetGenerateName("")
 				persisted.UnstructuredContent()["spec"] = submitted.UnstructuredContent()["spec"]
 
-				cache.Set(submitted, persisted)
+				cache.Set(submitted, persisted, "")
 				existingObjsOnAPIServer = append(existingObjsOnAPIServer, persisted.DeepCopy())
 			})
 
 			It("the cache matches against the generateName instead", func() {
-				Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).ToNot(BeNil())
+				Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "")).ToNot(BeNil())
 				submitted.SetGenerateName("another-generate-name-")
-				Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer)).To(BeNil())
+				Expect(cache.UnchangedSinceCachedFromList(submitted, existingObjsOnAPIServer, "")).To(BeNil())
 			})
 		})
 	})
@@ -168,7 +172,7 @@ var _ = Describe("Cache", func() {
 
 			Context("when the submitted object differs from the cached submitted object", func() {
 				BeforeEach(func() {
-					cache.Set(submitted, persisted)
+					cache.Set(submitted, persisted, "")
 				})
 
 				It("is false", func() {
@@ -180,7 +184,7 @@ var _ = Describe("Cache", func() {
 
 			Context("when the submitted object is the same as the cached submitted object", func() {
 				BeforeEach(func() {
-					cache.Set(submitted, persisted)
+					cache.Set(submitted, persisted, "")
 				})
 
 				Context("when the existing object has no spec", func() {
@@ -196,7 +200,7 @@ var _ = Describe("Cache", func() {
 
 					Context("when the persisted object has no spec", func() {
 						BeforeEach(func() {
-							cache.Set(submitted, persisted)
+							cache.Set(submitted, persisted, "")
 						})
 
 						It("is false", func() {
@@ -208,7 +212,7 @@ var _ = Describe("Cache", func() {
 						Context("when the existing object spec is the same as the cached submitted object spec", func() {
 							BeforeEach(func() {
 								persisted.UnstructuredContent()["spec"] = existingObjOnAPIServer.UnstructuredContent()["spec"]
-								cache.Set(submitted, persisted)
+								cache.Set(submitted, persisted, "")
 							})
 
 							It("is true", func() {
@@ -219,7 +223,7 @@ var _ = Describe("Cache", func() {
 						Context("when the existing object spec differs from the cached submitted object spec", func() {
 							BeforeEach(func() {
 								persisted.UnstructuredContent()["spec"] = map[string]interface{}{"oh-wait": "this-spec-is-different"}
-								cache.Set(submitted, persisted)
+								cache.Set(submitted, persisted, "")
 							})
 
 							It("is false", func() {
@@ -243,7 +247,7 @@ var _ = Describe("Cache", func() {
 				persisted.SetGenerateName("")
 				persisted.UnstructuredContent()["spec"] = submitted.UnstructuredContent()["spec"]
 
-				cache.Set(submitted, persisted)
+				cache.Set(submitted, persisted, "")
 				existingObjsOnAPIServer = persisted.DeepCopy()
 			})
 
