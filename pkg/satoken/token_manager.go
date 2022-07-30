@@ -13,13 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/utils/clock"
 )
 
 const (
@@ -30,37 +28,45 @@ const (
 
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
+//counterfeiter:generate k8s.io/client-go/kubernetes.Interface
+//counterfeiter:generate k8s.io/client-go/kubernetes/typed/core/v1.CoreV1Interface
+//counterfeiter:generate k8s.io/client-go/kubernetes/typed/core/v1.ServiceAccountInterface
+
+//counterfeiter:generate . Logger
+type Logger interface {
+	Error(err error, msg string, keysAndValues ...interface{})
+	Info(msg string, keysAndValues ...interface{})
+}
+
 //counterfeiter:generate . TokenManager
 type TokenManager interface {
 	GetServiceAccountToken(serviceAccount *corev1.ServiceAccount) (string, error)
+	Cleanup()
 }
 
-// NewManager returns a new token manager.
-func NewManager(c clientset.Interface, log logr.Logger) *Manager {
+// NewManager returns a new token manager, primed with the tokenCache.
+// A nil token cache will cause a new one to be automatically created.
+func NewManager(cl clientset.Interface, log Logger, tokenCache map[string]*authenticationv1.TokenRequest) *Manager {
+	if tokenCache == nil {
+		tokenCache = make(map[string]*authenticationv1.TokenRequest)
+	}
 	m := &Manager{
-		getToken: func(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
-			return c.CoreV1().ServiceAccounts(namespace).CreateToken(context.TODO(), name, tr, metav1.CreateOptions{})
-		},
-		cache: make(map[string]*authenticationv1.TokenRequest),
-		clock: clock.RealClock{},
+		cl:    cl,
+		cache: tokenCache,
 		log:   log,
 	}
-	go wait.Forever(m.cleanup, gcPeriod)
+	go wait.Forever(m.Cleanup, gcPeriod)
 	return m
 }
 
-// Manager manages service account tokens for pods.
 type Manager struct {
+	cl clientset.Interface
 
 	// cacheMutex guards the cache
 	cacheMutex sync.RWMutex
 	cache      map[string]*authenticationv1.TokenRequest
 
-	// mocked for testing
-	getToken func(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error)
-	clock    clock.Clock
-
-	log logr.Logger
+	log Logger
 }
 
 // GetServiceAccountToken gets a service account token from cache or
@@ -91,19 +97,18 @@ func (m *Manager) GetServiceAccountToken(serviceAccount *corev1.ServiceAccount) 
 		case !ok:
 			return "", fmt.Errorf("Fetch token: %v", err)
 		case m.expired(ctr):
-			return "", fmt.Errorf("Token %s expired and refresh failed: %v", key, err)
+			return "", fmt.Errorf("token %s expired and refresh failed: %v", key, err)
 		default:
-			m.log.Error(err, "Update token", "cacheKey", key)
+			m.log.Error(err, "update token", "cacheKey", key)
 			return ctr.Status.Token, nil
 		}
 	}
 
 	m.set(key, tr)
-	m.log.Info("returning token", "token", tr.Status.Token)
 	return tr.Status.Token, nil
 }
 
-func (m *Manager) cleanup() {
+func (m *Manager) Cleanup() {
 	m.cacheMutex.Lock()
 	defer m.cacheMutex.Unlock()
 	for k, tr := range m.cache {
@@ -111,6 +116,10 @@ func (m *Manager) cleanup() {
 			delete(m.cache, k)
 		}
 	}
+}
+
+func (m *Manager) getToken(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
+	return m.cl.CoreV1().ServiceAccounts(namespace).CreateToken(context.TODO(), name, tr, metav1.CreateOptions{})
 }
 
 func (m *Manager) get(key string) (*authenticationv1.TokenRequest, bool) {
@@ -127,10 +136,10 @@ func (m *Manager) set(key string, tr *authenticationv1.TokenRequest) {
 }
 
 func (m *Manager) expired(t *authenticationv1.TokenRequest) bool {
-	return m.clock.Now().After(t.Status.ExpirationTimestamp.Time)
+	return time.Now().After(t.Status.ExpirationTimestamp.Time)
 }
 
-// requiresRefresh returns true if the token is older half of it's maxTTL
+// requiresRefresh returns true if the token is older than half of it's maxTTL
 func (m *Manager) requiresRefresh(tr *authenticationv1.TokenRequest) bool {
 	if tr.Spec.ExpirationSeconds == nil {
 		cpy := tr.DeepCopy()
@@ -138,7 +147,7 @@ func (m *Manager) requiresRefresh(tr *authenticationv1.TokenRequest) bool {
 		m.log.Info("Expiration seconds was nil for token request", "tokenRequest", cpy)
 		return false
 	}
-	now := m.clock.Now()
+	now := time.Now()
 	exp := tr.Status.ExpirationTimestamp.Time
 	iat := exp.Add(-1 * time.Duration(*tr.Spec.ExpirationSeconds) * time.Second)
 

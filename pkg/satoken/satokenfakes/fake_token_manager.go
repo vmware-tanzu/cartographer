@@ -9,6 +9,10 @@ import (
 )
 
 type FakeTokenManager struct {
+	CleanupStub        func()
+	cleanupMutex       sync.RWMutex
+	cleanupArgsForCall []struct {
+	}
 	GetServiceAccountTokenStub        func(*v1.ServiceAccount) (string, error)
 	getServiceAccountTokenMutex       sync.RWMutex
 	getServiceAccountTokenArgsForCall []struct {
@@ -24,6 +28,30 @@ type FakeTokenManager struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeTokenManager) Cleanup() {
+	fake.cleanupMutex.Lock()
+	fake.cleanupArgsForCall = append(fake.cleanupArgsForCall, struct {
+	}{})
+	stub := fake.CleanupStub
+	fake.recordInvocation("Cleanup", []interface{}{})
+	fake.cleanupMutex.Unlock()
+	if stub != nil {
+		fake.CleanupStub()
+	}
+}
+
+func (fake *FakeTokenManager) CleanupCallCount() int {
+	fake.cleanupMutex.RLock()
+	defer fake.cleanupMutex.RUnlock()
+	return len(fake.cleanupArgsForCall)
+}
+
+func (fake *FakeTokenManager) CleanupCalls(stub func()) {
+	fake.cleanupMutex.Lock()
+	defer fake.cleanupMutex.Unlock()
+	fake.CleanupStub = stub
 }
 
 func (fake *FakeTokenManager) GetServiceAccountToken(arg1 *v1.ServiceAccount) (string, error) {
@@ -93,6 +121,8 @@ func (fake *FakeTokenManager) GetServiceAccountTokenReturnsOnCall(i int, result1
 func (fake *FakeTokenManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.cleanupMutex.RLock()
+	defer fake.cleanupMutex.RUnlock()
 	fake.getServiceAccountTokenMutex.RLock()
 	defer fake.getServiceAccountTokenMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
