@@ -1,0 +1,17 @@
+---
+apiVersion: blueprints.carto.run/v1alpha1
+kind: ClusterBlueprintType
+metadata:
+  name: rash.source
+spec:
+  qualifier: rash
+  schema:
+    type: object
+    properties:
+      url:
+        type: string
+      branch:
+        type: string
+    required:
+      - url
+      - branch
