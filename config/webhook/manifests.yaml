@@ -1,0 +1,27 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-blueprints-carto-run-v1alpha1-clusterblueprinttype
+  failurePolicy: Fail
+  name: vclusterblueprinttype.kb.io
+  rules:
+  - apiGroups:
+    - blueprints.carto.run
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - clusterblueprinttypes
+  sideEffects: None
