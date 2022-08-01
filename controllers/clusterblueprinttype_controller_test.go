@@ -8,6 +8,7 @@ import (
 	"carto.run/blueprints/tests/resources/dies"
 	"github.com/vmware-labs/reconciler-runtime/reconcilers"
 	rtesting "github.com/vmware-labs/reconciler-runtime/testing"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -22,7 +23,7 @@ func TestInMemoryGatewayReconciler(t *testing.T) {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = blueprintsv1alpha1.AddToScheme(scheme)
 
-	baseType := dies.ClusterBlueprintTypeBlank
+	base := dies.ClusterBlueprintTypeBlank
 
 	rts := rtesting.ReconcilerTestSuite{{
 		Name: "nothing on cluster",
@@ -35,10 +36,20 @@ func TestInMemoryGatewayReconciler(t *testing.T) {
 			},
 		},
 		GivenObjects: []client.Object{
-			baseType,
+			base,
 		},
-		ExpectStatusUpdates: nil,
-		ExpectStatusPatches: nil,
+		ExpectStatusUpdates: []client.Object{
+			base.
+				StatusDie(func(d *dies.ClusterBlueprintTypeStatusDie) {
+					d.Conditions(
+						v1.Condition{
+							Type:               "Ready",
+							Status:             v1.ConditionTrue,
+							ObservedGeneration: 0,
+							LastTransitionTime: v1.Time{},
+						})
+				}),
+		},
 	}}
 
 	rts.Run(t, scheme, func(t *testing.T, rtc *rtesting.ReconcilerTestCase, c reconcilers.Config) reconcile.Reconciler {
