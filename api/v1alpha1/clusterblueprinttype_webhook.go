@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/google/gnostic/openapiv3"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -28,9 +29,9 @@ import (
 // log is for logging in this package.
 var clusterblueprinttypelog = logf.Log.WithName("clusterblueprinttype-resource")
 
-func (r *ClusterBlueprintType) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (cbt *ClusterBlueprintType) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(cbt).
 		Complete()
 }
 
@@ -39,31 +40,34 @@ func (r *ClusterBlueprintType) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &ClusterBlueprintType{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ClusterBlueprintType) ValidateCreate() error {
-	clusterblueprinttypelog.Info("validate create", "name", r.Name)
+func (cbt *ClusterBlueprintType) ValidateCreate() error {
+	clusterblueprinttypelog.Info("validate create", "name", cbt.Name)
 
-	return r.validateSchema()
-
+	return cbt.validateSchema()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *ClusterBlueprintType) ValidateUpdate(old runtime.Object) error {
-	clusterblueprinttypelog.Info("validate update", "name", r.Name)
+func (cbt *ClusterBlueprintType) ValidateUpdate(old runtime.Object) error {
+	clusterblueprinttypelog.Info("validate update", "name", cbt.Name)
 
-	r.validateSchema()
-	return nil
+	return cbt.validateSchema()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *ClusterBlueprintType) ValidateDelete() error {
-	clusterblueprinttypelog.Info("validate delete", "name", r.Name)
+func (cbt *ClusterBlueprintType) ValidateDelete() error {
+	clusterblueprinttypelog.Info("validate delete", "name", cbt.Name)
 
 	// Deliberate NO-OP
 	return nil
 }
 
-func (r *ClusterBlueprintType) validateSchema() error {
-	//schema := r.Spec.Schema
+func (cbt *ClusterBlueprintType) validateSchema() error {
+	schema := cbt.Spec.Schema
 
-	return fmt.Errorf("OMG")
+	_, err := openapi_v3.ParseDocument(schema.Raw)
+
+	if err != nil {
+		return fmt.Errorf("could not parse spec.schema. failed with error: %w", err)
+	}
+	return nil
 }

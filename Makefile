@@ -149,7 +149,12 @@ quick-build:
 install-cert-manager:
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 
+.PHONY: fetch-latest-image
+fetch-latest-image:
+	kubectl scale --replicas=0 deployment blueprints-controller-manager -n blueprints-system
+	kubectl scale --replicas=1 deployment blueprints-controller-manager -n blueprints-system
+
 .PHONY: quick-deploy
 quick-deploy: export IMG = "rabdulaziz983/blueprints:dev"
-quick-deploy: install-cert-manager quick-build docker-push deploy
+quick-deploy: install-cert-manager quick-build docker-push deploy fetch-latest-image
 
