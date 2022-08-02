@@ -91,6 +91,8 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
+	err := SetupWebhookWithManage
+
 	if err = controllers.ClusterBlueprintTypeReconciler(
 		reconcilers.NewConfig(mgr, &blueprintsv1alpha1.ClusterBlueprintType{}, 10*time.Hour),
 	).SetupWithManager(ctx, mgr); err != nil {

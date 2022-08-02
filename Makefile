@@ -145,7 +145,11 @@ test-gen-dies: tests/resources/dies/zz_generated.die.go
 quick-build:
 	docker build -t ${IMG} .
 
+.PHONY: install-cert-manager
+install-cert-manager:
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+
 .PHONY: quick-deploy
 quick-deploy: export IMG = "rabdulaziz983/blueprints:dev"
-quick-deploy: quick-build docker-push deploy
+quick-deploy: install-cert-manager quick-build docker-push deploy
 
