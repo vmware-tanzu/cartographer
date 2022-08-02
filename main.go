@@ -91,14 +91,23 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
-	err := SetupWebhookWithManage
-
 	if err = controllers.ClusterBlueprintTypeReconciler(
 		reconcilers.NewConfig(mgr, &blueprintsv1alpha1.ClusterBlueprintType{}, 10*time.Hour),
 	).SetupWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterBlueprintType")
 		os.Exit(1)
 	}
+
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		setupLog.Info("webhooks enabled", "webhook", "ClusterBlueprintType")
+		if err = (&blueprintsv1alpha1.ClusterBlueprintType{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ClusterBlueprintType")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("webhooks disabled", "webhook", "ClusterBlueprintType")
+	}
+	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
