@@ -12,6 +12,7 @@ spec:
         type: string
       branch:
         type: string
+    smelly: foo
     required:
       - url
       - branch

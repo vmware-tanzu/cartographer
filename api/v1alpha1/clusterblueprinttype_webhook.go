@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/google/gnostic/openapiv3"
+	"github.com/getkin/kin-openapi/openapi3"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -62,9 +62,10 @@ func (cbt *ClusterBlueprintType) ValidateDelete() error {
 }
 
 func (cbt *ClusterBlueprintType) validateSchema() error {
-	schema := cbt.Spec.Schema
+	rawSchema := cbt.Spec.Schema
 
-	_, err := openapi_v3.ParseDocument(schema.Raw)
+	schema := &openapi3.Schema{}
+	err := schema.UnmarshalJSON(rawSchema.Raw)
 
 	if err != nil {
 		return fmt.Errorf("could not parse spec.schema. failed with error: %w", err)
