@@ -8,7 +8,7 @@ rules:
 - apiGroups:
   - blueprints.carto.run
   resources:
-  - clusterblueprinttypes
+  - clusterbindings
   verbs:
   - create
   - delete
@@ -20,13 +20,39 @@ rules:
 - apiGroups:
   - blueprints.carto.run
   resources:
-  - clusterblueprinttypes/finalizers
+  - clusterbindings/finalizers
   verbs:
   - update
 - apiGroups:
   - blueprints.carto.run
   resources:
-  - clusterblueprinttypes/status
+  - clusterbindings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - blueprints.carto.run
+  resources:
+  - clusterblueprints
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - blueprints.carto.run
+  resources:
+  - clusterblueprints/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - blueprints.carto.run
+  resources:
+  - clusterblueprints/status
   verbs:
   - get
   - patch
