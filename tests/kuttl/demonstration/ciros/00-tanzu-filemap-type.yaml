@@ -1,0 +1,14 @@
+apiVersion: blueprints.carto.run/v1alpha1
+kind: ClusterBlueprintType
+metadata:
+  name: tanzu.filemap
+spec:
+  qualifier: tanzu
+  schema:
+    type: object
+    files:
+      type: object
+        description: >
+          A map[string]string of `filename` to `file content`.
+      additionalProperties:
+        type: string

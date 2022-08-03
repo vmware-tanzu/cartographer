@@ -1,0 +1,8 @@
+apiVersion: carto.run/v2alpha1
+kind: ClusterBlueprintType
+metadata:
+  name: tanzu.image
+spec:
+  qualifier: tanzu
+  schema:
+    type: string

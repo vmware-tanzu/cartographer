@@ -1,0 +1,22 @@
+apiVersion: carto.run/v2alpha1
+kind: ClusterBlueprintType
+metadata:
+  name: tanzu.source
+spec:
+  qualifier: tanzu
+  schema:
+    type: object
+    properties:
+      url:
+        type: string
+        description: |
+          git url for the repository containing
+          a constrained version of code
+      revision:
+        type: string
+        description: |
+          a ref, usually a SHA, that points to a constrained
+          (immutable) reference in the repository
+    required:
+      - url
+      - revision
