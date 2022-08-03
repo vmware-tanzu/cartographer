@@ -5,6 +5,6 @@ type TemplateOption struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Selector is a criteria to match against  a workload or deliverable resource.
+	// Selector is a criteria to match against the params list.
 	Selector Selector `json:"selector"`
 }

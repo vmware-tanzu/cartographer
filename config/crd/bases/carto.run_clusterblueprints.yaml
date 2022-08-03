@@ -103,7 +103,7 @@ spec:
                       type: string
                     options:
                       description: Options is a list of template names and Selector.
-                        A template will be selected if the workload matches the specified
+                        A template will be selected if params match the specified
                         selector. Only one template can be selected. Only one of BlueprintRef
                         and Options can be specified. Minimum number of items in list
                         is two.
@@ -114,8 +114,8 @@ spec:
                             minLength: 1
                             type: string
                           selector:
-                            description: Selector is a criteria to match against  a
-                              workload or deliverable resource.
+                            description: Selector is a criteria to match against the
+                              params list.
                             properties:
                               matchExpressions:
                                 description: matchExpressions is a list of label selector

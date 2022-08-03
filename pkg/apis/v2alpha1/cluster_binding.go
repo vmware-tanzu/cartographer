@@ -8,18 +8,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ClusterSelector represents a mechanism to bind a Blueprint to an OwnerObject
+// ClusterBinding represents a mechanism to bind a Blueprint to an OwnerObject
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:spec
-// +kubebuilder:resource:path=clusterselectors,scope=Cluster,shortName=cs
-type ClusterSelector struct {
+// +kubebuilder:resource:path=clusterbindings,scope=Cluster,shortName=cb
+type ClusterBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ClusterSelectorSpec `json:"spec"`
+	Spec ClusterBindingSpec `json:"spec"`
 }
 
-type ClusterSelectorSpec struct {
+type ClusterBindingSpec struct {
 	// OwnerSelector is the criteria used to match an Owner to the BlueprintRef
 	// todo: explain selection criteria, precedence and how version is only used for representation
 	OwnerSelector `json:"ownerSelector"`
@@ -91,17 +91,17 @@ type StatusMapping struct {
 	// or we ensure a complete object is stored and not accessible
 }
 
-// ClusterSelectorList
+// ClusterBindingList
 // +kubebuilder:object:root=true
-type ClusterSelectorList struct {
+type ClusterBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterSelector `json:"items"`
+	Items           []ClusterBinding `json:"items"`
 }
 
 func init() {
 	SchemeBuilder.Register(
-		&ClusterSelector{},
-		&ClusterSelectorList{},
+		&ClusterBinding{},
+		&ClusterBindingList{},
 	)
 }

@@ -19,22 +19,22 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
-  name: clusterselectors.carto.run
+  name: clusterbindings.carto.run
 spec:
   group: carto.run
   names:
-    kind: ClusterSelector
-    listKind: ClusterSelectorList
-    plural: clusterselectors
+    kind: ClusterBinding
+    listKind: ClusterBindingList
+    plural: clusterbindings
     shortNames:
-    - cs
-    singular: clusterselector
+    - cb
+    singular: clusterbinding
   scope: Cluster
   versions:
   - name: v2alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterSelector represents a mechanism to bind a Blueprint to
+        description: ClusterBinding represents a mechanism to bind a Blueprint to
           an OwnerObject
         properties:
           apiVersion:

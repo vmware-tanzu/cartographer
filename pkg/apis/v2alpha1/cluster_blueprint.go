@@ -117,7 +117,7 @@ type Component struct {
 	Inputs ComponentInputs `json:"inputs,omitempty"`
 
 	// Options is a list of template names and Selector.
-	// A template will be selected if the workload matches the specified selector.
+	// A template will be selected if params match the specified selector.
 	// Only one template can be selected.
 	// Only one of BlueprintRef and Options can be specified.
 	// Minimum number of items in list is two.
