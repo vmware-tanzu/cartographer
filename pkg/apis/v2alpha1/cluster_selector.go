@@ -27,8 +27,8 @@ type ClusterSelectorSpec struct {
 	// BlueprintRef selects a specific blueprint for the matched OwnerSelector
 	BlueprintRef BlueprintRef `json:"blueprintRef"`
 
-	// ParamMap maps Blueprint parameters to the specific Owner specified in OwnerSelector's TypeMeta.
-	ParamMap []ParameterMapping `json:"paramMap,omitempty"`
+	// Params maps Blueprint parameters to the specific Owner specified in OwnerSelector's TypeMeta.
+	Params []ParameterMapping `json:"params,omitempty"`
 
 	// StatusMapping represents the mechanism used to record the status of the Blueprint's imprint back
 	// to the Owner.

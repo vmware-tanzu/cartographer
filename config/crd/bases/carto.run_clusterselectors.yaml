@@ -209,8 +209,8 @@ spec:
                       are ANDed.
                     type: object
                 type: object
-              paramMap:
-                description: ParamMap maps Blueprint parameters to the specific Owner
+              params:
+                description: Params maps Blueprint parameters to the specific Owner
                   specified in OwnerSelector's TypeMeta.
                 items:
                   properties:

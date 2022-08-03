@@ -383,8 +383,8 @@ func (in *ClusterSelectorSpec) DeepCopyInto(out *ClusterSelectorSpec) {
 	*out = *in
 	in.OwnerSelector.DeepCopyInto(&out.OwnerSelector)
 	out.BlueprintRef = in.BlueprintRef
-	if in.ParamMap != nil {
-		in, out := &in.ParamMap, &out.ParamMap
+	if in.Params != nil {
+		in, out := &in.Params, &out.Params
 		*out = make([]ParameterMapping, len(*in))
 		copy(*out, *in)
 	}
