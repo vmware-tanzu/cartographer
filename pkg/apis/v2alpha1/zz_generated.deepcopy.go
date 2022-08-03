@@ -93,7 +93,7 @@ func (in *BlueprintSpec) DeepCopyInto(out *BlueprintSpec) {
 		*out = make(BlueprintInputs, len(*in))
 		copy(*out, *in)
 	}
-	out.TypeRef = in.TypeRef
+	out.OutputTypeRef = in.OutputTypeRef
 	if in.Components != nil {
 		in, out := &in.Components, &out.Components
 		*out = make(Components, len(*in))

@@ -43,16 +43,16 @@ type BlueprintSpec struct {
 	// component to a parent blueprint.
 	Inputs BlueprintInputs `json:"inputs,omitempty"`
 
-	// TypeRef refers to an object describing the contract this blueprint can fulfill
+	// OutputTypeRef refers to an object describing the contract this blueprint can fulfill
 	// This is optional, however without an output, this Blueprint cannot be the cause of
 	// a reconciliation of sibling components in a parent blueprint.
 	// Templates can specify an output mapping via TemplateSpec.OutputMapping.
-	// The last component in Components must match the type of TypeRef, as this is the
+	// The last component in Components must match the type of OutputTypeRef, as this is the
 	// component that is used for this blueprint's output.
-	TypeRef BlueprintTypeRef `json:"typeRef,omitempty"`
+	OutputTypeRef BlueprintTypeRef `json:"outputTypeRef,omitempty"`
 
 	// Components are a list of child blueprints managed by this blueprint.
-	// If TypeRef is specified, the last item in this list must emit that type.
+	// If OutputTypeRef is specified, the last item in this list must emit that type.
 	// One of Components or Template can be specified exclusively.
 	// The last Component in this list is assumed to be the Output for this blueprint.
 	Components Components `json:"components,omitempty"`

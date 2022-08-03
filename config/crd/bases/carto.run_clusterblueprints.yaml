@@ -52,10 +52,10 @@ spec:
             properties:
               components:
                 description: Components are a list of child blueprints managed by
-                  this blueprint. If TypeRef is specified, the last item in this list
-                  must emit that type. One of Components or Template can be specified
-                  exclusively. The last Component in this list is assumed to be the
-                  Output for this blueprint.
+                  this blueprint. If OutputTypeRef is specified, the last item in
+                  this list must emit that type. One of Components or Template can
+                  be specified exclusively. The last Component in this list is assumed
+                  to be the Output for this blueprint.
                 items:
                   description: 'Component to a subcomponent Note: There are no params
                     specified at this level. See BlueprintSpec.Params and TemplateSpec.Params'
@@ -262,6 +262,26 @@ spec:
                   - typeRef
                   type: object
                 type: array
+              outputTypeRef:
+                description: OutputTypeRef refers to an object describing the contract
+                  this blueprint can fulfill This is optional, however without an
+                  output, this Blueprint cannot be the cause of a reconciliation of
+                  sibling components in a parent blueprint. Templates can specify
+                  an output mapping via TemplateSpec.OutputMapping. The last component
+                  in Components must match the type of OutputTypeRef, as this is the
+                  component that is used for this blueprint's output.
+                properties:
+                  description:
+                    description: Description allows authors to describe the output
+                      of their blueprint
+                    type: string
+                  name:
+                    description: Name of the ClusterBlueprintType that defines the
+                      output type of this blueprint.
+                    type: string
+                required:
+                - name
+                type: object
               params:
                 description: Params specifies accepted parameters for the template.
                   Any parameter consumed in the template MUST be specified as a Param
@@ -495,26 +515,6 @@ spec:
                       and is not the owner namespace, the resource will fail to be
                       created.'
                     type: string
-                type: object
-              typeRef:
-                description: TypeRef refers to an object describing the contract this
-                  blueprint can fulfill This is optional, however without an output,
-                  this Blueprint cannot be the cause of a reconciliation of sibling
-                  components in a parent blueprint. Templates can specify an output
-                  mapping via TemplateSpec.OutputMapping. The last component in Components
-                  must match the type of TypeRef, as this is the component that is
-                  used for this blueprint's output.
-                properties:
-                  description:
-                    description: Description allows authors to describe the output
-                      of their blueprint
-                    type: string
-                  name:
-                    description: Name of the ClusterBlueprintType that defines the
-                      output type of this blueprint.
-                    type: string
-                required:
-                - name
                 type: object
             type: object
           status:
