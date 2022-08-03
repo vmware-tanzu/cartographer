@@ -1,4 +1,4 @@
-apiVersion: carto.run/v2alpha1
+apiVersion: blueprints.carto.run/v1alpha1
 kind: ClusterBlueprintType
 metadata:
   name: tanzu.podtemplatespec
