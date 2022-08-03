@@ -69,8 +69,8 @@ type BlueprintInput struct {
 	// Name is used to reference this input in templates and component definitions
 	Name string `json:"name"`
 
-	// Ref is the name of the ClusterBlueprintType that must be provided
-	Ref BlueprintTypeRef `json:"ref"`
+	// TypeRef is the name of the ClusterBlueprintType that must be provided
+	TypeRef BlueprintTypeRef `json:"typeRef"`
 
 	// Description allows authors to describe this input
 	Description string `json:"description,omitempty"`

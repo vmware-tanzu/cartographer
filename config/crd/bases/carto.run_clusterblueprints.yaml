@@ -242,9 +242,9 @@ spec:
                       description: Name is used to reference this input in templates
                         and component definitions
                       type: string
-                    ref:
-                      description: Ref is the name of the ClusterBlueprintType that
-                        must be provided
+                    typeRef:
+                      description: TypeRef is the name of the ClusterBlueprintType
+                        that must be provided
                       properties:
                         description:
                           description: Description allows authors to describe the
@@ -259,7 +259,7 @@ spec:
                       type: object
                   required:
                   - name
-                  - ref
+                  - typeRef
                   type: object
                 type: array
               params:
