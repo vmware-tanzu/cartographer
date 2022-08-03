@@ -16,4 +16,22 @@ resources:
   webhooks:
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: carto.run
+  group: blueprints
+  kind: ClusterBlueprint
+  path: carto.run/blueprints/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: carto.run
+  group: blueprints
+  kind: ClusterBinding
+  path: carto.run/blueprints/api/v1alpha1
+  version: v1alpha1
 version: "3"

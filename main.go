@@ -107,6 +107,22 @@ func main() {
 	} else {
 		setupLog.Info("webhooks disabled", "webhook", "ClusterBlueprintType")
 	}
+
+	if err = (&controllers.ClusterBlueprintReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterBlueprint")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.ClusterBindingReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterBinding")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

@@ -1,0 +1,20 @@
+# permissions for end users to view clusterbindings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: clusterbinding-viewer-role
+rules:
+- apiGroups:
+  - blueprints.carto.run
+  resources:
+  - clusterbindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - blueprints.carto.run
+  resources:
+  - clusterbindings/status
+  verbs:
+  - get

@@ -1,0 +1,6 @@
+apiVersion: blueprints.carto.run/v1alpha1
+kind: ClusterBinding
+metadata:
+  name: clusterbinding-sample
+spec:
+  # TODO(user): Add fields here

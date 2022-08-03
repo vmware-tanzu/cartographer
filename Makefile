@@ -12,6 +12,12 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+ifndef ($LOG_LEVEL)
+        # set a default LOG_LEVEL whenever we run the controller
+        # and for our kuttl tests which require something to be set.
+        export LOG_LEVEL = info
+endif
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -153,6 +159,11 @@ install-cert-manager:
 fetch-latest-image:
 	kubectl scale --replicas=0 deployment blueprints-controller-manager -n blueprints-system
 	kubectl scale --replicas=1 deployment blueprints-controller-manager -n blueprints-system
+
+.PHONY: test-demonstration
+test-demonstration: build
+	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/demonstration --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/demonstration; fi
+
 
 .PHONY: quick-deploy
 quick-deploy: export IMG = "rabdulaziz983/blueprints:dev"
