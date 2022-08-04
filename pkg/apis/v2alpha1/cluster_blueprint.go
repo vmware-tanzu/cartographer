@@ -8,10 +8,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TODO:
-//  * explain how healthrules are nested and continue to work with this spec
-//  * try adding schema to inputs
-
 // ClusterBlueprint represents a component within Cartographe
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -29,9 +25,10 @@ type BlueprintSpec struct {
 	// If not set, this does not reflect descriptions in child blueprints or templates
 	Description string `json:"description,omitempty"`
 
-	// Params specifies accepted parameters for the template.
-	// Any parameter consumed in the template MUST be specified
-	// as a Param
+	// Params specifies parameters accepted by this template, as well
+	// as default (re)specification, and assigning a constant value for compound components.
+	// Any parameter consumed in the template or by a compound component MUST be specified
+	// as a Param. If the param name needs to be renamed, use the Component.ParamRenames.
 	Params []Param `json:"params,omitempty"`
 
 	// Inputs specifies the input types and names required by this blueprint

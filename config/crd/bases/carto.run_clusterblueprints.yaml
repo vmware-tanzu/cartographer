@@ -283,8 +283,11 @@ spec:
                 - name
                 type: object
               params:
-                description: Params specifies accepted parameters for the template.
-                  Any parameter consumed in the template MUST be specified as a Param
+                description: Params specifies parameters accepted by this template,
+                  as well as default (re)specification, and assigning a constant value
+                  for compound components. Any parameter consumed in the template
+                  or by a compound component MUST be specified as a Param. If the
+                  param name needs to be renamed, use the Component.ParamRenames.
                 items:
                   properties:
                     default:
@@ -298,6 +301,28 @@ spec:
                       description: Name of the parameter. Blueprints must specify
                         params used by the template or child components
                       type: string
+                    schema:
+                      description: Schema is a JSON schema that is a valid representation
+                        of this input. Schema is optional, but cannot be specified
+                        at the same time as TypeRef This field allows you to enforce
+                        a type without needing a shared contract in a ClusterBlueprintType.
+                      x-kubernetes-preserve-unknown-fields: true
+                    typeRef:
+                      description: TypeRef is the name of the ClusterBlueprintType
+                        that can be enforced for this parameter. TypeRef is optional,
+                        but cannot be specified at the same time as Schema
+                      properties:
+                        description:
+                          description: Description allows authors to describe the
+                            output of their blueprint
+                          type: string
+                        name:
+                          description: Name of the ClusterBlueprintType that defines
+                            the output type of this blueprint.
+                          type: string
+                      required:
+                      - name
+                      type: object
                     value:
                       description: Value of the parameter. If specified, parent parameters
                         are ignored. It's invalid to provide a value in a blueprint
@@ -305,6 +330,7 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                   required:
                   - name
+                  - schema
                   type: object
                 type: array
               template:

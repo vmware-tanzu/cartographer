@@ -16,6 +16,16 @@ type Param struct {
 	// Causes the parameter to be optional
 	Default *apiextensionsv1.JSON `json:"default,omitempty"`
 
+	// TypeRef is the name of the ClusterBlueprintType that can be enforced for this parameter.
+	// TypeRef is optional, but cannot be specified at the same time as Schema
+	TypeRef BlueprintTypeRef `json:"typeRef,omitempty"`
+
+	// Schema is a JSON schema that is a valid representation of this input.
+	// Schema is optional, but cannot be specified at the same time as TypeRef
+	// This field allows you to enforce a type without needing a shared contract in
+	// a ClusterBlueprintType.
+	Schema *apiextensionsv1.JSON `json:"schema"`
+
 	// Description of the parameter
 	Description string `json:"description,omitempty"`
 }
