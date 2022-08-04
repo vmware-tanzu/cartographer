@@ -47,6 +47,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken/satokenfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
@@ -60,6 +61,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		ctx               context.Context
 		req               ctrl.Request
 		repo              *repositoryfakes.FakeRepository
+		tokenManager      *satokenfakes.FakeTokenManager
 		conditionManager  *conditionsfakes.FakeConditionManager
 		rlzr              *realizerfakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
@@ -69,10 +71,11 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
 		labelerForBuiltResourceRealizer realizer.ResourceLabeler
-		resourceRealizerSecret          *corev1.Secret
-		serviceAccountSecret            *corev1.Secret
-		serviceAccountName              string
+		resourceRealizerAuthToken       string
+		deliverableServiceAccount       *corev1.ServiceAccount
 		resourceRealizerBuilderError    error
+		deliverableServiceAccountName   = "service-account-name-for-deliverable"
+		deliverableServiceAccountToken  = "deliverable-sa-token"
 	)
 
 	BeforeEach(func() {
@@ -98,26 +101,29 @@ var _ = Describe("DeliverableReconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		serviceAccountName = "service-account-name-for-deliverable"
+		tokenManager = &satokenfakes.FakeTokenManager{}
 
-		serviceAccountSecret = &corev1.Secret{
-			StringData: map[string]string{"foo": "bar"},
+		deliverableServiceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: deliverableServiceAccountName},
 		}
-		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
+
+		repo.GetServiceAccountReturns(deliverableServiceAccount, nil)
+		tokenManager.GetServiceAccountTokenReturns(deliverableServiceAccountToken, nil)
 
 		resourceRealizerBuilderError = nil
 
-		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
-			resourceRealizerSecret = secret
+			resourceRealizerAuthToken = authToken
 			return builtResourceRealizer, nil
 		}
 
 		reconciler = controllers.DeliverableReconciler{
 			Repo:                    repo,
+			TokenManager:            tokenManager,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,
 			Realizer:                rlzr,
@@ -139,7 +145,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				Labels:     deliverableLabels,
 			},
 			Spec: v1alpha1.DeliverableSpec{
-				ServiceAccountName: serviceAccountName,
+				ServiceAccountName: deliverableServiceAccountName,
 			},
 		}
 		repo.GetDeliverableReturns(dl, nil)
@@ -350,12 +356,13 @@ var _ = Describe("DeliverableReconciler", func() {
 		It("uses the service account specified by the deliverable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
+			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal(deliverableServiceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+			Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(deliverableServiceAccount))
+			Expect(resourceRealizerAuthToken).To(Equal(deliverableServiceAccountToken))
 		})
 
 		Context("the deliverable does not specify a service account", func() {
@@ -364,24 +371,29 @@ var _ = Describe("DeliverableReconciler", func() {
 			})
 
 			Context("the delivery provides a service account", func() {
-				var deliveryServiceAccountSecret *corev1.Secret
+				deliveryServiceAccountName := "some-delivery-service-account"
+				deliveryServiceAccountToken := "delivery-service-account-token"
+				deliveryServiceAccount := &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{Name: deliveryServiceAccountName},
+				}
 
 				BeforeEach(func() {
-					delivery.Spec.ServiceAccountRef.Name = "some-delivery-service-account"
+					delivery.Spec.ServiceAccountRef.Name = deliveryServiceAccountName
 
-					deliveryServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-delivery-service-account-token`)}}
-					repo.GetServiceAccountSecretReturns(deliveryServiceAccountSecret, nil)
+					repo.GetServiceAccountReturns(deliveryServiceAccount, nil)
+					tokenManager.GetServiceAccountTokenReturns(deliveryServiceAccountToken, nil)
 				})
 
 				It("uses the delivery service account in the deliverable's namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-					Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
+					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal(deliveryServiceAccountName))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
+					Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(deliveryServiceAccount))
+					Expect(resourceRealizerAuthToken).To(Equal(deliveryServiceAccountToken))
 				})
 
 				Context("the delivery specifies a namespace", func() {
@@ -392,33 +404,38 @@ var _ = Describe("DeliverableReconciler", func() {
 					It("uses the delivery service account in the specified namespace", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
 
-						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-						Expect(serviceAccountNameArg).To(Equal("some-delivery-service-account"))
+						Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+						Expect(serviceAccountNameArg).To(Equal(deliveryServiceAccountName))
 						Expect(serviceAccountNS).To(Equal("some-delivery-namespace"))
 
-						Expect(resourceRealizerSecret).To(Equal(deliveryServiceAccountSecret))
+						Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(deliveryServiceAccount))
+						Expect(resourceRealizerAuthToken).To(Equal(deliveryServiceAccountToken))
 					})
 				})
 			})
 
 			Context("the delivery does not provide a service account", func() {
-				var defaultServiceAccountSecret *corev1.Secret
+				defaultServiceAccountToken := "default-service-account-token"
+				defaultServiceAccount := &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				}
 
 				BeforeEach(func() {
-					defaultServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-default-service-account-token`)}}
-					repo.GetServiceAccountSecretReturns(defaultServiceAccountSecret, nil)
+					repo.GetServiceAccountReturns(defaultServiceAccount, nil)
+					tokenManager.GetServiceAccountTokenReturns(defaultServiceAccountToken, nil)
 				})
 
 				It("defaults to the default service account in the deliverables namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 					Expect(serviceAccountNameArg).To(Equal("default"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
+					Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(defaultServiceAccount))
+					Expect(resourceRealizerAuthToken).To(Equal(defaultServiceAccountToken))
 				})
 			})
 		})
@@ -1157,16 +1174,16 @@ var _ = Describe("DeliverableReconciler", func() {
 			})
 		})
 
-		Context("but the repo returns an error when requesting the service account secret", func() {
+		Context("but the repo returns an error when requesting the service account", func() {
 			var repoError error
 			BeforeEach(func() {
 				repoError = errors.New("some error")
-				repo.GetServiceAccountSecretReturns(nil, repoError)
+				repo.GetServiceAccountReturns(nil, repoError)
 			})
 
-			It("calls the condition manager to add a service account secret not found condition", func() {
+			It("calls the condition manager to add a service account not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountSecretNotFoundCondition(repoError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountNotFoundCondition(repoError)))
 			})
 
 			It("handles the error and logs it", func() {
@@ -1174,7 +1191,28 @@ var _ = Describe("DeliverableReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"handled error":"failed to get secret for service account \[my-namespace/service-account-name-for-deliverable\]: some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get service account \[my-namespace/service-account-name-for-deliverable\]: some error"`))
+			})
+		})
+
+		Context("but the token manager returns an error when requesting a token for the service account", func() {
+			var tokenError error
+			BeforeEach(func() {
+				tokenError = errors.New("some error")
+				tokenManager.GetServiceAccountTokenReturns("", tokenError)
+			})
+
+			It("calls the condition manager to add a service account not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountTokenErrorCondition(tokenError)))
+			})
+
+			It("handles the error and logs it", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"handled error":"failed to get token for service account \[my-namespace/service-account-name-for-deliverable\]: some error"`))
 			})
 		})
 

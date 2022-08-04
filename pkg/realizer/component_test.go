@@ -40,20 +40,21 @@ import (
 var _ = Describe("Resource", func() {
 
 	var (
-		ctx                             context.Context
-		resource                        realizer.OwnerResource
-		workload                        v1alpha1.Workload
-		outputs                         realizer.Outputs
-		blueprintName                   string
-		fakeSystemRepo                  repositoryfakes.FakeRepository
-		fakeOwnerRepo                   repositoryfakes.FakeRepository
-		clientForBuiltRepository        client.Client
-		cacheForBuiltRepository         repository.RepoCache
-		theSecret, secretForBuiltClient *corev1.Secret
-		r                               realizer.ResourceRealizer
-		out                             *Buffer
-		repoCache                       repository.RepoCache
-		supplyChainParams               []v1alpha1.BlueprintParam
+		ctx                      context.Context
+		resource                 realizer.OwnerResource
+		workload                 v1alpha1.Workload
+		outputs                  realizer.Outputs
+		blueprintName            string
+		fakeSystemRepo           repositoryfakes.FakeRepository
+		fakeOwnerRepo            repositoryfakes.FakeRepository
+		clientForBuiltRepository client.Client
+		cacheForBuiltRepository  repository.RepoCache
+		theAuthToken             string
+		authTokenForBuiltClient  string
+		r                        realizer.ResourceRealizer
+		out                      *Buffer
+		repoCache                repository.RepoCache
+		supplyChainParams        []v1alpha1.BlueprintParam
 	)
 
 	BeforeEach(func() {
@@ -84,8 +85,8 @@ var _ = Describe("Resource", func() {
 		}
 
 		builtClient := &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
-			secretForBuiltClient = secret
+		clientBuilder := func(authToken string, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
+			authTokenForBuiltClient = authToken
 			return builtClient, nil, nil
 		}
 		out = NewBuffer()
@@ -94,18 +95,18 @@ var _ = Describe("Resource", func() {
 		repoCache = repository.NewCache(logger)
 		resourceRealizerBuilder := realizer.NewResourceRealizerBuilder(repositoryBuilder, clientBuilder, repoCache)
 
-		theSecret = &corev1.Secret{StringData: map[string]string{"blah": "blah"}}
+		theAuthToken = "tis-but-a-flesh-wound"
 
 		dummyLabeler := func(resource realizer.OwnerResource) templates.Labels {
 			return templates.Labels{"expected-labels-from-labeller-dummy": "labeller"}
 		}
-		r, err = resourceRealizerBuilder(theSecret, &workload, []v1alpha1.OwnerParam{}, &fakeSystemRepo, supplyChainParams, dummyLabeler)
+		r, err = resourceRealizerBuilder(theAuthToken, &workload, []v1alpha1.OwnerParam{}, &fakeSystemRepo, supplyChainParams, dummyLabeler)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("creates a resource realizer with the existing client, as well as one with the the supplied secret mixed in", func() {
-		Expect(secretForBuiltClient).To(Equal(theSecret))
+		Expect(authTokenForBuiltClient).To(Equal(theAuthToken))
 		Expect(clientForBuiltRepository).To(Equal(clientForBuiltRepository))
 	})
 

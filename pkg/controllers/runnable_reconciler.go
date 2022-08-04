@@ -26,6 +26,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,12 +42,14 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type RunnableReconciler struct {
+	TokenManager            satoken.TokenManager
 	Repo                    repository.Repository
 	Realizer                realizer.Realizer
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
@@ -91,13 +94,23 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	r.trackDependencies(runnable, serviceAccountName)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, req.Namespace)
+	serviceAccount, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.RunnableServiceAccountSecretNotFoundCondition(err))
+		//TODO: wow this wasnt even tested
+		//TODO ratify this cargo-culted error handling... this should reflect we are just looking for the service account first in this instance
+		//r.conditionManager.AddPositive(conditions.RunnableServiceAccountSecretNotFoundCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
-	runnableClient, discoveryClient, err := r.ClientBuilder(secret, true)
+	saToken, err := r.TokenManager.GetServiceAccountToken(serviceAccount)
+	if err != nil {
+		//TODO: wow this wasnt even tested
+		//TODO ratify this error handling cargo-culted from the Repo.GetServiceAccountSecret path
+		//r.conditionManager.AddPositive(conditions.RunnableServiceAccountSecretNotFoundCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+	}
+
+	runnableClient, discoveryClient, err := r.ClientBuilder(saToken, true)
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ClientBuilderErrorCondition(err))
 		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
@@ -217,6 +230,12 @@ func (r *RunnableReconciler) trackDependencies(runnable *v1alpha1.Runnable, serv
 }
 
 func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
+
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
