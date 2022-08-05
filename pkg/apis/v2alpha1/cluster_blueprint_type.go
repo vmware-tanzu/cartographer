@@ -38,6 +38,11 @@ type BlueprintTypeSpec struct {
 	// Todo: explain the problem with the absence of schema here, and semantic error checking
 	Schema *apiextensionsv1.JSON `json:"schema"`
 
+	// Schemas represent named subschemas, great for using with openapi $ref syntax,
+	// especially in oneOf, anyOf, allOf etc expressions. See:
+	//  https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/
+	Schemas map[string]*apiextensionsv1.JSON `json:"schemas"`
+
 	// Description describes this output to provide documentation to consumers.
 	Description string `json:"description,omitempty"`
 }

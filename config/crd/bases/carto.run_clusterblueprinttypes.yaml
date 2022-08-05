@@ -71,8 +71,16 @@ spec:
                   Todo: explain the problem with the absence of schema here, and semantic
                   error checking'
                 x-kubernetes-preserve-unknown-fields: true
+              schemas:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: 'Schemas represent named subschemas, great for using
+                  with openapi $ref syntax, especially in oneOf, anyOf, allOf etc
+                  expressions. See: https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/'
+                type: object
             required:
             - schema
+            - schemas
             type: object
         required:
         - metadata

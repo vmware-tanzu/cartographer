@@ -26,6 +26,11 @@ type Param struct {
 	// a ClusterBlueprintType.
 	Schema *apiextensionsv1.JSON `json:"schema"`
 
+	// Schemas represent named subschemas, great for using with openapi $ref syntax,
+	// especially in oneOf, anyOf, allOf etc expressions. See:
+	// https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/
+	Schemas map[string]*apiextensionsv1.JSON `json:"schemas"`
+
 	// Description of the parameter
 	Description string `json:"description,omitempty"`
 }
