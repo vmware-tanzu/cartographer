@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package conditions
+package satoken_test
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"testing"
 
-type ConditionList []metav1.Condition
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
 
-func (c ConditionList) ConditionWithType(conditionType string) *metav1.Condition {
-	for _, condition := range c {
-		if condition.Type == conditionType {
-			return &condition
-		}
-	}
-	return nil
+func TestSatoken(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Satoken Suite")
 }

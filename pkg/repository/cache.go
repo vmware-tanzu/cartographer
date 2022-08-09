@@ -28,9 +28,9 @@ type Logger interface {
 
 //counterfeiter:generate . RepoCache
 type RepoCache interface {
-	Set(submitted, persisted *unstructured.Unstructured)
+	Set(submitted, persisted *unstructured.Unstructured, ownerDiscriminant string)
 	UnchangedSinceCached(submitted *unstructured.Unstructured, existingObj *unstructured.Unstructured) *unstructured.Unstructured
-	UnchangedSinceCachedFromList(local *unstructured.Unstructured, remote []*unstructured.Unstructured) *unstructured.Unstructured
+	UnchangedSinceCachedFromList(local *unstructured.Unstructured, remote []*unstructured.Unstructured, ownerDiscriminant string) *unstructured.Unstructured
 }
 
 func NewCache(l Logger) RepoCache {
@@ -47,14 +47,14 @@ type cache struct {
 	persistedCache map[string]unstructured.Unstructured
 }
 
-func (c *cache) Set(submitted, persisted *unstructured.Unstructured) {
-	key := getKey(submitted)
+func (c *cache) Set(submitted, persisted *unstructured.Unstructured, ownerDiscriminant string) {
+	key := getKey(submitted, ownerDiscriminant)
 	c.submittedCache[key] = *submitted
 	c.persistedCache[key] = *persisted
 }
 
-func (c *cache) UnchangedSinceCachedFromList(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured) *unstructured.Unstructured {
-	key := getKey(submitted)
+func (c *cache) UnchangedSinceCachedFromList(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured, ownerDiscriminant string) *unstructured.Unstructured {
+	key := getKey(submitted, ownerDiscriminant)
 	c.logger.Info("checking for changes since cached", "key", key)
 	if !c.isSubmittedCacheHit(submitted, key) {
 		return nil
@@ -75,7 +75,7 @@ func (c *cache) UnchangedSinceCachedFromList(submitted *unstructured.Unstructure
 }
 
 func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingObj *unstructured.Unstructured) *unstructured.Unstructured {
-	key := getKey(submitted)
+	key := getKey(submitted, "")
 	c.logger.Info("checking for changes since cached", "key", key)
 	if !c.isSubmittedCacheHit(submitted, key) {
 		return nil
@@ -131,7 +131,7 @@ func (c *cache) isPersistedCacheHit(key string, existingObj *unstructured.Unstru
 	}
 }
 
-func getKey(obj *unstructured.Unstructured) string {
+func getKey(obj *unstructured.Unstructured, ownerDiscriminant string) string {
 	// todo: probably should hash object for key
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
 	var name string
@@ -141,7 +141,7 @@ func getKey(obj *unstructured.Unstructured) string {
 		name = obj.GetName()
 	}
 	ns := obj.GetNamespace()
-	return fmt.Sprintf("%s:%s:%s", ns, kind, name)
+	return fmt.Sprintf("%s:%s:%s:%s", ns, kind, name, ownerDiscriminant)
 }
 
 func (c *cache) getPersistedCached(key string) *unstructured.Unstructured {

@@ -75,7 +75,8 @@ const (
 // -- OWNER ConditionType - ResourcesSubmitted ConditionReasons
 
 const (
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ServiceAccountErrorResourcesSubmittedReason          = "ServiceAccountError"
+	ServiceAccountTokenErrorResourcesSubmittedReason     = "ServiceAccountTokenError"
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )
 
@@ -149,8 +150,9 @@ const (
 // -- RUNNABLE ConditionTypes
 
 const (
-	RunnableReady    = "Ready"
-	RunTemplateReady = "RunTemplateReady"
+	RunnableReady          = "Ready"
+	RunTemplateReady       = "RunTemplateReady"
+	StampedObjectCondition = "StampedObjectCondition"
 )
 
 // -- RUNNABLE ConditionType - RunTemplateReady ConditionReasons
@@ -164,4 +166,6 @@ const (
 	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
 	UnknownErrorReason                                = "UnknownError"
 	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
+	SucceededStampedObjectConditionReason             = "SucceededCondition"
+	UnknownStampedObjectConditionReason               = "Unknown"
 )

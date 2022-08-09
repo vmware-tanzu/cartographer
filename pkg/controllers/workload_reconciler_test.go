@@ -47,6 +47,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken/satokenfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
@@ -60,6 +61,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		ctx                             context.Context
 		req                             ctrl.Request
 		repo                            *repositoryfakes.FakeRepository
+		tokenManager                    *satokenfakes.FakeTokenManager
 		conditionManager                *conditionsfakes.FakeConditionManager
 		rlzr                            *realizerfakes.FakeRealizer
 		wl                              *v1alpha1.Workload
@@ -68,9 +70,10 @@ var _ = Describe("WorkloadReconciler", func() {
 		dependencyTracker               *dependencyfakes.FakeDependencyTracker
 		builtResourceRealizer           *realizerfakes.FakeResourceRealizer
 		labelerForBuiltResourceRealizer realizer.ResourceLabeler
-		resourceRealizerSecret          *corev1.Secret
-		serviceAccountSecret            *corev1.Secret
-		serviceAccountName              string
+		resourceRealizerAuthToken       string
+		workloadServiceAccount          *corev1.ServiceAccount
+		workloadServiceAccountName      = "workload-service-account-name"
+		workloadServiceAccountToken     = "workload-sa-token"
 		resourceRealizerBuilderError    error
 	)
 
@@ -97,25 +100,32 @@ var _ = Describe("WorkloadReconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
 
-		serviceAccountName = "workload-service-account-name"
+		tokenManager = &satokenfakes.FakeTokenManager{}
 
-		serviceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`blahblah`)}}
-		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
+		workloadServiceAccountName = "workload-service-account-name"
+
+		workloadServiceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: workloadServiceAccountName},
+		}
+
+		repo.GetServiceAccountReturns(workloadServiceAccount, nil)
+		tokenManager.GetServiceAccountTokenReturns(workloadServiceAccountToken, nil)
 
 		resourceRealizerBuilderError = nil
 
-		resourceRealizerBuilder := func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
 			}
-			resourceRealizerSecret = secret
+			resourceRealizerAuthToken = authToken
 			builtResourceRealizer = &realizerfakes.FakeResourceRealizer{}
 			return builtResourceRealizer, nil
 		}
 
 		reconciler = controllers.WorkloadReconciler{
 			Repo:                    repo,
+			TokenManager:            tokenManager,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
 			ResourceRealizerBuilder: resourceRealizerBuilder,
 			Realizer:                rlzr,
@@ -137,7 +147,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				Namespace:  "my-namespace",
 			},
 			Spec: v1alpha1.WorkloadSpec{
-				ServiceAccountName: serviceAccountName,
+				ServiceAccountName: workloadServiceAccountName,
 			},
 		}
 		repo.GetWorkloadReturns(wl, nil)
@@ -348,12 +358,13 @@ var _ = Describe("WorkloadReconciler", func() {
 		It("uses the service account specified by the workload for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, req)
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-			Expect(serviceAccountNameArg).To(Equal(serviceAccountName))
+			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+			_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+			Expect(serviceAccountNameArg).To(Equal(workloadServiceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-			Expect(resourceRealizerSecret).To(Equal(serviceAccountSecret))
+			Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(workloadServiceAccount))
+			Expect(resourceRealizerAuthToken).To(Equal(workloadServiceAccountToken))
 		})
 
 		Context("the workload does not specify a service account", func() {
@@ -362,24 +373,29 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 
 			Context("the supply chain provides a service account", func() {
-				var supplyChainServiceAccountSecret *corev1.Secret
+				supplyChainServiceAccountName := "some-supply-chain-service-account"
+				supplyChainServiceAccountToken := "supply-chain-service-account-token"
+				supplyChainServiceAccount := &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{Name: supplyChainServiceAccountName},
+				}
 
 				BeforeEach(func() {
 					supplyChain.Spec.ServiceAccountRef.Name = "some-supply-chain-service-account"
 
-					supplyChainServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-sc-service-account-token`)}}
-					repo.GetServiceAccountSecretReturns(supplyChainServiceAccountSecret, nil)
+					repo.GetServiceAccountReturns(supplyChainServiceAccount, nil)
+					tokenManager.GetServiceAccountTokenReturns(supplyChainServiceAccountToken, nil)
 				})
 
 				It("uses the supply chain service account in the workload's namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-					Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
+					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+					Expect(serviceAccountNameArg).To(Equal(supplyChainServiceAccountName))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
+					Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(supplyChainServiceAccount))
+					Expect(resourceRealizerAuthToken).To(Equal(supplyChainServiceAccountToken))
 				})
 
 				Context("the supply chain specifies a namespace", func() {
@@ -390,33 +406,38 @@ var _ = Describe("WorkloadReconciler", func() {
 					It("uses the supply chain service account in the specified namespace", func() {
 						_, _ = reconciler.Reconcile(ctx, req)
 
-						Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
-						Expect(serviceAccountNameArg).To(Equal("some-supply-chain-service-account"))
+						Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+						_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
+						Expect(serviceAccountNameArg).To(Equal(supplyChainServiceAccountName))
 						Expect(serviceAccountNS).To(Equal("some-supply-chain-namespace"))
 
-						Expect(resourceRealizerSecret).To(Equal(supplyChainServiceAccountSecret))
+						Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(supplyChainServiceAccount))
+						Expect(resourceRealizerAuthToken).To(Equal(supplyChainServiceAccountToken))
 					})
 				})
 			})
 
 			Context("the supply chain does not provide a service account", func() {
-				var defaultServiceAccountSecret *corev1.Secret
+				defaultServiceAccountToken := "default-service-account-token"
+				defaultServiceAccount := &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				}
 
 				BeforeEach(func() {
-					defaultServiceAccountSecret = &corev1.Secret{Data: map[string][]byte{"token": []byte(`some-default-service-account-token`)}}
-					repo.GetServiceAccountSecretReturns(defaultServiceAccountSecret, nil)
+					repo.GetServiceAccountReturns(defaultServiceAccount, nil)
+					tokenManager.GetServiceAccountTokenReturns(defaultServiceAccountToken, nil)
 				})
 
 				It("defaults to the default service account in the workloads namespace", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 
-					Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+					Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+					_, serviceAccountNameArg, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 					Expect(serviceAccountNameArg).To(Equal("default"))
 					Expect(serviceAccountNS).To(Equal("my-namespace"))
 
-					Expect(resourceRealizerSecret).To(Equal(defaultServiceAccountSecret))
+					Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(defaultServiceAccount))
+					Expect(resourceRealizerAuthToken).To(Equal(defaultServiceAccountToken))
 				})
 			})
 		})
@@ -1027,16 +1048,16 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 		})
 
-		Context("but the repo returns an error when requesting the service account secret", func() {
+		Context("but the repo returns an error when requesting the service account", func() {
 			var repoError error
 			BeforeEach(func() {
 				repoError = errors.New("some error")
-				repo.GetServiceAccountSecretReturns(nil, repoError)
+				repo.GetServiceAccountReturns(nil, repoError)
 			})
 
-			It("calls the condition manager to add a service account secret not found condition", func() {
+			It("calls the condition manager to add a service account not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
-				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountSecretNotFoundCondition(repoError)))
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountNotFoundCondition(repoError)))
 			})
 
 			It("handles the error and logs it", func() {
@@ -1044,7 +1065,28 @@ var _ = Describe("WorkloadReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"handled error":"failed to get service account secret \[my-namespace/workload-service-account-name\]: some error"`))
+				Expect(out).To(Say(`"handled error":"failed to get service account \[my-namespace/workload-service-account-name\]: some error"`))
+			})
+		})
+
+		Context("but the token manager returns an error when requesting a token for the service account", func() {
+			var tokenError error
+			BeforeEach(func() {
+				tokenError = errors.New("some error")
+				tokenManager.GetServiceAccountTokenReturns("", tokenError)
+			})
+
+			It("calls the condition manager to add a service account not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountTokenErrorCondition(tokenError)))
+			})
+
+			It("handles the error and logs it", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"handled error":"failed to get token for service account \[my-namespace/workload-service-account-name\]: some error"`))
 			})
 		})
 

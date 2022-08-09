@@ -39,6 +39,12 @@ metadata:
   name: cartographer-controller-admin
 rules:
   - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts/token
+    verbs:
+      - create
+  - apiGroups:
       - carto.run
     resources:
       - workloads/status
