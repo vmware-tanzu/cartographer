@@ -19,8 +19,8 @@ import (
 	"errors"
 	"testing"
 
-	v1 "dies.dev/apis/core/v1"
-	diesv1 "dies.dev/apis/meta/v1"
+	diecorev1 "dies.dev/apis/core/v1"
+	diemetav1 "dies.dev/apis/meta/v1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
