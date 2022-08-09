@@ -21,10 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	. "github.com/vmware-tanzu/cartographer/pkg/utils"
-	"github.com/vmware-tanzu/cartographer/tests/helpers"
-	"github.com/vmware-tanzu/cartographer/tests/resources"
 	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +28,11 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	. "github.com/vmware-tanzu/cartographer/pkg/utils"
+	"github.com/vmware-tanzu/cartographer/tests/helpers"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Stamping a resource on Runnable Creation", func() {
@@ -60,22 +61,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 		ctx = context.Background()
 
 		serviceAccountName = "my-service-account"
-
-		serviceAccountSecretYaml := HereYamlF(`---
-			apiVersion: v1
-			kind: Secret
-			metadata:
-			  namespace: %s
-			  name: my-service-account-secret
-			  annotations:
-				kubernetes.io/service-account.name: my-service-account
-			data:
-			  token: ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU=
-			type: kubernetes.io/service-account-token
-			`,
-			testNS)
-
-		_ = createNamespacedObject(ctx, serviceAccountSecretYaml, testNS)
 
 		serviceAccountYaml := HereYamlF(`---
 			apiVersion: v1
@@ -257,6 +242,55 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						"something-useful": Not(BeNil()),
 						"other-things":     Not(BeNil()),
 					}))
+				})
+			})
+
+			Context("and a second Runnable matches the RunTemplateRef", func() {
+				var secondRunnableDefinition *unstructured.Unstructured
+
+				BeforeEach(func() {
+					runnableYaml := HereYamlF(`---
+					apiVersion: carto.run/v1alpha1
+					kind: Runnable
+					metadata:
+					  namespace: %s
+					  name: second-runnable
+					spec:
+					  serviceAccountName: %s
+					  runTemplateRef:
+					    name: my-run-template
+					    namespace: %s
+					    kind: ClusterRunTemplate
+					  inputs:
+					    key: val
+					`,
+						testNS, serviceAccountName, testNS)
+
+					secondRunnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+				})
+
+				AfterEach(func() {
+					err := c.Delete(ctx, secondRunnableDefinition)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("only one additional templated object is stamped", func() {
+					resourceList := &v1.ResourceQuotaList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(Equal(2))
+
+					Consistently(func() (int, error) {
+						err := c.List(ctx, resourceList, &client.ListOptions{Namespace: testNS})
+						return len(resourceList.Items), err
+					}).Should(BeNumerically("<=", 2))
+
+					for i := 0; i < 2; i++ {
+						Expect(resourceList.Items[i].Name).To(ContainSubstring("my-stamped-resource-"))
+						Expect(resourceList.Items[i].Spec.ScopeSelector.MatchExpressions[0].Values).To(ConsistOf("val"))
+					}
 				})
 			})
 		})
