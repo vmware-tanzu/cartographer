@@ -137,7 +137,7 @@ coverage:
 
 .PHONY: lint
 lint: copyright
-	$(GCI_LINT) --local github.com/vmware-tanzu/cartographer --write $$(find ./pkg ! -name "fake_*" -type f)
+	$(GCI_LINT) write -s standard -s default -s "prefix(github.com/vmware-tanzu/cartographer)" $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
 
