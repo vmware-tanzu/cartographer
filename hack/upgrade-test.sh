@@ -243,7 +243,11 @@ update_source(){
   log "updating source repo"
 
   pushd "$source_dir/$SOURCE_REPO"
-    sed -i '' 's/hello world/hello universe/g' main.go
+    if [ "$(uname)" == "Darwin" ]; then
+      sed -i '' 's/hello world/hello universe/g' main.go
+    else
+      sed 's/hello world/hello universe/' main.go
+    fi
     git config user.email "gitops-user@example.com"
     git config user.name "Gitops User"
     git add .
