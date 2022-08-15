@@ -243,11 +243,15 @@ update_source(){
   log "updating source repo"
 
   pushd "$source_dir/$SOURCE_REPO"
-    echo "meaningless change" >> README.md
+    if [ "$(uname)" == "Darwin" ]; then
+      sed -i '' 's/hello world/hello universe/g' main.go
+    else
+      sed -i 's/hello world/hello universe/g' main.go
+    fi
     git config user.email "gitops-user@example.com"
     git config user.name "Gitops User"
     git add .
-    git commit -m "Meaningless change"
+    git commit -m "Not a meaningless change"
     git push origin $SOURCE_BRANCH
   popd
 }
