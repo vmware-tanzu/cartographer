@@ -246,7 +246,7 @@ update_source(){
     if [ "$(uname)" == "Darwin" ]; then
       sed -i '' 's/hello world/hello universe/g' main.go
     else
-      sed 's/hello world/hello universe/' main.go
+      sed -i 's/hello world/hello universe/g' main.go
     fi
     git config user.email "gitops-user@example.com"
     git config user.name "Gitops User"
