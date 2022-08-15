@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -59,12 +58,14 @@ type resourceRealizer struct {
 	resourceLabeler ResourceLabeler
 }
 
-type ResourceRealizerBuilder func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
+type ResourceLabeler func(resource OwnerResource) templates.Labels
+
+type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(secret *corev1.Secret, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
-		ownerClient, _, err := clientBuilder(secret, false)
+	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
+		ownerClient, _, err := clientBuilder(authToken, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}

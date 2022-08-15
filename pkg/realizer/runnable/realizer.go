@@ -99,8 +99,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	// FIXME: why are we taking a DeepCopy?
-	err = runnableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject.DeepCopy(), map[string]string{"carto.run/runnable-name": runnable.Name})
+	err = runnableRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, map[string]string{"carto.run/runnable-name": runnable.Name})
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 		return nil, nil, errors.RunnableApplyStampedObjectError{
@@ -125,7 +124,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		log.Error(err, "failed to cleanup runnable stamped objects")
 	}
 
-	outputs, evaluatedStampedObject, err := template.GetOutput(allRunnableStampedObjects)
+	outputs, outputSource, err := template.GetLatestSuccessfulOutput(allRunnableStampedObjects)
 	if err != nil {
 		for _, obj := range allRunnableStampedObjects {
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
@@ -138,8 +137,8 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	if evaluatedStampedObject != nil {
-		log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", evaluatedStampedObject)
+	if outputSource != nil {
+		log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", outputSource)
 	}
 
 	if len(outputs) == 0 {

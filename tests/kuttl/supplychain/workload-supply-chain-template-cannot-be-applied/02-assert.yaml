@@ -24,6 +24,9 @@ status:
     - type: ResourcesSubmitted
       status: "False"
       reason: "TemplateRejectedByAPIServer"
+    - type: ResourcesHealthy
+      status: "Unknown"
+      reason: HealthyConditionRule
     - type: Ready
       status: "False"
       reason: "TemplateRejectedByAPIServer"

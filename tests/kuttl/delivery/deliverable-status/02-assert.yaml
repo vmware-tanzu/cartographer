@@ -50,6 +50,9 @@ status:
     - type: ResourcesSubmitted
       status: "True"
       reason: ResourceSubmissionComplete
+    - type: ResourcesHealthy
+      status: "True"
+      reason: HealthyConditionRule
     - type: Ready
       status: "True"
       reason: Ready
@@ -96,6 +99,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: OutputsAvailable
         - type: Ready
           status: "True"
           reason: Ready
@@ -121,6 +127,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
         - type: Ready
           status: "True"
           reason: Ready
@@ -144,6 +153,10 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: MatchedField
+          message: "field value: 5, message: example-config-configmap"
         - type: Ready
           status: "True"
           reason: Ready
@@ -162,6 +175,9 @@ status:
         - type: ResourceSubmitted
           status: "True"
           reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
         - type: Ready
           status: "True"
           reason: Ready

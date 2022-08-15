@@ -172,7 +172,8 @@ and can download them with:
 
 ```
 K8S_VERSION=1.19.2
-curl -sSLo envtest-bins.tar.gz "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-${K8S_VERSION}-$(go env GOOS)-$(go env GOARCH).tar.gz"
+if [[ "$(go env GOARCH)" == "arm64" ]] && [[ "$(go env GOOS)" == "darwin" ]]; then ENV_TEST_ARCH="amd64"; else ENV_TEST_ARCH="$(go env GOARCH)"; fi # use Rosetta on M1 macs
+curl -sSLo envtest-bins.tar.gz "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-${K8S_VERSION}-$(go env GOOS)-${ENV_TEST_ARCH}.tar.gz"
 ```
 
 **Note:** `envTest` cannot run pods, so is limited, but is typically all that's needed to test controllers and webhooks.

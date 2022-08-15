@@ -26,6 +26,7 @@ package v1alpha1
 
 const (
 	OwnerReady               = "Ready"
+	ResourcesHealthy         = "ResourcesHealthy"
 	WorkloadSupplyChainReady = "SupplyChainReady"
 	DeliverableDeliveryReady = "DeliveryReady"
 	OwnerResourcesSubmitted  = "ResourcesSubmitted"
@@ -74,14 +75,15 @@ const (
 // -- OWNER ConditionType - ResourcesSubmitted ConditionReasons
 
 const (
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ServiceAccountErrorResourcesSubmittedReason          = "ServiceAccountError"
+	ServiceAccountTokenErrorResourcesSubmittedReason     = "ServiceAccountTokenError"
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )
 
 // -----------------------------------------
 // -- OWNER.STATUS.RESOURCE[x].CONDITIONS --
 // ConditionTypes
-//   (ResourcesHealthy) - TODO
+//   ResourcesHealthy
 //   ResourcesSubmitted
 //   Ready
 
@@ -90,6 +92,7 @@ const (
 const (
 	ResourceReady     = "Ready"
 	ResourceSubmitted = "ResourceSubmitted"
+	ResourceHealthy   = "Healthy"
 )
 
 // -- RESOURCE ConditionType - ResourceSubmitted ConditionReasons (above)
@@ -115,6 +118,29 @@ const (
 	NotFoundTemplatesReadyReason = "TemplatesNotFound"
 )
 
+// -- BLUEPRINT ConditionType - ResourcesHealthy True ConditionReasons
+
+const (
+	OutputAvailableResourcesHealthyReason = "OutputsAvailable"
+	AlwaysHealthyResourcesHealthyReason   = "AlwaysHealthy"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy Unknown ConditionReasons
+
+const (
+	NoResourceResourcesHealthyReason         = "NoResource"
+	OutputNotAvailableResourcesHealthyReason = "OutputNotAvailable"
+	NoStampedObjectHealthyReason             = "NoStampedObject"
+	NoMatchesFulfilledReason                 = "NoMatchesFulfilled"
+)
+
+// -- BLUEPRINT ConditionType - ResourcesHealthy MultiMatch ConditionReasons
+
+const (
+	MultiMatchConditionHealthyReason = "MatchedCondition"
+	MultiMatchFieldHealthyReason     = "MatchedField"
+)
+
 // -----------------------------------------
 // -- RUNNABLE.STATUS.CONDITIONS --
 // ConditionTypes
@@ -124,8 +150,9 @@ const (
 // -- RUNNABLE ConditionTypes
 
 const (
-	RunnableReady    = "Ready"
-	RunTemplateReady = "RunTemplateReady"
+	RunnableReady          = "Ready"
+	RunTemplateReady       = "RunTemplateReady"
+	StampedObjectCondition = "StampedObjectCondition"
 )
 
 // -- RUNNABLE ConditionType - RunTemplateReady ConditionReasons
@@ -139,4 +166,6 @@ const (
 	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
 	UnknownErrorReason                                = "UnknownError"
 	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
+	SucceededStampedObjectConditionReason             = "SucceededCondition"
+	UnknownStampedObjectConditionReason               = "Unknown"
 )

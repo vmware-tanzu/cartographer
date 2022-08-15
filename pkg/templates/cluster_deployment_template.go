@@ -206,3 +206,7 @@ func (t *clusterDeploymentTemplate) observedCompletionReady(stampedObject *unstr
 
 	return nil
 }
+
+func (t *clusterDeploymentTemplate) GetHealthRule() *v1alpha1.HealthRule {
+	return t.template.Spec.HealthRule
+}

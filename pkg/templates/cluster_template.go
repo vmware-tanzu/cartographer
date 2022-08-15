@@ -58,3 +58,7 @@ func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 func (t *clusterTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 	return t.template.Spec.Params
 }
+
+func (t *clusterTemplate) GetHealthRule() *v1alpha1.HealthRule {
+	return t.template.Spec.HealthRule
+}

@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,8 +40,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped"
@@ -48,6 +51,7 @@ import (
 )
 
 type WorkloadReconciler struct {
+	TokenManager            satoken.TokenManager
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
@@ -111,14 +115,20 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForWorkload(workload, supplyChain)
 
-	secret, err := r.Repo.GetServiceAccountSecret(ctx, serviceAccountName, serviceAccountNS)
+	serviceAccount, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountSecretNotFoundCondition(err))
-		log.Info("failed to get service account secret", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account secret [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		r.conditionManager.AddPositive(conditions.ServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(secret, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
+	saToken, err := r.TokenManager.GetServiceAccountToken(serviceAccount)
+	if err != nil {
+		r.conditionManager.AddPositive(conditions.ServiceAccountTokenErrorCondition(err))
+		log.Info("failed to get token for service account", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
+		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+	}
+
+	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
@@ -135,6 +145,8 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 	}
+
+	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), workload.Status.Conditions))
 
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
@@ -193,7 +205,7 @@ func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workloa
 		workload.Status.ObservedGeneration = workload.Generation
 		updateErr = r.Repo.StatusUpdate(ctx, workload)
 		if updateErr != nil {
-			log.Error(err, "failed to update status for workload")
+			log.Error(updateErr, "failed to update status for workload")
 			return ctrl.Result{}, fmt.Errorf("failed to update status for workload: %w", updateErr)
 		}
 	}
@@ -382,6 +394,12 @@ func getServiceAccountNameAndNamespaceForWorkload(workload *v1alpha1.Workload, s
 
 // TODO: kubebuilder:rbac
 func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
+
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
@@ -391,7 +409,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
-	r.Realizer = realizer.NewRealizer()
+	r.Realizer = realizer.NewRealizer(nil)
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-workload"),
