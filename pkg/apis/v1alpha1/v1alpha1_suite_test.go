@@ -50,7 +50,7 @@ func markersFor(filename, packageRef, typeName, fieldName, markerType string) (i
 		return nil, err
 	}
 	if len(packages) != 1 {
-		return nil, fmt.Errorf("got %d package(s) for file: %s", len(packages), filename)
+		return nil, fmt.Errorf("got %d package(s) for package ref: %s", len(packages), packageRef)
 	}
 
 	found := false
