@@ -5,7 +5,7 @@
 - Name: Common Blueprint Architecture
 - Start Date: 2022-03-29 (revised: 2022-08-15)
 - Author(s): @emmjohnson @martyspiewak @squeedee
-- Status: Accepted
+- Status: In Review
 - RFC Pull Request: (leave blank)
 - Supersedes: N/A
 
