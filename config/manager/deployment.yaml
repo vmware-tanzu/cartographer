@@ -49,6 +49,7 @@ spec:
           image: ko://github.com/vmware-tanzu/cartographer/cmd/cartographer
           args:
             - -cert-dir=/cert
+            - -metrics-port=9998
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -67,3 +68,20 @@ spec:
             requests:
               cpu: 500m
               memory: 512Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/port: "9998"
+    prometheus.io/scheme: https
+    prometheus.io/scrape: "true"
+  name: cartographer-controller-metrics-service
+  namespace: cartographer-system
+spec:
+  ports:
+    - port: 9998
+      targetPort: 9998
+  selector:
+    app: cartographer-controller
