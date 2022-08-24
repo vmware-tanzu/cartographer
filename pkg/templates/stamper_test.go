@@ -210,6 +210,9 @@ var _ = Describe("Stamper", func() {
 			Entry(`Single tag, array value and type preserved, nested tags evaluated`,
 				`$(params.sub)$`, `["foo", "$(params['extra-for-nested'])$"]`, []interface{}{"foo", "nested"}, ""),
 
+			Entry(`Single tag, empty array value preserved`,
+				`$(params.sub)$`, `["foo", []]`, []interface{}{"foo", []interface{}{}}, ""),
+
 			Entry(`Multiple tags, result becomes a string`,
 				`$(params.sub)$$(params.sub)$`, `5`, "55", ""),
 
