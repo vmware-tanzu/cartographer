@@ -25,14 +25,14 @@ spec:
     - cartographer-webhook.cartographer-system.svc.cluster.local
   issuerRef:
     kind: Issuer
-    name: selfsigned-issuer
+    name: cartographer-selfsigned-issuer
   secretName: cartographer-webhook
 
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: selfsigned-issuer
+  name: cartographer-selfsigned-issuer
   namespace: cartographer-system
 spec:
   selfSigned: {}
