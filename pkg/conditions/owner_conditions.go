@@ -44,15 +44,6 @@ func ResourcesSubmittedCondition(isOwner bool) metav1.Condition {
 	}
 }
 
-// -- Owner.Status.Conditions - ResourcesHealthy - True/False/Unknown
-
-func ResourcesHealthyCondition(status metav1.ConditionStatus) metav1.Condition {
-	return metav1.Condition{
-		Type:   v1alpha1.ResourcesHealthy,
-		Status: status,
-	}
-}
-
 // -- Owner.Status.Resource[x].Conditions - ResourceSubmitted &&
 // -- Owner.Status.Conditions - ResourcesSubmitted
 
@@ -134,11 +125,20 @@ func getConditionType(isOwner bool) string {
 
 // -- Owner.Status.Conditions - ResourcesSubmitted
 
-func ServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
+func ServiceAccountNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.OwnerResourcesSubmitted,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
+		Reason:  v1alpha1.ServiceAccountErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}
+
+func ServiceAccountTokenErrorCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.OwnerResourcesSubmitted,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ServiceAccountTokenErrorResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }

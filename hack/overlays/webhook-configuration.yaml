@@ -21,6 +21,7 @@ metadata:
   #@overlay/match missing_ok=True
   annotations:
     cert-manager.io/inject-ca-from: cartographer-system/cartographer-webhook
+  name: cartographer-validating-webhook-configuration
 
 webhooks:
   #@overlay/match by=overlay.all, expects="1+"

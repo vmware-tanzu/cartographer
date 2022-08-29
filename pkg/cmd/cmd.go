@@ -17,6 +17,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/pprof"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,9 +32,11 @@ import (
 )
 
 type Command struct {
-	Port    int
-	CertDir string
-	Logger  logr.Logger
+	Port        int
+	CertDir     string
+	MetricsPort int
+	PprofPort   int
+	Logger      logr.Logger
 }
 
 func (cmd *Command) Execute(ctx context.Context) error {
@@ -49,12 +53,22 @@ func (cmd *Command) Execute(ctx context.Context) error {
 		return fmt.Errorf("add to scheme: %w", err)
 	}
 
-	mgr, err := manager.New(cfg, manager.Options{
+	mgrOpts := manager.Options{
 		Port:               cmd.Port,
 		CertDir:            cmd.CertDir,
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-	})
+	}
+
+	if cmd.MetricsPort != 0 {
+		mgrOpts.MetricsBindAddress = fmt.Sprintf(":%d", cmd.MetricsPort)
+	}
+
+	if cmd.PprofPort != 0 {
+		startPprof(cmd.PprofPort)
+	}
+
+	mgr, err := manager.New(cfg, mgrOpts)
 	if err != nil {
 		return fmt.Errorf("failed to create new manager: %w", err)
 	}
@@ -136,4 +150,16 @@ func registerWebhooks(mgr manager.Manager) error {
 	}
 
 	return nil
+}
+
+func startPprof(port int) {
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	go func() {
+		_ = http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
+	}()
 }

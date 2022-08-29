@@ -24,23 +24,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ClientBuilder func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error)
+type ClientBuilder func(authToken string, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error)
 
 func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
-	return func(secret *corev1.Secret, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
-		config, err := AddBearerToken(secret, restConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("adding bearer token: %w", err)
-		}
+	return func(authToken string, needDiscovery bool) (client.Client, discovery.DiscoveryInterface, error) {
+		newConfig := *restConfig
+		newConfig.BearerToken = authToken
+		newConfig.BearerTokenFile = ""
 
-		cl, err := client.New(config, client.Options{})
+		cl, err := client.New(&newConfig, client.Options{})
 		if err != nil {
 			return nil, nil, fmt.Errorf("creating client: %w", err)
 		}
 
 		var cachedDiscoveryClient discovery.DiscoveryInterface
 		if needDiscovery {
-			discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+			discoveryClient, err := discovery.NewDiscoveryClientForConfig(&newConfig)
 			if err != nil {
 				return cl, nil, fmt.Errorf("failed to create discovery client: %w", err)
 			}
@@ -51,6 +50,7 @@ func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
 	}
 }
 
+//TODO: this must be removed --- compare what is tested in client_test ?
 func AddBearerToken(secret *corev1.Secret, restConfig *rest.Config) (*rest.Config, error) {
 	tokenBytes, found := secret.Data[corev1.ServiceAccountTokenKey]
 	if !found {

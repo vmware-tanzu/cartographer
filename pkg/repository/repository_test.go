@@ -174,14 +174,15 @@ spec:
 						Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 					})
 
-					It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+					It("caches the submitted and persisted objects with no ownerDiscriminant, as the persisted one may be modified by mutating webhooks", func() {
 						originalStampedObj := stampedObj.DeepCopy()
 
 						Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 						Expect(cache.SetCallCount()).To(Equal(1))
-						submitted, persisted := cache.SetArgsForCall(0)
+						submitted, persisted, ownerDiscriminant := cache.SetArgsForCall(0)
 						Expect(*submitted).To(Equal(*originalStampedObj))
 						Expect(*persisted).To(Equal(*returnedCreatedObj))
+						Expect(ownerDiscriminant).To(Equal(""))
 					})
 				})
 			})
@@ -272,14 +273,15 @@ spec:
 									Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 								})
 
-								It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+								It("caches the submitted and persisted objects with no ownerDiscriminant, as the persisted one may be modified by mutating webhooks", func() {
 									originalStampedObj := stampedObj.DeepCopy()
 
 									Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
 									Expect(cache.SetCallCount()).To(Equal(1))
-									submitted, persisted := cache.SetArgsForCall(0)
+									submitted, persisted, ownerDiscriminant := cache.SetArgsForCall(0)
 									Expect(*submitted).To(Equal(*originalStampedObj))
 									Expect(*persisted).To(Equal(*returnedPatchedObj))
+									Expect(ownerDiscriminant).To(Equal(""))
 								})
 							})
 
@@ -310,7 +312,7 @@ spec:
 			)
 
 			BeforeEach(func() {
-				labels = map[string]string{"foo": "bar"}
+				labels = map[string]string{"quux": "xyzzy", "foo": "bar", "waldo": "fred"}
 				stampedObj = &unstructured.Unstructured{}
 				stampedObjManifest := `
 apiVersion: batch/v1
@@ -359,13 +361,14 @@ spec:
 					}
 				})
 
-				It("the cache is consulted to see if there was a change since the last time the cache was updated", func() {
+				It("the cache is consulted (with an ownerDiscriminant of the labels) to see if there was a change since the last time the cache was updated", func() {
 					Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
 					Expect(cache.UnchangedSinceCachedFromListCallCount()).To(Equal(1))
 
-					submitted, persisted := cache.UnchangedSinceCachedFromListArgsForCall(0)
+					submitted, persisted, ownerDiscriminant := cache.UnchangedSinceCachedFromListArgsForCall(0)
 					Expect(*submitted).To(Equal(*stampedObj))
 					Expect(persisted[0]).To(Equal(existingObj))
+					Expect(ownerDiscriminant).To(Equal("{foo:bar}{quux:xyzzy}{waldo:fred}"))
 				})
 
 				Context("and the cache determines there has been no change since the last update", func() {
@@ -422,14 +425,15 @@ spec:
 							Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
 						})
 
-						It("caches the submitted and persisted objects, as the persisted one may be modified by mutating webhooks", func() {
+						It("caches the submitted and persisted objects with an ownerDiscriminant of the labels, as the persisted one may be modified by mutating webhooks", func() {
 							originalStampedObj := stampedObj.DeepCopy()
 
 							Expect(repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)).To(Succeed())
 							Expect(cache.SetCallCount()).To(Equal(1))
-							submitted, persisted := cache.SetArgsForCall(0)
+							submitted, persisted, ownerDiscriminant := cache.SetArgsForCall(0)
 							Expect(*submitted).To(Equal(*originalStampedObj))
 							Expect(*persisted).To(Equal(*returnedCreatedObj))
+							Expect(ownerDiscriminant).To(Equal("{foo:bar}{quux:xyzzy}{waldo:fred}"))
 						})
 					})
 
@@ -677,50 +681,29 @@ spec:
 
 		})
 
-		Describe("GetServiceAccountSecret", func() {
-			Context("when the service account and secret exist", func() {
+		Describe("GetServiceAccount", func() {
+			Context("when the service account exists", func() {
 				var (
-					serviceAccount       *v1.ServiceAccount
-					serviceAccountSecret *v1.Secret
-					serviceAccountName   string
+					serviceAccount     *v1.ServiceAccount
+					serviceAccountName string
+					serviceAccountNS   string
 				)
 
 				BeforeEach(func() {
 					serviceAccountName = "my-service-account"
-					serviceAccountSecretName := "my-service-account-secret"
-
-					serviceAccountSecret = &v1.Secret{
-						TypeMeta: metav1.TypeMeta{},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountSecretName,
-							Annotations: map[string]string{
-								"kubernetes.io/service-account.name": serviceAccountName,
-							},
-						},
-						Data: map[string][]byte{
-							"token": []byte("ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklubFNWM1YxVDNSRldESnZVRE4wTUd0R1EzQmlVVlJOVWtkMFNGb3RYMGh2VUhKYU1FRnVOR0Y0WlRBaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbTE1TFhOaExYUnZhMlZ1TFd4dVkzRndJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpYSjJhV05sTFdGalkyOTFiblF1Ym1GdFpTSTZJbTE1TFhOaElpd2lhM1ZpWlhKdVpYUmxjeTVwYnk5elpYSjJhV05sWVdOamIzVnVkQzl6WlhKMmFXTmxMV0ZqWTI5MWJuUXVkV2xrSWpvaU9HSXhNV1V3WldNdFlURTVOeTAwWVdNeUxXRmpORFF0T0RjelpHSmpOVE13TkdKbElpd2ljM1ZpSWpvaWMzbHpkR1Z0T25ObGNuWnBZMlZoWTJOdmRXNTBPbVJsWm1GMWJIUTZiWGt0YzJFaWZRLmplMzRsZ3hpTUtnd0QxUGFhY19UMUZNWHdXWENCZmhjcVhQMEE2VUV2T0F6ek9xWGhpUUdGN2poY3RSeFhmUVFJVEs0Q2tkVmZ0YW5SUjNPRUROTUxVMVBXNXVsV3htVTZTYkMzdmZKT3ozLVJPX3BOVkNmVW8tZURpblN1Wm53bjNzMjNjZU9KM3IzYk04cnBrMHZZZFgyRVlQRGItMnd4cjIzZ1RxUjVxZU5ULW11cS1qYktXVE8wYnRYVl9wVHNjTnFXUkZIVzJBVTVHYVBpbmNWVXg1bXExLXN0SFdOOGtjTG96OF96S2RnUnJGYV92clFjb3NWZzZCRW5MSEt2NW1fVEhaR3AybU8wYmtIV3J1Q2xEUDdLc0tMOFVaZWxvTDN4Y3dQa000VlBBb2V0bDl5MzlvUi1KbWh3RUlIcS1hX3BzaVh5WE9EQU44STcybEZpUSU="),
-						},
-						Type: v1.SecretTypeServiceAccountToken,
-					}
+					serviceAccountNS = "best-namespace-ever"
 
 					serviceAccount = &v1.ServiceAccount{
 						TypeMeta: metav1.TypeMeta{},
 						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
-						},
-						Secrets: []v1.ObjectReference{
-							{
-								Name: serviceAccountSecretName,
-							},
+							Name:      serviceAccountName,
+							Namespace: serviceAccountNS,
 						},
 					}
 
 					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountName {
+						if key.Name == serviceAccountName && key.Namespace == serviceAccountNS {
 							bytes, _ := json.Marshal(serviceAccount)
-							_ = json.Unmarshal(bytes, obj)
-						} else if key.Name == serviceAccountSecretName {
-							bytes, _ := json.Marshal(serviceAccountSecret)
 							_ = json.Unmarshal(bytes, obj)
 						} else {
 							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
@@ -729,11 +712,18 @@ spec:
 					}
 				})
 
-				It("returns the secret associated with the specified service account", func() {
-					secret, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
+				It("returns the named service account retrieved from the apiserver", func() {
+					serviceAccount, err := repo.GetServiceAccount(context.TODO(), serviceAccountName, serviceAccountNS)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(secret).To(Equal(serviceAccountSecret))
+					Expect(cl.GetCallCount()).To(Equal(1))
+					_, getKey, obj := cl.GetArgsForCall(0)
+					Expect(getKey.Name).To(Equal(serviceAccountName))
+					Expect(getKey.Namespace).To(Equal(serviceAccountNS))
+					_, isGettingServiceAccount := obj.(*v1.ServiceAccount)
+					Expect(isGettingServiceAccount).To(BeTrue())
+
+					Expect(serviceAccount).To(Equal(serviceAccount))
 				})
 			})
 
@@ -743,148 +733,10 @@ spec:
 				})
 
 				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), "some-service-account", "")
+					_, err := repo.GetServiceAccount(context.TODO(), "some-service-account", "dont-matter")
 					Expect(err).To(HaveOccurred())
 
-					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [/some-service-account]: failed to get object [some-service-account] from api server: some error"))
-				})
-			})
-
-			Context("when there is an error getting the service account secret", func() {
-				var (
-					serviceAccount     *v1.ServiceAccount
-					serviceAccountName string
-				)
-
-				BeforeEach(func() {
-					serviceAccountName = "my-service-account"
-					serviceAccountSecretName := "my-service-account-secret"
-
-					serviceAccount = &v1.ServiceAccount{
-						TypeMeta: metav1.TypeMeta{},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: serviceAccountName,
-						},
-						Secrets: []v1.ObjectReference{
-							{
-								Name: serviceAccountSecretName,
-							},
-						},
-					}
-
-					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountName {
-							bytes, _ := json.Marshal(serviceAccount)
-							_ = json.Unmarshal(bytes, obj)
-						} else if key.Name == serviceAccountSecretName {
-							return fmt.Errorf("some error")
-						} else {
-							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
-						}
-						return nil
-					}
-				})
-
-				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, "")
-					Expect(err).To(HaveOccurred())
-
-					Expect(err.Error()).To(ContainSubstring("failed to get secret object from api server: "))
-				})
-			})
-
-			Context("when the service account does not have any secrets", func() {
-				var (
-					serviceAccount     *v1.ServiceAccount
-					serviceAccountName string
-					serviceAccountNs   string
-				)
-
-				BeforeEach(func() {
-					serviceAccountName = "my-service-account"
-					serviceAccountNs = "my-ns"
-
-					serviceAccount = &v1.ServiceAccount{
-						TypeMeta: metav1.TypeMeta{},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      serviceAccountName,
-							Namespace: serviceAccountNs,
-						},
-						Secrets: []v1.ObjectReference{},
-					}
-
-					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountName {
-							bytes, _ := json.Marshal(serviceAccount)
-							_ = json.Unmarshal(bytes, obj)
-						} else {
-							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
-						}
-						return nil
-					}
-				})
-
-				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
-					Expect(err).To(HaveOccurred())
-
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any secrets", serviceAccountNs, serviceAccountName)))
-				})
-			})
-
-			Context("when the service account does not have any token secrets", func() {
-				var (
-					serviceAccount     *v1.ServiceAccount
-					secret             *v1.Secret
-					serviceAccountName string
-					serviceAccountNs   string
-				)
-
-				BeforeEach(func() {
-					serviceAccountName = "my-service-account"
-					serviceAccountNs = "my-ns"
-					secretName := "my-secret"
-
-					secret = &v1.Secret{
-						TypeMeta: metav1.TypeMeta{},
-						ObjectMeta: metav1.ObjectMeta{
-							Name: secretName,
-						},
-						Type: v1.SecretTypeBasicAuth,
-					}
-
-					serviceAccount = &v1.ServiceAccount{
-						TypeMeta: metav1.TypeMeta{},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      serviceAccountName,
-							Namespace: serviceAccountNs,
-						},
-						Secrets: []v1.ObjectReference{
-							{
-								Name: secretName,
-							},
-						},
-					}
-
-					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
-						if key.Name == serviceAccountName {
-							bytes, _ := json.Marshal(serviceAccount)
-							_ = json.Unmarshal(bytes, obj)
-						} else if key.Name == secretName {
-							bytes, _ := json.Marshal(secret)
-							_ = json.Unmarshal(bytes, obj)
-						} else {
-							Fail(fmt.Sprintf("unexpected get call for name %s", key.Name))
-						}
-						return nil
-					}
-				})
-
-				It("returns a helpful error message", func() {
-					_, err := repo.GetServiceAccountSecret(context.TODO(), serviceAccountName, serviceAccountNs)
-					Expect(err).To(HaveOccurred())
-
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("service account [%s/%s] does not have any token secrets", serviceAccountNs, serviceAccountName)))
+					Expect(err.Error()).To(ContainSubstring("failed to get service account object from api server [dont-matter/some-service-account]: failed to get object [dont-matter/some-service-account] from api server: some error"))
 				})
 			})
 		})

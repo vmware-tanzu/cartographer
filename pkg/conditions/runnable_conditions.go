@@ -103,7 +103,7 @@ func RunnableServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ServiceAccountSecretErrorResourcesSubmittedReason,
+		Reason:  v1alpha1.ServiceAccountErrorResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }
@@ -114,5 +114,23 @@ func ClientBuilderErrorCondition(err error) metav1.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.ClientBuilderErrorResourcesSubmittedReason,
 		Message: err.Error(),
+	}
+}
+
+// -- Runnable.Status.Conditions - StampedObjectCondition
+
+func StampedObjectConditionUnknown() metav1.Condition {
+	return metav1.Condition{
+		Type:   v1alpha1.StampedObjectCondition,
+		Status: metav1.ConditionUnknown,
+		Reason: v1alpha1.UnknownStampedObjectConditionReason,
+	}
+}
+
+func StampedObjectConditionKnown(condition *metav1.Condition) metav1.Condition {
+	return metav1.Condition{
+		Type:   v1alpha1.StampedObjectCondition,
+		Status: condition.Status,
+		Reason: v1alpha1.SucceededStampedObjectConditionReason,
 	}
 }

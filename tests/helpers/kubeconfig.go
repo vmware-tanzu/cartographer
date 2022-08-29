@@ -16,7 +16,7 @@ package helpers
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
@@ -30,7 +30,7 @@ func GenerateConfigFile(env *envtest.Environment) (string, error) {
 		return "", fmt.Errorf("add user: %w", err)
 	}
 
-	kubeconfigFile, err := ioutil.TempFile("", "cartographer-integration-test-kubeconfig-")
+	kubeconfigFile, err := os.CreateTemp("", "cartographer-integration-test-kubeconfig-")
 	if err != nil {
 		return "", fmt.Errorf("tempfile: %w", err)
 	}

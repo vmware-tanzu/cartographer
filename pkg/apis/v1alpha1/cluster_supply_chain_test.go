@@ -125,7 +125,8 @@ var _ = Describe("ClusterSupplyChain", func() {
 
 		It("has a matching valid enum for Kind", func() {
 			mrkrs, err := markersFor(
-				"./cluster_supply_chain.go",
+				"cluster_supply_chain.go",
+				"./...",
 				"SupplyChainTemplateReference",
 				"Kind",
 				"kubebuilder:validation:Enum",

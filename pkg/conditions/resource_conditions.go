@@ -40,11 +40,12 @@ func AlwaysHealthyResourcesHealthyCondition() metav1.Condition {
 	}
 }
 
-func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName string) metav1.Condition {
+func SingleConditionMatchCondition(status metav1.ConditionStatus, conditionName, message string) metav1.Condition {
 	return metav1.Condition{
-		Type:   v1alpha1.ResourceHealthy,
-		Status: status,
-		Reason: fmt.Sprintf("%sCondition", conditionName),
+		Type:    v1alpha1.ResourceHealthy,
+		Status:  status,
+		Reason:  fmt.Sprintf("%sCondition", conditionName),
+		Message: message,
 	}
 }
 
@@ -62,7 +63,7 @@ func UnknownResourcesHealthyCondition() metav1.Condition {
 	return metav1.Condition{
 		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionUnknown,
-		Reason: "Unknokwn",
+		Reason: "Unknown",
 	}
 }
 
@@ -82,19 +83,21 @@ func OutputNotAvailableResourcesHealthyCondition() metav1.Condition {
 	}
 }
 
-func SingleConditionTypeEvaluationErrorCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.ResourceHealthy,
-		Status:  metav1.ConditionUnknown,
-		Reason:  v1alpha1.SingleConditionTypeEvaluationErrorResourcesHealthyReason,
-		Message: err.Error(),
-	}
-}
-
-func SingleConditionTypeNoResultResourcesCondition() metav1.Condition {
+func MultiMatchNoMatchesCondition() metav1.Condition {
 	return metav1.Condition{
 		Type:   v1alpha1.ResourceHealthy,
 		Status: metav1.ConditionUnknown,
-		Reason: v1alpha1.SingleConditionTypeNoResultResourcesHealthyReason,
+		Reason: v1alpha1.NoMatchesFulfilledReason,
+	}
+}
+
+// -- Resource.Conditions - ResourcesHealthy - MultiMatch
+
+func MultiMatchResourcesHealthyCondition(status metav1.ConditionStatus, reason, message string) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.ResourceHealthy,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
 	}
 }

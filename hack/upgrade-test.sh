@@ -20,7 +20,7 @@ set -o pipefail
 # shellcheck disable=SC2155
 readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
-readonly REGISTRY_PORT=${REGISTRY_PORT:-5000}
+readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
@@ -35,7 +35,7 @@ readonly CONFIG_BRANCH="main"
 readonly CONFIG_COMMIT_MESSAGE="Update config"
 
 main() {
-  "$DIR/setup.sh" cluster example-dependencies
+  KIND_IMAGE='kindest/node:v1.21.1' "$DIR/setup.sh" cluster example-dependencies
   install_latest_released_cartographer
 
   port=$(available_port)
@@ -243,11 +243,15 @@ update_source(){
   log "updating source repo"
 
   pushd "$source_dir/$SOURCE_REPO"
-    echo "meaningless change" >> README.md
+    if [ "$(uname)" == "Darwin" ]; then
+      sed -i '' 's/hello world/hello universe/g' main.go
+    else
+      sed -i 's/hello world/hello universe/g' main.go
+    fi
     git config user.email "gitops-user@example.com"
     git config user.name "Gitops User"
     git add .
-    git commit -m "Meaningless change"
+    git commit -m "Not a meaningless change"
     git push origin $SOURCE_BRANCH
   popd
 }

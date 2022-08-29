@@ -75,7 +75,8 @@ const (
 // -- OWNER ConditionType - ResourcesSubmitted ConditionReasons
 
 const (
-	ServiceAccountSecretErrorResourcesSubmittedReason    = "ServiceAccountSecretError"
+	ServiceAccountErrorResourcesSubmittedReason          = "ServiceAccountError"
+	ServiceAccountTokenErrorResourcesSubmittedReason     = "ServiceAccountTokenError"
 	ResourceRealizerBuilderErrorResourcesSubmittedReason = "ResourceRealizerBuilderError"
 )
 
@@ -130,13 +131,14 @@ const (
 	NoResourceResourcesHealthyReason         = "NoResource"
 	OutputNotAvailableResourcesHealthyReason = "OutputNotAvailable"
 	NoStampedObjectHealthyReason             = "NoStampedObject"
+	NoMatchesFulfilledReason                 = "NoMatchesFulfilled"
 )
 
-// -- BLUEPRINT ConditionType - ResourcesHealthy False ConditionReasons
+// -- BLUEPRINT ConditionType - ResourcesHealthy MultiMatch ConditionReasons
 
 const (
-	SingleConditionTypeEvaluationErrorResourcesHealthyReason = "SingleConditionEvaluationError"
-	SingleConditionTypeNoResultResourcesHealthyReason        = "SingleConditionNoResult"
+	MultiMatchConditionHealthyReason = "MatchedCondition"
+	MultiMatchFieldHealthyReason     = "MatchedField"
 )
 
 // -----------------------------------------
@@ -148,8 +150,9 @@ const (
 // -- RUNNABLE ConditionTypes
 
 const (
-	RunnableReady    = "Ready"
-	RunTemplateReady = "RunTemplateReady"
+	RunnableReady          = "Ready"
+	RunTemplateReady       = "RunTemplateReady"
+	StampedObjectCondition = "StampedObjectCondition"
 )
 
 // -- RUNNABLE ConditionType - RunTemplateReady ConditionReasons
@@ -163,4 +166,6 @@ const (
 	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
 	UnknownErrorReason                                = "UnknownError"
 	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
+	SucceededStampedObjectConditionReason             = "SucceededCondition"
+	UnknownStampedObjectConditionReason               = "Unknown"
 )

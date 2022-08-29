@@ -120,6 +120,10 @@ func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetect
 		}
 		return stampedMap, nil
 	case []interface{}:
+		if len(typedJSONValue) == 0 {
+			return typedJSONValue, nil
+		}
+
 		var stampedSlice []interface{}
 		for _, sliceElement := range typedJSONValue {
 			stampedElement, err := s.recursivelyEvaluateTemplates(sliceElement, loopDetector)

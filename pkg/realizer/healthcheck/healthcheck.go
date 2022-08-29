@@ -23,6 +23,8 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
@@ -38,14 +40,14 @@ func IsClusterTemplate(reference *corev1.ObjectReference) bool {
 
 func OwnerHealthCondition(resourceStatuses []v1alpha1.ResourceStatus, previousConditions []metav1.Condition) metav1.Condition {
 	var previousHealthCondition []metav1.Condition
-	condition := conditions.ConditionList(previousConditions).ConditionWithType(v1alpha1.ResourceHealthy)
+	condition := utils.ConditionList(previousConditions).ConditionWithType(v1alpha1.ResourceHealthy)
 	if condition != nil {
 		previousHealthCondition = append(previousHealthCondition, *condition)
 	}
 	healthyConditionManager := conditions.NewConditionManager(v1alpha1.ResourcesHealthy, previousHealthCondition)
 
 	for _, resourceStatus := range resourceStatuses {
-		resourceHealthyCondition := conditions.ConditionList(resourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy)
+		resourceHealthyCondition := utils.ConditionList(resourceStatus.Conditions).ConditionWithType(v1alpha1.ResourceHealthy)
 		if resourceHealthyCondition != nil {
 			healthyConditionManager.AddPositive(*resourceHealthyCondition)
 		}
@@ -75,25 +77,101 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 		if rule.AlwaysHealthy != nil {
 			return conditions.AlwaysHealthyResourcesHealthyCondition()
 		}
-		if rule.SingleConditionType != "" && stampedObject != nil {
-			jsonpathQuery := fmt.Sprintf("{.status.conditions[?(@.type==\"%s\")].status}", rule.SingleConditionType)
-			result, err := utils.SinglePathEvaluate(jsonpathQuery, stampedObject.UnstructuredContent())
-			if err != nil {
-				return conditions.SingleConditionTypeEvaluationErrorCondition(err)
+		if stampedObject != nil {
+			if rule.SingleConditionType != "" {
+				return singleConditionTypeCondition(rule.SingleConditionType, stampedObject)
 			}
-			if len(result) == 0 {
-				return conditions.SingleConditionTypeNoResultResourcesCondition()
+			if rule.MultiMatch != nil {
+				return multiMatchCondition(rule.MultiMatch, stampedObject)
 			}
-			if resultString, ok := result[0].(string); ok {
-				conditionStatus := metav1.ConditionStatus(resultString)
-				if conditionStatus == metav1.ConditionFalse || conditionStatus == metav1.ConditionTrue {
-					return conditions.SingleConditionMatchCondition(conditionStatus, rule.SingleConditionType)
-				} else {
-					return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, rule.SingleConditionType)
-				}
-			}
-			return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, "")
 		}
 	}
 	return conditions.UnknownResourcesHealthyCondition()
+}
+
+func singleConditionTypeCondition(singleConditionType string, stampedObject *unstructured.Unstructured) metav1.Condition {
+	singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(singleConditionType)
+	if singleCondition != nil {
+		if singleCondition.Status == metav1.ConditionFalse || singleCondition.Status == metav1.ConditionTrue {
+			return conditions.SingleConditionMatchCondition(singleCondition.Status, singleConditionType, singleCondition.Message)
+		} else {
+			return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, singleConditionType, singleCondition.Message)
+		}
+	}
+	return conditions.SingleConditionMatchCondition(metav1.ConditionUnknown, singleConditionType, fmt.Sprintf("condition with type [%s] not found on resource status", singleConditionType))
+}
+
+func multiMatchCondition(multiMatchRule *v1alpha1.MultiMatchHealthRule, stampedObject *unstructured.Unstructured) metav1.Condition {
+	condition := anyUnhealthyMatchCondition(multiMatchRule.Unhealthy, stampedObject)
+	if condition != nil {
+		return *condition
+	}
+	condition = allHealthyMatchCondition(multiMatchRule.Healthy, stampedObject)
+	if condition != nil {
+		return *condition
+	}
+	return conditions.MultiMatchNoMatchesCondition()
+}
+
+func messageForMatchingFieldRequirement(requirement v1alpha1.HealthMatchFieldSelectorRequirement, stampedObject *unstructured.Unstructured) string {
+	evaluator := eval.EvaluatorBuilder()
+	fieldValue, fieldErr := evaluator.EvaluateJsonPath(requirement.Key, stampedObject.UnstructuredContent())
+	if fieldErr != nil {
+		fieldValue = "<error retrieving field value>"
+	}
+	messageValue, messageErr := evaluator.EvaluateJsonPath(requirement.MessagePath, stampedObject.UnstructuredContent())
+	if messageErr != nil {
+		messageValue = fmt.Sprintf("unknown, error retrieving message path [%s]", requirement.MessagePath)
+	}
+
+	return fmt.Sprintf("field value: %v, message: %v", fieldValue, messageValue)
+}
+
+func anyUnhealthyMatchCondition(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) *metav1.Condition {
+	for _, conditionRule := range rule.MatchConditions {
+		singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(conditionRule.Type)
+		if singleCondition != nil && singleCondition.Status == conditionRule.Status {
+			condition := conditions.MultiMatchResourcesHealthyCondition(metav1.ConditionFalse,
+				v1alpha1.MultiMatchConditionHealthyReason,
+				fmt.Sprintf("condition status: %s, message: %s", singleCondition.Status, singleCondition.Message))
+			return &condition
+		}
+	}
+	for _, matchFieldRule := range rule.MatchFields {
+		matches, _ := selector.Matches(matchFieldRule.FieldSelectorRequirement, stampedObject.UnstructuredContent())
+		if matches {
+			condition := conditions.MultiMatchResourcesHealthyCondition(metav1.ConditionFalse,
+				v1alpha1.MultiMatchFieldHealthyReason,
+				messageForMatchingFieldRequirement(matchFieldRule, stampedObject))
+			return &condition
+		}
+	}
+	return nil
+}
+
+func allHealthyMatchCondition(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) *metav1.Condition {
+	var firstReason string
+	var message string
+	for _, conditionRule := range rule.MatchConditions {
+		resourceCondition := utils.ExtractConditions(stampedObject).ConditionWithType(conditionRule.Type)
+		if resourceCondition == nil || resourceCondition.Status != conditionRule.Status {
+			return nil
+		}
+		if firstReason == "" {
+			firstReason = v1alpha1.MultiMatchConditionHealthyReason
+			message = fmt.Sprintf("condition status: %s, message: %s", resourceCondition.Status, resourceCondition.Message)
+		}
+	}
+	for _, matchFieldRule := range rule.MatchFields {
+		matches, err := selector.Matches(matchFieldRule.FieldSelectorRequirement, stampedObject.UnstructuredContent())
+		if err != nil || !matches {
+			return nil
+		}
+		if firstReason == "" {
+			firstReason = v1alpha1.MultiMatchFieldHealthyReason
+			message = messageForMatchingFieldRequirement(matchFieldRule, stampedObject)
+		}
+	}
+	condition := conditions.MultiMatchResourcesHealthyCondition(metav1.ConditionTrue, firstReason, message)
+	return &condition
 }

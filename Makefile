@@ -3,6 +3,7 @@ ADDLICENSE ?= go run -modfile hack/tools/go.mod github.com/google/addlicense
 GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-lint/cmd/golangci-lint
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
 GCI_LINT ?= go run -modfile hack/tools/go.mod github.com/daixiang0/gci
+CONTROL_PLANE_KUTTL ?= kubectl kuttl test --control-plane-config=kuttl-control-plane.config
 
 ifndef ($LOG_LEVEL)
 	# set a default LOG_LEVEL whenever we run the controller
@@ -16,7 +17,7 @@ build: gen-objects gen-manifests
 
 .PHONY: run
 run: build
-	build/cartographer
+	build/cartographer --pprof-port 9999 --metrics-port 9998
 
 crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
 crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
@@ -94,19 +95,19 @@ test-integration: test-gen-manifests test-gen-objects
 
 .PHONY: test-kuttl
 test-kuttl: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test --test $$(basename $(focus)); else kubectl kuttl test; fi
+	if [ -n "$$focus" ]; then $(CONTROL_PLANE_KUTTL) --test $$(basename $(focus)); else $(CONTROL_PLANE_KUTTL); fi
 
 .PHONY: test-kuttl-runnable
 test-kuttl-runnable: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/runnable --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/runnable; fi
+	if [ -n "$$focus" ]; then $(CONTROL_PLANE_KUTTL) ./tests/kuttl/runnable --test $$(basename $(focus)); else $(CONTROL_PLANE_KUTTL) ./tests/kuttl/runnable; fi
 
 .PHONY: test-kuttl-supplychain
 test-kuttl-supplychain: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/supplychain --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/supplychain; fi
+	if [ -n "$$focus" ]; then $(CONTROL_PLANE_KUTTL) ./tests/kuttl/supplychain --test $$(basename $(focus)); else $(CONTROL_PLANE_KUTTL) ./tests/kuttl/supplychain; fi
 
 .PHONY: test-kuttl-delivery
 test-kuttl-delivery: build test-gen-manifests
-	if [ -n "$$focus" ]; then kubectl kuttl test ./tests/kuttl/delivery --test $$(basename $(focus)); else kubectl kuttl test ./tests/kuttl/delivery; fi
+	if [ -n "$$focus" ]; then $(CONTROL_PLANE_KUTTL) ./tests/kuttl/delivery --test $$(basename $(focus)); else $(CONTROL_PLANE_KUTTL) ./tests/kuttl/delivery; fi
 
 .PHONY: list-kuttl
 list-kuttl:
@@ -136,7 +137,7 @@ coverage:
 
 .PHONY: lint
 lint: copyright
-	$(GCI_LINT) --local github.com/vmware-tanzu/cartographer --write $$(find ./pkg ! -name "fake_*" -type f)
+	$(GCI_LINT) write -s standard -s default -s "prefix(github.com/vmware-tanzu/cartographer)" $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
 

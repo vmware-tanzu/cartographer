@@ -44,6 +44,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/satoken/satokenfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
@@ -56,6 +57,7 @@ var _ = Describe("Reconcile", func() {
 		reconciler               controllers.RunnableReconciler
 		request                  controllerruntime.Request
 		repo                     *repositoryfakes.FakeRepository
+		tokenManager             *satokenfakes.FakeTokenManager
 		rlzr                     *runnablefakes.FakeRealizer
 		stampedTracker           *stampedfakes.FakeStampedTracker
 		dependencyTracker        *dependencyfakes.FakeDependencyTracker
@@ -65,9 +67,10 @@ var _ = Describe("Reconcile", func() {
 		cacheForBuiltRepository  *repository.RepoCache
 		fakeCache                *repositoryfakes.FakeRepoCache
 		fakeRunnabeRepo          *repositoryfakes.FakeRepository
-		serviceAccountSecret     *corev1.Secret
-		secretForBuiltClient     *corev1.Secret
-		serviceAccountName       string
+		serviceAccount           *corev1.ServiceAccount
+		authTokenForBuiltClient  string
+		serviceAccountName       = "alternate-service-account-name"
+		serviceAccountToken      = "alternate-service-account-token"
 		fakeDiscoveryClient      *runnablefakes.FakeDiscoveryInterface
 	)
 
@@ -76,6 +79,7 @@ var _ = Describe("Reconcile", func() {
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
 		repo = &repositoryfakes.FakeRepository{}
+		tokenManager = &satokenfakes.FakeTokenManager{}
 		rlzr = &runnablefakes.FakeRealizer{}
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
 		dependencyTracker = &dependencyfakes.FakeDependencyTracker{}
@@ -83,9 +87,11 @@ var _ = Describe("Reconcile", func() {
 		fakeCache = &repositoryfakes.FakeRepoCache{}
 		fakeDiscoveryClient = &runnablefakes.FakeDiscoveryInterface{}
 
-		serviceAccountName = "alternate-service-account-name"
-
-		repo.GetServiceAccountSecretReturns(serviceAccountSecret, nil)
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName},
+		}
+		repo.GetServiceAccountReturns(serviceAccount, nil)
+		tokenManager.GetServiceAccountTokenReturns(serviceAccountToken, nil)
 
 		fakeConditionManagerBuilder := func(string, []metav1.Condition) conditions.ConditionManager {
 			return conditionManager
@@ -98,13 +104,14 @@ var _ = Describe("Reconcile", func() {
 		}
 
 		builtClient = &repositoryfakes.FakeClient{}
-		clientBuilder := func(secret *corev1.Secret, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
-			secretForBuiltClient = secret
+		clientBuilder := func(authToken string, _ bool) (client.Client, discovery.DiscoveryInterface, error) {
+			authTokenForBuiltClient = authToken
 			return builtClient, fakeDiscoveryClient, nil
 		}
 
 		reconciler = controllers.RunnableReconciler{
 			Repo:                    repo,
+			TokenManager:            tokenManager,
 			Realizer:                rlzr,
 			StampedTracker:          stampedTracker,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
@@ -180,13 +187,15 @@ var _ = Describe("Reconcile", func() {
 		It("uses the service account specified by the runnable for realizing resources", func() {
 			_, _ = reconciler.Reconcile(ctx, request)
 
-			Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+			Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+			_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 			Expect(serviceAccountName).To(Equal(serviceAccountName))
 			Expect(serviceAccountNS).To(Equal("my-namespace"))
 
+			Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(serviceAccount))
+
 			Expect(*clientForBuiltRepository).To(Equal(builtClient))
-			Expect(secretForBuiltClient).To(Equal(serviceAccountSecret))
+			Expect(authTokenForBuiltClient).To(Equal(serviceAccountToken))
 			Expect(*cacheForBuiltRepository).To(Equal(reconciler.RunnableCache))
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
@@ -629,17 +638,28 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		Context("the runnable does not specify a service account", func() {
+			defaultServiceAccountToken := "default-service-account-token"
+			defaultServiceAccount := &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			}
+
 			BeforeEach(func() {
 				rb.Spec.ServiceAccountName = ""
 				repo.GetRunnableReturns(rb, nil)
+				repo.GetServiceAccountReturns(defaultServiceAccount, nil)
+				tokenManager.GetServiceAccountTokenReturns(defaultServiceAccountToken, nil)
 			})
+
 			It("uses the default service account in the namespace", func() {
 				_, _ = reconciler.Reconcile(ctx, request)
 
-				Expect(repo.GetServiceAccountSecretCallCount()).To(Equal(1))
-				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountSecretArgsForCall(0)
+				Expect(repo.GetServiceAccountCallCount()).To(Equal(1))
+				_, serviceAccountName, serviceAccountNS := repo.GetServiceAccountArgsForCall(0)
 				Expect(serviceAccountName).To(Equal("default"))
 				Expect(serviceAccountNS).To(Equal("my-namespace"))
+
+				Expect(tokenManager.GetServiceAccountTokenArgsForCall(0)).To(Equal(defaultServiceAccount))
+				Expect(authTokenForBuiltClient).To(Equal(defaultServiceAccountToken))
 			})
 		})
 	})
