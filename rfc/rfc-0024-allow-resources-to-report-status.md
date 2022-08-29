@@ -3,8 +3,8 @@
 - Name: Allow Resources to Report Status
 - Start Date: 2022-03-22
 - Author(s): @emmjohnson, @martyspiewak
-- Status: Draft <!-- Acceptable values: Draft, Approved, On Hold, Superseded -->
-- RFC Pull Request: (leave blank)
+- Status: Approved
+- RFC Pull Request: https://github.com/vmware-tanzu/cartographer/pull/738
 - Supersedes: (put "N/A" unless this replaces an existing RFC, then link to that RFC)
 
 # Summary
