@@ -16,6 +16,7 @@ package v1alpha1_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -43,16 +44,25 @@ type ArbitrarySpec struct {
 	SomeKey string `json:"someKey"`
 }
 
-func markersFor(relativeFile, typeName, fieldName, markerType string) (interface{}, error) {
-	packages, err := loader.LoadRoots(relativeFile)
+func markersFor(filename, packageRef, typeName, fieldName, markerType string) (interface{}, error) {
+	packages, err := loader.LoadRoots(packageRef)
 	if err != nil {
 		return nil, err
 	}
 	if len(packages) != 1 {
-		return nil, fmt.Errorf("got %d package(s) for file: %s", len(packages), relativeFile)
+		return nil, fmt.Errorf("got %d package(s) for package ref: %s", len(packages), packageRef)
 	}
-	if len(packages[0].GoFiles) != 1 {
-		return nil, fmt.Errorf("got %d GoFiles(s) for file: %s", len(packages[0].GoFiles), relativeFile)
+
+	found := false
+	for _, file := range packages[0].GoFiles {
+		if strings.HasSuffix(file, filename) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("Could not find file: %s", filename)
 	}
 
 	// create a registry of CRD markers
@@ -83,7 +93,7 @@ func markersFor(relativeFile, typeName, fieldName, markerType string) (interface
 		return nil, fmt.Errorf(
 			"could not find marker type [%s] in file/type/field: [%s/%s/%s]",
 			markerType,
-			relativeFile,
+			filename,
 			typeName,
 			fieldName,
 		)

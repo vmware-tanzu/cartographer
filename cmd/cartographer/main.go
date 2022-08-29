@@ -29,12 +29,16 @@ var devMode bool
 var port int
 var certDir string
 var verbosity string
+var metricsPort int
+var pProfPort int
 
 func init() {
 	flag.IntVar(&port, "Port", 9443, "Webhook server Port")
 	flag.StringVar(&certDir, "cert-dir", "", "Webhook server tls dir")
 	flag.BoolVar(&devMode, "dev", false, "Human readable logs")
 	flag.StringVar(&verbosity, "log-level", "info", "Log levels")
+	flag.IntVar(&metricsPort, "metrics-port", 0, "Metrics port")
+	flag.IntVar(&pProfPort, "pprof-port", 0, "Pprof port")
 	flag.Parse()
 }
 
@@ -45,9 +49,11 @@ func main() {
 	}
 
 	c := cmd.Command{
-		Port:    port,
-		CertDir: certDir,
-		Logger:  zap.New(loggerOpt, zap.UseDevMode(devMode)),
+		Port:        port,
+		CertDir:     certDir,
+		Logger:      zap.New(loggerOpt, zap.UseDevMode(devMode)),
+		MetricsPort: metricsPort,
+		PprofPort:   pProfPort,
 	}
 
 	if err = c.Execute(ctrl.SetupSignalHandler()); err != nil {
