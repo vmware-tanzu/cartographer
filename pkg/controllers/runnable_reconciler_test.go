@@ -278,6 +278,50 @@ var _ = Describe("Reconcile", func() {
 			})
 		})
 
+		Context("requesting the service account causes an error", func() {
+			var repoError error
+			BeforeEach(func() {
+				repoError = errors.New("some error")
+				repo.GetServiceAccountReturns(nil, repoError)
+			})
+
+			It("calls the condition manager to add a service account not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, request)
+				Expect(conditionManager.AddPositiveCallCount()).To(BeNumerically(">", 0))
+				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.RunnableServiceAccountNotFoundCondition(repoError)))
+			})
+
+			It("handles the error and logs it", func() {
+				_, err := reconciler.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"handled error":"failed to get service account \[my-namespace/alternate-service-account-name\]: some error"`))
+			})
+		})
+
+		Context("requesting a service account token causes an error", func() {
+			var tokenError error
+			BeforeEach(func() {
+				tokenError = errors.New("some error")
+				tokenManager.GetServiceAccountTokenReturns("", tokenError)
+			})
+
+			It("calls the condition manager to add a service account not found condition", func() {
+				_, _ = reconciler.Reconcile(ctx, request)
+				Expect(conditionManager.AddPositiveCallCount()).To(BeNumerically(">", 0))
+				Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.RunnableServiceAccountTokenErrorCondition(tokenError)))
+			})
+
+			It("handles the error and logs it", func() {
+				_, err := reconciler.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(out).To(Say(`"level":"info"`))
+				Expect(out).To(Say(`"handled error":"failed to get token for service account \[my-namespace/alternate-service-account-name\]: some error"`))
+			})
+		})
+
 		Context("no outputs were returned from the realizer", func() {
 			BeforeEach(func() {
 				rlzr.RealizeReturns(nil, nil, nil)

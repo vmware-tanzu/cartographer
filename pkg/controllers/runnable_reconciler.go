@@ -96,18 +96,15 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	serviceAccount, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
-		//TODO: wow this wasnt even tested
-		//TODO ratify this cargo-culted error handling... this should reflect we are just looking for the service account first in this instance
-		//r.conditionManager.AddPositive(conditions.RunnableServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+		r.conditionManager.AddPositive(conditions.RunnableServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	saToken, err := r.TokenManager.GetServiceAccountToken(serviceAccount)
 	if err != nil {
-		//TODO: wow this wasnt even tested
-		//TODO ratify this error handling cargo-culted from the Repo.GetServiceAccountSecret path
-		//r.conditionManager.AddPositive(conditions.RunnableServiceAccountSecretNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get secret for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+		r.conditionManager.AddPositive(conditions.RunnableServiceAccountTokenErrorCondition(err))
+		log.Info("failed to get token for service account", "service account", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName))
+		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	runnableClient, discoveryClient, err := r.ClientBuilder(saToken, true)
