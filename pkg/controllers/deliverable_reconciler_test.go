@@ -1183,6 +1183,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			It("calls the condition manager to add a service account not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveCallCount()).To(BeNumerically(">", 1))
 				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountNotFoundCondition(repoError)))
 			})
 
@@ -1204,6 +1205,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			It("calls the condition manager to add a service account not found condition", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
+				Expect(conditionManager.AddPositiveCallCount()).To(BeNumerically(">", 1))
 				Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.ServiceAccountTokenErrorCondition(tokenError)))
 			})
 

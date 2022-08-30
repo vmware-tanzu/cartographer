@@ -81,6 +81,24 @@ func FailedToListCreatedObjectsCondition(err error) metav1.Condition {
 	}
 }
 
+func RunnableServiceAccountNotFoundCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.RunTemplateReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ServiceAccountErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}
+
+func RunnableServiceAccountTokenErrorCondition(err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.RunTemplateReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.ServiceAccountTokenErrorResourcesSubmittedReason,
+		Message: err.Error(),
+	}
+}
+
 func RunnableTemplateStampFailureCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
