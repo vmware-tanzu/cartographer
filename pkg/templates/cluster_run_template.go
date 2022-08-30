@@ -117,5 +117,6 @@ func (t *runTemplate) GetName() string {
 func (t *runTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return v1alpha1.TemplateSpec{
 		Template: &t.template.Spec.Template,
+		Ytt:      t.template.Spec.Ytt,
 	}
 }
