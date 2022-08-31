@@ -27,9 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
@@ -58,17 +60,19 @@ type Repository interface {
 	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
 }
 
-type RepositoryBuilder func(client client.Client, repoCache RepoCache) Repository
+type RepositoryBuilder func(client client.Client, repoCache RepoCache, recorder record.EventRecorder) Repository
 
 type repository struct {
-	rc RepoCache
-	cl client.Client
+	rc       RepoCache
+	cl       client.Client
+	recorder record.EventRecorder
 }
 
-func NewRepository(client client.Client, repoCache RepoCache) Repository {
+func NewRepository(client client.Client, repoCache RepoCache, eventRecorder record.EventRecorder) Repository {
 	return &repository{
-		rc: repoCache,
-		cl: client,
+		rc:       repoCache,
+		cl:       client,
+		recorder: eventRecorder,
 	}
 }
 
@@ -286,6 +290,7 @@ func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.U
 	}
 
 	r.rc.Set(submitted, obj.DeepCopy(), ownerDiscriminant)
+	r.recorder.Event(obj, events.NormalType, events.StampedObjectAppliedReason, "Created object")
 	return nil
 }
 
@@ -298,6 +303,7 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 	}
 
 	r.rc.Set(submitted, obj.DeepCopy(), "")
+	r.recorder.Event(obj, events.NormalType, events.StampedObjectAppliedReason, "Patched object")
 	return nil
 }
 

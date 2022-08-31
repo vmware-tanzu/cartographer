@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,6 +60,7 @@ type RunnableReconciler struct {
 	RunnableCache           repository.RepoCache
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
+	Recorder                record.EventRecorder
 }
 
 func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -113,7 +115,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), discoveryClient)
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache, r.Recorder), discoveryClient)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -231,11 +233,15 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+
+	r.Recorder = mgr.GetEventRecorderFor("Runnable")
+
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
+		r.Recorder,
 	)
 
 	r.Realizer = realizer.NewRealizer()

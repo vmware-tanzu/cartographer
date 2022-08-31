@@ -159,6 +159,7 @@ func (r *DeliveryReconiler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("delivery-repo-cache")),
+		mgr.GetEventRecorderFor("Delivery"),
 	)
 
 	r.DependencyTracker = dependency.NewDependencyTracker(

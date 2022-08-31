@@ -400,14 +400,18 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
+	eventRecorder := mgr.GetEventRecorderFor("Workload")
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
+		eventRecorder,
 	)
 	r.ConditionManagerBuilder = conditions.NewConditionManager
 	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(
-		repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()),
+		repository.NewRepository,
+		realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
+		eventRecorder,
 	)
 	r.Realizer = realizer.NewRealizer(nil)
 	r.DependencyTracker = dependency.NewDependencyTracker(

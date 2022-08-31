@@ -394,13 +394,20 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
+	eventRecorder := mgr.GetEventRecorderFor("Workload")
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("deliverable-repo-cache")),
+		eventRecorder,
 	)
 
 	r.ConditionManagerBuilder = conditions.NewConditionManager
-	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(repository.NewRepository, realizerclient.NewClientBuilder(mgr.GetConfig()), repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")))
+	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(
+		repository.NewRepository,
+		realizerclient.NewClientBuilder(mgr.GetConfig()),
+		repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")),
+		eventRecorder,
+	)
 	r.Realizer = realizer.NewRealizer(nil)
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,

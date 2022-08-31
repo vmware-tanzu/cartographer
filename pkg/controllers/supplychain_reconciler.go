@@ -165,6 +165,7 @@ func (r *SupplyChainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("supply-chain-repo-cache")),
+		mgr.GetEventRecorderFor("SupplyChain"),
 	)
 
 	r.ConditionManagerBuilder = conditions.NewConditionManager

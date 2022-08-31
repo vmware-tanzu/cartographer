@@ -17,11 +17,11 @@ package runnable_test
 import (
 	"context"
 	"encoding/json"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -855,6 +855,20 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				}).Should(HaveLen(1))
 
 				firstStampedObject = testsList.Items[0]
+
+				events := &eventsv1.EventList{}
+				err := c.List(ctx, events)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(events.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Reason": Equal("StampedObjectApplied"),
+					"Note":   Equal("Created object"),
+					"Regarding": MatchFields(IgnoreExtras, Fields{
+						"APIVersion": Equal("test.run/v1alpha1"),
+						"Kind":       Equal(firstStampedObject.Kind),
+						"Namespace":  Equal(testNS),
+						"Name":       Equal(firstStampedObject.Name),
+					}),
+				})))
 			})
 			By("changing the first stamped object's status to false", func() {
 				firstStampedObject.Status = resources.TestStatus{

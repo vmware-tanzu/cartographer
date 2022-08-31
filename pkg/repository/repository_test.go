@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -48,6 +49,7 @@ var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
+		rec   *realizerfakes.FakeEventRecorder
 		ctx   context.Context
 		out   *Buffer
 	)
@@ -58,6 +60,7 @@ var _ = Describe("repository", func() {
 		ctx = logr.NewContext(context.Background(), logger)
 
 		cache = &repositoryfakes.FakeRepoCache{}
+		rec = &realizerfakes.FakeEventRecorder{}
 	})
 
 	Describe("tests using counterfeiter client", func() {
@@ -65,7 +68,7 @@ var _ = Describe("repository", func() {
 
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
-			repo = repository.NewRepository(cl, cache)
+			repo = repository.NewRepository(cl, cache, rec)
 		})
 
 		Context("EnsureMutableObjectExistsOnCluster", func() {
@@ -125,6 +128,11 @@ spec:
 					_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
 					Expect(cache.SetCallCount()).To(Equal(0))
 				})
+
+				It("does not record any events", func() {
+					_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+					Expect(rec.Invocations()).To(BeEmpty())
+				})
 			})
 
 			Context("and the apiServer attempts to get the object and it doesn't exist", func() {
@@ -153,6 +161,11 @@ spec:
 					It("does not write to the submitted or persisted cache", func() {
 						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
 						Expect(cache.SetCallCount()).To(Equal(0))
+					})
+
+					It("does not record any events", func() {
+						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+						Expect(rec.Invocations()).To(BeEmpty())
 					})
 				})
 
@@ -183,6 +196,16 @@ spec:
 						Expect(*submitted).To(Equal(*originalStampedObj))
 						Expect(*persisted).To(Equal(*returnedCreatedObj))
 						Expect(ownerDiscriminant).To(Equal(""))
+					})
+
+					It("records an StampedObjectApplied event", func() {
+						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+						Expect(rec.EventCallCount()).To(Equal(1))
+						object, eventType, reason, message := rec.EventArgsForCall(0)
+						Expect(object).To(Equal(stampedObj))
+						Expect(eventType).To(Equal("Normal"))
+						Expect(reason).To(Equal("StampedObjectApplied"))
+						Expect(message).To(Equal("Created object"))
 					})
 				})
 			})
@@ -240,6 +263,11 @@ spec:
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
 					})
+
+					It("does not record any events", func() {
+						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+						Expect(rec.Invocations()).To(BeEmpty())
+					})
 				})
 
 				Context("and the cache determines there has been a change since the last update", func() {
@@ -283,6 +311,16 @@ spec:
 									Expect(*persisted).To(Equal(*returnedPatchedObj))
 									Expect(ownerDiscriminant).To(Equal(""))
 								})
+
+								It("records an StampedObjectApplied event", func() {
+									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+									Expect(rec.EventCallCount()).To(Equal(1))
+									object, eventType, reason, message := rec.EventArgsForCall(0)
+									Expect(object).To(Equal(stampedObj))
+									Expect(eventType).To(Equal("Normal"))
+									Expect(reason).To(Equal("StampedObjectApplied"))
+									Expect(message).To(Equal("Patched object"))
+								})
 							})
 
 							Context("and the patch fails", func() {
@@ -297,6 +335,11 @@ spec:
 								It("does not write to the submitted or persisted cache", func() {
 									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
 									Expect(cache.SetCallCount()).To(Equal(0))
+								})
+
+								It("does not record any events", func() {
+									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+									Expect(rec.Invocations()).To(BeEmpty())
 								})
 							})
 						})
@@ -394,6 +437,11 @@ spec:
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
 					})
+
+					It("does not record any events", func() {
+						_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+						Expect(rec.Invocations()).To(BeEmpty())
+					})
 				})
 
 				Context("and the cache determines there has been a change since the last update", func() {
@@ -435,6 +483,16 @@ spec:
 							Expect(*persisted).To(Equal(*returnedCreatedObj))
 							Expect(ownerDiscriminant).To(Equal("{foo:bar}{quux:xyzzy}{waldo:fred}"))
 						})
+
+						It("records a StampedObjectApplied event", func() {
+							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+							Expect(rec.EventCallCount()).To(Equal(1))
+							object, eventType, reason, message := rec.EventArgsForCall(0)
+							Expect(object).To(Equal(stampedObj))
+							Expect(eventType).To(Equal("Normal"))
+							Expect(reason).To(Equal("StampedObjectApplied"))
+							Expect(message).To(Equal("Created object"))
+						})
 					})
 
 					Context("and the create fails", func() {
@@ -449,6 +507,11 @@ spec:
 						It("does not write to the submitted or persisted cache", func() {
 							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
 							Expect(cache.SetCallCount()).To(Equal(0))
+						})
+
+						It("does not record any events", func() {
+							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+							Expect(rec.Invocations()).To(BeEmpty())
 						})
 					})
 				})
@@ -761,7 +824,7 @@ spec:
 			fakeClientBuilder = fake.NewClientBuilder().WithScheme(scheme).WithObjects(clientObjects...)
 			cl = fakeClientBuilder.Build()
 
-			repo = repository.NewRepository(cl, cache)
+			repo = repository.NewRepository(cl, cache, rec)
 		})
 
 		Context("GetTemplate", func() {
