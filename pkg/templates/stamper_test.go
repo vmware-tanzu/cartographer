@@ -198,17 +198,8 @@ var _ = Describe("Stamper", func() {
 			Entry(`Single tag, string value and type preserved`,
 				`$(params.sub)$`, `"5"`, "5", ""),
 
-			Entry(`Single tag, string value with nested tag`,
-				`$(params.sub)$`, `"$(params.extra-for-nested)$"`, "nested", ""),
-
 			Entry(`Single tag, number value and type preserved`,
 				`$(params.sub)$`, `5`, float64(5), ""),
-
-			Entry(`Single tag, map value and type preserved, nested tags evaluated`,
-				`$(params.sub)$`, `{"foo": "$(params.extra-for-nested)$"}`, map[string]interface{}{"foo": "nested"}, ""),
-
-			Entry(`Single tag, array value and type preserved, nested tags evaluated`,
-				`$(params.sub)$`, `["foo", "$(params['extra-for-nested'])$"]`, []interface{}{"foo", "nested"}, ""),
 
 			Entry(`Single tag, empty array value preserved`,
 				`$(params.sub)$`, `["foo", []]`, []interface{}{"foo", []interface{}{}}, ""),
@@ -222,26 +213,11 @@ var _ = Describe("Stamper", func() {
 			Entry(`Adjacent non-tag (number), result still becomes a string`,
 				`5$(params.sub)$`, `5`, "55", ""),
 
-			Entry(`Adjacent non-tag, string value with nested tag`,
-				`HI:$(params.sub)$`, `"$(params.extra-for-nested)$"`, "HI:nested", ""),
-
 			Entry(`Looks like an array, but result must be preserved as string`,
 				`[$(params.sub)$]`, `5`, "[5]", ""),
 
 			Entry(`Looks like a map, but result must be preserved as string`,
 				`{\"foo\": $(params.sub)$}`, `5`, `{"foo": 5}`, ""),
-
-			Entry(`Infinite recursion should error`,
-				`$(params.sub)$`, `"$(params.infinite-recurse)$"`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
-
-			Entry(`Infinite recursion should error`,
-				`$(params.sub)$`, `"$(params.bigger-infinite-recurse)$"`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.bigger-infinite-recurse)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
-
-			Entry(`Infinite recursion with a map should error`,
-				`$(params.sub)$`, `{"foo": "$(params.infinite-recurse)$"}`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
-
-			Entry(`Infinite recursion with an array should error`,
-				`$(params.sub)$`, `["foo", "$(params.infinite-recurse)$"]`, nil, "infinite tag loop detected: $(params.sub)$ -> $(params.infinite-recurse)$ -> $(params.sub)$"),
 		)
 
 		DescribeTable("tag evaluation of ytt template",
