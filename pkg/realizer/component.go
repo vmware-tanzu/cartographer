@@ -148,6 +148,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		log.Error(err, "failed to stamp resource")
 		return template, nil, nil, errors.StampError{
 			Err:           err,
+			TemplateName:  templateName,
+			TemplateKind:  resource.TemplateRef.Kind,
 			ResourceName:  resource.Name,
 			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,

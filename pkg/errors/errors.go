@@ -108,13 +108,17 @@ func (e ApplyStampedObjectError) Error() string {
 type StampError struct {
 	Err           error
 	ResourceName  string
+	TemplateName  string
+	TemplateKind  string
 	BlueprintName string
 	BlueprintType string
 }
 
 func (e StampError) Error() string {
-	return fmt.Errorf("unable to stamp object for resource [%s] in %s [%s]: %w",
+	return fmt.Errorf("unable to stamp object for resource [%s] for template [%s/%s] in %s [%s]: %w",
 		e.ResourceName,
+		e.TemplateKind,
+		e.TemplateName,
 		e.BlueprintType,
 		e.BlueprintName,
 		e.Err,

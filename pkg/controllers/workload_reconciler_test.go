@@ -604,6 +604,8 @@ var _ = Describe("WorkloadReconciler", func() {
 						ResourceName:  "some-name",
 						BlueprintName: supplyChainName,
 						BlueprintType: cerrors.SupplyChain,
+						TemplateName:  "cool-template",
+						TemplateKind:  "FrozenTemplate",
 					}
 
 					resourceStatuses.Add(
@@ -660,7 +662,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
-					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] in supply chain \[some-supply-chain\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] for template \[FrozenTemplate/cool-template\] in supply chain \[some-supply-chain\]: some error"`))
 				})
 
 				It("does track the template", func() {
