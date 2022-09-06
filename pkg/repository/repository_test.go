@@ -100,7 +100,7 @@ spec:
 
 				Expect(cl.GetCallCount()).To(Equal(1))
 
-				_, namespacedName, obj := cl.GetArgsForCall(0)
+				_, namespacedName, obj, _ := cl.GetArgsForCall(0)
 				Expect(namespacedName).To(Equal(types.NamespacedName{Namespace: "default", Name: "hello"}))
 				Expect(obj.GetObjectKind().GroupVersionKind()).To(Equal(stampedObj.GroupVersionKind()))
 			})
@@ -161,7 +161,7 @@ spec:
 					BeforeEach(func() {
 						returnedCreatedObj = stampedObj.DeepCopy()
 						Expect(utils.AlterFieldOfNestedStringMaps(returnedCreatedObj.Object, "spec.template.spec.restartPolicy", "Never")).To(Succeed())
-						cl.CreateStub = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+						cl.CreateStub = func(ctx context.Context, obj client.Object, _ ...client.CreateOption) error {
 							objVal := reflect.ValueOf(obj)
 							returnVal := reflect.ValueOf(returnedCreatedObj)
 
@@ -198,7 +198,7 @@ spec:
 					existingObj.SetNamespace("default")
 					existingObj.SetGeneration(5)
 
-					cl.GetStub = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+					cl.GetStub = func(ctx context.Context, key types.NamespacedName, obj client.Object, _ ...client.GetOption) error {
 						objVal := reflect.ValueOf(obj)
 						existingVal := reflect.ValueOf(existingObj)
 
@@ -557,7 +557,7 @@ spec:
 					existingObj.SetNamespace("default")
 					existingObj.SetGeneration(5)
 
-					cl.GetStub = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+					cl.GetStub = func(ctx context.Context, key types.NamespacedName, obj client.Object, _ ...client.GetOption) error {
 						objVal := reflect.ValueOf(obj)
 						existingVal := reflect.ValueOf(existingObj)
 
@@ -653,7 +653,7 @@ spec:
 				BeforeEach(func() {
 					apiDelivery = &v1alpha1.ClusterDelivery{}
 					//nolint:staticcheck,ineffassign
-					cl.GetStub = func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+					cl.GetStub = func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						obj = apiDelivery
 						return nil
 					}
@@ -664,7 +664,7 @@ spec:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(cl.GetCallCount()).To(Equal(1))
-					_, key, _ := cl.GetArgsForCall(0)
+					_, key, _, _ := cl.GetArgsForCall(0)
 					Expect(key).To(Equal(client.ObjectKey{
 						Name:      "my-delivery",
 						Namespace: "",
@@ -701,7 +701,7 @@ spec:
 						},
 					}
 
-					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object) error {
+					cl.GetStub = func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 						if key.Name == serviceAccountName && key.Namespace == serviceAccountNS {
 							bytes, _ := json.Marshal(serviceAccount)
 							_ = json.Unmarshal(bytes, obj)
@@ -717,7 +717,7 @@ spec:
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(cl.GetCallCount()).To(Equal(1))
-					_, getKey, obj := cl.GetArgsForCall(0)
+					_, getKey, obj, _ := cl.GetArgsForCall(0)
 					Expect(getKey.Name).To(Equal(serviceAccountName))
 					Expect(getKey.Namespace).To(Equal(serviceAccountNS))
 					_, isGettingServiceAccount := obj.(*v1.ServiceAccount)
