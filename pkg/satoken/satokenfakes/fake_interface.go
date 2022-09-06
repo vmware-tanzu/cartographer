@@ -36,20 +36,21 @@ import (
 	v1beta1j "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 	v1beta2a "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
 	v1k "k8s.io/client-go/kubernetes/typed/networking/v1"
+	v1alpha1b "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 	v1beta1k "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 	v1l "k8s.io/client-go/kubernetes/typed/node/v1"
-	v1alpha1b "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
+	v1alpha1c "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
 	v1beta1l "k8s.io/client-go/kubernetes/typed/node/v1beta1"
 	v1m "k8s.io/client-go/kubernetes/typed/policy/v1"
 	v1beta1m "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 	v1n "k8s.io/client-go/kubernetes/typed/rbac/v1"
-	v1alpha1c "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
+	v1alpha1d "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
 	v1beta1n "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	v1o "k8s.io/client-go/kubernetes/typed/scheduling/v1"
-	v1alpha1d "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
+	v1alpha1e "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
 	v1beta1o "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
 	v1p "k8s.io/client-go/kubernetes/typed/storage/v1"
-	v1alpha1e "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
+	v1alpha1f "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 	v1beta1p "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 )
 
@@ -364,6 +365,16 @@ type FakeInterface struct {
 	networkingV1ReturnsOnCall map[int]struct {
 		result1 v1k.NetworkingV1Interface
 	}
+	NetworkingV1alpha1Stub        func() v1alpha1b.NetworkingV1alpha1Interface
+	networkingV1alpha1Mutex       sync.RWMutex
+	networkingV1alpha1ArgsForCall []struct {
+	}
+	networkingV1alpha1Returns struct {
+		result1 v1alpha1b.NetworkingV1alpha1Interface
+	}
+	networkingV1alpha1ReturnsOnCall map[int]struct {
+		result1 v1alpha1b.NetworkingV1alpha1Interface
+	}
 	NetworkingV1beta1Stub        func() v1beta1k.NetworkingV1beta1Interface
 	networkingV1beta1Mutex       sync.RWMutex
 	networkingV1beta1ArgsForCall []struct {
@@ -384,15 +395,15 @@ type FakeInterface struct {
 	nodeV1ReturnsOnCall map[int]struct {
 		result1 v1l.NodeV1Interface
 	}
-	NodeV1alpha1Stub        func() v1alpha1b.NodeV1alpha1Interface
+	NodeV1alpha1Stub        func() v1alpha1c.NodeV1alpha1Interface
 	nodeV1alpha1Mutex       sync.RWMutex
 	nodeV1alpha1ArgsForCall []struct {
 	}
 	nodeV1alpha1Returns struct {
-		result1 v1alpha1b.NodeV1alpha1Interface
+		result1 v1alpha1c.NodeV1alpha1Interface
 	}
 	nodeV1alpha1ReturnsOnCall map[int]struct {
-		result1 v1alpha1b.NodeV1alpha1Interface
+		result1 v1alpha1c.NodeV1alpha1Interface
 	}
 	NodeV1beta1Stub        func() v1beta1l.NodeV1beta1Interface
 	nodeV1beta1Mutex       sync.RWMutex
@@ -434,15 +445,15 @@ type FakeInterface struct {
 	rbacV1ReturnsOnCall map[int]struct {
 		result1 v1n.RbacV1Interface
 	}
-	RbacV1alpha1Stub        func() v1alpha1c.RbacV1alpha1Interface
+	RbacV1alpha1Stub        func() v1alpha1d.RbacV1alpha1Interface
 	rbacV1alpha1Mutex       sync.RWMutex
 	rbacV1alpha1ArgsForCall []struct {
 	}
 	rbacV1alpha1Returns struct {
-		result1 v1alpha1c.RbacV1alpha1Interface
+		result1 v1alpha1d.RbacV1alpha1Interface
 	}
 	rbacV1alpha1ReturnsOnCall map[int]struct {
-		result1 v1alpha1c.RbacV1alpha1Interface
+		result1 v1alpha1d.RbacV1alpha1Interface
 	}
 	RbacV1beta1Stub        func() v1beta1n.RbacV1beta1Interface
 	rbacV1beta1Mutex       sync.RWMutex
@@ -464,15 +475,15 @@ type FakeInterface struct {
 	schedulingV1ReturnsOnCall map[int]struct {
 		result1 v1o.SchedulingV1Interface
 	}
-	SchedulingV1alpha1Stub        func() v1alpha1d.SchedulingV1alpha1Interface
+	SchedulingV1alpha1Stub        func() v1alpha1e.SchedulingV1alpha1Interface
 	schedulingV1alpha1Mutex       sync.RWMutex
 	schedulingV1alpha1ArgsForCall []struct {
 	}
 	schedulingV1alpha1Returns struct {
-		result1 v1alpha1d.SchedulingV1alpha1Interface
+		result1 v1alpha1e.SchedulingV1alpha1Interface
 	}
 	schedulingV1alpha1ReturnsOnCall map[int]struct {
-		result1 v1alpha1d.SchedulingV1alpha1Interface
+		result1 v1alpha1e.SchedulingV1alpha1Interface
 	}
 	SchedulingV1beta1Stub        func() v1beta1o.SchedulingV1beta1Interface
 	schedulingV1beta1Mutex       sync.RWMutex
@@ -494,15 +505,15 @@ type FakeInterface struct {
 	storageV1ReturnsOnCall map[int]struct {
 		result1 v1p.StorageV1Interface
 	}
-	StorageV1alpha1Stub        func() v1alpha1e.StorageV1alpha1Interface
+	StorageV1alpha1Stub        func() v1alpha1f.StorageV1alpha1Interface
 	storageV1alpha1Mutex       sync.RWMutex
 	storageV1alpha1ArgsForCall []struct {
 	}
 	storageV1alpha1Returns struct {
-		result1 v1alpha1e.StorageV1alpha1Interface
+		result1 v1alpha1f.StorageV1alpha1Interface
 	}
 	storageV1alpha1ReturnsOnCall map[int]struct {
-		result1 v1alpha1e.StorageV1alpha1Interface
+		result1 v1alpha1f.StorageV1alpha1Interface
 	}
 	StorageV1beta1Stub        func() v1beta1p.StorageV1beta1Interface
 	storageV1beta1Mutex       sync.RWMutex
@@ -2161,6 +2172,59 @@ func (fake *FakeInterface) NetworkingV1ReturnsOnCall(i int, result1 v1k.Networki
 	}{result1}
 }
 
+func (fake *FakeInterface) NetworkingV1alpha1() v1alpha1b.NetworkingV1alpha1Interface {
+	fake.networkingV1alpha1Mutex.Lock()
+	ret, specificReturn := fake.networkingV1alpha1ReturnsOnCall[len(fake.networkingV1alpha1ArgsForCall)]
+	fake.networkingV1alpha1ArgsForCall = append(fake.networkingV1alpha1ArgsForCall, struct {
+	}{})
+	stub := fake.NetworkingV1alpha1Stub
+	fakeReturns := fake.networkingV1alpha1Returns
+	fake.recordInvocation("NetworkingV1alpha1", []interface{}{})
+	fake.networkingV1alpha1Mutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeInterface) NetworkingV1alpha1CallCount() int {
+	fake.networkingV1alpha1Mutex.RLock()
+	defer fake.networkingV1alpha1Mutex.RUnlock()
+	return len(fake.networkingV1alpha1ArgsForCall)
+}
+
+func (fake *FakeInterface) NetworkingV1alpha1Calls(stub func() v1alpha1b.NetworkingV1alpha1Interface) {
+	fake.networkingV1alpha1Mutex.Lock()
+	defer fake.networkingV1alpha1Mutex.Unlock()
+	fake.NetworkingV1alpha1Stub = stub
+}
+
+func (fake *FakeInterface) NetworkingV1alpha1Returns(result1 v1alpha1b.NetworkingV1alpha1Interface) {
+	fake.networkingV1alpha1Mutex.Lock()
+	defer fake.networkingV1alpha1Mutex.Unlock()
+	fake.NetworkingV1alpha1Stub = nil
+	fake.networkingV1alpha1Returns = struct {
+		result1 v1alpha1b.NetworkingV1alpha1Interface
+	}{result1}
+}
+
+func (fake *FakeInterface) NetworkingV1alpha1ReturnsOnCall(i int, result1 v1alpha1b.NetworkingV1alpha1Interface) {
+	fake.networkingV1alpha1Mutex.Lock()
+	defer fake.networkingV1alpha1Mutex.Unlock()
+	fake.NetworkingV1alpha1Stub = nil
+	if fake.networkingV1alpha1ReturnsOnCall == nil {
+		fake.networkingV1alpha1ReturnsOnCall = make(map[int]struct {
+			result1 v1alpha1b.NetworkingV1alpha1Interface
+		})
+	}
+	fake.networkingV1alpha1ReturnsOnCall[i] = struct {
+		result1 v1alpha1b.NetworkingV1alpha1Interface
+	}{result1}
+}
+
 func (fake *FakeInterface) NetworkingV1beta1() v1beta1k.NetworkingV1beta1Interface {
 	fake.networkingV1beta1Mutex.Lock()
 	ret, specificReturn := fake.networkingV1beta1ReturnsOnCall[len(fake.networkingV1beta1ArgsForCall)]
@@ -2267,7 +2331,7 @@ func (fake *FakeInterface) NodeV1ReturnsOnCall(i int, result1 v1l.NodeV1Interfac
 	}{result1}
 }
 
-func (fake *FakeInterface) NodeV1alpha1() v1alpha1b.NodeV1alpha1Interface {
+func (fake *FakeInterface) NodeV1alpha1() v1alpha1c.NodeV1alpha1Interface {
 	fake.nodeV1alpha1Mutex.Lock()
 	ret, specificReturn := fake.nodeV1alpha1ReturnsOnCall[len(fake.nodeV1alpha1ArgsForCall)]
 	fake.nodeV1alpha1ArgsForCall = append(fake.nodeV1alpha1ArgsForCall, struct {
@@ -2291,32 +2355,32 @@ func (fake *FakeInterface) NodeV1alpha1CallCount() int {
 	return len(fake.nodeV1alpha1ArgsForCall)
 }
 
-func (fake *FakeInterface) NodeV1alpha1Calls(stub func() v1alpha1b.NodeV1alpha1Interface) {
+func (fake *FakeInterface) NodeV1alpha1Calls(stub func() v1alpha1c.NodeV1alpha1Interface) {
 	fake.nodeV1alpha1Mutex.Lock()
 	defer fake.nodeV1alpha1Mutex.Unlock()
 	fake.NodeV1alpha1Stub = stub
 }
 
-func (fake *FakeInterface) NodeV1alpha1Returns(result1 v1alpha1b.NodeV1alpha1Interface) {
+func (fake *FakeInterface) NodeV1alpha1Returns(result1 v1alpha1c.NodeV1alpha1Interface) {
 	fake.nodeV1alpha1Mutex.Lock()
 	defer fake.nodeV1alpha1Mutex.Unlock()
 	fake.NodeV1alpha1Stub = nil
 	fake.nodeV1alpha1Returns = struct {
-		result1 v1alpha1b.NodeV1alpha1Interface
+		result1 v1alpha1c.NodeV1alpha1Interface
 	}{result1}
 }
 
-func (fake *FakeInterface) NodeV1alpha1ReturnsOnCall(i int, result1 v1alpha1b.NodeV1alpha1Interface) {
+func (fake *FakeInterface) NodeV1alpha1ReturnsOnCall(i int, result1 v1alpha1c.NodeV1alpha1Interface) {
 	fake.nodeV1alpha1Mutex.Lock()
 	defer fake.nodeV1alpha1Mutex.Unlock()
 	fake.NodeV1alpha1Stub = nil
 	if fake.nodeV1alpha1ReturnsOnCall == nil {
 		fake.nodeV1alpha1ReturnsOnCall = make(map[int]struct {
-			result1 v1alpha1b.NodeV1alpha1Interface
+			result1 v1alpha1c.NodeV1alpha1Interface
 		})
 	}
 	fake.nodeV1alpha1ReturnsOnCall[i] = struct {
-		result1 v1alpha1b.NodeV1alpha1Interface
+		result1 v1alpha1c.NodeV1alpha1Interface
 	}{result1}
 }
 
@@ -2532,7 +2596,7 @@ func (fake *FakeInterface) RbacV1ReturnsOnCall(i int, result1 v1n.RbacV1Interfac
 	}{result1}
 }
 
-func (fake *FakeInterface) RbacV1alpha1() v1alpha1c.RbacV1alpha1Interface {
+func (fake *FakeInterface) RbacV1alpha1() v1alpha1d.RbacV1alpha1Interface {
 	fake.rbacV1alpha1Mutex.Lock()
 	ret, specificReturn := fake.rbacV1alpha1ReturnsOnCall[len(fake.rbacV1alpha1ArgsForCall)]
 	fake.rbacV1alpha1ArgsForCall = append(fake.rbacV1alpha1ArgsForCall, struct {
@@ -2556,32 +2620,32 @@ func (fake *FakeInterface) RbacV1alpha1CallCount() int {
 	return len(fake.rbacV1alpha1ArgsForCall)
 }
 
-func (fake *FakeInterface) RbacV1alpha1Calls(stub func() v1alpha1c.RbacV1alpha1Interface) {
+func (fake *FakeInterface) RbacV1alpha1Calls(stub func() v1alpha1d.RbacV1alpha1Interface) {
 	fake.rbacV1alpha1Mutex.Lock()
 	defer fake.rbacV1alpha1Mutex.Unlock()
 	fake.RbacV1alpha1Stub = stub
 }
 
-func (fake *FakeInterface) RbacV1alpha1Returns(result1 v1alpha1c.RbacV1alpha1Interface) {
+func (fake *FakeInterface) RbacV1alpha1Returns(result1 v1alpha1d.RbacV1alpha1Interface) {
 	fake.rbacV1alpha1Mutex.Lock()
 	defer fake.rbacV1alpha1Mutex.Unlock()
 	fake.RbacV1alpha1Stub = nil
 	fake.rbacV1alpha1Returns = struct {
-		result1 v1alpha1c.RbacV1alpha1Interface
+		result1 v1alpha1d.RbacV1alpha1Interface
 	}{result1}
 }
 
-func (fake *FakeInterface) RbacV1alpha1ReturnsOnCall(i int, result1 v1alpha1c.RbacV1alpha1Interface) {
+func (fake *FakeInterface) RbacV1alpha1ReturnsOnCall(i int, result1 v1alpha1d.RbacV1alpha1Interface) {
 	fake.rbacV1alpha1Mutex.Lock()
 	defer fake.rbacV1alpha1Mutex.Unlock()
 	fake.RbacV1alpha1Stub = nil
 	if fake.rbacV1alpha1ReturnsOnCall == nil {
 		fake.rbacV1alpha1ReturnsOnCall = make(map[int]struct {
-			result1 v1alpha1c.RbacV1alpha1Interface
+			result1 v1alpha1d.RbacV1alpha1Interface
 		})
 	}
 	fake.rbacV1alpha1ReturnsOnCall[i] = struct {
-		result1 v1alpha1c.RbacV1alpha1Interface
+		result1 v1alpha1d.RbacV1alpha1Interface
 	}{result1}
 }
 
@@ -2691,7 +2755,7 @@ func (fake *FakeInterface) SchedulingV1ReturnsOnCall(i int, result1 v1o.Scheduli
 	}{result1}
 }
 
-func (fake *FakeInterface) SchedulingV1alpha1() v1alpha1d.SchedulingV1alpha1Interface {
+func (fake *FakeInterface) SchedulingV1alpha1() v1alpha1e.SchedulingV1alpha1Interface {
 	fake.schedulingV1alpha1Mutex.Lock()
 	ret, specificReturn := fake.schedulingV1alpha1ReturnsOnCall[len(fake.schedulingV1alpha1ArgsForCall)]
 	fake.schedulingV1alpha1ArgsForCall = append(fake.schedulingV1alpha1ArgsForCall, struct {
@@ -2715,32 +2779,32 @@ func (fake *FakeInterface) SchedulingV1alpha1CallCount() int {
 	return len(fake.schedulingV1alpha1ArgsForCall)
 }
 
-func (fake *FakeInterface) SchedulingV1alpha1Calls(stub func() v1alpha1d.SchedulingV1alpha1Interface) {
+func (fake *FakeInterface) SchedulingV1alpha1Calls(stub func() v1alpha1e.SchedulingV1alpha1Interface) {
 	fake.schedulingV1alpha1Mutex.Lock()
 	defer fake.schedulingV1alpha1Mutex.Unlock()
 	fake.SchedulingV1alpha1Stub = stub
 }
 
-func (fake *FakeInterface) SchedulingV1alpha1Returns(result1 v1alpha1d.SchedulingV1alpha1Interface) {
+func (fake *FakeInterface) SchedulingV1alpha1Returns(result1 v1alpha1e.SchedulingV1alpha1Interface) {
 	fake.schedulingV1alpha1Mutex.Lock()
 	defer fake.schedulingV1alpha1Mutex.Unlock()
 	fake.SchedulingV1alpha1Stub = nil
 	fake.schedulingV1alpha1Returns = struct {
-		result1 v1alpha1d.SchedulingV1alpha1Interface
+		result1 v1alpha1e.SchedulingV1alpha1Interface
 	}{result1}
 }
 
-func (fake *FakeInterface) SchedulingV1alpha1ReturnsOnCall(i int, result1 v1alpha1d.SchedulingV1alpha1Interface) {
+func (fake *FakeInterface) SchedulingV1alpha1ReturnsOnCall(i int, result1 v1alpha1e.SchedulingV1alpha1Interface) {
 	fake.schedulingV1alpha1Mutex.Lock()
 	defer fake.schedulingV1alpha1Mutex.Unlock()
 	fake.SchedulingV1alpha1Stub = nil
 	if fake.schedulingV1alpha1ReturnsOnCall == nil {
 		fake.schedulingV1alpha1ReturnsOnCall = make(map[int]struct {
-			result1 v1alpha1d.SchedulingV1alpha1Interface
+			result1 v1alpha1e.SchedulingV1alpha1Interface
 		})
 	}
 	fake.schedulingV1alpha1ReturnsOnCall[i] = struct {
-		result1 v1alpha1d.SchedulingV1alpha1Interface
+		result1 v1alpha1e.SchedulingV1alpha1Interface
 	}{result1}
 }
 
@@ -2850,7 +2914,7 @@ func (fake *FakeInterface) StorageV1ReturnsOnCall(i int, result1 v1p.StorageV1In
 	}{result1}
 }
 
-func (fake *FakeInterface) StorageV1alpha1() v1alpha1e.StorageV1alpha1Interface {
+func (fake *FakeInterface) StorageV1alpha1() v1alpha1f.StorageV1alpha1Interface {
 	fake.storageV1alpha1Mutex.Lock()
 	ret, specificReturn := fake.storageV1alpha1ReturnsOnCall[len(fake.storageV1alpha1ArgsForCall)]
 	fake.storageV1alpha1ArgsForCall = append(fake.storageV1alpha1ArgsForCall, struct {
@@ -2874,32 +2938,32 @@ func (fake *FakeInterface) StorageV1alpha1CallCount() int {
 	return len(fake.storageV1alpha1ArgsForCall)
 }
 
-func (fake *FakeInterface) StorageV1alpha1Calls(stub func() v1alpha1e.StorageV1alpha1Interface) {
+func (fake *FakeInterface) StorageV1alpha1Calls(stub func() v1alpha1f.StorageV1alpha1Interface) {
 	fake.storageV1alpha1Mutex.Lock()
 	defer fake.storageV1alpha1Mutex.Unlock()
 	fake.StorageV1alpha1Stub = stub
 }
 
-func (fake *FakeInterface) StorageV1alpha1Returns(result1 v1alpha1e.StorageV1alpha1Interface) {
+func (fake *FakeInterface) StorageV1alpha1Returns(result1 v1alpha1f.StorageV1alpha1Interface) {
 	fake.storageV1alpha1Mutex.Lock()
 	defer fake.storageV1alpha1Mutex.Unlock()
 	fake.StorageV1alpha1Stub = nil
 	fake.storageV1alpha1Returns = struct {
-		result1 v1alpha1e.StorageV1alpha1Interface
+		result1 v1alpha1f.StorageV1alpha1Interface
 	}{result1}
 }
 
-func (fake *FakeInterface) StorageV1alpha1ReturnsOnCall(i int, result1 v1alpha1e.StorageV1alpha1Interface) {
+func (fake *FakeInterface) StorageV1alpha1ReturnsOnCall(i int, result1 v1alpha1f.StorageV1alpha1Interface) {
 	fake.storageV1alpha1Mutex.Lock()
 	defer fake.storageV1alpha1Mutex.Unlock()
 	fake.StorageV1alpha1Stub = nil
 	if fake.storageV1alpha1ReturnsOnCall == nil {
 		fake.storageV1alpha1ReturnsOnCall = make(map[int]struct {
-			result1 v1alpha1e.StorageV1alpha1Interface
+			result1 v1alpha1f.StorageV1alpha1Interface
 		})
 	}
 	fake.storageV1alpha1ReturnsOnCall[i] = struct {
-		result1 v1alpha1e.StorageV1alpha1Interface
+		result1 v1alpha1f.StorageV1alpha1Interface
 	}{result1}
 }
 
@@ -3021,6 +3085,8 @@ func (fake *FakeInterface) Invocations() map[string][][]interface{} {
 	defer fake.internalV1alpha1Mutex.RUnlock()
 	fake.networkingV1Mutex.RLock()
 	defer fake.networkingV1Mutex.RUnlock()
+	fake.networkingV1alpha1Mutex.RLock()
+	defer fake.networkingV1alpha1Mutex.RUnlock()
 	fake.networkingV1beta1Mutex.RLock()
 	defer fake.networkingV1beta1Mutex.RUnlock()
 	fake.nodeV1Mutex.RLock()
