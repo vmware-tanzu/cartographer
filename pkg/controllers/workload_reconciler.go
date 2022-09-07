@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
@@ -59,6 +61,7 @@ type WorkloadReconciler struct {
 	conditionManager        conditions.ConditionManager
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
+	EventRecorder           record.EventRecorder
 }
 
 func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -84,6 +87,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		return ctrl.Result{}, nil
 	}
+	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, workload))
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
 
@@ -400,18 +404,16 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
-	eventRecorder := mgr.GetEventRecorderFor("Workload")
+	r.EventRecorder = mgr.GetEventRecorderFor("Workload")
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("workload-repo-cache")),
-		eventRecorder,
 	)
 	r.ConditionManagerBuilder = conditions.NewConditionManager
 	r.ResourceRealizerBuilder = realizer.NewResourceRealizerBuilder(
 		repository.NewRepository,
 		realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
-		eventRecorder,
 	)
 	r.Realizer = realizer.NewRealizer(nil)
 	r.DependencyTracker = dependency.NewDependencyTracker(

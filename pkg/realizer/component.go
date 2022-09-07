@@ -20,7 +20,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -64,15 +63,14 @@ type ResourceLabeler func(resource OwnerResource) templates.Labels
 type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
-//counterfeiter:generate k8s.io/client-go/tools/record.EventRecorder
-func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache, recorder record.EventRecorder) ResourceRealizerBuilder {
+func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
 	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(authToken, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
 		}
 
-		ownerRepo := repositoryBuilder(ownerClient, cache, recorder)
+		ownerRepo := repositoryBuilder(ownerClient, cache)
 
 		return &resourceRealizer{
 			owner:           owner,

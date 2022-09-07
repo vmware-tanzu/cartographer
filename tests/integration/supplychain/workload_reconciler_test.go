@@ -381,12 +381,12 @@ var _ = Describe("WorkloadReconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(events.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 					"Reason": Equal("StampedObjectApplied"),
-					"Note":   Equal("Created object"),
+					"Note":   Equal("Created object [testobjs.test.run/test-resource]"),
 					"Regarding": MatchFields(IgnoreExtras, Fields{
-						"APIVersion": Equal("test.run/v1alpha1"),
-						"Kind":       Equal("TestObj"),
+						"APIVersion": Equal("carto.run/v1alpha1"),
+						"Kind":       Equal("Workload"),
 						"Namespace":  Equal(testNS),
-						"Name":       Equal("test-resource"),
+						"Name":       Equal("workload-joe"),
 					}),
 				})))
 			})

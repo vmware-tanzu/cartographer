@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
+	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -49,7 +51,8 @@ var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
-		rec   *realizerfakes.FakeEventRecorder
+		rm    *repositoryfakes.FakeRESTMapper
+		rec   *eventsfakes.FakeOwnerEventRecorder
 		ctx   context.Context
 		out   *Buffer
 	)
@@ -59,8 +62,12 @@ var _ = Describe("repository", func() {
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
 
+		rec = &eventsfakes.FakeOwnerEventRecorder{}
+		ctx = events.NewContext(ctx, rec)
+
+		rm = &repositoryfakes.FakeRESTMapper{}
+
 		cache = &repositoryfakes.FakeRepoCache{}
-		rec = &realizerfakes.FakeEventRecorder{}
 	})
 
 	Describe("tests using counterfeiter client", func() {
@@ -68,7 +75,14 @@ var _ = Describe("repository", func() {
 
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
-			repo = repository.NewRepository(cl, cache, rec)
+			cl.RESTMapperReturns(rm)
+			rm.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "example.com",
+					Resource: "thing",
+				},
+			}, nil)
+			repo = repository.NewRepository(cl, cache)
 		})
 
 		Context("EnsureMutableObjectExistsOnCluster", func() {
@@ -200,12 +214,12 @@ spec:
 
 					It("records an StampedObjectApplied event", func() {
 						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
-						Expect(rec.EventCallCount()).To(Equal(1))
-						object, eventType, reason, message := rec.EventArgsForCall(0)
-						Expect(object).To(Equal(stampedObj))
+						Expect(rec.EventfCallCount()).To(Equal(1))
+						eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
 						Expect(eventType).To(Equal("Normal"))
 						Expect(reason).To(Equal("StampedObjectApplied"))
-						Expect(message).To(Equal("Created object"))
+						Expect(message).To(Equal("Created object [%s.%s/%s]"))
+						Expect(fmtArgs).To(Equal([]interface{}{"thing", "example.com", "hello"}))
 					})
 				})
 			})
@@ -314,12 +328,12 @@ spec:
 
 								It("records an StampedObjectApplied event", func() {
 									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
-									Expect(rec.EventCallCount()).To(Equal(1))
-									object, eventType, reason, message := rec.EventArgsForCall(0)
-									Expect(object).To(Equal(stampedObj))
+									Expect(rec.EventfCallCount()).To(Equal(1))
+									eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
 									Expect(eventType).To(Equal("Normal"))
 									Expect(reason).To(Equal("StampedObjectApplied"))
-									Expect(message).To(Equal("Patched object"))
+									Expect(message).To(Equal("Patched object [%s.%s/%s]"))
+									Expect(fmtArgs).To(Equal([]interface{}{"thing", "example.com", "hello"}))
 								})
 							})
 
@@ -486,12 +500,12 @@ spec:
 
 						It("records a StampedObjectApplied event", func() {
 							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
-							Expect(rec.EventCallCount()).To(Equal(1))
-							object, eventType, reason, message := rec.EventArgsForCall(0)
-							Expect(object).To(Equal(stampedObj))
+							Expect(rec.EventfCallCount()).To(Equal(1))
+							eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
 							Expect(eventType).To(Equal("Normal"))
 							Expect(reason).To(Equal("StampedObjectApplied"))
-							Expect(message).To(Equal("Created object"))
+							Expect(message).To(Equal("Created object [%s.%s/%s]"))
+							Expect(fmtArgs).To(Equal([]interface{}{"thing", "example.com", "hello"}))
 						})
 					})
 
@@ -824,7 +838,7 @@ spec:
 			fakeClientBuilder = fake.NewClientBuilder().WithScheme(scheme).WithObjects(clientObjects...)
 			cl = fakeClientBuilder.Build()
 
-			repo = repository.NewRepository(cl, cache, rec)
+			repo = repository.NewRepository(cl, cache)
 		})
 
 		Context("GetTemplate", func() {

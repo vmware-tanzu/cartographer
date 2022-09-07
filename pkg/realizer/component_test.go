@@ -27,13 +27,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -49,7 +47,6 @@ var _ = Describe("Resource", func() {
 		blueprintName            string
 		fakeSystemRepo           repositoryfakes.FakeRepository
 		fakeOwnerRepo            repositoryfakes.FakeRepository
-		fakeEventRecorder        realizerfakes.FakeEventRecorder
 		clientForBuiltRepository client.Client
 		cacheForBuiltRepository  repository.RepoCache
 		theAuthToken             string
@@ -79,10 +76,9 @@ var _ = Describe("Resource", func() {
 
 		fakeSystemRepo = repositoryfakes.FakeRepository{}
 		fakeOwnerRepo = repositoryfakes.FakeRepository{}
-		fakeEventRecorder = realizerfakes.FakeEventRecorder{}
 		workload = v1alpha1.Workload{}
 
-		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache, recorder record.EventRecorder) repository.Repository {
+		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache) repository.Repository {
 			clientForBuiltRepository = client
 			cacheForBuiltRepository = repoCache
 			return &fakeOwnerRepo
@@ -97,7 +93,7 @@ var _ = Describe("Resource", func() {
 		logger := zap.New(zap.WriteTo(out))
 
 		repoCache = repository.NewCache(logger)
-		resourceRealizerBuilder := realizer.NewResourceRealizerBuilder(repositoryBuilder, clientBuilder, repoCache, &fakeEventRecorder)
+		resourceRealizerBuilder := realizer.NewResourceRealizerBuilder(repositoryBuilder, clientBuilder, repoCache)
 
 		theAuthToken = "tis-but-a-flesh-wound"
 

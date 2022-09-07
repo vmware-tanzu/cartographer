@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/tools/record"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -42,7 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -54,28 +53,27 @@ import (
 
 var _ = Describe("Reconcile", func() {
 	var (
-		out                        *Buffer
-		ctx                        context.Context
-		reconciler                 controllers.RunnableReconciler
-		request                    controllerruntime.Request
-		repo                       *repositoryfakes.FakeRepository
-		tokenManager               *satokenfakes.FakeTokenManager
-		rlzr                       *runnablefakes.FakeRealizer
-		stampedTracker             *stampedfakes.FakeStampedTracker
-		dependencyTracker          *dependencyfakes.FakeDependencyTracker
-		conditionManager           *conditionsfakes.FakeConditionManager
-		builtClient                *repositoryfakes.FakeClient
-		clientForBuiltRepository   *client.Client
-		cacheForBuiltRepository    *repository.RepoCache
-		fakeCache                  *repositoryfakes.FakeRepoCache
-		fakeRunnabeRepo            *repositoryfakes.FakeRepository
-		fakeEventRecorder          *realizerfakes.FakeEventRecorder
-		serviceAccount             *corev1.ServiceAccount
-		authTokenForBuiltClient    string
-		serviceAccountName         = "alternate-service-account-name"
-		serviceAccountToken        = "alternate-service-account-token"
-		fakeDiscoveryClient        *runnablefakes.FakeDiscoveryInterface
-		recorderForBuiltRepository record.EventRecorder
+		out                      *Buffer
+		ctx                      context.Context
+		reconciler               controllers.RunnableReconciler
+		request                  controllerruntime.Request
+		repo                     *repositoryfakes.FakeRepository
+		tokenManager             *satokenfakes.FakeTokenManager
+		rlzr                     *runnablefakes.FakeRealizer
+		stampedTracker           *stampedfakes.FakeStampedTracker
+		dependencyTracker        *dependencyfakes.FakeDependencyTracker
+		conditionManager         *conditionsfakes.FakeConditionManager
+		builtClient              *repositoryfakes.FakeClient
+		clientForBuiltRepository *client.Client
+		cacheForBuiltRepository  *repository.RepoCache
+		fakeCache                *repositoryfakes.FakeRepoCache
+		fakeRunnabeRepo          *repositoryfakes.FakeRepository
+		fakeEventRecorder        *eventsfakes.FakeEventRecorder
+		serviceAccount           *corev1.ServiceAccount
+		authTokenForBuiltClient  string
+		serviceAccountName       = "alternate-service-account-name"
+		serviceAccountToken      = "alternate-service-account-token"
+		fakeDiscoveryClient      *runnablefakes.FakeDiscoveryInterface
 	)
 
 	BeforeEach(func() {
@@ -90,7 +88,7 @@ var _ = Describe("Reconcile", func() {
 		conditionManager = &conditionsfakes.FakeConditionManager{}
 		fakeCache = &repositoryfakes.FakeRepoCache{}
 		fakeDiscoveryClient = &runnablefakes.FakeDiscoveryInterface{}
-		fakeEventRecorder = &realizerfakes.FakeEventRecorder{}
+		fakeEventRecorder = &eventsfakes.FakeEventRecorder{}
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName},
@@ -102,10 +100,9 @@ var _ = Describe("Reconcile", func() {
 			return conditionManager
 		}
 
-		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache, recorder record.EventRecorder) repository.Repository {
+		repositoryBuilder := func(client client.Client, repoCache repository.RepoCache) repository.Repository {
 			clientForBuiltRepository = &client
 			cacheForBuiltRepository = &repoCache
-			recorderForBuiltRepository = recorder
 			return fakeRunnabeRepo
 		}
 
@@ -125,7 +122,7 @@ var _ = Describe("Reconcile", func() {
 			ClientBuilder:           clientBuilder,
 			RepositoryBuilder:       repositoryBuilder,
 			DependencyTracker:       dependencyTracker,
-			Recorder:                fakeEventRecorder,
+			EventRecorder:           fakeEventRecorder,
 		}
 
 		request = controllerruntime.Request{
@@ -204,7 +201,6 @@ var _ = Describe("Reconcile", func() {
 			Expect(*clientForBuiltRepository).To(Equal(builtClient))
 			Expect(authTokenForBuiltClient).To(Equal(serviceAccountToken))
 			Expect(*cacheForBuiltRepository).To(Equal(reconciler.RunnableCache))
-			Expect(recorderForBuiltRepository).To(Equal(reconciler.Recorder))
 
 			Expect(rlzr.RealizeCallCount()).To(Equal(1))
 			_, _, systemRepo, runnableRepo, discoveryClient := rlzr.RealizeArgsForCall(0)

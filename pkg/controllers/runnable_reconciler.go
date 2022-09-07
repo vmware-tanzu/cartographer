@@ -38,6 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
@@ -60,7 +61,7 @@ type RunnableReconciler struct {
 	RunnableCache           repository.RepoCache
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
-	Recorder                record.EventRecorder
+	EventRecorder           record.EventRecorder
 }
 
 func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -86,6 +87,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		return ctrl.Result{}, nil
 	}
+	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, runnable))
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
@@ -115,7 +117,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
-	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache, r.Recorder), discoveryClient)
+	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), discoveryClient)
 	if err != nil {
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
@@ -234,14 +236,13 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	r.Recorder = mgr.GetEventRecorderFor("Runnable")
+	r.EventRecorder = mgr.GetEventRecorderFor("Runnable")
 
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
 	r.Repo = repository.NewRepository(
 		mgr.GetClient(),
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
-		r.Recorder,
 	)
 
 	r.Realizer = realizer.NewRealizer()

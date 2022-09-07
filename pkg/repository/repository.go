@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -38,6 +37,7 @@ import (
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
+//counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
 
 //counterfeiter:generate . Repository
 type Repository interface {
@@ -60,19 +60,17 @@ type Repository interface {
 	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
 }
 
-type RepositoryBuilder func(client client.Client, repoCache RepoCache, recorder record.EventRecorder) Repository
+type RepositoryBuilder func(client client.Client, repoCache RepoCache) Repository
 
 type repository struct {
-	rc       RepoCache
-	cl       client.Client
-	recorder record.EventRecorder
+	rc RepoCache
+	cl client.Client
 }
 
-func NewRepository(client client.Client, repoCache RepoCache, eventRecorder record.EventRecorder) Repository {
+func NewRepository(client client.Client, repoCache RepoCache) Repository {
 	return &repository{
-		rc:       repoCache,
-		cl:       client,
-		recorder: eventRecorder,
+		rc: repoCache,
+		cl: client,
 	}
 }
 
@@ -290,7 +288,14 @@ func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.U
 	}
 
 	r.rc.Set(submitted, obj.DeepCopy(), ownerDiscriminant)
-	r.recorder.Event(obj, events.NormalType, events.StampedObjectAppliedReason, "Created object")
+
+	mapping, err := r.cl.RESTMapper().RESTMapping(obj.GroupVersionKind().GroupKind(), obj.GroupVersionKind().Version)
+	if err != nil {
+		log := logr.FromContextOrDiscard(ctx)
+		log.V(logger.DEBUG).Error(err, "cannot find rest mapping for created stamped object", "object", obj)
+	}
+	rec := events.FromContextOrDie(ctx)
+	rec.Eventf(events.NormalType, events.StampedObjectAppliedReason, "Created object [%s.%s/%s]", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName())
 	return nil
 }
 
@@ -303,7 +308,14 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 	}
 
 	r.rc.Set(submitted, obj.DeepCopy(), "")
-	r.recorder.Event(obj, events.NormalType, events.StampedObjectAppliedReason, "Patched object")
+	rec := events.FromContextOrDie(ctx)
+
+	mapping, err := r.cl.RESTMapper().RESTMapping(obj.GroupVersionKind().GroupKind(), obj.GroupVersionKind().Version)
+	if err != nil {
+		log := logr.FromContextOrDiscard(ctx)
+		log.V(logger.DEBUG).Error(err, "cannot find rest mapping for patched stamped object", "object", obj)
+	}
+	rec.Eventf(events.NormalType, events.StampedObjectAppliedReason, "Patched object [%s.%s/%s]", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName())
 	return nil
 }
 

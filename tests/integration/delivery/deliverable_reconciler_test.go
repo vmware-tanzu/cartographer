@@ -523,12 +523,12 @@ var _ = Describe("DeliverableReconciler", func() {
 							return events.Items
 						}).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 							"Reason": Equal("StampedObjectApplied"),
-							"Note":   Equal("Created object"),
+							"Note":   Equal("Created object [testobjs.test.run/deliverable-bob-1]"),
 							"Regarding": MatchFields(IgnoreExtras, Fields{
-								"APIVersion": Equal("test.run/v1alpha1"),
-								"Kind":       Equal("TestObj"),
+								"APIVersion": Equal("carto.run/v1alpha1"),
+								"Kind":       Equal("Deliverable"),
 								"Namespace":  Equal(testNS),
-								"Name":       Equal("deliverable-bob-merge"),
+								"Name":       Equal("deliverable-bob"),
 							}),
 						})))
 					})

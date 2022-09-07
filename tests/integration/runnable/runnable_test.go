@@ -17,6 +17,7 @@ package runnable_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -856,17 +857,18 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 
 				firstStampedObject = testsList.Items[0]
 
-				events := &eventsv1.EventList{}
-				err := c.List(ctx, events)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(events.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				Eventually(func() ([]eventsv1.Event, error) {
+					events := &eventsv1.EventList{}
+					err := c.List(ctx, events)
+					return events.Items, err
+				}).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
 					"Reason": Equal("StampedObjectApplied"),
-					"Note":   Equal("Created object"),
+					"Note":   Equal(fmt.Sprintf("Created object [testobjs.test.run/%s]", firstStampedObject.Name)),
 					"Regarding": MatchFields(IgnoreExtras, Fields{
-						"APIVersion": Equal("test.run/v1alpha1"),
-						"Kind":       Equal(firstStampedObject.Kind),
+						"APIVersion": Equal("carto.run/v1alpha1"),
+						"Kind":       Equal("Runnable"),
 						"Namespace":  Equal(testNS),
-						"Name":       Equal(firstStampedObject.Name),
+						"Name":       Equal("my-runnable"),
 					}),
 				})))
 			})
