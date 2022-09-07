@@ -218,8 +218,20 @@ spec:
 						eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
 						Expect(eventType).To(Equal("Normal"))
 						Expect(reason).To(Equal("StampedObjectApplied"))
-						Expect(message).To(Equal("Created object [%s.%s/%s]"))
-						Expect(fmtArgs).To(Equal([]interface{}{"thing", "example.com", "hello"}))
+						Expect(message).To(Equal("Created object [%s]"))
+						Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
+					})
+
+					Context("rest mapper fails to resolve the object's GVK", func() {
+						BeforeEach(func() {
+							rm.RESTMappingReturns(nil, errors.New("mapping is hard"))
+						})
+
+						It("does not record any events and logs the error without returning it", func() {
+							Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
+							Expect(rec.Invocations()).To(BeEmpty())
+							Expect(out).To(Say(`cannot find rest mapping for created stamped object.*"apiVersion":"batch/v1".*"kind":"Job".*"name":"hello"`))
+						})
 					})
 				})
 			})
@@ -332,8 +344,8 @@ spec:
 									eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
 									Expect(eventType).To(Equal("Normal"))
 									Expect(reason).To(Equal("StampedObjectApplied"))
-									Expect(message).To(Equal("Patched object [%s.%s/%s]"))
-									Expect(fmtArgs).To(Equal([]interface{}{"thing", "example.com", "hello"}))
+									Expect(message).To(Equal("Patched object [%s]"))
+									Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
 								})
 							})
 
@@ -504,8 +516,8 @@ spec:
 							eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
 							Expect(eventType).To(Equal("Normal"))
 							Expect(reason).To(Equal("StampedObjectApplied"))
-							Expect(message).To(Equal("Created object [%s.%s/%s]"))
-							Expect(fmtArgs).To(Equal([]interface{}{"thing", "example.com", "hello"}))
+							Expect(message).To(Equal("Created object [%s]"))
+							Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
 						})
 					})
 
