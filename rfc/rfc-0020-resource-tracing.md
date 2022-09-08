@@ -158,7 +158,7 @@ All of the data collected by this RFC exists within Cartographer today but is no
 
 Some users may consider the runtime behavior of a `ClusterSupplyChain` to be an implementation detail that a user creating a `Workload` should not have visibility into. That a particular resource is created by Cartographer for a `Workload` may be viewed as an information disclosure. This change shines light on the internal behavior of a supply chain. The exact definition for each template is not exposed, unless the user also has access to view that resource.
 
-If there is significant user concern, a toggle could be developed to partially or fully disable tracing. Such a toggle is not in scope for this RFC.
+If there is significant user concern, a toggle could be developed to partially or fully deactivate tracing. Such a toggle is not in scope for this RFC.
 
 # Alternatives
 [alternatives]: #alternatives
