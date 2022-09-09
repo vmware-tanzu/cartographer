@@ -19,9 +19,9 @@ import (
 	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cartographer/benchmark/sampler"
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
-	"github.com/vmware-tanzu/cartographer/benchmark/sampler"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -162,7 +162,7 @@ var _ = Describe("Benchmark", func() {
 		numRunnables    int
 		numRunnableRuns int
 		err             error
-		s sampler.PodMetricsSampler
+		s               sampler.PodMetricsSampler
 	)
 
 	BeforeEach(func() {
@@ -322,7 +322,7 @@ var _ = Describe("Benchmark", func() {
 					}
 					g.Expect(succeeded).To(BeTrue())
 
-					//Sanity check the templated object was stamped.
+					//Confidence check the templated object was stamped.
 					stamped := &v1.ConfigMap{}
 					key = client.ObjectKey{Name: fmt.Sprintf("foo-workload-%d-stamped-object", nWorkload), Namespace: "default"}
 					err = c.Get(context.Background(), key, stamped)
@@ -332,7 +332,7 @@ var _ = Describe("Benchmark", func() {
 
 					completedWorkloads[nWorkload] = true
 				}
-			}).WithTimeout(time.Duration(timeoutSecsPerWorkload*(numWorkloads+(numRunnables * numRunnableRuns))) * time.Second).WithPolling(pollingFrequencySecs * time.Second).Should(Succeed())
+			}).WithTimeout(time.Duration(timeoutSecsPerWorkload*(numWorkloads+(numRunnables*numRunnableRuns))) * time.Second).WithPolling(pollingFrequencySecs * time.Second).Should(Succeed())
 
 			By("Observing stability after all initial workloads and runnables are reconciled...")
 			for i := 0; i < numPollingIntervalsToWaitAtEnd; i++ {
