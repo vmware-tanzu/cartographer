@@ -30,12 +30,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
+//counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
 
 //counterfeiter:generate . Repository
 type Repository interface {
@@ -286,6 +289,15 @@ func (r *repository) createUnstructured(ctx context.Context, obj *unstructured.U
 	}
 
 	r.rc.Set(submitted, obj.DeepCopy(), ownerDiscriminant)
+
+	qualifiedResourceName, err := utils.QualifiedResourceName(obj, r.cl.RESTMapper())
+	if err != nil {
+		log := logr.FromContextOrDiscard(ctx)
+		log.V(logger.DEBUG).Error(err, "cannot find rest mapping for created stamped object", "object", obj)
+	} else {
+		rec := events.FromContextOrDie(ctx)
+		rec.Eventf(events.NormalType, events.StampedObjectAppliedReason, "Created object [%s]", qualifiedResourceName)
+	}
 	return nil
 }
 
@@ -298,6 +310,15 @@ func (r *repository) patchUnstructured(ctx context.Context, existingObj *unstruc
 	}
 
 	r.rc.Set(submitted, obj.DeepCopy(), "")
+
+	qualifiedResourceName, err := utils.QualifiedResourceName(obj, r.cl.RESTMapper())
+	if err != nil {
+		log := logr.FromContextOrDiscard(ctx)
+		log.V(logger.DEBUG).Error(err, "cannot find rest mapping for patched stamped object", "object", obj)
+	} else {
+		rec := events.FromContextOrDie(ctx)
+		rec.Eventf(events.NormalType, events.StampedObjectAppliedReason, "Patched object [%s]", qualifiedResourceName)
+	}
 	return nil
 }
 
