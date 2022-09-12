@@ -24,8 +24,8 @@ readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5001"}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
-readonly YTT_VERSION=0.39.0
-readonly YTT_CHECKSUM=7a472b8c62bfec5c12586bb39065beda42c6fe43cf24271275e4dbc0a04acb8b
+readonly YTT_VERSION=0.42.0
+readonly YTT_CHECKSUM=aa7074d08dc35e588ab0e014f53e98aec0cfed6c3babf8a953c4225007e49ae7
 
 main() {
         readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
