@@ -41,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -67,6 +68,7 @@ var _ = Describe("Reconcile", func() {
 		cacheForBuiltRepository  *repository.RepoCache
 		fakeCache                *repositoryfakes.FakeRepoCache
 		fakeRunnabeRepo          *repositoryfakes.FakeRepository
+		fakeEventRecorder        *eventsfakes.FakeEventRecorder
 		serviceAccount           *corev1.ServiceAccount
 		authTokenForBuiltClient  string
 		serviceAccountName       = "alternate-service-account-name"
@@ -86,6 +88,7 @@ var _ = Describe("Reconcile", func() {
 		conditionManager = &conditionsfakes.FakeConditionManager{}
 		fakeCache = &repositoryfakes.FakeRepoCache{}
 		fakeDiscoveryClient = &runnablefakes.FakeDiscoveryInterface{}
+		fakeEventRecorder = &eventsfakes.FakeEventRecorder{}
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName},
@@ -119,6 +122,7 @@ var _ = Describe("Reconcile", func() {
 			ClientBuilder:           clientBuilder,
 			RepositoryBuilder:       repositoryBuilder,
 			DependencyTracker:       dependencyTracker,
+			EventRecorder:           fakeEventRecorder,
 		}
 
 		request = controllerruntime.Request{

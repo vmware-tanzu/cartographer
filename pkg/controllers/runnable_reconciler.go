@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/enqueuer"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/mapper"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
@@ -59,6 +61,7 @@ type RunnableReconciler struct {
 	RunnableCache           repository.RepoCache
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
+	EventRecorder           record.EventRecorder
 }
 
 func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -84,6 +87,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		return ctrl.Result{}, nil
 	}
+	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, runnable))
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
@@ -231,6 +235,9 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+
+	r.EventRecorder = mgr.GetEventRecorderFor("Runnable")
+
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
 	r.Repo = repository.NewRepository(

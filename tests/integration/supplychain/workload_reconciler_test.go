@@ -17,6 +17,7 @@ package supplychain_test
 import (
 	"context"
 	"encoding/json"
+	eventsv1 "k8s.io/api/events/v1"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -375,6 +376,19 @@ var _ = Describe("WorkloadReconciler", func() {
 						"Status": Equal(metav1.ConditionStatus("True")),
 					}),
 				))
+				events := &eventsv1.EventList{}
+				err := c.List(ctx, events)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(events.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Reason": Equal("StampedObjectApplied"),
+					"Note":   Equal("Created object [testobjs.test.run/test-resource]"),
+					"Regarding": MatchFields(IgnoreExtras, Fields{
+						"APIVersion": Equal("carto.run/v1alpha1"),
+						"Kind":       Equal("Workload"),
+						"Namespace":  Equal(testNS),
+						"Name":       Equal("workload-joe"),
+					}),
+				})))
 			})
 		})
 	})

@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -41,6 +42,7 @@ type Command struct {
 
 func (cmd *Command) Execute(ctx context.Context) error {
 	log.SetLogger(cmd.Logger)
+	klog.SetLogger(cmd.Logger)
 	l := log.Log.WithName("cartographer")
 
 	cfg, err := config.GetConfig()

@@ -17,6 +17,7 @@ package delivery_test
 import (
 	"context"
 	"io"
+	eventsv1 "k8s.io/api/events/v1"
 	"os"
 	"testing"
 	"time"
@@ -121,6 +122,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = resources.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = eventsv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	c, err = client.New(apiConfig, client.Options{
