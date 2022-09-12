@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	eventsv1 "k8s.io/api/events/v1"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -512,6 +513,24 @@ var _ = Describe("DeliverableReconciler", func() {
 							  value:
 								merge-key: https://github.com/ekcasey/hello-world-ops
 						`))
+					})
+
+					It("emits a StampedObjectApplied event", func() {
+						Eventually(func() []eventsv1.Event {
+							events := &eventsv1.EventList{}
+							err := c.List(ctx, events)
+							Expect(err).NotTo(HaveOccurred())
+							return events.Items
+						}).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+							"Reason": Equal("StampedObjectApplied"),
+							"Note":   Equal("Created object [testobjs.test.run/deliverable-bob-1]"),
+							"Regarding": MatchFields(IgnoreExtras, Fields{
+								"APIVersion": Equal("carto.run/v1alpha1"),
+								"Kind":       Equal("Deliverable"),
+								"Namespace":  Equal(testNS),
+								"Name":       Equal("deliverable-bob"),
+							}),
+						})))
 					})
 
 					It("reports the deliverable Ready condition as True", func() {

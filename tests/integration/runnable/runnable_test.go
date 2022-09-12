@@ -17,11 +17,12 @@ package runnable_test
 import (
 	"context"
 	"encoding/json"
-
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	v1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -855,6 +856,21 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				}).Should(HaveLen(1))
 
 				firstStampedObject = testsList.Items[0]
+
+				Eventually(func() ([]eventsv1.Event, error) {
+					events := &eventsv1.EventList{}
+					err := c.List(ctx, events)
+					return events.Items, err
+				}).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Reason": Equal("StampedObjectApplied"),
+					"Note":   Equal(fmt.Sprintf("Created object [testobjs.test.run/%s]", firstStampedObject.Name)),
+					"Regarding": MatchFields(IgnoreExtras, Fields{
+						"APIVersion": Equal("carto.run/v1alpha1"),
+						"Kind":       Equal("Runnable"),
+						"Namespace":  Equal(testNS),
+						"Name":       Equal("my-runnable"),
+					}),
+				})))
 			})
 			By("changing the first stamped object's status to false", func() {
 				firstStampedObject.Status = resources.TestStatus{

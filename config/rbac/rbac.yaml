@@ -45,6 +45,13 @@ rules:
     verbs:
       - create
   - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
       - carto.run
     resources:
       - workloads/status

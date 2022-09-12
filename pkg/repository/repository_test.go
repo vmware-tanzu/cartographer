@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
+	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -48,6 +51,8 @@ var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
+		rm    *repositoryfakes.FakeRESTMapper
+		rec   *eventsfakes.FakeOwnerEventRecorder
 		ctx   context.Context
 		out   *Buffer
 	)
@@ -57,6 +62,11 @@ var _ = Describe("repository", func() {
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
 
+		rec = &eventsfakes.FakeOwnerEventRecorder{}
+		ctx = events.NewContext(ctx, rec)
+
+		rm = &repositoryfakes.FakeRESTMapper{}
+
 		cache = &repositoryfakes.FakeRepoCache{}
 	})
 
@@ -65,6 +75,13 @@ var _ = Describe("repository", func() {
 
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
+			cl.RESTMapperReturns(rm)
+			rm.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "example.com",
+					Resource: "thing",
+				},
+			}, nil)
 			repo = repository.NewRepository(cl, cache)
 		})
 
@@ -125,6 +142,11 @@ spec:
 					_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
 					Expect(cache.SetCallCount()).To(Equal(0))
 				})
+
+				It("does not record any events", func() {
+					_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+					Expect(rec.Invocations()).To(BeEmpty())
+				})
 			})
 
 			Context("and the apiServer attempts to get the object and it doesn't exist", func() {
@@ -153,6 +175,11 @@ spec:
 					It("does not write to the submitted or persisted cache", func() {
 						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
 						Expect(cache.SetCallCount()).To(Equal(0))
+					})
+
+					It("does not record any events", func() {
+						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+						Expect(rec.Invocations()).To(BeEmpty())
 					})
 				})
 
@@ -183,6 +210,28 @@ spec:
 						Expect(*submitted).To(Equal(*originalStampedObj))
 						Expect(*persisted).To(Equal(*returnedCreatedObj))
 						Expect(ownerDiscriminant).To(Equal(""))
+					})
+
+					It("records an StampedObjectApplied event", func() {
+						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+						Expect(rec.EventfCallCount()).To(Equal(1))
+						eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+						Expect(eventType).To(Equal("Normal"))
+						Expect(reason).To(Equal("StampedObjectApplied"))
+						Expect(message).To(Equal("Created object [%s]"))
+						Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
+					})
+
+					Context("rest mapper fails to resolve the object's GVK", func() {
+						BeforeEach(func() {
+							rm.RESTMappingReturns(nil, errors.New("mapping is hard"))
+						})
+
+						It("does not record any events and logs the error without returning it", func() {
+							Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
+							Expect(rec.Invocations()).To(BeEmpty())
+							Expect(out).To(Say(`cannot find rest mapping for created stamped object.*"apiVersion":"batch/v1".*"kind":"Job".*"name":"hello"`))
+						})
 					})
 				})
 			})
@@ -240,6 +289,11 @@ spec:
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
 					})
+
+					It("does not record any events", func() {
+						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+						Expect(rec.Invocations()).To(BeEmpty())
+					})
 				})
 
 				Context("and the cache determines there has been a change since the last update", func() {
@@ -283,6 +337,16 @@ spec:
 									Expect(*persisted).To(Equal(*returnedPatchedObj))
 									Expect(ownerDiscriminant).To(Equal(""))
 								})
+
+								It("records an StampedObjectApplied event", func() {
+									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+									Expect(rec.EventfCallCount()).To(Equal(1))
+									eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+									Expect(eventType).To(Equal("Normal"))
+									Expect(reason).To(Equal("StampedObjectApplied"))
+									Expect(message).To(Equal("Patched object [%s]"))
+									Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
+								})
 							})
 
 							Context("and the patch fails", func() {
@@ -297,6 +361,11 @@ spec:
 								It("does not write to the submitted or persisted cache", func() {
 									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
 									Expect(cache.SetCallCount()).To(Equal(0))
+								})
+
+								It("does not record any events", func() {
+									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
+									Expect(rec.Invocations()).To(BeEmpty())
 								})
 							})
 						})
@@ -394,6 +463,11 @@ spec:
 						Expect(stampedObj).To(Equal(existingObj))
 						Expect(stampedObj).NotTo(Equal(originalStampedObj))
 					})
+
+					It("does not record any events", func() {
+						_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+						Expect(rec.Invocations()).To(BeEmpty())
+					})
 				})
 
 				Context("and the cache determines there has been a change since the last update", func() {
@@ -435,6 +509,16 @@ spec:
 							Expect(*persisted).To(Equal(*returnedCreatedObj))
 							Expect(ownerDiscriminant).To(Equal("{foo:bar}{quux:xyzzy}{waldo:fred}"))
 						})
+
+						It("records a StampedObjectApplied event", func() {
+							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+							Expect(rec.EventfCallCount()).To(Equal(1))
+							eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+							Expect(eventType).To(Equal("Normal"))
+							Expect(reason).To(Equal("StampedObjectApplied"))
+							Expect(message).To(Equal("Created object [%s]"))
+							Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
+						})
 					})
 
 					Context("and the create fails", func() {
@@ -449,6 +533,11 @@ spec:
 						It("does not write to the submitted or persisted cache", func() {
 							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
 							Expect(cache.SetCallCount()).To(Equal(0))
+						})
+
+						It("does not record any events", func() {
+							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
+							Expect(rec.Invocations()).To(BeEmpty())
 						})
 					})
 				})
