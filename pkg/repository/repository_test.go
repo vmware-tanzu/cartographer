@@ -66,6 +66,12 @@ var _ = Describe("repository", func() {
 		ctx = events.NewContext(ctx, rec)
 
 		rm = &repositoryfakes.FakeRESTMapper{}
+		rm.RESTMappingReturns(&meta.RESTMapping{
+			Resource: schema.GroupVersionResource{
+				Group:    "example.com",
+				Resource: "thing",
+			},
+		}, nil)
 
 		cache = &repositoryfakes.FakeRepoCache{}
 	})
@@ -76,12 +82,6 @@ var _ = Describe("repository", func() {
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
 			cl.RESTMapperReturns(rm)
-			rm.RESTMappingReturns(&meta.RESTMapping{
-				Resource: schema.GroupVersionResource{
-					Group:    "example.com",
-					Resource: "thing",
-				},
-			}, nil)
 			repo = repository.NewRepository(cl, cache)
 		})
 
@@ -847,7 +847,7 @@ spec:
 		})
 
 		JustBeforeEach(func() {
-			fakeClientBuilder = fake.NewClientBuilder().WithScheme(scheme).WithObjects(clientObjects...)
+			fakeClientBuilder = fake.NewClientBuilder().WithRESTMapper(rm).WithScheme(scheme).WithObjects(clientObjects...)
 			cl = fakeClientBuilder.Build()
 
 			repo = repository.NewRepository(cl, cache)
@@ -1205,6 +1205,13 @@ spec:
 					_, _, err := dec.Decode([]byte(stampedObjManifest), nil, testObj)
 					Expect(err).NotTo(HaveOccurred())
 
+					rm.RESTMappingReturns(&meta.RESTMapping{
+						Resource: schema.GroupVersionResource{
+							Group:    "test.run",
+							Resource: "testobj",
+						},
+					}, nil)
+
 					clientObjects = []client.Object{testObj}
 				})
 
@@ -1218,6 +1225,30 @@ spec:
 						Name:      "hello",
 					}, obj)
 					Expect(err).To(MatchError("testobjs.test.run \"hello\" not found"))
+				})
+
+				It("records an StampedObjectRemoved event", func() {
+					err := repo.Delete(ctx, testObj)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(rec.EventfCallCount()).To(Equal(1))
+					eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+					Expect(eventType).To(Equal("Normal"))
+					Expect(reason).To(Equal("StampedObjectRemoved"))
+					Expect(message).To(Equal("Deleted object [%s]"))
+					Expect(fmtArgs).To(Equal([]interface{}{"testobj.test.run/hello"}))
+				})
+
+				Context("rest mapper fails to resolve the object's GVK", func() {
+					BeforeEach(func() {
+						rm.RESTMappingReturns(nil, errors.New("mapping is hard"))
+					})
+
+					It("does not record any events and logs the error without returning it", func() {
+						Expect(repo.Delete(ctx, testObj)).To(Succeed())
+						Expect(rec.Invocations()).To(BeEmpty())
+						Expect(out).To(Say(`cannot find rest mapping for deleted stamped object.*"apiVersion":"test.run/v1alpha1".*"kind":"TestObj".*"name":"hello"`))
+					})
 				})
 			})
 		})

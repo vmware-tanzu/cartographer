@@ -17,3 +17,4 @@ package events
 const NormalType = "Normal"
 
 const StampedObjectAppliedReason = "StampedObjectApplied"
+const StampedObjectRemovedReason = "StampedObjectRemoved"
