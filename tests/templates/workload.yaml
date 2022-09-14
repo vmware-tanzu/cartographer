@@ -1,0 +1,11 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: my-workload-name
+  namespace: my-namespace
+spec:
+  source:
+    git:
+      url: some-url
+      ref:
+        branch: some-branch

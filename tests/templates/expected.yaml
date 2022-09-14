@@ -1,0 +1,26 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  labels:
+    app.kubernetes.io/component: source
+    carto.run/workload-name: my-workload-name
+    carto.run/workload-namespace: my-namespace
+    carto.run/cluster-template-name: source-template
+    carto.run/template-kind: ClusterSourceTemplate
+  name: my-workload-name
+  namespace: my-namespace
+  ownerReferences:
+    - apiVersion: "carto.run/v1alpha1"
+      blockOwnerDeletion: true
+      controller: true
+      kind: "Workload"
+      name: my-workload-name
+      uid: ""
+spec:
+  gitImplementation: some-implementation
+  ignore: |
+    !.git
+  interval: 1m0s
+  ref:
+    branch: some-branch
+  url: some-url
