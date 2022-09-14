@@ -87,6 +87,14 @@ func (r *repository) Delete(ctx context.Context, objToDelete *unstructured.Unstr
 	}
 
 	log.V(logger.DEBUG).Info("object deleted successfully")
+	qualifiedResourceName, err := utils.QualifiedResourceName(objToDelete, r.cl.RESTMapper())
+	if err != nil {
+		log.V(logger.DEBUG).Error(err, "cannot find rest mapping for deleted stamped object", "object", objToDelete)
+	} else {
+		rec := events.FromContextOrDie(ctx)
+		rec.Eventf(events.NormalType, events.StampedObjectRemovedReason, "Deleted object [%s]", qualifiedResourceName)
+	}
+
 	return nil
 }
 
