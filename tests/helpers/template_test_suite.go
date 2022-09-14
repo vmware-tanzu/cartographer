@@ -92,6 +92,10 @@ func (ts *TemplateTestSuite) verifySuite() error {
 		ts.Labels = map[string]string{}
 	}
 
+	if ts.Params == nil {
+		ts.Params = map[string]interface{}{}
+	}
+
 	return nil
 }
 
