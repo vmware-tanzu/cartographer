@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,18 +30,6 @@ import (
 )
 
 const DefaultResyncTime = 10 * time.Hour
-
-func QualifiedResourceName(obj *unstructured.Unstructured, mapper meta.RESTMapper) (string, error) {
-	gvk := obj.GroupVersionKind()
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return "", err
-	}
-	if mapping.Resource.Group == "" {
-		return fmt.Sprintf("%s/%s", mapping.Resource.Resource, obj.GetName()), nil
-	}
-	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName()), nil
-}
 
 func GetObjectGVK(obj metav1.Object, scheme *runtime.Scheme) (schema.GroupVersionKind, error) {
 	ro, ok := obj.(runtime.Object)

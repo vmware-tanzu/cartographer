@@ -12,10 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package events
+package events_test
 
-const NormalType = "Normal"
+import (
+	"testing"
 
-const StampedObjectAppliedReason = "StampedObjectApplied"
-const StampedObjectRemovedReason = "StampedObjectRemoved"
-const ResourceOutputChangedReason = "ResourceOutputChanged"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+func TestEvents(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Events Suite")
+}

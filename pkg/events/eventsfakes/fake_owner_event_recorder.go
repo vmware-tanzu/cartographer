@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/vmware-tanzu/cartographer/pkg/events"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type FakeOwnerEventRecorder struct {
@@ -31,6 +32,15 @@ type FakeOwnerEventRecorder struct {
 		arg2 string
 		arg3 string
 		arg4 []interface{}
+	}
+	ResourceEventfStub        func(string, string, string, *unstructured.Unstructured, ...interface{})
+	resourceEventfMutex       sync.RWMutex
+	resourceEventfArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+		arg4 *unstructured.Unstructured
+		arg5 []interface{}
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -141,6 +151,42 @@ func (fake *FakeOwnerEventRecorder) EventfArgsForCall(i int) (string, string, st
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
+func (fake *FakeOwnerEventRecorder) ResourceEventf(arg1 string, arg2 string, arg3 string, arg4 *unstructured.Unstructured, arg5 ...interface{}) {
+	fake.resourceEventfMutex.Lock()
+	fake.resourceEventfArgsForCall = append(fake.resourceEventfArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+		arg4 *unstructured.Unstructured
+		arg5 []interface{}
+	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.ResourceEventfStub
+	fake.recordInvocation("ResourceEventf", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	fake.resourceEventfMutex.Unlock()
+	if stub != nil {
+		fake.ResourceEventfStub(arg1, arg2, arg3, arg4, arg5...)
+	}
+}
+
+func (fake *FakeOwnerEventRecorder) ResourceEventfCallCount() int {
+	fake.resourceEventfMutex.RLock()
+	defer fake.resourceEventfMutex.RUnlock()
+	return len(fake.resourceEventfArgsForCall)
+}
+
+func (fake *FakeOwnerEventRecorder) ResourceEventfCalls(stub func(string, string, string, *unstructured.Unstructured, ...interface{})) {
+	fake.resourceEventfMutex.Lock()
+	defer fake.resourceEventfMutex.Unlock()
+	fake.ResourceEventfStub = stub
+}
+
+func (fake *FakeOwnerEventRecorder) ResourceEventfArgsForCall(i int) (string, string, string, *unstructured.Unstructured, []interface{}) {
+	fake.resourceEventfMutex.RLock()
+	defer fake.resourceEventfMutex.RUnlock()
+	argsForCall := fake.resourceEventfArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+}
+
 func (fake *FakeOwnerEventRecorder) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -150,6 +196,8 @@ func (fake *FakeOwnerEventRecorder) Invocations() map[string][][]interface{} {
 	defer fake.eventMutex.RUnlock()
 	fake.eventfMutex.RLock()
 	defer fake.eventfMutex.RUnlock()
+	fake.resourceEventfMutex.RLock()
+	defer fake.resourceEventfMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -24,6 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -62,6 +63,7 @@ type RunnableReconciler struct {
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
 	EventRecorder           record.EventRecorder
+	RESTMapper              meta.RESTMapper
 }
 
 func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -87,7 +89,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		return ctrl.Result{}, nil
 	}
-	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, runnable))
+	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, runnable, r.RESTMapper, log))
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
@@ -237,6 +239,7 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	r.EventRecorder = mgr.GetEventRecorderFor("Runnable")
+	r.RESTMapper = mgr.GetRESTMapper()
 
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 

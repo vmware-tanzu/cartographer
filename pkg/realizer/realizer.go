@@ -18,6 +18,8 @@ package realizer
 
 import (
 	"context"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -26,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
@@ -134,6 +137,14 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
 			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
+			var previousOutputs []v1alpha1.Output
+			if previousRealizedResource != nil {
+				previousOutputs = previousRealizedResource.Outputs
+			}
+			if !reflect.DeepEqual(previousOutputs, realizedResource.Outputs) {
+				rec := events.FromContextOrDie(ctx)
+				rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "Resource [%Q] outputs changed to %s", stampedObject, summarizeOutputs(realizedResource.Outputs))
+			}
 			if template != nil {
 				additionalConditions = []metav1.Condition{r.healthyConditionEvaluator(template.GetHealthRule(), realizedResource, stampedObject)}
 			}
@@ -142,6 +153,21 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	}
 
 	return firstError
+}
+
+func summarizeOutputs(outputs []v1alpha1.Output) string {
+	sb := strings.Builder{}
+	for i, output := range outputs {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString("[")
+		sb.WriteString(output.Name)
+		sb.WriteString(":")
+		sb.WriteString(output.Preview)
+		sb.WriteString("]")
+	}
+	return sb.String()
 }
 
 func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {

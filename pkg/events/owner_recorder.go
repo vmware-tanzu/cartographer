@@ -16,13 +16,23 @@ package events
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+
+	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
+
+const QualifiedResourceNameToken = "%Q"
 
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 //counterfeiter:generate k8s.io/client-go/tools/record.EventRecorder
+//counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
 //counterfeiter:generate . OwnerEventRecorder
 type OwnerEventRecorder interface {
 	// Event uses an EventRecorder to record an event against this OwnerEventRecorder's owner object
@@ -33,12 +43,17 @@ type OwnerEventRecorder interface {
 
 	// AnnotatedEventf is just like eventf, but with annotations attached
 	AnnotatedEventf(annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{})
+
+	// ResourceEventf is just like Eventf, but the token %Q will be substituted with the qualified name of the provided unstructured resource
+	ResourceEventf(eventtype, reason, messageFmt string, resource *unstructured.Unstructured, args ...interface{})
 }
 
-func FromEventRecorder(rec record.EventRecorder, ownerObj runtime.Object) OwnerEventRecorder {
+func FromEventRecorder(rec record.EventRecorder, ownerObj runtime.Object, mapper meta.RESTMapper, log logr.Logger) OwnerEventRecorder {
 	return ownerEventRecorder{
-		obj: ownerObj,
-		rec: rec,
+		obj:    ownerObj,
+		rec:    rec,
+		mapper: mapper,
+		log:    log,
 	}
 }
 
@@ -46,8 +61,10 @@ func FromEventRecorder(rec record.EventRecorder, ownerObj runtime.Object) OwnerE
 type contextKey struct{}
 
 type ownerEventRecorder struct {
-	obj runtime.Object
-	rec record.EventRecorder
+	obj    runtime.Object
+	rec    record.EventRecorder
+	mapper meta.RESTMapper
+	log    logr.Logger
 }
 
 func (o ownerEventRecorder) Event(eventtype, reason, message string) {
@@ -55,6 +72,16 @@ func (o ownerEventRecorder) Event(eventtype, reason, message string) {
 }
 
 func (o ownerEventRecorder) Eventf(eventtype, reason, messageFmt string, args ...interface{}) {
+	o.rec.Eventf(o.obj, eventtype, reason, messageFmt, args...)
+}
+
+func (o ownerEventRecorder) ResourceEventf(eventtype, reason, messageFmt string, resource *unstructured.Unstructured, args ...interface{}) {
+	qualifiedResourceName, err := o.qualifiedResourceName(resource)
+	if err != nil {
+		o.log.V(logger.DEBUG).Error(err, "cannot find rest mapping for resource", "resource", resource)
+		return
+	}
+	messageFmt = strings.ReplaceAll(messageFmt, QualifiedResourceNameToken, qualifiedResourceName)
 	o.rec.Eventf(o.obj, eventtype, reason, messageFmt, args...)
 }
 
@@ -76,4 +103,16 @@ func FromContextOrDie(ctx context.Context) OwnerEventRecorder {
 // provided OwnerEventRecorder.
 func NewContext(ctx context.Context, rec OwnerEventRecorder) context.Context {
 	return context.WithValue(ctx, contextKey{}, rec)
+}
+
+func (o ownerEventRecorder) qualifiedResourceName(obj *unstructured.Unstructured) (string, error) {
+	gvk := obj.GroupVersionKind()
+	mapping, err := o.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return "", err
+	}
+	if mapping.Resource.Group == "" {
+		return fmt.Sprintf("%s/%s", mapping.Resource.Resource, obj.GetName()), nil
+	}
+	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName()), nil
 }

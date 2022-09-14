@@ -19,14 +19,17 @@ package runnable
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
@@ -139,6 +142,10 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 
 	if outputSource != nil {
 		log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", outputSource)
+		if !reflect.DeepEqual(runnable.Status.Outputs, map[string]apiextensionsv1.JSON(outputs)) {
+			rec := events.FromContextOrDie(ctx)
+			rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "Resource [%Q] outputs changed to %s", stampedObject, outputs)
+		}
 	}
 
 	if len(outputs) == 0 {
