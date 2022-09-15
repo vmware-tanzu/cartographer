@@ -27,7 +27,7 @@ require (
 require (
 	github.com/google/gnostic v0.6.9
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/klog/v2 v2.70.1
+	k8s.io/klog/v2 v2.80.1
 )
 
 require (
