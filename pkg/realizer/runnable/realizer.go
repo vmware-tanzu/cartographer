@@ -144,7 +144,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		log.V(logger.DEBUG).Info("retrieved output from stamped object", "stamped object", outputSource)
 		if !reflect.DeepEqual(runnable.Status.Outputs, map[string]apiextensionsv1.JSON(outputs)) {
 			rec := events.FromContextOrDie(ctx)
-			rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "Resource [%Q] outputs changed to %s", stampedObject, outputs)
+			rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "Runnable [%s] found a new output in [%Q]", stampedObject, runnable.Name)
 		}
 	}
 

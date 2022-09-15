@@ -180,9 +180,9 @@ var _ = Describe("Realizer", func() {
 			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
 			Expect(evType).To(Equal("Normal"))
 			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
-			Expect(messageFmt).To(Equal("Resource [%Q] outputs changed to %s"))
+			Expect(messageFmt).To(Equal("Runnable [%s] found a new output in [%Q]"))
 			Expect(resourceObj).To(Equal(stampedObject))
-			Expect(fmtArgs).To(Equal([]interface{}{templates.Outputs{"myout": apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}}}))
+			Expect(fmtArgs).To(Equal([]interface{}{"my-runnable"}))
 		})
 
 		It("does not emit any event when the output has not changed", func() {

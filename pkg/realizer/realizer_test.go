@@ -227,10 +227,9 @@ var _ = Describe("Realize", func() {
 			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
 			Expect(evType).To(Equal("Normal"))
 			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
-			Expect(messageFmt).To(Equal("Resource [%Q] outputs changed to %s"))
+			Expect(messageFmt).To(Equal("[%s] found a new output in [%Q]"))
 			Expect(resourceObj.GetName()).To(Equal("obj1"))
-			expectedNewOutput := "[image:whatever\n]"
-			Expect(fmtArgs).To(Equal([]interface{}{expectedNewOutput}))
+			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
 		})
 
 		It("does not record an event if there was no resource output change", func() {
@@ -477,9 +476,8 @@ var _ = Describe("Realize", func() {
 			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
 			Expect(evType).To(Equal("Normal"))
 			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
-			Expect(messageFmt).To(Equal("Resource [%Q] outputs changed to %s"))
-			expectedNewOutput := "[url:hi\n], [revision:bye\n]"
-			Expect(fmtArgs).To(Equal([]interface{}{expectedNewOutput}))
+			Expect(messageFmt).To(Equal("[%s] found a new output in [%Q]"))
+			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
 			Expect(resourceObj).To(Equal(stampedObj1))
 		})
 
