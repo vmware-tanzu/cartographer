@@ -1,0 +1,43 @@
+#@ load("@ytt:data", "data")
+
+#@ if/end "deliverable-template" not in data.values.excluded_templates:
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: deliverable-template
+  labels:
+    app.tanzu.vmware.com/deliverable-type: web
+spec:
+  params:
+    - name: registry
+      default: {}
+
+  ytt: |
+    #@ load("@ytt:data", "data")
+    #@ load("@ytt:assert", "assert")
+    
+    #@ def param(key):
+    #@   if not key in data.values.params:
+    #@     return None
+    #@   end
+    #@   return data.values.params[key]
+    #@ end
+
+    ---
+    apiVersion: carto.run/v1alpha1
+    kind: Deliverable
+    metadata:
+      name: #@ data.values.workload.metadata.name
+    spec:
+      serviceAccountName: #@ data.values.workload.spec.serviceAccountName
+
+      params:
+        - name: "gitops_ssh_secret"
+          value: #@ param("gitops_ssh_secret")
+
+      source:
+        git:
+          url: #@ param("gitops_url")
+          ref:
+            branch: #@ param("gitops_branch")

@@ -1,17 +1,34 @@
 package templates
 
 import (
+	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestSupplyChainSourceTemplate(t *testing.T) {
-	params := map[string]interface{}{
-		"serviceAccount":    "my-sc",
-		"gitImplementation": "some-implementation",
+	param1, err := helpers.BuildBlueprintStringParam(
+		"serviceAccount",
+		"my-sc",
+		"",
+	)
+	if err != nil {
+		t.Fatalf("failed to build param: %v", err)
 	}
+
+	param2, err := helpers.BuildBlueprintStringParam(
+		"gitImplementation",
+		"",
+		"some-implementation",
+	)
+	if err != nil {
+		t.Fatalf("failed to build param: %v", err)
+	}
+
+	params := []v1alpha1.BlueprintParam{*param1, *param2}
 
 	url := "some-url"
 	branch := "some-branch"
@@ -32,7 +49,7 @@ func TestSupplyChainSourceTemplate(t *testing.T) {
 	ts := helpers.TemplateTestSuite{
 		TemplateFile:       "source.yaml",
 		ExpectedObjectFile: "expected.yaml",
-		Params:             params,
+		BlueprintParams:    params,
 		Workload:           &workload,
 	}
 
@@ -41,9 +58,37 @@ func TestSupplyChainSourceTemplate(t *testing.T) {
 	ts = helpers.TemplateTestSuite{
 		TemplateFile:       "source.yaml",
 		ExpectedObjectFile: "expected.yaml",
-		Params:             params,
+		BlueprintParams:    params,
 		WorkloadFile:       "workload.yaml",
 		Labels:             map[string]string{},
+	}
+
+	ts.Run(t)
+}
+
+func TestAnother(t *testing.T) {
+	param1, err := helpers.BuildBlueprintStringParam(
+		"gitops_url",
+		"",
+		"https://github.com/waciumawanjohi/computer-science",
+	)
+	param2, err := helpers.BuildBlueprintStringParam(
+		"gitops_branch",
+		"",
+		"main",
+	)
+	if err != nil {
+		t.Fatalf("failed to build param: %v", err)
+	}
+
+	ts := helpers.TemplateTestSuite{
+		TemplateFile:       "another-template-1.yaml",
+		ExpectedObjectFile: "another-expect.yaml",
+		BlueprintParams:    []v1alpha1.BlueprintParam{*param1, *param2}, // TODO: simplify so users don't have to know about this internal struct
+		WorkloadFile:       "another-workload.yaml",
+		IgnoreMetadata:     false,
+		IgnoreOwnerRefs:    true,
+		IgnoreLabels:       true,
 	}
 
 	ts.Run(t)

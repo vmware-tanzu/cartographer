@@ -1,0 +1,26 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: create-deliverable
+spec:
+  template:
+    apiVersion: carto.run/v1alpha1
+    kind: Deliverable
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      serviceAccountName: $(workload.spec.serviceAccountName)$
+      params:
+        - name: "gitops_ssh_secret"
+          value: $(params.gitops_ssh_secret)$
+
+      source:
+        git:
+          url: $(params.gitops_url)$
+          ref:
+            branch: $(params.gitops_branch)$
+
+  params:
+    - name: gitops_ssh_secret
+      default: some-secret

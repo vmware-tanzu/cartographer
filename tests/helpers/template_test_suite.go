@@ -3,14 +3,17 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
-	"reflect"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-	"testing"
+
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 type templateType interface {
@@ -21,10 +24,13 @@ type templateType interface {
 type TemplateTestSuite struct {
 	TemplateFile       string
 	ExpectedObjectFile string
-	Params             map[string]interface{}
 	WorkloadFile       string
 	Workload           *v1alpha1.Workload
+	BlueprintParams    []v1alpha1.BlueprintParam
 	Labels             map[string]string
+	IgnoreMetadata     bool
+	IgnoreOwnerRefs    bool
+	IgnoreLabels       bool
 }
 
 func (ts *TemplateTestSuite) Run(t *testing.T) {
@@ -53,7 +59,9 @@ func (ts *TemplateTestSuite) Run(t *testing.T) {
 
 	completeLabels(ts.Labels, *workload, template)
 
-	templatingContext := createTemplatingContext(*workload, ts.Params)
+	params := templates.ParamsBuilder(template.GetDefaultParams(), ts.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
+
+	templatingContext := createTemplatingContext(*workload, params)
 
 	stampContext := templates.StamperBuilder(workload, templatingContext, ts.Labels)
 	ctx := context.TODO()
@@ -69,13 +77,33 @@ func (ts *TemplateTestSuite) Run(t *testing.T) {
 
 	expectedStampedObject := getExpectedObject(t, err, expectedStampedObjectYaml)
 
-	if !reflect.DeepEqual(expectedStampedObject.Object, actualStampedObject.Object) {
-		yamlActual, err := yaml.Marshal(actualStampedObject)
-		if err != nil {
-			t.Fatalf("marshall: %v", actualStampedObject)
-		}
+	stripIgnoredFields(ts, expectedStampedObject, actualStampedObject)
 
-		t.Fatalf("expected does not equal actual:\nexpected:\n%v\nactual:\n%v", string(expectedStampedObjectYaml), string(yamlActual))
+	if diff := cmp.Diff(expectedStampedObject.Object, actualStampedObject.Object); diff != "" {
+		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
+	}
+}
+
+func stripIgnoredFields(ts *TemplateTestSuite, expected unstructured.Unstructured, actual *unstructured.Unstructured) {
+	if ts.IgnoreMetadata {
+		expected.Object["metadata"] = nil
+		actual.Object["metadata"] = nil
+	}
+
+	if ts.IgnoreOwnerRefs {
+		if expected.Object["metadata"] != nil {
+			metadata := expected.Object["metadata"].(map[string]interface{})
+			metadata["ownerReferences"] = nil
+		}
+		if actual.Object["metadata"] != nil {
+			metadata := actual.Object["metadata"].(map[string]interface{})
+			metadata["ownerReferences"] = nil
+		}
+	}
+
+	if ts.IgnoreLabels {
+		expected.SetLabels(nil)
+		actual.SetLabels(nil)
 	}
 }
 
@@ -92,8 +120,8 @@ func (ts *TemplateTestSuite) verifySuite() error {
 		ts.Labels = map[string]string{}
 	}
 
-	if ts.Params == nil {
-		ts.Params = map[string]interface{}{}
+	if ts.BlueprintParams == nil {
+		ts.BlueprintParams = []v1alpha1.BlueprintParam{}
 	}
 
 	return nil
@@ -139,7 +167,7 @@ func completeLabels(labels map[string]string, workload v1alpha1.Workload, templa
 	labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
-func createTemplatingContext(workload v1alpha1.Workload, params map[string]interface{}) map[string]interface{} {
+func createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
 	sources := map[string]templates.SourceInput{}
 	images := map[string]templates.ImageInput{}
 	configs := map[string]templates.ConfigInput{}
@@ -195,11 +223,11 @@ func getPopulatedTemplate(templateFile string) (templateType, error) {
 	case "ClusterSourceTemplate":
 		apiTemplate = &v1alpha1.ClusterSourceTemplate{}
 	case "ClusterImageTemplate":
-		return &v1alpha1.ClusterImageTemplate{}, nil
+		apiTemplate = &v1alpha1.ClusterImageTemplate{}
 	case "ClusterConfigTemplate":
-		return &v1alpha1.ClusterConfigTemplate{}, nil
+		apiTemplate = &v1alpha1.ClusterConfigTemplate{}
 	case "ClusterTemplate":
-		return &v1alpha1.ClusterTemplate{}, nil
+		apiTemplate = &v1alpha1.ClusterTemplate{}
 	default:
 		return nil, fmt.Errorf("template kind not found")
 	}
@@ -209,4 +237,27 @@ func getPopulatedTemplate(templateFile string) (templateType, error) {
 	}
 
 	return apiTemplate, nil
+}
+
+func BuildBlueprintStringParam(name string, value string, defaultValue string) (*v1alpha1.BlueprintParam, error) {
+	if (value == "" && defaultValue == "") ||
+		value != "" && defaultValue != "" {
+		return nil, fmt.Errorf("exactly one of value or defaultValue must be set")
+	}
+
+	if name == "" {
+		return nil, fmt.Errorf("name must be set")
+	}
+
+	param := v1alpha1.BlueprintParam{
+		Name: name,
+	}
+
+	if value != "" {
+		param.Value = &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf("%#v", value))}
+	} else {
+		param.DefaultValue = &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf("%#v", defaultValue))}
+	}
+
+	return &param, nil
 }
