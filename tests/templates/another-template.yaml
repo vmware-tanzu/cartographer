@@ -5,18 +5,18 @@
 apiVersion: carto.run/v1alpha1
 kind: ClusterTemplate
 metadata:
-  name: deliverable-template
-  labels:
-    app.tanzu.vmware.com/deliverable-type: web
+  name: create-deliverable
 spec:
   params:
     - name: registry
       default: {}
+    - name: gitops_ssh_secret
+      default: some-secret
 
   ytt: |
     #@ load("@ytt:data", "data")
     #@ load("@ytt:assert", "assert")
-    
+
     #@ def param(key):
     #@   if not key in data.values.params:
     #@     return None

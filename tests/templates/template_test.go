@@ -86,9 +86,15 @@ func TestAnother(t *testing.T) {
 		ExpectedObjectFile: "another-expect.yaml",
 		BlueprintParams:    []v1alpha1.BlueprintParam{*param1, *param2}, // TODO: simplify so users don't have to know about this internal struct
 		WorkloadFile:       "another-workload.yaml",
-		IgnoreMetadata:     false,
-		IgnoreOwnerRefs:    true,
-		IgnoreLabels:       true,
+	}
+
+	ts.Run(t)
+
+	ts = helpers.TemplateTestSuite{
+		TemplateFile:       "another-template.yaml",
+		ExpectedObjectFile: "another-expect.yaml",
+		BlueprintParams:    []v1alpha1.BlueprintParam{*param1, *param2}, // TODO: simplify so users don't have to know about this internal struct
+		WorkloadFile:       "another-workload.yaml",
 	}
 
 	ts.Run(t)

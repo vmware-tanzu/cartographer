@@ -3,11 +3,11 @@ kind: Deliverable
 metadata:
   name: my-workload-name
   namespace: my-namespace
-#  labels:
-#    carto.run/cluster-template-name: create-deliverable
-#    carto.run/template-kind: ClusterTemplate
-#    carto.run/workload-name: my-workload-name
-#    carto.run/workload-namespace: my-namespace
+  labels:
+    carto.run/cluster-template-name: create-deliverable
+    carto.run/template-kind: ClusterTemplate
+    carto.run/workload-name: my-workload-name
+    carto.run/workload-namespace: my-namespace
   ownerReferences:
     - apiVersion: carto.run/v1alpha1
       blockOwnerDeletion: true
