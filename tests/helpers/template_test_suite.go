@@ -22,15 +22,17 @@ type templateType interface {
 }
 
 type TemplateTestSuite struct {
-	TemplateFile       string
-	ExpectedObjectFile string
-	WorkloadFile       string
-	Workload           *v1alpha1.Workload
-	BlueprintParams    []v1alpha1.BlueprintParam
-	Labels             map[string]string
-	IgnoreMetadata     bool
-	IgnoreOwnerRefs    bool
-	IgnoreLabels       bool
+	TemplateFile         string
+	Template             templateType
+	ExpectedObjectFile   string
+	WorkloadFile         string
+	Workload             *v1alpha1.Workload
+	BlueprintParams      []v1alpha1.BlueprintParam
+	Labels               map[string]string
+	IgnoreMetadata       bool
+	IgnoreOwnerRefs      bool
+	IgnoreLabels         bool
+	IgnoreMetadataFields []string
 }
 
 func (ts *TemplateTestSuite) Run(t *testing.T) {
@@ -43,7 +45,7 @@ func (ts *TemplateTestSuite) Run(t *testing.T) {
 		t.Fatalf("get workload failed: %v", err)
 	}
 
-	apiTemplate, err := getPopulatedTemplate(ts.TemplateFile)
+	apiTemplate, err := ts.getPopulatedTemplate()
 	if err != nil {
 		t.Fatalf("get populated template failed: %v", err)
 	}
@@ -85,25 +87,36 @@ func (ts *TemplateTestSuite) Run(t *testing.T) {
 }
 
 func stripIgnoredFields(ts *TemplateTestSuite, expected unstructured.Unstructured, actual *unstructured.Unstructured) {
-	if ts.IgnoreMetadata {
-		expected.Object["metadata"] = nil
-		actual.Object["metadata"] = nil
-	}
-
-	if ts.IgnoreOwnerRefs {
-		if expected.Object["metadata"] != nil {
-			metadata := expected.Object["metadata"].(map[string]interface{})
-			metadata["ownerReferences"] = nil
-		}
-		if actual.Object["metadata"] != nil {
-			metadata := actual.Object["metadata"].(map[string]interface{})
-			metadata["ownerReferences"] = nil
-		}
-	}
+	delete(expected.Object, "status")
+	delete(actual.Object, "status")
 
 	if ts.IgnoreLabels {
 		expected.SetLabels(nil)
 		actual.SetLabels(nil)
+	}
+
+	if ts.IgnoreMetadata {
+		delete(expected.Object, "metadata")
+		delete(actual.Object, "metadata")
+	}
+
+	var expectedMetadata, actualMetadata map[string]interface{}
+
+	if expected.Object["metadata"] != nil {
+		expectedMetadata = expected.Object["metadata"].(map[string]interface{})
+	}
+	if actual.Object["metadata"] != nil {
+		actualMetadata = actual.Object["metadata"].(map[string]interface{})
+	}
+
+	if ts.IgnoreOwnerRefs {
+		delete(expectedMetadata, "ownerReferences")
+		delete(actualMetadata, "ownerReferences")
+	}
+
+	for _, field := range ts.IgnoreMetadataFields {
+		delete(expectedMetadata, field)
+		delete(actualMetadata, field)
 	}
 }
 
@@ -199,8 +212,17 @@ func createTemplatingContext(workload v1alpha1.Workload, params templates.Params
 	return templatingContext
 }
 
-func getPopulatedTemplate(templateFile string) (templateType, error) {
-	templateData, err := os.ReadFile(templateFile)
+func (ts *TemplateTestSuite) getPopulatedTemplate() (templateType, error) {
+	if (ts.TemplateFile == "" && ts.Template == nil) ||
+		(ts.TemplateFile != "" && ts.Template != nil) {
+		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
+	}
+
+	if ts.Template != nil {
+		return ts.Template, nil
+	}
+
+	templateData, err := os.ReadFile(ts.TemplateFile)
 
 	if err != nil {
 		return nil, fmt.Errorf("could not read template file: %v", err)

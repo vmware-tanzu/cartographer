@@ -1,6 +1,9 @@
 package templates
 
 import (
+	"encoding/json"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,6 +98,70 @@ func TestAnother(t *testing.T) {
 		ExpectedObjectFile: "another-expect.yaml",
 		BlueprintParams:    []v1alpha1.BlueprintParam{*param1, *param2}, // TODO: simplify so users don't have to know about this internal struct
 		WorkloadFile:       "another-workload.yaml",
+	}
+
+	ts.Run(t)
+
+	deliverableURL := `$(params.gitops_url)$`
+	deliverableBranch := `$(params.gitops_branch)$`
+
+	deliverable := &v1alpha1.Deliverable{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deliverable",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: `$(workload.metadata.name)$`,
+		},
+		Spec: v1alpha1.DeliverableSpec{
+			ServiceAccountName: `$(workload.spec.serviceAccountName)$`,
+			Params: []v1alpha1.OwnerParam{
+				{
+					Name:  "gitops_ssh_secret",
+					Value: apiextensionsv1.JSON{Raw: []byte(`"$(params.gitops_ssh_secret)$"`)},
+				},
+			},
+			Source: &v1alpha1.Source{
+				Git: &v1alpha1.GitSource{
+					URL: &deliverableURL,
+					Ref: &v1alpha1.GitRef{
+						Branch: &deliverableBranch,
+					},
+				},
+			},
+		},
+	}
+
+	dbytes, err := json.Marshal(deliverable)
+	if err != nil {
+		t.Fatalf("marshal deliverable: %v", err)
+	}
+
+	template := v1alpha1.ClusterTemplate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterTemplate",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "create-deliverable",
+		},
+		Spec: v1alpha1.TemplateSpec{
+			Template: &runtime.RawExtension{Raw: dbytes},
+			Params: []v1alpha1.TemplateParam{
+				{
+					Name:         "gitops_ssh_secret",
+					DefaultValue: apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)},
+				},
+			},
+		},
+	}
+
+	ts = helpers.TemplateTestSuite{
+		Template:             &template,
+		ExpectedObjectFile:   "another-expect.yaml",
+		BlueprintParams:      []v1alpha1.BlueprintParam{*param1, *param2},
+		WorkloadFile:         "another-workload.yaml",
+		IgnoreMetadataFields: []string{"creationTimestamp"},
 	}
 
 	ts.Run(t)
