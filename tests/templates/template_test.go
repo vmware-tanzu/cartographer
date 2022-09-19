@@ -165,4 +165,19 @@ func TestAnother(t *testing.T) {
 	}
 
 	ts.Run(t)
+
+	deliverableURL = "https://github.com/waciumawanjohi/computer-science"
+	deliverableBranch = "main"
+	deliverable.Spec.Params[0].Value = apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)}
+	deliverable.Spec.ServiceAccountName = "such-a-good-sa"
+
+	ts = helpers.TemplateTestSuite{
+		Template:        &template,
+		ExpectedObject:  deliverable,
+		BlueprintParams: []v1alpha1.BlueprintParam{*param1, *param2},
+		WorkloadFile:    "another-workload.yaml",
+		IgnoreMetadata:  true,
+	}
+
+	ts.Run(t)
 }

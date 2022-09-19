@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -25,6 +26,7 @@ type TemplateTestSuite struct {
 	TemplateFile         string
 	Template             templateType
 	ExpectedObjectFile   string
+	ExpectedObject       client.Object
 	WorkloadFile         string
 	Workload             *v1alpha1.Workload
 	BlueprintParams      []v1alpha1.BlueprintParam
@@ -72,16 +74,14 @@ func (ts *TemplateTestSuite) Run(t *testing.T) {
 		t.Fatalf("could not stamp: %v", err)
 	}
 
-	expectedStampedObjectYaml, err := os.ReadFile(ts.ExpectedObjectFile)
+	expectedObject, err := ts.getExpectedObject()
 	if err != nil {
-		t.Fatalf("could not read expected yaml: %v", err)
+		t.Fatalf("failed to get expected object: %v", err)
 	}
 
-	expectedStampedObject := getExpectedObject(t, err, expectedStampedObjectYaml)
+	stripIgnoredFields(ts, *expectedObject, actualStampedObject)
 
-	stripIgnoredFields(ts, expectedStampedObject, actualStampedObject)
-
-	if diff := cmp.Diff(expectedStampedObject.Object, actualStampedObject.Object); diff != "" {
+	if diff := cmp.Diff(expectedObject.Object, actualStampedObject.Object); diff != "" {
 		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
 	}
 }
@@ -157,20 +157,6 @@ func (ts *TemplateTestSuite) getWorkload() (*v1alpha1.Workload, error) {
 	}
 
 	return workload, nil
-}
-
-func getExpectedObject(t *testing.T, err error, expectedStampedObjectYaml []byte) unstructured.Unstructured {
-	expectedJson, err := yaml.YAMLToJSON(expectedStampedObjectYaml)
-	if err != nil {
-		t.Fatalf("convert yaml to json: %v", err)
-	}
-
-	expectedStampedObject := unstructured.Unstructured{}
-
-	if err = expectedStampedObject.UnmarshalJSON(expectedJson); err != nil {
-		t.Fatalf("unmarshall json: %v", err)
-	}
-	return expectedStampedObject
 }
 
 func completeLabels(labels map[string]string, workload v1alpha1.Workload, template templates.Template) {
@@ -259,6 +245,44 @@ func (ts *TemplateTestSuite) getPopulatedTemplate() (templateType, error) {
 	}
 
 	return apiTemplate, nil
+}
+
+func (ts *TemplateTestSuite) getExpectedObject() (*unstructured.Unstructured, error) {
+	if (ts.ExpectedObjectFile == "" && ts.ExpectedObject == nil) ||
+		(ts.ExpectedObjectFile != "" && ts.ExpectedObject != nil) {
+		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
+	}
+
+	if ts.ExpectedObjectFile != "" {
+		return ts.getExpectedObjectFromFile()
+	}
+
+	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(ts.ExpectedObject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert template to unstructured: %v", err)
+	}
+
+	return &unstructured.Unstructured{Object: unstruct}, nil
+}
+
+func (ts *TemplateTestSuite) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
+	expectedStampedObjectYaml, err := os.ReadFile(ts.ExpectedObjectFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read expected yaml: %v", err)
+	}
+
+	expectedJson, err := yaml.YAMLToJSON(expectedStampedObjectYaml)
+	if err != nil {
+		return nil, fmt.Errorf("convert yaml to json: %v", err)
+	}
+
+	expectedStampedObject := unstructured.Unstructured{}
+
+	if err = expectedStampedObject.UnmarshalJSON(expectedJson); err != nil {
+		return nil, fmt.Errorf("unmarshall json: %v", err)
+	}
+
+	return &expectedStampedObject, nil
 }
 
 func BuildBlueprintStringParam(name string, value string, defaultValue string) (*v1alpha1.BlueprintParam, error) {
