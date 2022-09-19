@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,6 +63,7 @@ type DeliverableReconciler struct {
 	DependencyTracker       dependency.DependencyTracker
 	conditionManager        conditions.ConditionManager
 	EventRecorder           record.EventRecorder
+	RESTMapper              meta.RESTMapper
 }
 
 func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -87,7 +89,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		return ctrl.Result{}, nil
 	}
-	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, deliverable))
+	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, deliverable, r.RESTMapper, log))
 
 	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
 
@@ -397,6 +399,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
+	r.RESTMapper = mgr.GetRESTMapper()
 
 	r.EventRecorder = mgr.GetEventRecorderFor("Workload")
 	r.Repo = repository.NewRepository(

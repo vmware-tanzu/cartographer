@@ -31,6 +31,8 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
+	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
@@ -41,13 +43,19 @@ var _ = Describe("Realize", func() {
 	var (
 		resourceRealizer               *realizerfakes.FakeResourceRealizer
 		rlzr                           realizer.Realizer
+		rec                            *eventsfakes.FakeOwnerEventRecorder
 		healthyConditionEvaluator      realizer.HealthyConditionEvaluator
 		evaluatedHealthRules           []*v1alpha1.HealthRule
 		evaluatedRealizedResourceNames []string
 		evaluatedStampedObjectNames    []string
+		ctx                            context.Context
 	)
 
 	BeforeEach(func() {
+		ctx = context.TODO()
+		rec = &eventsfakes.FakeOwnerEventRecorder{}
+		ctx = events.NewContext(ctx, rec)
+
 		evaluatedHealthRules = []*v1alpha1.HealthRule{}
 		evaluatedRealizedResourceNames = []string{}
 		evaluatedStampedObjectNames = []string{}
@@ -148,7 +156,7 @@ var _ = Describe("Realize", func() {
 
 		It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
 			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
-			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+			err := rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
 			currentResourceStatuses := resourceStatuses.GetCurrent()
@@ -211,6 +219,42 @@ var _ = Describe("Realize", func() {
 			})))
 		})
 
+		It("records an event for resource output changes", func() {
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			Expect(rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)).To(Succeed())
+
+			Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
+			Expect(evType).To(Equal("Normal"))
+			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
+			Expect(messageFmt).To(Equal("[%s] found a new output in [%Q]"))
+			Expect(resourceObj.GetName()).To(Equal("obj1"))
+			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
+		})
+
+		It("does not record an event if there was no resource output change", func() {
+			previousResources := []v1alpha1.ResourceStatus{
+				{
+					RealizedResource: v1alpha1.RealizedResource{
+						Name: "resource1",
+						Outputs: []v1alpha1.Output{
+							{
+								Name:               "image",
+								Preview:            "whatever\n",
+								Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("whatever\n"))),
+								LastTransitionTime: metav1.Now(),
+							},
+						},
+					},
+				},
+			}
+
+			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
+			Expect(rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)).To(Succeed())
+
+			Expect(rec.Invocations()).To(BeEmpty())
+		})
+
 		It("returns the first error encountered realizing a resource and continues to realize", func() {
 			template, err := templates.NewModelFromAPI(template2)
 			Expect(err).NotTo(HaveOccurred())
@@ -218,7 +262,7 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
 
 			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
-			err = rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+			err = rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 			Expect(err).To(MatchError("realizing is hard"))
 
 			currentResourceStatuses := resourceStatuses.GetCurrent()
@@ -363,14 +407,16 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, &unstructured.Unstructured{}, nil, nil)
 		})
 
-		It("realizes each resource and does not update last transition time since the resource has not changed", func() {
+		It("realizes each resource and does not update last transition time on resources that have not changed", func() {
 			newOutput := &templates.Output{
 				Source: &templates.Source{
 					URL:      "hi",
 					Revision: "bye",
 				},
 			}
-			resourceRealizer.DoReturnsOnCall(0, templateModel1, &unstructured.Unstructured{}, newOutput, nil)
+			stampedObj1 := &unstructured.Unstructured{}
+			stampedObj1.SetName("obj1")
+			resourceRealizer.DoReturnsOnCall(0, templateModel1, stampedObj1, newOutput, nil)
 
 			oldOutput := &templates.Output{
 				Image: "whatever",
@@ -383,7 +429,7 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, obj, oldOutput2, nil)
 
 			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
-			err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+			err := rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 			Expect(err).ToNot(HaveOccurred())
 
 			currentStatuses := resourceStatuses.GetCurrent()
@@ -425,6 +471,14 @@ var _ = Describe("Realize", func() {
 
 			Expect(len(resource3Status.Outputs)).To(Equal(1))
 			Expect(resource3Status.Outputs[0].LastTransitionTime).To(Equal(previousTime))
+
+			Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
+			Expect(evType).To(Equal("Normal"))
+			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
+			Expect(messageFmt).To(Equal("[%s] found a new output in [%Q]"))
+			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
+			Expect(resourceObj).To(Equal(stampedObj1))
 		})
 
 		Context("there is an error realizing resource 1 and resource 2", func() {
@@ -441,7 +495,7 @@ var _ = Describe("Realize", func() {
 			It("the status uses the previous resource for resource 2", func() {
 				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 
-				err := rlzr.Realize(context.TODO(), resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+				err := rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 				Expect(err).To(MatchError("im in a bad state"))
 
 				Expect(evaluatedRealizedResourceNames).To(Equal([]string{"resource3"}))

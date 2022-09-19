@@ -33,9 +33,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
+	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
@@ -43,6 +46,7 @@ import (
 var _ = Describe("Realizer", func() {
 	var (
 		ctx                 context.Context
+		rec                 *eventsfakes.FakeOwnerEventRecorder
 		systemRepo          *repositoryfakes.FakeRepository
 		runnableRepo        *repositoryfakes.FakeRepository
 		rlzr                realizer.Realizer
@@ -53,6 +57,9 @@ var _ = Describe("Realizer", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		rec = &eventsfakes.FakeOwnerEventRecorder{}
+		ctx = events.NewContext(ctx, rec)
+
 		systemRepo = &repositoryfakes.FakeRepository{}
 		runnableRepo = &repositoryfakes.FakeRepository{}
 		discoveryClient = &runnablefakes.FakeDiscoveryInterface{}
@@ -165,6 +172,24 @@ var _ = Describe("Realizer", func() {
 		It("does not return an error", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("emits a ResourceOutputChangedReason event when the output changes", func() {
+			stampedObject, _, _ := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
+			Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
+			Expect(evType).To(Equal("Normal"))
+			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
+			Expect(messageFmt).To(Equal("Runnable [%s] found a new output in [%Q]"))
+			Expect(resourceObj).To(Equal(stampedObject))
+			Expect(fmtArgs).To(Equal([]interface{}{"my-runnable"}))
+		})
+
+		It("does not emit any event when the output has not changed", func() {
+			runnable.Status.Outputs = templates.Outputs{"myout": apiextensionsv1.JSON{Raw: []byte(`"is a string"`)}}
+			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.Invocations()).To(BeEmpty())
 		})
 
 		It("returns the outputs", func() {

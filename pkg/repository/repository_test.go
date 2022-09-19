@@ -27,7 +27,6 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,7 +50,6 @@ var _ = Describe("repository", func() {
 	var (
 		repo  repository.Repository
 		cache *repositoryfakes.FakeRepoCache
-		rm    *repositoryfakes.FakeRESTMapper
 		rec   *eventsfakes.FakeOwnerEventRecorder
 		ctx   context.Context
 		out   *Buffer
@@ -65,14 +63,6 @@ var _ = Describe("repository", func() {
 		rec = &eventsfakes.FakeOwnerEventRecorder{}
 		ctx = events.NewContext(ctx, rec)
 
-		rm = &repositoryfakes.FakeRESTMapper{}
-		rm.RESTMappingReturns(&meta.RESTMapping{
-			Resource: schema.GroupVersionResource{
-				Group:    "example.com",
-				Resource: "thing",
-			},
-		}, nil)
-
 		cache = &repositoryfakes.FakeRepoCache{}
 	})
 
@@ -81,7 +71,6 @@ var _ = Describe("repository", func() {
 
 		BeforeEach(func() {
 			cl = &repositoryfakes.FakeClient{}
-			cl.RESTMapperReturns(rm)
 			repo = repository.NewRepository(cl, cache)
 		})
 
@@ -214,24 +203,13 @@ spec:
 
 					It("records an StampedObjectApplied event", func() {
 						_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
-						Expect(rec.EventfCallCount()).To(Equal(1))
-						eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+						Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+						eventType, reason, message, messageObject, fmtArgs := rec.ResourceEventfArgsForCall(0)
 						Expect(eventType).To(Equal("Normal"))
 						Expect(reason).To(Equal("StampedObjectApplied"))
-						Expect(message).To(Equal("Created object [%s]"))
-						Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
-					})
-
-					Context("rest mapper fails to resolve the object's GVK", func() {
-						BeforeEach(func() {
-							rm.RESTMappingReturns(nil, errors.New("mapping is hard"))
-						})
-
-						It("does not record any events and logs the error without returning it", func() {
-							Expect(repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)).To(Succeed())
-							Expect(rec.Invocations()).To(BeEmpty())
-							Expect(out).To(Say(`cannot find rest mapping for created stamped object.*"apiVersion":"batch/v1".*"kind":"Job".*"name":"hello"`))
-						})
+						Expect(message).To(Equal("Created object [%Q]"))
+						Expect(messageObject).To(Equal(stampedObj))
+						Expect(fmtArgs).To(BeEmpty())
 					})
 				})
 			})
@@ -340,12 +318,13 @@ spec:
 
 								It("records an StampedObjectApplied event", func() {
 									_ = repo.EnsureMutableObjectExistsOnCluster(ctx, stampedObj)
-									Expect(rec.EventfCallCount()).To(Equal(1))
-									eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+									Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+									eventType, reason, message, resourceObject, fmtArgs := rec.ResourceEventfArgsForCall(0)
 									Expect(eventType).To(Equal("Normal"))
 									Expect(reason).To(Equal("StampedObjectApplied"))
-									Expect(message).To(Equal("Patched object [%s]"))
-									Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
+									Expect(message).To(Equal("Patched object [%Q]"))
+									Expect(resourceObject).To(Equal(stampedObj))
+									Expect(fmtArgs).To(BeEmpty())
 								})
 							})
 
@@ -512,12 +491,13 @@ spec:
 
 						It("records a StampedObjectApplied event", func() {
 							_ = repo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObj, labels)
-							Expect(rec.EventfCallCount()).To(Equal(1))
-							eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+							Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+							eventType, reason, message, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
 							Expect(eventType).To(Equal("Normal"))
 							Expect(reason).To(Equal("StampedObjectApplied"))
-							Expect(message).To(Equal("Created object [%s]"))
-							Expect(fmtArgs).To(Equal([]interface{}{"thing.example.com/hello"}))
+							Expect(message).To(Equal("Created object [%Q]"))
+							Expect(resourceObj).To(Equal(stampedObj))
+							Expect(fmtArgs).To(BeEmpty())
 						})
 					})
 
@@ -847,7 +827,7 @@ spec:
 		})
 
 		JustBeforeEach(func() {
-			fakeClientBuilder = fake.NewClientBuilder().WithRESTMapper(rm).WithScheme(scheme).WithObjects(clientObjects...)
+			fakeClientBuilder = fake.NewClientBuilder().WithScheme(scheme).WithObjects(clientObjects...)
 			cl = fakeClientBuilder.Build()
 
 			repo = repository.NewRepository(cl, cache)
@@ -1205,13 +1185,6 @@ spec:
 					_, _, err := dec.Decode([]byte(stampedObjManifest), nil, testObj)
 					Expect(err).NotTo(HaveOccurred())
 
-					rm.RESTMappingReturns(&meta.RESTMapping{
-						Resource: schema.GroupVersionResource{
-							Group:    "test.run",
-							Resource: "testobj",
-						},
-					}, nil)
-
 					clientObjects = []client.Object{testObj}
 				})
 
@@ -1231,24 +1204,13 @@ spec:
 					err := repo.Delete(ctx, testObj)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(rec.EventfCallCount()).To(Equal(1))
-					eventType, reason, message, fmtArgs := rec.EventfArgsForCall(0)
+					Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+					eventType, reason, message, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
 					Expect(eventType).To(Equal("Normal"))
 					Expect(reason).To(Equal("StampedObjectRemoved"))
-					Expect(message).To(Equal("Deleted object [%s]"))
-					Expect(fmtArgs).To(Equal([]interface{}{"testobj.test.run/hello"}))
-				})
-
-				Context("rest mapper fails to resolve the object's GVK", func() {
-					BeforeEach(func() {
-						rm.RESTMappingReturns(nil, errors.New("mapping is hard"))
-					})
-
-					It("does not record any events and logs the error without returning it", func() {
-						Expect(repo.Delete(ctx, testObj)).To(Succeed())
-						Expect(rec.Invocations()).To(BeEmpty())
-						Expect(out).To(Say(`cannot find rest mapping for deleted stamped object.*"apiVersion":"test.run/v1alpha1".*"kind":"TestObj".*"name":"hello"`))
-					})
+					Expect(message).To(Equal("Deleted object [%Q]"))
+					Expect(resourceObj).To(Equal(testObj))
+					Expect(fmtArgs).To(BeEmpty())
 				})
 			})
 		})

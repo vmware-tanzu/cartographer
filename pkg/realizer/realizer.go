@@ -18,6 +18,7 @@ package realizer
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
@@ -134,6 +136,14 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
 			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
+			var previousOutputs []v1alpha1.Output
+			if previousRealizedResource != nil {
+				previousOutputs = previousRealizedResource.Outputs
+			}
+			if !reflect.DeepEqual(previousOutputs, realizedResource.Outputs) {
+				rec := events.FromContextOrDie(ctx)
+				rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", stampedObject, realizedResource.Name)
+			}
 			if template != nil {
 				additionalConditions = []metav1.Condition{r.healthyConditionEvaluator(template.GetHealthRule(), realizedResource, stampedObject)}
 			}
