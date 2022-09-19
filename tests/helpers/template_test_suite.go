@@ -61,7 +61,7 @@ func (ts *TemplateTestSuite) Run(t *testing.T) {
 		t.Fatalf("failed to get cluster template")
 	}
 
-	completeLabels(ts.Labels, *workload, template)
+	ts.completeLabels(*workload, template)
 
 	params := templates.ParamsBuilder(template.GetDefaultParams(), ts.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
 
@@ -159,43 +159,11 @@ func (ts *TemplateTestSuite) getWorkload() (*v1alpha1.Workload, error) {
 	return workload, nil
 }
 
-func completeLabels(labels map[string]string, workload v1alpha1.Workload, template templates.Template) {
-	labels["carto.run/workload-name"] = workload.GetName()
-	labels["carto.run/workload-namespace"] = workload.GetNamespace()
-	labels["carto.run/template-kind"] = template.GetKind()
-	labels["carto.run/cluster-template-name"] = template.GetName()
-}
-
-func createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
-	sources := map[string]templates.SourceInput{}
-	images := map[string]templates.ImageInput{}
-	configs := map[string]templates.ConfigInput{}
-
-	inputs := templates.Inputs{
-		Sources: sources,
-		Images:  images,
-		Configs: configs,
-	}
-
-	templatingContext := map[string]interface{}{
-		"workload": workload,
-		"params":   params,
-		"sources":  sources,
-		"images":   images,
-		"configs":  configs,
-		//"deployment": // not implemented yet,
-	}
-
-	if inputs.OnlyConfig() != nil {
-		templatingContext["config"] = inputs.OnlyConfig()
-	}
-	if inputs.OnlyImage() != nil {
-		templatingContext["image"] = inputs.OnlyImage()
-	}
-	if inputs.OnlySource() != nil {
-		templatingContext["source"] = inputs.OnlySource()
-	}
-	return templatingContext
+func (ts *TemplateTestSuite) completeLabels(workload v1alpha1.Workload, template templates.Template) {
+	ts.Labels["carto.run/workload-name"] = workload.GetName()
+	ts.Labels["carto.run/workload-namespace"] = workload.GetNamespace()
+	ts.Labels["carto.run/template-kind"] = template.GetKind()
+	ts.Labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
 func (ts *TemplateTestSuite) getPopulatedTemplate() (templateType, error) {
@@ -283,6 +251,38 @@ func (ts *TemplateTestSuite) getExpectedObjectFromFile() (*unstructured.Unstruct
 	}
 
 	return &expectedStampedObject, nil
+}
+
+func createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
+	sources := map[string]templates.SourceInput{}
+	images := map[string]templates.ImageInput{}
+	configs := map[string]templates.ConfigInput{}
+
+	inputs := templates.Inputs{
+		Sources: sources,
+		Images:  images,
+		Configs: configs,
+	}
+
+	templatingContext := map[string]interface{}{
+		"workload": workload,
+		"params":   params,
+		"sources":  sources,
+		"images":   images,
+		"configs":  configs,
+		//"deployment": // not implemented yet,
+	}
+
+	if inputs.OnlyConfig() != nil {
+		templatingContext["config"] = inputs.OnlyConfig()
+	}
+	if inputs.OnlyImage() != nil {
+		templatingContext["image"] = inputs.OnlyImage()
+	}
+	if inputs.OnlySource() != nil {
+		templatingContext["source"] = inputs.OnlySource()
+	}
+	return templatingContext
 }
 
 func BuildBlueprintStringParam(name string, value string, defaultValue string) (*v1alpha1.BlueprintParam, error) {
