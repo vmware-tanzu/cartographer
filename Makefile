@@ -165,6 +165,21 @@ endif
 .PHONY: pre-push .pre-push-check
 .pre-push-check: copyright lint gen-manifests gen-objects test-gen-manifests test-gen-objects generate
 
+
+.PHONY: mac-compat
+mac-compat:
+ifeq ($(UNAME), Darwin)
+	docker build hack/compat/ -t compat:latest
+endif
+
+.PHONY: inclusive
+inclusive: mac-compat
+ifeq ($(UNAME), Darwin)
+	docker run -it -v $$(pwd):/app -w /app -it compat:latest /app/hack/inclusive.sh
+else
+	./hack/inclusive.sh
+endif
+
 # pre-push ensures that all generated content, copywrites and lints are
 # run and ends with an error if a mutation is caused.
 #
