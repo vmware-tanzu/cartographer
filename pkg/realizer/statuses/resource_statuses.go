@@ -24,6 +24,7 @@ import (
 )
 
 type ResourceStatuses interface {
+	ChangedConditionTypes(realizedResourceName string) []string
 	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
 	Add(status *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition)
 	GetCurrent() []v1alpha1.ResourceStatus
@@ -123,6 +124,33 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 		RealizedResource: *realizedResource,
 		Conditions:       r.createConditions(name, err, furtherConditions...),
 	}
+}
+
+func (r *resourceStatuses) ChangedConditionTypes(realizedResourceName string) []string {
+	var changed []string
+	for _, status := range r.statuses {
+		if status.name == realizedResourceName {
+			if status.current != nil {
+				for _, condition := range status.current.Conditions {
+					if conditionChanged(status.previous, condition) {
+						changed = append(changed, condition.Type)
+					}
+				}
+			}
+		}
+	}
+	return changed
+}
+
+func conditionChanged(previousResourceStatus *v1alpha1.ResourceStatus, newCondition metav1.Condition) bool {
+	if previousResourceStatus != nil {
+		for _, previousCondition := range previousResourceStatus.Conditions {
+			if previousCondition.Type == newCondition.Type {
+				return previousCondition.Status != newCondition.Status
+			}
+		}
+	}
+	return newCondition.Status != "Unknown"
 }
 
 func (r *resourceStatuses) createConditions(name string, err error, furtherConditions ...metav1.Condition) []metav1.Condition {

@@ -50,6 +50,13 @@ var _ = Describe("ResourceStatuses", func() {
 							Message:            "",
 						},
 						{
+							Type:               v1alpha1.ResourcesHealthy,
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 0,
+							Reason:             v1alpha1.AlwaysHealthyResourcesHealthyReason,
+							Message:            "",
+						},
+						{
 							Type:               v1alpha1.ResourceReady,
 							Status:             metav1.ConditionTrue,
 							ObservedGeneration: 0,
@@ -63,7 +70,7 @@ var _ = Describe("ResourceStatuses", func() {
 		})
 
 		Context("#add is called with an unchanged resource", func() {
-			It("the resourceStatuses reports IsChanged is false", func() {
+			BeforeEach(func() {
 				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name:        "resource1",
 					StampedRef:  nil,
@@ -71,7 +78,14 @@ var _ = Describe("ResourceStatuses", func() {
 					Inputs:      nil,
 					Outputs:     nil,
 				}, nil)
+			})
+
+			It("the resourceStatuses reports IsChanged is false", func() {
 				Expect(resourceStatuses.IsChanged()).To(BeFalse())
+			})
+
+			It("ChangedConditionTypes is empty", func() {
+				Expect(resourceStatuses.ChangedConditionTypes("resource1")).To(BeEmpty())
 			})
 		})
 
@@ -85,6 +99,59 @@ var _ = Describe("ResourceStatuses", func() {
 					Outputs:     nil,
 				}, nil)
 				Expect(resourceStatuses.IsChanged()).To(BeTrue())
+			})
+
+			It("ChangedConditionTypes only contains ResourceSubmitted if the healthy status is not present", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
+					Name:        "resource2",
+					StampedRef:  nil,
+					TemplateRef: nil,
+					Inputs:      nil,
+					Outputs:     nil,
+				}, nil)
+				Expect(resourceStatuses.ChangedConditionTypes("resource2")).To(ConsistOf(v1alpha1.ResourceSubmitted, v1alpha1.ResourceReady))
+			})
+
+			It("ChangedConditionTypes is empty if the healthy status is Unknown", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
+					Name:        "resource2",
+					StampedRef:  nil,
+					TemplateRef: nil,
+					Inputs:      nil,
+					Outputs:     nil,
+				}, nil, metav1.Condition{
+					Type:   v1alpha1.ResourceHealthy,
+					Status: "Unknown",
+				})
+				Expect(resourceStatuses.ChangedConditionTypes("resource2")).To(ConsistOf(v1alpha1.ResourceSubmitted))
+			})
+
+			It("ChangedConditionTypes is ResourceSubmitted, Healthy and Ready if the healthy status is False", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
+					Name:        "resource2",
+					StampedRef:  nil,
+					TemplateRef: nil,
+					Inputs:      nil,
+					Outputs:     nil,
+				}, nil, metav1.Condition{
+					Type:   v1alpha1.ResourceHealthy,
+					Status: "False",
+				})
+				Expect(resourceStatuses.ChangedConditionTypes("resource2")).To(ConsistOf(v1alpha1.ResourceSubmitted, v1alpha1.ResourceHealthy, "Ready"))
+			})
+
+			It("ChangedConditionTypes is ResourceSubmitted, Healthy and Ready if the healthy status is True", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
+					Name:        "resource2",
+					StampedRef:  nil,
+					TemplateRef: nil,
+					Inputs:      nil,
+					Outputs:     nil,
+				}, nil, metav1.Condition{
+					Type:   v1alpha1.ResourceHealthy,
+					Status: "True",
+				})
+				Expect(resourceStatuses.ChangedConditionTypes("resource2")).To(ConsistOf(v1alpha1.ResourceSubmitted, v1alpha1.ResourceHealthy, "Ready"))
 			})
 		})
 
@@ -113,6 +180,17 @@ var _ = Describe("ResourceStatuses", func() {
 					Outputs:     nil,
 				}, errors.New("has an error"))
 				Expect(resourceStatuses.IsChanged()).To(BeTrue())
+			})
+
+			It("ChangedConditionTypes reports the changed condition types", func() {
+				resourceStatuses.Add(&v1alpha1.RealizedResource{
+					Name:        "resource1",
+					StampedRef:  nil,
+					TemplateRef: nil,
+					Inputs:      nil,
+					Outputs:     nil,
+				}, errors.New("has an error"))
+				Expect(resourceStatuses.ChangedConditionTypes("resource1")).To(ConsistOf("Ready", "ResourceSubmitted"))
 			})
 		})
 
