@@ -147,7 +147,7 @@ spec:
     name: go-builder
   source:
     git:
-      url: https://github.com/carto-labs/hello-world
+      url: https://github.com/carto-run/hello-world
       revision: main
 ```
 
@@ -171,7 +171,7 @@ metadata:
 spec:
   source:
     git:
-      url: https://github.com/carto-labs/hello-world
+      url: https://github.com/carto-run/hello-world
       revision: $(commit_that_passed_tests)$
   ...
 ```

@@ -111,7 +111,7 @@ setup_source_repo() {
   pushd "$source_dir"
     git clone "http://localhost:$port/$SOURCE_REPO.git"
     pushd "$SOURCE_REPO"
-      git pull https://github.com/carto-labs/hello-world.git
+      git pull https://github.com/carto-run/hello-world.git
       if [[ $(git branch --show-current) != "$SOURCE_BRANCH" ]]; then
         git checkout -b $SOURCE_BRANCH
       fi
