@@ -23,5 +23,5 @@ spec:
     name: tekton-taskrun
 
   inputs:
-    blob-url: https://github.com/carto-labs/hello-world
+    blob-url: https://github.com/carto-run/hello-world
     blob-revision: 19769456b6b229b3e78f2b90eced15a353eb4e7c

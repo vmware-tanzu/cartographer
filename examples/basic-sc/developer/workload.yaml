@@ -24,7 +24,7 @@ spec:
   serviceAccountName: #@ data.values.service_account_name
   source:
     git:
-      url: https://github.com/carto-labs/hello-world
+      url: https://github.com/carto-run/hello-world
       ref:
         branch: main
   build:
