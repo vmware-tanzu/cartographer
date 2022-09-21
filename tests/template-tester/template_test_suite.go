@@ -25,7 +25,9 @@ type templateType interface {
 type TemplateTestSuite map[string]*TemplateTestCase
 
 func (s *TemplateTestSuite) Run(t *testing.T) {
-	for name, testCase := range *s {
+	testsToRun := s.getTestsToRun()
+
+	for name, testCase := range testsToRun {
 		tc := testCase
 		t.Run(name, func(t *testing.T) {
 			tc.Run(t)
@@ -33,8 +35,26 @@ func (s *TemplateTestSuite) Run(t *testing.T) {
 	}
 }
 
-func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
+func (s *TemplateTestSuite) getTestsToRun() TemplateTestSuite {
+	testsToRun := *s
+	focusedCases := make(map[string]*TemplateTestCase, len(*s))
+
 	for name, testCase := range *s {
+		if testCase.Focus {
+			focusedCases[name] = testCase
+		}
+	}
+
+	if len(focusedCases) > 0 {
+		testsToRun = focusedCases
+	}
+	return testsToRun
+}
+
+func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
+	testsToRun := s.getTestsToRun()
+
+	for name, testCase := range testsToRun {
 		tc := testCase
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -50,6 +70,7 @@ type TemplateTestCase struct {
 	IgnoreOwnerRefs      bool
 	IgnoreLabels         bool
 	IgnoreMetadataFields []string
+	Focus                bool
 }
 
 type TemplateTestInputs struct {
