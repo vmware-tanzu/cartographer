@@ -79,7 +79,7 @@ func (c *TemplateTestCase) Run(t *testing.T) {
 		t.Fatalf("failed to get actual object: %v", err)
 	}
 
-	c.stripIgnoredFields(*expectedObject, actualObject)
+	c.stripIgnoredFields(expectedObject, actualObject)
 
 	if diff := cmp.Diff(expectedObject.Object, actualObject.Object); diff != "" {
 		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
@@ -122,7 +122,7 @@ func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, erro
 	return actualStampedObject, nil
 }
 
-func (c *TemplateTestCase) stripIgnoredFields(expected unstructured.Unstructured, actual *unstructured.Unstructured) {
+func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
 	delete(expected.Object, "status")
 	delete(actual.Object, "status")
 
