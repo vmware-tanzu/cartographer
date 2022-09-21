@@ -7,4 +7,4 @@ spec:
   serviceAccountName: such-a-good-sa
   params:
     - name: gitops_url
-      value: "https://github.com/waciumawanjohi/computer-science"
+      value: "https://github.com/vmware-tanzu/cartographer/"

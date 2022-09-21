@@ -23,6 +23,6 @@ spec:
 
   source:
     git:
-      url: "https://github.com/waciumawanjohi/computer-science"
+      url: "https://github.com/vmware-tanzu/cartographer/"
       ref:
         branch: main

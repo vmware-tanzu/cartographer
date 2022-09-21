@@ -17,7 +17,7 @@ func TestTemplateExample(t *testing.T) {
 	params, err := template_tester.BuildBlueprintStringParams(template_tester.StringParams{
 		{
 			Name:         "gitops_url",
-			DefaultValue: "https://github.com/waciumawanjohi/computer-science",
+			DefaultValue: "https://github.com/vmware-tanzu/cartographer/",
 		},
 		{
 			Name:         "gitops_branch",
@@ -189,7 +189,7 @@ func createDeliverable() *v1alpha1.Deliverable {
 func createExpectedDeliverable(deliverable *v1alpha1.Deliverable) *v1alpha1.Deliverable {
 	newDeliverable := *deliverable
 
-	url := "https://github.com/waciumawanjohi/computer-science"
+	url := "https://github.com/vmware-tanzu/cartographer/"
 	branch := "main"
 
 	deliverable.Spec.Source.Git.URL = &url
@@ -219,7 +219,7 @@ func createWorkload() *v1alpha1.Workload {
 			Params: []v1alpha1.OwnerParam{
 				{
 					Name:  "gitops_url",
-					Value: apiextensionsv1.JSON{Raw: []byte(`"https://github.com/waciumawanjohi/computer-science"`)},
+					Value: apiextensionsv1.JSON{Raw: []byte(`"https://github.com/vmware-tanzu/cartographer/"`)},
 				},
 			},
 			Source: &v1alpha1.Source{

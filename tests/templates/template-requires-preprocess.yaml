@@ -27,6 +27,6 @@ spec:
     - name: gitops_ssh_secret
       default: some-secret
     - name: gitops_url
-      default: https://github.com/waciumawanjohi/computer-science
+      default: https://github.com/vmware-tanzu/cartographer/
     - name: gitops_branch
       default: main
