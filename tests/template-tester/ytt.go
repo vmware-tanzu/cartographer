@@ -1,4 +1,4 @@
-package helpers
+package template_tester
 
 import (
 	"context"

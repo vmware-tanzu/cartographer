@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/tests/helpers"
+	"github.com/vmware-tanzu/cartographer/tests/template-tester"
 )
 
 func TestSupplyChainSourceTemplate(t *testing.T) {
-	params, err := helpers.BuildBlueprintStringParams(helpers.StringParams{
+	params, err := template_tester.BuildBlueprintStringParams(template_tester.StringParams{
 		{
 			Name:  "serviceAccount",
 			Value: "my-sc",
@@ -44,25 +44,25 @@ func TestSupplyChainSourceTemplate(t *testing.T) {
 		Spec: v1alpha1.WorkloadSpec{Source: &v1alpha1.Source{Git: &v1alpha1.GitSource{URL: &url, Ref: &v1alpha1.GitRef{Branch: &branch}}}},
 	}
 
-	testSuite := helpers.TemplateTestSuite{
+	testSuite := template_tester.TemplateTestSuite{
 		"workload as an object": {
-			Inputs: helpers.TemplateTestInputs{
+			Inputs: template_tester.TemplateTestInputs{
 				TemplateFile:    "source.yaml",
 				BlueprintParams: params,
 				Workload:        &workload,
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObjectFile: "expected.yaml",
 			},
 		},
 
 		"workload as a file": {
-			Inputs: helpers.TemplateTestInputs{
+			Inputs: template_tester.TemplateTestInputs{
 				TemplateFile:    "source.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObjectFile: "expected.yaml",
 			},
 		},
@@ -71,8 +71,8 @@ func TestSupplyChainSourceTemplate(t *testing.T) {
 	testSuite.Run(t)
 }
 
-func TestAnother(t *testing.T) {
-	params, err := helpers.BuildBlueprintStringParams(helpers.StringParams{
+func TestTemplateExample(t *testing.T) {
+	params, err := template_tester.BuildBlueprintStringParams(template_tester.StringParams{
 		{
 			Name:         "gitops_url",
 			DefaultValue: "https://github.com/waciumawanjohi/computer-science",
@@ -86,6 +86,8 @@ func TestAnother(t *testing.T) {
 		t.Fatalf("failed to build param: %v", err)
 	}
 
+	workload := createWorkload()
+
 	deliverable := createDeliverable()
 
 	templateOfDeliverable, err := createTemplate(deliverable)
@@ -95,74 +97,85 @@ func TestAnother(t *testing.T) {
 
 	expectedDeliverable := createExpectedDeliverable(deliverable)
 
-	testSuite := helpers.TemplateTestSuite{
-		"Test params in regular template": {
-			Inputs: helpers.TemplateTestInputs{
+	testSuite := template_tester.TemplateTestSuite{
+		"template, workload and expected defined in files": {
+			Inputs: template_tester.TemplateTestInputs{
 				TemplateFile:    "another-template-1.yaml",
-				BlueprintParams: params,
 				WorkloadFile:    "another-workload.yaml",
+				BlueprintParams: params,
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObjectFile: "another-expect.yaml",
 			},
 		},
 
-		"test params in ytt template": {
-			Inputs: helpers.TemplateTestInputs{
-				TemplateFile:    "another-template.yaml",
-				BlueprintParams: params,
-				WorkloadFile:    "another-workload.yaml",
-			},
-			Expectations: helpers.TemplateTestExpectations{
-				ExpectedObjectFile: "another-expect.yaml",
-			},
-		},
-
-		"template as an object": {
-			Inputs: helpers.TemplateTestInputs{
+		"template defined as an object": {
+			Inputs: template_tester.TemplateTestInputs{
 				Template:        templateOfDeliverable,
 				BlueprintParams: params,
 				WorkloadFile:    "another-workload.yaml",
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObjectFile: "another-expect.yaml",
 			},
 			IgnoreMetadataFields: []string{"creationTimestamp"},
 		},
 
-		"expected as object": {
-			Inputs: helpers.TemplateTestInputs{
+		"expected defined as an object": {
+			Inputs: template_tester.TemplateTestInputs{
 				Template:        templateOfDeliverable,
 				BlueprintParams: params,
 				WorkloadFile:    "another-workload.yaml",
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObject: expectedDeliverable,
 			},
 			IgnoreMetadata: true,
 		},
 
-		"template modified by ytt": {
-			Inputs: helpers.TemplateTestInputs{
-				TemplateFile:    "another-template-preytt.yaml",
+		"workload defined as an object": {
+			Inputs: template_tester.TemplateTestInputs{
+				TemplateFile:    "another-template-1.yaml",
+				Workload:        workload,
 				BlueprintParams: params,
-				WorkloadFile:    "another-workload.yaml",
-				YttValues: helpers.Values{
-					"kind": "Deliverable",
-				},
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObjectFile: "another-expect.yaml",
 			},
 		},
 
-		"template modified by ytt object": {
-			Inputs: helpers.TemplateTestInputs{
+		"clustertemplate uses ytt field": {
+			Inputs: template_tester.TemplateTestInputs{
+				TemplateFile:    "another-template.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+			},
+			Expectations: template_tester.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+		},
+
+		"template requires ytt preprocessing, data supplied in object": {
+			Inputs: template_tester.TemplateTestInputs{
+				TemplateFile:    "another-template-preytt.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+				YttValues: template_tester.Values{
+					"kind": "Deliverable",
+				},
+			},
+			Expectations: template_tester.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+		},
+
+		"template requires ytt preprocessing, data supplied in files": {
+			Inputs: template_tester.TemplateTestInputs{
 				TemplateFile: "another-template-preytt.yaml",
 				WorkloadFile: "another-workload.yaml",
 				YttFiles:     []string{"values.yaml"},
 			},
-			Expectations: helpers.TemplateTestExpectations{
+			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedObjectFile: "another-expect.yaml",
 			},
 		},
@@ -243,4 +256,36 @@ func createExpectedDeliverable(deliverable *v1alpha1.Deliverable) *v1alpha1.Deli
 	newDeliverable.Spec.ServiceAccountName = "such-a-good-sa"
 
 	return &newDeliverable
+}
+
+func createWorkload() *v1alpha1.Workload {
+	url := "some-url"
+	branch := "some-branch"
+
+	workload := v1alpha1.Workload{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Workload",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Generation: 1,
+			Name:       "my-workload-name",
+			Namespace:  "my-namespace",
+		},
+		Spec: v1alpha1.WorkloadSpec{
+			ServiceAccountName: "such-a-good-sa",
+			Params: []v1alpha1.OwnerParam{
+				{
+					Name:  "gitops_url",
+					Value: apiextensionsv1.JSON{Raw: []byte(`"https://github.com/waciumawanjohi/computer-science"`)},
+				},
+			},
+			Source: &v1alpha1.Source{
+				Git: &v1alpha1.GitSource{
+					URL: &url,
+					Ref: &v1alpha1.GitRef{
+						Branch: &branch}}}},
+	}
+
+	return &workload
 }

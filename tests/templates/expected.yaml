@@ -2,10 +2,9 @@ apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
   labels:
-    app.kubernetes.io/component: source
     carto.run/workload-name: my-workload-name
     carto.run/workload-namespace: my-namespace
-    carto.run/cluster-template-name: source-template
+    carto.run/cluster-template-name: source
     carto.run/template-kind: ClusterSourceTemplate
   name: my-workload-name
   namespace: my-namespace
@@ -17,9 +16,8 @@ metadata:
       name: my-workload-name
       uid: ""
 spec:
-  gitImplementation: some-implementation
-  ignore: |
-    !.git
+  gitImplementation: libgit2
+  ignore: ""
   interval: 1m0s
   ref:
     branch: some-branch
