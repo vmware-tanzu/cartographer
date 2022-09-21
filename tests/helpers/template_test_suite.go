@@ -22,80 +22,116 @@ type templateType interface {
 	client.Object
 }
 
-type TemplateTestSuite struct {
-	TemplateFile         string
-	Template             templateType
-	ExpectedObjectFile   string
-	ExpectedObject       client.Object
-	WorkloadFile         string
-	Workload             *v1alpha1.Workload
-	BlueprintParams      []v1alpha1.BlueprintParam
-	Labels               map[string]string
+type TemplateTestSuite map[string]*TemplateTestCase
+
+func (s *TemplateTestSuite) Run(t *testing.T) {
+	for name, testCase := range *s {
+		tc := testCase
+		t.Run(name, func(t *testing.T) {
+			tc.Run(t)
+		})
+	}
+}
+
+func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
+	for name, testCase := range *s {
+		tc := testCase
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			tc.Run(t)
+		})
+	}
+}
+
+type TemplateTestCase struct {
+	Inputs               TemplateTestInputs
+	Expectations         TemplateTestExpectations
 	IgnoreMetadata       bool
 	IgnoreOwnerRefs      bool
 	IgnoreLabels         bool
 	IgnoreMetadataFields []string
 }
 
-func (ts *TemplateTestSuite) Run(t *testing.T) {
-	if err := ts.verifySuite(); err != nil {
-		t.Fatalf("TemplateTestSuite invalid: %v", err)
-	}
+type TemplateTestInputs struct {
+	TemplateFile    string
+	Template        templateType
+	WorkloadFile    string
+	Workload        *v1alpha1.Workload
+	BlueprintParams []v1alpha1.BlueprintParam
+	YttValues       Values
+	YttFiles        []string
+	labels          map[string]string
+}
 
-	workload, err := ts.getWorkload()
-	if err != nil {
-		t.Fatalf("get workload failed: %v", err)
-	}
+type TemplateTestExpectations struct {
+	ExpectedObjectFile string
+	ExpectedObject     client.Object
+}
 
-	apiTemplate, err := ts.getPopulatedTemplate()
-	if err != nil {
-		t.Fatalf("get populated template failed: %v", err)
-	}
-
-	if err = apiTemplate.ValidateCreate(); err != nil {
-		t.Fatalf("template validation failed: %v", err)
-	}
-
-	template, err := templates.NewModelFromAPI(apiTemplate)
-	if err != nil {
-		t.Fatalf("failed to get cluster template")
-	}
-
-	ts.completeLabels(*workload, template)
-
-	params := templates.ParamsBuilder(template.GetDefaultParams(), ts.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
-
-	templatingContext := createTemplatingContext(*workload, params)
-
-	stampContext := templates.StamperBuilder(workload, templatingContext, ts.Labels)
-	ctx := context.TODO()
-	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
-	if err != nil {
-		t.Fatalf("could not stamp: %v", err)
-	}
-
-	expectedObject, err := ts.getExpectedObject()
+func (c *TemplateTestCase) Run(t *testing.T) {
+	expectedObject, err := c.Expectations.getExpectedObject()
 	if err != nil {
 		t.Fatalf("failed to get expected object: %v", err)
 	}
 
-	stripIgnoredFields(ts, *expectedObject, actualStampedObject)
+	actualObject, err := c.Inputs.getActualObject()
+	if err != nil {
+		t.Fatalf("failed to get actual object: %v", err)
+	}
 
-	if diff := cmp.Diff(expectedObject.Object, actualStampedObject.Object); diff != "" {
+	c.stripIgnoredFields(*expectedObject, actualObject)
+
+	if diff := cmp.Diff(expectedObject.Object, actualObject.Object); diff != "" {
 		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
 	}
 }
 
-func stripIgnoredFields(ts *TemplateTestSuite, expected unstructured.Unstructured, actual *unstructured.Unstructured) {
+func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, error) {
+	workload, err := i.getWorkload()
+	if err != nil {
+		return nil, fmt.Errorf("get workload failed: %v", err)
+	}
+
+	apiTemplate, err := i.getPopulatedTemplate()
+	if err != nil {
+		return nil, fmt.Errorf("get populated template failed: %v", err)
+	}
+
+	if err = apiTemplate.ValidateCreate(); err != nil {
+		return nil, fmt.Errorf("template validation failed: %v", err)
+	}
+
+	template, err := templates.NewModelFromAPI(apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster template")
+	}
+
+	i.completeLabels(*workload, template)
+
+	params := templates.ParamsBuilder(template.GetDefaultParams(), i.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
+
+	templatingContext := createTemplatingContext(*workload, params)
+
+	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
+	ctx := context.TODO()
+	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
+	if err != nil {
+		return nil, fmt.Errorf("could not stamp: %v", err)
+	}
+
+	return actualStampedObject, nil
+}
+
+func (c *TemplateTestCase) stripIgnoredFields(expected unstructured.Unstructured, actual *unstructured.Unstructured) {
 	delete(expected.Object, "status")
 	delete(actual.Object, "status")
 
-	if ts.IgnoreLabels {
+	if c.IgnoreLabels {
 		expected.SetLabels(nil)
 		actual.SetLabels(nil)
 	}
 
-	if ts.IgnoreMetadata {
+	if c.IgnoreMetadata {
 		delete(expected.Object, "metadata")
 		delete(actual.Object, "metadata")
 	}
@@ -109,88 +145,90 @@ func stripIgnoredFields(ts *TemplateTestSuite, expected unstructured.Unstructure
 		actualMetadata = actual.Object["metadata"].(map[string]interface{})
 	}
 
-	if ts.IgnoreOwnerRefs {
+	if c.IgnoreOwnerRefs {
 		delete(expectedMetadata, "ownerReferences")
 		delete(actualMetadata, "ownerReferences")
 	}
 
-	for _, field := range ts.IgnoreMetadataFields {
+	for _, field := range c.IgnoreMetadataFields {
 		delete(expectedMetadata, field)
 		delete(actualMetadata, field)
 	}
 }
 
-func (ts *TemplateTestSuite) verifySuite() error {
-	if ts.Workload == nil && ts.WorkloadFile == "" {
-		return fmt.Errorf("exactly one of Workload or WorkloadFile must be specified")
+func (i *TemplateTestInputs) getWorkload() (*v1alpha1.Workload, error) {
+	if (i.Workload == nil && i.WorkloadFile == "") ||
+		(i.Workload != nil && i.WorkloadFile != "") {
+		return nil, fmt.Errorf("exactly one of Workload or WorkloadFile must be specified")
 	}
 
-	if ts.Workload != nil && ts.WorkloadFile != "" {
-		return fmt.Errorf("exactly one of Workload or WorkloadFile must be specified")
-	}
-
-	if ts.Labels == nil {
-		ts.Labels = map[string]string{}
-	}
-
-	if ts.BlueprintParams == nil {
-		ts.BlueprintParams = []v1alpha1.BlueprintParam{}
-	}
-
-	return nil
-}
-
-func (ts *TemplateTestSuite) getWorkload() (*v1alpha1.Workload, error) {
-	if ts.Workload != nil {
-		return ts.Workload, nil
+	if i.Workload != nil {
+		return i.Workload, nil
 	}
 
 	workload := &v1alpha1.Workload{}
 
-	workloadData, err := os.ReadFile(ts.WorkloadFile)
+	workloadData, err := os.ReadFile(i.WorkloadFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not read workload file: %v", err)
+		return nil, fmt.Errorf("could not read workload file: %w", err)
 	}
 
 	if err = yaml.Unmarshal(workloadData, workload); err != nil {
-		return nil, fmt.Errorf("unmarshall template: %v", err)
+		return nil, fmt.Errorf("unmarshall template: %w", err)
 	}
 
 	return workload, nil
 }
 
-func (ts *TemplateTestSuite) completeLabels(workload v1alpha1.Workload, template templates.Template) {
-	ts.Labels["carto.run/workload-name"] = workload.GetName()
-	ts.Labels["carto.run/workload-namespace"] = workload.GetNamespace()
-	ts.Labels["carto.run/template-kind"] = template.GetKind()
-	ts.Labels["carto.run/cluster-template-name"] = template.GetName()
+func (i *TemplateTestInputs) completeLabels(workload v1alpha1.Workload, template templates.Template) {
+	i.labels = map[string]string{}
+
+	i.labels["carto.run/workload-name"] = workload.GetName()
+	i.labels["carto.run/workload-namespace"] = workload.GetNamespace()
+	i.labels["carto.run/template-kind"] = template.GetKind()
+	i.labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
-func (ts *TemplateTestSuite) getPopulatedTemplate() (templateType, error) {
-	if (ts.TemplateFile == "" && ts.Template == nil) ||
-		(ts.TemplateFile != "" && ts.Template != nil) {
+func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
+	if (i.TemplateFile == "" && i.Template == nil) ||
+		(i.TemplateFile != "" && i.Template != nil) {
 		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
 	}
 
-	if ts.Template != nil {
-		return ts.Template, nil
+	if i.Template != nil {
+		return i.Template, nil
 	}
 
-	templateData, err := os.ReadFile(ts.TemplateFile)
+	var (
+		templateFile string
+		err          error
+	)
+
+	if len(i.YttValues) != 0 || len(i.YttFiles) != 0 {
+		templateFile, err = i.preprocessYtt()
+		if err != nil {
+			return nil, fmt.Errorf("failed to preprocess ytt: %w", err)
+		}
+		defer os.RemoveAll(templateFile)
+	} else {
+		templateFile = i.TemplateFile
+	}
+
+	templateData, err := os.ReadFile(templateFile)
 
 	if err != nil {
-		return nil, fmt.Errorf("could not read template file: %v", err)
+		return nil, fmt.Errorf("could not read template file: %w", err)
 	}
 
 	unknownTemplate := unstructured.Unstructured{}
 
 	templateJson, err := yaml.YAMLToJSON(templateData)
 	if err != nil {
-		return nil, fmt.Errorf("convert yaml to json: %v", err)
+		return nil, fmt.Errorf("convert yaml to json: %w", err)
 	}
 
 	if err = unknownTemplate.UnmarshalJSON(templateJson); err != nil {
-		return nil, fmt.Errorf("unmarshall json: %v", err)
+		return nil, fmt.Errorf("unmarshall json: %w", err)
 	}
 
 	var apiTemplate templateType
@@ -209,48 +247,63 @@ func (ts *TemplateTestSuite) getPopulatedTemplate() (templateType, error) {
 	}
 
 	if err = yaml.Unmarshal(templateData, apiTemplate); err != nil {
-		return nil, fmt.Errorf("unmarshall template: %v", err)
+		return nil, fmt.Errorf("unmarshall template: %w", err)
 	}
 
 	return apiTemplate, nil
 }
 
-func (ts *TemplateTestSuite) getExpectedObject() (*unstructured.Unstructured, error) {
-	if (ts.ExpectedObjectFile == "" && ts.ExpectedObject == nil) ||
-		(ts.ExpectedObjectFile != "" && ts.ExpectedObject != nil) {
+func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructured, error) {
+	if (e.ExpectedObjectFile == "" && e.ExpectedObject == nil) ||
+		(e.ExpectedObjectFile != "" && e.ExpectedObject != nil) {
 		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
 	}
 
-	if ts.ExpectedObjectFile != "" {
-		return ts.getExpectedObjectFromFile()
+	if e.ExpectedObjectFile != "" {
+		return e.getExpectedObjectFromFile()
 	}
 
-	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(ts.ExpectedObject)
+	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ExpectedObject)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert template to unstructured: %v", err)
+		return nil, fmt.Errorf("failed to convert template to unstructured: %w", err)
 	}
 
 	return &unstructured.Unstructured{Object: unstruct}, nil
 }
 
-func (ts *TemplateTestSuite) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
-	expectedStampedObjectYaml, err := os.ReadFile(ts.ExpectedObjectFile)
+func (e *TemplateTestExpectations) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
+	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedObjectFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not read expected yaml: %v", err)
+		return nil, fmt.Errorf("could not read expected yaml: %w", err)
 	}
 
 	expectedJson, err := yaml.YAMLToJSON(expectedStampedObjectYaml)
 	if err != nil {
-		return nil, fmt.Errorf("convert yaml to json: %v", err)
+		return nil, fmt.Errorf("convert yaml to json: %w", err)
 	}
 
 	expectedStampedObject := unstructured.Unstructured{}
 
 	if err = expectedStampedObject.UnmarshalJSON(expectedJson); err != nil {
-		return nil, fmt.Errorf("unmarshall json: %v", err)
+		return nil, fmt.Errorf("unmarshall json: %w", err)
 	}
 
 	return &expectedStampedObject, nil
+}
+
+func (i *TemplateTestInputs) preprocessYtt() (string, error) {
+	yt := YTT()
+	yt.Values(i.YttValues)
+	yt.F(i.TemplateFile)
+	for _, yttfile := range i.YttFiles {
+		yt.F(yttfile)
+	}
+	f, err := yt.ToTempFile(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp fail by ytt: %w", err)
+	}
+
+	return f.Name(), nil
 }
 
 func createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
@@ -283,6 +336,26 @@ func createTemplatingContext(workload v1alpha1.Workload, params templates.Params
 		templatingContext["source"] = inputs.OnlySource()
 	}
 	return templatingContext
+}
+
+type StringParams []struct {
+	Name         string
+	Value        string
+	DefaultValue string
+}
+
+func BuildBlueprintStringParams(candidateParams StringParams) ([]v1alpha1.BlueprintParam, error) {
+	var completeParams []v1alpha1.BlueprintParam
+
+	for _, stringParam := range candidateParams {
+		newParam, err := BuildBlueprintStringParam(stringParam.Name, stringParam.Value, stringParam.DefaultValue)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build param: %w", err)
+		}
+		completeParams = append(completeParams, *newParam)
+	}
+
+	return completeParams, nil
 }
 
 func BuildBlueprintStringParam(name string, value string, defaultValue string) (*v1alpha1.BlueprintParam, error) {

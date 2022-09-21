@@ -2,36 +2,31 @@ package templates
 
 import (
 	"encoding/json"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"fmt"
 	"testing"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/tests/helpers"
 )
 
 func TestSupplyChainSourceTemplate(t *testing.T) {
-	param1, err := helpers.BuildBlueprintStringParam(
-		"serviceAccount",
-		"my-sc",
-		"",
-	)
+	params, err := helpers.BuildBlueprintStringParams(helpers.StringParams{
+		{
+			Name:  "serviceAccount",
+			Value: "my-sc",
+		},
+		{
+			Name:         "gitImplementation",
+			DefaultValue: "some-implementation",
+		},
+	})
 	if err != nil {
 		t.Fatalf("failed to build param: %v", err)
 	}
-
-	param2, err := helpers.BuildBlueprintStringParam(
-		"gitImplementation",
-		"",
-		"some-implementation",
-	)
-	if err != nil {
-		t.Fatalf("failed to build param: %v", err)
-	}
-
-	params := []v1alpha1.BlueprintParam{*param1, *param2}
 
 	url := "some-url"
 	branch := "some-branch"
@@ -49,59 +44,161 @@ func TestSupplyChainSourceTemplate(t *testing.T) {
 		Spec: v1alpha1.WorkloadSpec{Source: &v1alpha1.Source{Git: &v1alpha1.GitSource{URL: &url, Ref: &v1alpha1.GitRef{Branch: &branch}}}},
 	}
 
-	ts := helpers.TemplateTestSuite{
-		TemplateFile:       "source.yaml",
-		ExpectedObjectFile: "expected.yaml",
-		BlueprintParams:    params,
-		Workload:           &workload,
+	testSuite := helpers.TemplateTestSuite{
+		"workload as an object": {
+			Inputs: helpers.TemplateTestInputs{
+				TemplateFile:    "source.yaml",
+				BlueprintParams: params,
+				Workload:        &workload,
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "expected.yaml",
+			},
+		},
+
+		"workload as a file": {
+			Inputs: helpers.TemplateTestInputs{
+				TemplateFile:    "source.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "workload.yaml",
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "expected.yaml",
+			},
+		},
 	}
 
-	ts.Run(t)
-
-	ts = helpers.TemplateTestSuite{
-		TemplateFile:       "source.yaml",
-		ExpectedObjectFile: "expected.yaml",
-		BlueprintParams:    params,
-		WorkloadFile:       "workload.yaml",
-		Labels:             map[string]string{},
-	}
-
-	ts.Run(t)
+	testSuite.Run(t)
 }
 
 func TestAnother(t *testing.T) {
-	param1, err := helpers.BuildBlueprintStringParam(
-		"gitops_url",
-		"",
-		"https://github.com/waciumawanjohi/computer-science",
-	)
-	param2, err := helpers.BuildBlueprintStringParam(
-		"gitops_branch",
-		"",
-		"main",
-	)
+	params, err := helpers.BuildBlueprintStringParams(helpers.StringParams{
+		{
+			Name:         "gitops_url",
+			DefaultValue: "https://github.com/waciumawanjohi/computer-science",
+		},
+		{
+			Name:         "gitops_branch",
+			DefaultValue: "main",
+		},
+	})
 	if err != nil {
 		t.Fatalf("failed to build param: %v", err)
 	}
 
-	ts := helpers.TemplateTestSuite{
-		TemplateFile:       "another-template-1.yaml",
-		ExpectedObjectFile: "another-expect.yaml",
-		BlueprintParams:    []v1alpha1.BlueprintParam{*param1, *param2}, // TODO: simplify so users don't have to know about this internal struct
-		WorkloadFile:       "another-workload.yaml",
+	deliverable := createDeliverable()
+
+	templateOfDeliverable, err := createTemplate(deliverable)
+	if err != nil {
+		t.Fatalf("failed to create template: %v", err)
 	}
 
-	ts.Run(t)
+	expectedDeliverable := createExpectedDeliverable(deliverable)
 
-	ts = helpers.TemplateTestSuite{
-		TemplateFile:       "another-template.yaml",
-		ExpectedObjectFile: "another-expect.yaml",
-		BlueprintParams:    []v1alpha1.BlueprintParam{*param1, *param2}, // TODO: simplify so users don't have to know about this internal struct
-		WorkloadFile:       "another-workload.yaml",
+	testSuite := helpers.TemplateTestSuite{
+		"Test params in regular template": {
+			Inputs: helpers.TemplateTestInputs{
+				TemplateFile:    "another-template-1.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+		},
+
+		"test params in ytt template": {
+			Inputs: helpers.TemplateTestInputs{
+				TemplateFile:    "another-template.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+		},
+
+		"template as an object": {
+			Inputs: helpers.TemplateTestInputs{
+				Template:        templateOfDeliverable,
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+			IgnoreMetadataFields: []string{"creationTimestamp"},
+		},
+
+		"expected as object": {
+			Inputs: helpers.TemplateTestInputs{
+				Template:        templateOfDeliverable,
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObject: expectedDeliverable,
+			},
+			IgnoreMetadata: true,
+		},
+
+		"template modified by ytt": {
+			Inputs: helpers.TemplateTestInputs{
+				TemplateFile:    "another-template-preytt.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "another-workload.yaml",
+				YttValues: helpers.Values{
+					"kind": "Deliverable",
+				},
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+		},
+
+		"template modified by ytt object": {
+			Inputs: helpers.TemplateTestInputs{
+				TemplateFile: "another-template-preytt.yaml",
+				WorkloadFile: "another-workload.yaml",
+				YttFiles:     []string{"values.yaml"},
+			},
+			Expectations: helpers.TemplateTestExpectations{
+				ExpectedObjectFile: "another-expect.yaml",
+			},
+		},
 	}
 
-	ts.Run(t)
+	testSuite.Run(t)
+}
 
+func createTemplate(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterTemplate, error) {
+	dbytes, err := json.Marshal(deliverable)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deliverable: %w", err)
+	}
+
+	template := v1alpha1.ClusterTemplate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterTemplate",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "create-deliverable",
+		},
+		Spec: v1alpha1.TemplateSpec{
+			Template: &runtime.RawExtension{Raw: dbytes},
+			Params: []v1alpha1.TemplateParam{
+				{
+					Name:         "gitops_ssh_secret",
+					DefaultValue: apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)},
+				},
+			},
+		},
+	}
+	return &template, nil
+}
+
+func createDeliverable() *v1alpha1.Deliverable {
 	deliverableURL := `$(params.gitops_url)$`
 	deliverableBranch := `$(params.gitops_branch)$`
 
@@ -131,53 +228,19 @@ func TestAnother(t *testing.T) {
 			},
 		},
 	}
+	return deliverable
+}
 
-	dbytes, err := json.Marshal(deliverable)
-	if err != nil {
-		t.Fatalf("marshal deliverable: %v", err)
-	}
+func createExpectedDeliverable(deliverable *v1alpha1.Deliverable) *v1alpha1.Deliverable {
+	newDeliverable := *deliverable
 
-	template := v1alpha1.ClusterTemplate{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterTemplate",
-			APIVersion: "carto.run/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "create-deliverable",
-		},
-		Spec: v1alpha1.TemplateSpec{
-			Template: &runtime.RawExtension{Raw: dbytes},
-			Params: []v1alpha1.TemplateParam{
-				{
-					Name:         "gitops_ssh_secret",
-					DefaultValue: apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)},
-				},
-			},
-		},
-	}
+	url := "https://github.com/waciumawanjohi/computer-science"
+	branch := "main"
 
-	ts = helpers.TemplateTestSuite{
-		Template:             &template,
-		ExpectedObjectFile:   "another-expect.yaml",
-		BlueprintParams:      []v1alpha1.BlueprintParam{*param1, *param2},
-		WorkloadFile:         "another-workload.yaml",
-		IgnoreMetadataFields: []string{"creationTimestamp"},
-	}
+	deliverable.Spec.Source.Git.URL = &url
+	deliverable.Spec.Source.Git.Ref.Branch = &branch
+	newDeliverable.Spec.Params[0].Value = apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)}
+	newDeliverable.Spec.ServiceAccountName = "such-a-good-sa"
 
-	ts.Run(t)
-
-	deliverableURL = "https://github.com/waciumawanjohi/computer-science"
-	deliverableBranch = "main"
-	deliverable.Spec.Params[0].Value = apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)}
-	deliverable.Spec.ServiceAccountName = "such-a-good-sa"
-
-	ts = helpers.TemplateTestSuite{
-		Template:        &template,
-		ExpectedObject:  deliverable,
-		BlueprintParams: []v1alpha1.BlueprintParam{*param1, *param2},
-		WorkloadFile:    "another-workload.yaml",
-		IgnoreMetadata:  true,
-	}
-
-	ts.Run(t)
+	return &newDeliverable
 }
