@@ -4,8 +4,7 @@ metadata:
   name: my-workload-name
   namespace: my-namespace
 spec:
-  source:
-    git:
-      url: some-url
-      ref:
-        branch: some-branch
+  serviceAccountName: such-a-good-sa
+  params:
+    - name: gitops_url
+      value: "https://github.com/waciumawanjohi/computer-science"

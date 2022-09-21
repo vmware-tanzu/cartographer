@@ -1,24 +1,28 @@
-apiVersion: source.toolkit.fluxcd.io/v1beta1
-kind: GitRepository
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
 metadata:
-  labels:
-    carto.run/workload-name: my-workload-name
-    carto.run/workload-namespace: my-namespace
-    carto.run/cluster-template-name: source
-    carto.run/template-kind: ClusterSourceTemplate
   name: my-workload-name
   namespace: my-namespace
+  labels:
+    carto.run/cluster-template-name: create-deliverable
+    carto.run/template-kind: ClusterTemplate
+    carto.run/workload-name: my-workload-name
+    carto.run/workload-namespace: my-namespace
   ownerReferences:
-    - apiVersion: "carto.run/v1alpha1"
+    - apiVersion: carto.run/v1alpha1
       blockOwnerDeletion: true
       controller: true
-      kind: "Workload"
+      kind: Workload
       name: my-workload-name
       uid: ""
 spec:
-  gitImplementation: libgit2
-  ignore: ""
-  interval: 1m0s
-  ref:
-    branch: some-branch
-  url: some-url
+  serviceAccountName: such-a-good-sa
+  params:
+    - name: "gitops_ssh_secret"
+      value: some-secret
+
+  source:
+    git:
+      url: "https://github.com/waciumawanjohi/computer-science"
+      ref:
+        branch: main
