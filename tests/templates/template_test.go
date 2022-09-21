@@ -7,6 +7,7 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -39,6 +40,8 @@ func TestTemplateExample(t *testing.T) {
 
 	expectedDeliverable := createExpectedDeliverable(deliverable)
 
+	expectedUnstructured := getExpectedUnstructured()
+
 	testSuite := template_tester.TemplateTestSuite{
 		"template, workload and expected defined in files": {
 			Inputs: template_tester.TemplateTestInputs{
@@ -47,7 +50,7 @@ func TestTemplateExample(t *testing.T) {
 				BlueprintParams: params,
 			},
 			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObjectFile: "expected.yaml",
+				ExpectedFile: "expected.yaml",
 			},
 		},
 
@@ -58,21 +61,9 @@ func TestTemplateExample(t *testing.T) {
 				WorkloadFile:    "workload.yaml",
 			},
 			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObjectFile: "expected.yaml",
+				ExpectedFile: "expected.yaml",
 			},
 			IgnoreMetadataFields: []string{"creationTimestamp"},
-		},
-
-		"expected defined as an object": {
-			Inputs: template_tester.TemplateTestInputs{
-				Template:        templateOfDeliverable,
-				BlueprintParams: params,
-				WorkloadFile:    "workload.yaml",
-			},
-			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObject: expectedDeliverable,
-			},
-			IgnoreMetadata: true,
 		},
 
 		"workload defined as an object": {
@@ -82,8 +73,32 @@ func TestTemplateExample(t *testing.T) {
 				BlueprintParams: params,
 			},
 			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObjectFile: "expected.yaml",
+				ExpectedFile: "expected.yaml",
 			},
+		},
+
+		"expected defined as an object": {
+			Inputs: template_tester.TemplateTestInputs{
+				TemplateFile:    "template.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "workload.yaml",
+			},
+			Expectations: template_tester.TemplateTestExpectations{
+				ExpectedObject: expectedDeliverable,
+			},
+			IgnoreMetadata: true,
+		},
+
+		"expected defined as an unstructured": {
+			Inputs: template_tester.TemplateTestInputs{
+				TemplateFile:    "template.yaml",
+				BlueprintParams: params,
+				WorkloadFile:    "workload.yaml",
+			},
+			Expectations: template_tester.TemplateTestExpectations{
+				ExpectedUnstructured: &expectedUnstructured,
+			},
+			Focus: true,
 		},
 
 		"clustertemplate uses ytt field": {
@@ -93,7 +108,7 @@ func TestTemplateExample(t *testing.T) {
 				WorkloadFile:    "workload.yaml",
 			},
 			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObjectFile: "expected.yaml",
+				ExpectedFile: "expected.yaml",
 			},
 		},
 
@@ -107,7 +122,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObjectFile: "expected.yaml",
+				ExpectedFile: "expected.yaml",
 			},
 		},
 
@@ -118,12 +133,56 @@ func TestTemplateExample(t *testing.T) {
 				YttFiles:     []string{"values.yaml"},
 			},
 			Expectations: template_tester.TemplateTestExpectations{
-				ExpectedObjectFile: "expected.yaml",
+				ExpectedFile: "expected.yaml",
 			},
 		},
 	}
 
 	testSuite.Run(t)
+}
+
+func getExpectedUnstructured() unstructured.Unstructured {
+	expectedUnstructured := unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "carto.run/v1alpha1",
+			"kind":       "Deliverable",
+			"metadata": map[string]any{
+				"labels": map[string]any{
+					"carto.run/cluster-template-name": "create-deliverable",
+					"carto.run/template-kind":         "ClusterTemplate",
+					"carto.run/workload-name":         "my-workload-name",
+					"carto.run/workload-namespace":    "my-namespace",
+				},
+				"name":      "my-workload-name",
+				"namespace": "my-namespace",
+				"ownerReferences": []any{
+					map[string]any{
+						"apiVersion":         "carto.run/v1alpha1",
+						"blockOwnerDeletion": true,
+						"controller":         true,
+						"kind":               "Workload",
+						"name":               "my-workload-name",
+						"uid":                "",
+					},
+				},
+			},
+			"spec": map[string]any{
+				"params": []any{
+					map[string]any{"name": "gitops_ssh_secret", "value": "some-secret"},
+				},
+				"serviceAccountName": "such-a-good-sa",
+				"source": map[string]any{
+					"git": map[string]any{
+						"ref": map[string]any{
+							"branch": "main",
+						},
+						"url": "https://github.com/vmware-tanzu/cartographer/",
+					},
+				},
+			},
+		},
+	}
+	return expectedUnstructured
 }
 
 func createTemplate(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterTemplate, error) {

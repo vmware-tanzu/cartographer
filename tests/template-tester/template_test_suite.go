@@ -85,8 +85,9 @@ type TemplateTestInputs struct {
 }
 
 type TemplateTestExpectations struct {
-	ExpectedObjectFile string
-	ExpectedObject     client.Object
+	ExpectedFile         string
+	ExpectedObject       client.Object
+	ExpectedUnstructured *unstructured.Unstructured
 }
 
 func (c *TemplateTestCase) Run(t *testing.T) {
@@ -275,12 +276,26 @@ func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
 }
 
 func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructured, error) {
-	if (e.ExpectedObjectFile == "" && e.ExpectedObject == nil) ||
-		(e.ExpectedObjectFile != "" && e.ExpectedObject != nil) {
-		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
+	populatedFieldCount := 0
+	if e.ExpectedFile != "" {
+		populatedFieldCount++
+	}
+	if e.ExpectedObject != nil {
+		populatedFieldCount++
+	}
+	if e.ExpectedUnstructured != nil {
+		populatedFieldCount++
 	}
 
-	if e.ExpectedObjectFile != "" {
+	if populatedFieldCount != 1 {
+		return nil, fmt.Errorf("exactly one of ExpectedFile, ExpectedObject or ExpectedUnstructured must be set")
+	}
+
+	if e.ExpectedUnstructured != nil {
+		return e.ExpectedUnstructured, nil
+	}
+
+	if e.ExpectedFile != "" {
 		return e.getExpectedObjectFromFile()
 	}
 
@@ -293,7 +308,7 @@ func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructur
 }
 
 func (e *TemplateTestExpectations) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
-	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedObjectFile)
+	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not read expected yaml: %w", err)
 	}
