@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/tests/template-tester"
 )
 
@@ -135,6 +136,25 @@ func TestTemplateExample(t *testing.T) {
 			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
+		},
+
+		"template that requires a supply chain input": {
+			Inputs: template_tester.TemplateTestInputs{
+				TemplateFile: "template-kpack.yaml",
+				WorkloadFile: "workload.yaml",
+				SupplyChainInputs: templates.Inputs{
+					Sources: map[string]templates.SourceInput{
+						"source": {
+							URL: "some-passed-on-url",
+						},
+					},
+				},
+			},
+			Expectations: template_tester.TemplateTestExpectations{
+				ExpectedFile: "expected-kpack.yaml",
+			},
+			IgnoreMetadata: true,
+			Focus:          true,
 		},
 	}
 

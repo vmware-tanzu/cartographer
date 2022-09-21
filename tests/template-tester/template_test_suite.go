@@ -74,14 +74,15 @@ type TemplateTestCase struct {
 }
 
 type TemplateTestInputs struct {
-	TemplateFile    string
-	Template        templateType
-	WorkloadFile    string
-	Workload        *v1alpha1.Workload
-	BlueprintParams []v1alpha1.BlueprintParam
-	YttValues       Values
-	YttFiles        []string
-	labels          map[string]string
+	TemplateFile      string
+	Template          templateType
+	WorkloadFile      string
+	Workload          *v1alpha1.Workload
+	BlueprintParams   []v1alpha1.BlueprintParam
+	YttValues         Values
+	YttFiles          []string
+	labels            map[string]string
+	SupplyChainInputs templates.Inputs
 }
 
 type TemplateTestExpectations struct {
@@ -132,7 +133,7 @@ func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, erro
 
 	params := templates.ParamsBuilder(template.GetDefaultParams(), i.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
 
-	templatingContext := createTemplatingContext(*workload, params)
+	templatingContext := i.createTemplatingContext(*workload, params)
 
 	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
 	ctx := context.TODO()
@@ -342,23 +343,15 @@ func (i *TemplateTestInputs) preprocessYtt() (string, error) {
 	return f.Name(), nil
 }
 
-func createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
-	sources := map[string]templates.SourceInput{}
-	images := map[string]templates.ImageInput{}
-	configs := map[string]templates.ConfigInput{}
-
-	inputs := templates.Inputs{
-		Sources: sources,
-		Images:  images,
-		Configs: configs,
-	}
+func (i *TemplateTestInputs) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
+	inputs := i.SupplyChainInputs
 
 	templatingContext := map[string]interface{}{
 		"workload": workload,
 		"params":   params,
-		"sources":  sources,
-		"images":   images,
-		"configs":  configs,
+		"sources":  inputs.Sources,
+		"images":   inputs.Images,
+		"configs":  inputs.Configs,
 		//"deployment": // not implemented yet,
 	}
 

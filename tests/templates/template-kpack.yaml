@@ -1,0 +1,25 @@
+apiVersion: carto.run/v1alpha1
+kind: ClusterImageTemplate
+metadata:
+  name: image
+spec:
+  params:
+    - name: image_prefix
+      default: some-default-prefix-
+
+  imagePath: .status.latestImage
+
+  template:
+    apiVersion: kpack.io/v1alpha2
+    kind: Image
+    metadata:
+      name: $(workload.metadata.name)$
+    spec:
+      tag: $(params.image_prefix)$$(workload.metadata.name)$
+      serviceAccountName: cartographer-example-registry-creds-sa
+      builder:
+        kind: ClusterBuilder
+        name: go-builder
+      source:
+        blob:
+          url: $(sources.source.url)$
