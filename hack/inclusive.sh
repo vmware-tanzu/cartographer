@@ -30,7 +30,7 @@ echo "# downloading sensitive terms"
 curl https://s3.amazonaws.com/srp-cli/api-rules/regex > ./temp-inclusiveness/regex
 
 echo "# selecting files to scan"
-find . \( -name "*.go" -o -name "*.yal" -o -name "*.md" -o -name "*.sh" \) | grep -vE "/node_modules/|/target/|/dist/" > ./temp-inclusiveness/files
+find . \( -name "*.go" -o -name "*.yaml" -o -name "*.md" -o -name "*.sh" \) | grep -vE "/node_modules/|/target/|/dist/" > ./temp-inclusiveness/files
 echo -e "NOTICE\nMakefile\n" >> ./temp-inclusiveness/files
 
 
