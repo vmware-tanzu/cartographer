@@ -40,6 +40,11 @@ jobs:
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
+        with:
+          ytt: v0.42.0 # Todo unlock as soon as 0.43 is working.
+
+      - run: |
+             ytt version
 
       - name: run source checks
         uses: ./.github/actions/source-checks
