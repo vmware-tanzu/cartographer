@@ -166,16 +166,16 @@ endif
 .pre-push-check: copyright lint gen-manifests gen-objects test-gen-manifests test-gen-objects generate
 
 
-.PHONY: mac-compat
-mac-compat:
+.PHONY: inclusive-container
+inclusive-container:
 ifeq ($(UNAME), Darwin)
-	docker build hack/compat/ -t compat:latest
+	docker build . -f ./Dockerfile.inclusive -t inclusive:latest
 endif
 
 .PHONY: inclusive
-inclusive: mac-compat
+inclusive: inclusive-container
 ifeq ($(UNAME), Darwin)
-	docker run -it -v $$(pwd):/app -w /app -it compat:latest /app/hack/inclusive.sh
+	docker run -it -v $$(pwd):/app -w /app -it inclusive:latest /app/hack/inclusive.sh
 else
 	./hack/inclusive.sh
 endif
