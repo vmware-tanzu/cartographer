@@ -352,7 +352,7 @@ func (i *TemplateTestInputs) preprocessYtt() (string, error) {
 	}
 	f, err := yt.ToTempFile(context.TODO())
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp fail by ytt: %w", err)
+		return "", fmt.Errorf("failed to create temp file by ytt: %w", err)
 	}
 
 	return f.Name(), nil

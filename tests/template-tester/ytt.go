@@ -71,16 +71,6 @@ func (y *ytt) build() error {
 	return nil
 }
 
-func (y *ytt) gc() error {
-	for _, fpath := range y.tmpFiles {
-		if err := os.RemoveAll(fpath); err != nil {
-			return fmt.Errorf("removeall '%s': %w", fpath, err)
-		}
-	}
-
-	return nil
-}
-
 // ToTempFile runs `ytt` writing the results to a temporary file.
 func (y *ytt) ToTempFile(ctx context.Context) (*os.File, error) {
 	if err := y.build(); err != nil {
