@@ -220,12 +220,14 @@ type TemplateTestInputs struct {
 }
 
 func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, error) {
+	ctx := context.Background()
+
 	workload, err := i.getWorkload()
 	if err != nil {
 		return nil, fmt.Errorf("get workload failed: %v", err)
 	}
 
-	apiTemplate, err := i.getPopulatedTemplate()
+	apiTemplate, err := i.getPopulatedTemplate(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get populated template failed: %v", err)
 	}
@@ -246,7 +248,6 @@ func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, erro
 	templatingContext := i.createTemplatingContext(*workload, params)
 
 	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
-	ctx := context.TODO()
 	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		return nil, fmt.Errorf("could not stamp: %v", err)
@@ -279,7 +280,7 @@ func (i *TemplateTestInputs) getWorkload() (*v1alpha1.Workload, error) {
 	return workload, nil
 }
 
-func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
+func (i *TemplateTestInputs) getPopulatedTemplate(ctx context.Context) (templateType, error) {
 	if (i.TemplateFile == "" && i.Template == nil) ||
 		(i.TemplateFile != "" && i.Template != nil) {
 		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
@@ -295,7 +296,7 @@ func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
 	)
 
 	if len(i.YttValues) != 0 || len(i.YttFiles) != 0 {
-		templateFile, err = i.preprocessYtt()
+		templateFile, err = i.preprocessYtt(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to preprocess ytt: %w", err)
 		}
@@ -343,14 +344,14 @@ func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
 	return apiTemplate, nil
 }
 
-func (i *TemplateTestInputs) preprocessYtt() (string, error) {
+func (i *TemplateTestInputs) preprocessYtt(ctx context.Context) (string, error) {
 	yt := YTT()
 	yt.Values(i.YttValues)
 	yt.F(i.TemplateFile)
 	for _, yttfile := range i.YttFiles {
 		yt.F(yttfile)
 	}
-	f, err := yt.ToTempFile(context.TODO())
+	f, err := yt.ToTempFile(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file by ytt: %w", err)
 	}
