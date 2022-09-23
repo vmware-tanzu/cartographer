@@ -59,75 +59,75 @@ func TestTemplateExample(t *testing.T) {
 
 	testSuite := cartotesting.TemplateTestSuite{
 		"template, workload and expected defined in files": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    "template.yaml",
 				WorkloadFile:    "workload.yaml",
 				BlueprintParams: params,
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template defined as an object": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				Template:        templateOfDeliverable,
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected.yaml",
 			},
 			IgnoreMetadataFields: []string{"creationTimestamp"},
 		},
 
 		"workload defined as an object": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    "template.yaml",
 				Workload:        workload,
 				BlueprintParams: params,
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"expected defined as an object": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    "template.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedObject: expectedDeliverable,
 			},
 			IgnoreMetadata: true,
 		},
 
 		"expected defined as an unstructured": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    "template.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedUnstructured: &expectedUnstructured,
 			},
 		},
 
 		"clustertemplate uses ytt field": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    "template-ytt.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in object": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    "template-requires-preprocess.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
@@ -135,24 +135,24 @@ func TestTemplateExample(t *testing.T) {
 					"kind": "Deliverable",
 				},
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in files": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: "template-requires-preprocess.yaml",
 				WorkloadFile: "workload.yaml",
 				YttFiles:     []string{"values.yaml"},
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template that requires a supply chain input": {
-			Inputs: cartotesting.TemplateTestInputs{
+			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: "template-kpack.yaml",
 				WorkloadFile: "workload.yaml",
 				SupplyChainInputs: templates.Inputs{
@@ -163,7 +163,7 @@ func TestTemplateExample(t *testing.T) {
 					},
 				},
 			},
-			Expectations: cartotesting.TemplateTestExpectations{
+			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: "expected-kpack.yaml",
 			},
 			IgnoreMetadata: true,

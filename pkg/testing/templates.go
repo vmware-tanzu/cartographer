@@ -88,8 +88,8 @@ func (s *TemplateTestSuite) getTestsToRun() (TemplateTestSuite, bool) {
 }
 
 type TemplateTestCase struct {
-	Inputs               TemplateTestInputs
-	Expectations         TemplateTestExpectations
+	Given                TemplateTestGivens
+	Expect               TemplateTestExpectation
 	IgnoreMetadata       bool
 	IgnoreOwnerRefs      bool
 	IgnoreLabels         bool
@@ -98,12 +98,12 @@ type TemplateTestCase struct {
 }
 
 func (c *TemplateTestCase) Run(t *testing.T) {
-	expectedObject, err := c.Expectations.getExpectedObject()
+	expectedObject, err := c.Expect.getExpectedObject()
 	if err != nil {
 		t.Fatalf("failed to get expected object: %v", err)
 	}
 
-	actualObject, err := c.Inputs.getActualObject()
+	actualObject, err := c.Given.getActualObject()
 	if err != nil {
 		t.Fatalf("failed to get actual object: %v", err)
 	}
@@ -149,13 +149,13 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 	}
 }
 
-type TemplateTestExpectations struct {
+type TemplateTestExpectation struct {
 	ExpectedFile         string
 	ExpectedObject       client.Object
 	ExpectedUnstructured *unstructured.Unstructured
 }
 
-func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructured, error) {
+func (e *TemplateTestExpectation) getExpectedObject() (*unstructured.Unstructured, error) {
 	populatedFieldCount := 0
 	if e.ExpectedFile != "" {
 		populatedFieldCount++
@@ -187,7 +187,7 @@ func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructur
 	return &unstructured.Unstructured{Object: unstruct}, nil
 }
 
-func (e *TemplateTestExpectations) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
+func (e *TemplateTestExpectation) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
 	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not read expected yaml: %w", err)
@@ -207,7 +207,7 @@ func (e *TemplateTestExpectations) getExpectedObjectFromFile() (*unstructured.Un
 	return &expectedStampedObject, nil
 }
 
-type TemplateTestInputs struct {
+type TemplateTestGivens struct {
 	TemplateFile      string
 	Template          templateType
 	WorkloadFile      string
@@ -219,7 +219,7 @@ type TemplateTestInputs struct {
 	SupplyChainInputs templates.Inputs
 }
 
-func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, error) {
+func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
 	ctx := context.Background()
 
 	workload, err := i.getWorkload()
@@ -256,7 +256,7 @@ func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, erro
 	return actualStampedObject, nil
 }
 
-func (i *TemplateTestInputs) getWorkload() (*v1alpha1.Workload, error) {
+func (i *TemplateTestGivens) getWorkload() (*v1alpha1.Workload, error) {
 	if (i.Workload == nil && i.WorkloadFile == "") ||
 		(i.Workload != nil && i.WorkloadFile != "") {
 		return nil, fmt.Errorf("exactly one of Workload or WorkloadFile must be specified")
@@ -280,7 +280,7 @@ func (i *TemplateTestInputs) getWorkload() (*v1alpha1.Workload, error) {
 	return workload, nil
 }
 
-func (i *TemplateTestInputs) getPopulatedTemplate(ctx context.Context) (templateType, error) {
+func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (templateType, error) {
 	if (i.TemplateFile == "" && i.Template == nil) ||
 		(i.TemplateFile != "" && i.Template != nil) {
 		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
@@ -344,7 +344,7 @@ func (i *TemplateTestInputs) getPopulatedTemplate(ctx context.Context) (template
 	return apiTemplate, nil
 }
 
-func (i *TemplateTestInputs) preprocessYtt(ctx context.Context) (string, error) {
+func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) {
 	yt := YTT()
 	yt.Values(i.YttValues)
 	yt.F(i.TemplateFile)
@@ -359,7 +359,7 @@ func (i *TemplateTestInputs) preprocessYtt(ctx context.Context) (string, error) 
 	return f.Name(), nil
 }
 
-func (i *TemplateTestInputs) completeLabels(workload v1alpha1.Workload, template templates.Template) {
+func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template templates.Template) {
 	i.labels = map[string]string{}
 
 	i.labels["carto.run/workload-name"] = workload.GetName()
@@ -368,7 +368,7 @@ func (i *TemplateTestInputs) completeLabels(workload v1alpha1.Workload, template
 	i.labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
-func (i *TemplateTestInputs) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
+func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
 	inputs := i.SupplyChainInputs
 
 	templatingContext := map[string]interface{}{
