@@ -147,15 +147,18 @@ copyright:
 	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt .
 
+# Creates a GHA alike container image so we Mac user's can test flakies from CI
+ifeq ($(UNAME), Darwin)
 .PHONY: mac-compat
 mac-compat:
-ifeq ($(UNAME), Darwin)
 	docker build . -f ./Dockerfile.compat -t compat:latest
 endif
 
+# Shortcut to run GHA alike container image with the repo mounted in /app
+# eg: first: `make run-in-compat` then `make test-unit`
+ifeq ($(UNAME), Darwin)
 .PHONY: run-in-compat
 run-in-compat:
-ifeq ($(UNAME), Darwin)
 	docker run -it -v $$(pwd):/app -w /app -it compat:latest /bin/bash
 endif
 
