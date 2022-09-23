@@ -26,11 +26,11 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"github.com/vmware-tanzu/cartographer/tests/template-tester"
+	cartotesting "github.com/vmware-tanzu/cartographer/pkg/testing"
 )
 
 func TestTemplateExample(t *testing.T) {
-	params, err := template_tester.BuildBlueprintStringParams(template_tester.StringParams{
+	params, err := cartotesting.BuildBlueprintStringParams(cartotesting.StringParams{
 		{
 			Name:         "gitops_url",
 			DefaultValue: "https://github.com/vmware-tanzu/cartographer/",
@@ -57,102 +57,102 @@ func TestTemplateExample(t *testing.T) {
 
 	expectedUnstructured := createExpectedUnstructured()
 
-	testSuite := template_tester.TemplateTestSuite{
+	testSuite := cartotesting.TemplateTestSuite{
 		"template, workload and expected defined in files": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile:    "template.yaml",
 				WorkloadFile:    "workload.yaml",
 				BlueprintParams: params,
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template defined as an object": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				Template:        templateOfDeliverable,
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
 			IgnoreMetadataFields: []string{"creationTimestamp"},
 		},
 
 		"workload defined as an object": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile:    "template.yaml",
 				Workload:        workload,
 				BlueprintParams: params,
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"expected defined as an object": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile:    "template.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedObject: expectedDeliverable,
 			},
 			IgnoreMetadata: true,
 		},
 
 		"expected defined as an unstructured": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile:    "template.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedUnstructured: &expectedUnstructured,
 			},
 		},
 
 		"clustertemplate uses ytt field": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile:    "template-ytt.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in object": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile:    "template-requires-preprocess.yaml",
 				BlueprintParams: params,
 				WorkloadFile:    "workload.yaml",
-				YttValues: template_tester.Values{
+				YttValues: cartotesting.Values{
 					"kind": "Deliverable",
 				},
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in files": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile: "template-requires-preprocess.yaml",
 				WorkloadFile: "workload.yaml",
 				YttFiles:     []string{"values.yaml"},
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected.yaml",
 			},
 		},
 
 		"template that requires a supply chain input": {
-			Inputs: template_tester.TemplateTestInputs{
+			Inputs: cartotesting.TemplateTestInputs{
 				TemplateFile: "template-kpack.yaml",
 				WorkloadFile: "workload.yaml",
 				SupplyChainInputs: templates.Inputs{
@@ -163,7 +163,7 @@ func TestTemplateExample(t *testing.T) {
 					},
 				},
 			},
-			Expectations: template_tester.TemplateTestExpectations{
+			Expectations: cartotesting.TemplateTestExpectations{
 				ExpectedFile: "expected-kpack.yaml",
 			},
 			IgnoreMetadata: true,
