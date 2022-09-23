@@ -4,6 +4,7 @@ GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
 GCI_LINT ?= go run -modfile hack/tools/go.mod github.com/daixiang0/gci
 CONTROL_PLANE_KUTTL ?= kubectl kuttl test --control-plane-config=kuttl-control-plane.config
+UNAME := $(shell uname)
 
 ifndef ($LOG_LEVEL)
 	# set a default LOG_LEVEL whenever we run the controller
@@ -145,6 +146,21 @@ lint: copyright
 copyright:
 	$(ADDLICENSE) \
 		-f ./hack/boilerplate.go.txt .
+
+# Creates a GHA alike container image so we Mac user's can test flakies from CI
+ifeq ($(UNAME), Darwin)
+.PHONY: mac-compat
+mac-compat:
+	docker build . -f ./Dockerfile.compat -t compat:latest
+endif
+
+# Shortcut to run GHA alike container image with the repo mounted in /app
+# eg: first: `make run-in-compat` then `make test-unit`
+ifeq ($(UNAME), Darwin)
+.PHONY: run-in-compat
+run-in-compat:
+	docker run -it -v $$(pwd):/app -w /app -it compat:latest /bin/bash
+endif
 
 .PHONY: pre-push .pre-push-check
 .pre-push-check: copyright lint gen-manifests gen-objects test-gen-manifests test-gen-objects generate
