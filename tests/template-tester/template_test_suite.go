@@ -25,7 +25,11 @@ type templateType interface {
 type TemplateTestSuite map[string]*TemplateTestCase
 
 func (s *TemplateTestSuite) Run(t *testing.T) {
-	testsToRun := s.getTestsToRun()
+	testsToRun, focused := s.getTestsToRun()
+
+	if focused {
+		defer t.Fatalf("test suite failed due to focused test, check individual test case status")
+	}
 
 	for name, testCase := range testsToRun {
 		tc := testCase
@@ -35,7 +39,24 @@ func (s *TemplateTestSuite) Run(t *testing.T) {
 	}
 }
 
-func (s *TemplateTestSuite) getTestsToRun() TemplateTestSuite {
+func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
+	testsToRun, focused := s.getTestsToRun()
+
+	if focused {
+		defer t.Fatalf("test suite failed due to focused test, check individual test case status")
+	}
+
+	for name, testCase := range testsToRun {
+		tc := testCase
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			tc.Run(t)
+		})
+	}
+}
+
+func (s *TemplateTestSuite) getTestsToRun() (TemplateTestSuite, bool) {
+	focused := false
 	testsToRun := *s
 	focusedCases := make(map[string]*TemplateTestCase, len(*s))
 
@@ -47,20 +68,9 @@ func (s *TemplateTestSuite) getTestsToRun() TemplateTestSuite {
 
 	if len(focusedCases) > 0 {
 		testsToRun = focusedCases
+		focused = true
 	}
-	return testsToRun
-}
-
-func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
-	testsToRun := s.getTestsToRun()
-
-	for name, testCase := range testsToRun {
-		tc := testCase
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			tc.Run(t)
-		})
-	}
+	return testsToRun, focused
 }
 
 type TemplateTestCase struct {
@@ -71,24 +81,6 @@ type TemplateTestCase struct {
 	IgnoreLabels         bool
 	IgnoreMetadataFields []string
 	Focus                bool
-}
-
-type TemplateTestInputs struct {
-	TemplateFile      string
-	Template          templateType
-	WorkloadFile      string
-	Workload          *v1alpha1.Workload
-	BlueprintParams   []v1alpha1.BlueprintParam
-	YttValues         Values
-	YttFiles          []string
-	labels            map[string]string
-	SupplyChainInputs templates.Inputs
-}
-
-type TemplateTestExpectations struct {
-	ExpectedFile         string
-	ExpectedObject       client.Object
-	ExpectedUnstructured *unstructured.Unstructured
 }
 
 func (c *TemplateTestCase) Run(t *testing.T) {
@@ -107,6 +99,110 @@ func (c *TemplateTestCase) Run(t *testing.T) {
 	if diff := cmp.Diff(expectedObject.Object, actualObject.Object); diff != "" {
 		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
 	}
+}
+
+func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
+	delete(expected.Object, "status")
+	delete(actual.Object, "status")
+
+	if c.IgnoreLabels {
+		expected.SetLabels(nil)
+		actual.SetLabels(nil)
+	}
+
+	if c.IgnoreMetadata {
+		delete(expected.Object, "metadata")
+		delete(actual.Object, "metadata")
+	}
+
+	var expectedMetadata, actualMetadata map[string]interface{}
+
+	if expected.Object["metadata"] != nil {
+		expectedMetadata = expected.Object["metadata"].(map[string]interface{})
+	}
+	if actual.Object["metadata"] != nil {
+		actualMetadata = actual.Object["metadata"].(map[string]interface{})
+	}
+
+	if c.IgnoreOwnerRefs {
+		delete(expectedMetadata, "ownerReferences")
+		delete(actualMetadata, "ownerReferences")
+	}
+
+	for _, field := range c.IgnoreMetadataFields {
+		delete(expectedMetadata, field)
+		delete(actualMetadata, field)
+	}
+}
+
+type TemplateTestExpectations struct {
+	ExpectedFile         string
+	ExpectedObject       client.Object
+	ExpectedUnstructured *unstructured.Unstructured
+}
+
+func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructured, error) {
+	populatedFieldCount := 0
+	if e.ExpectedFile != "" {
+		populatedFieldCount++
+	}
+	if e.ExpectedObject != nil {
+		populatedFieldCount++
+	}
+	if e.ExpectedUnstructured != nil {
+		populatedFieldCount++
+	}
+
+	if populatedFieldCount != 1 {
+		return nil, fmt.Errorf("exactly one of ExpectedFile, ExpectedObject or ExpectedUnstructured must be set")
+	}
+
+	if e.ExpectedUnstructured != nil {
+		return e.ExpectedUnstructured, nil
+	}
+
+	if e.ExpectedFile != "" {
+		return e.getExpectedObjectFromFile()
+	}
+
+	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ExpectedObject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert template to unstructured: %w", err)
+	}
+
+	return &unstructured.Unstructured{Object: unstruct}, nil
+}
+
+func (e *TemplateTestExpectations) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
+	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read expected yaml: %w", err)
+	}
+
+	expectedJson, err := yaml.YAMLToJSON(expectedStampedObjectYaml)
+	if err != nil {
+		return nil, fmt.Errorf("convert yaml to json: %w", err)
+	}
+
+	expectedStampedObject := unstructured.Unstructured{}
+
+	if err = expectedStampedObject.UnmarshalJSON(expectedJson); err != nil {
+		return nil, fmt.Errorf("unmarshall json: %w", err)
+	}
+
+	return &expectedStampedObject, nil
+}
+
+type TemplateTestInputs struct {
+	TemplateFile      string
+	Template          templateType
+	WorkloadFile      string
+	Workload          *v1alpha1.Workload
+	BlueprintParams   []v1alpha1.BlueprintParam
+	YttValues         Values
+	YttFiles          []string
+	labels            map[string]string
+	SupplyChainInputs templates.Inputs
 }
 
 func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, error) {
@@ -145,40 +241,6 @@ func (i *TemplateTestInputs) getActualObject() (*unstructured.Unstructured, erro
 	return actualStampedObject, nil
 }
 
-func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
-	delete(expected.Object, "status")
-	delete(actual.Object, "status")
-
-	if c.IgnoreLabels {
-		expected.SetLabels(nil)
-		actual.SetLabels(nil)
-	}
-
-	if c.IgnoreMetadata {
-		delete(expected.Object, "metadata")
-		delete(actual.Object, "metadata")
-	}
-
-	var expectedMetadata, actualMetadata map[string]interface{}
-
-	if expected.Object["metadata"] != nil {
-		expectedMetadata = expected.Object["metadata"].(map[string]interface{})
-	}
-	if actual.Object["metadata"] != nil {
-		actualMetadata = actual.Object["metadata"].(map[string]interface{})
-	}
-
-	if c.IgnoreOwnerRefs {
-		delete(expectedMetadata, "ownerReferences")
-		delete(actualMetadata, "ownerReferences")
-	}
-
-	for _, field := range c.IgnoreMetadataFields {
-		delete(expectedMetadata, field)
-		delete(actualMetadata, field)
-	}
-}
-
 func (i *TemplateTestInputs) getWorkload() (*v1alpha1.Workload, error) {
 	if (i.Workload == nil && i.WorkloadFile == "") ||
 		(i.Workload != nil && i.WorkloadFile != "") {
@@ -201,15 +263,6 @@ func (i *TemplateTestInputs) getWorkload() (*v1alpha1.Workload, error) {
 	}
 
 	return workload, nil
-}
-
-func (i *TemplateTestInputs) completeLabels(workload v1alpha1.Workload, template templates.Template) {
-	i.labels = map[string]string{}
-
-	i.labels["carto.run/workload-name"] = workload.GetName()
-	i.labels["carto.run/workload-namespace"] = workload.GetNamespace()
-	i.labels["carto.run/template-kind"] = template.GetKind()
-	i.labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
 func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
@@ -276,58 +329,6 @@ func (i *TemplateTestInputs) getPopulatedTemplate() (templateType, error) {
 	return apiTemplate, nil
 }
 
-func (e *TemplateTestExpectations) getExpectedObject() (*unstructured.Unstructured, error) {
-	populatedFieldCount := 0
-	if e.ExpectedFile != "" {
-		populatedFieldCount++
-	}
-	if e.ExpectedObject != nil {
-		populatedFieldCount++
-	}
-	if e.ExpectedUnstructured != nil {
-		populatedFieldCount++
-	}
-
-	if populatedFieldCount != 1 {
-		return nil, fmt.Errorf("exactly one of ExpectedFile, ExpectedObject or ExpectedUnstructured must be set")
-	}
-
-	if e.ExpectedUnstructured != nil {
-		return e.ExpectedUnstructured, nil
-	}
-
-	if e.ExpectedFile != "" {
-		return e.getExpectedObjectFromFile()
-	}
-
-	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ExpectedObject)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert template to unstructured: %w", err)
-	}
-
-	return &unstructured.Unstructured{Object: unstruct}, nil
-}
-
-func (e *TemplateTestExpectations) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
-	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read expected yaml: %w", err)
-	}
-
-	expectedJson, err := yaml.YAMLToJSON(expectedStampedObjectYaml)
-	if err != nil {
-		return nil, fmt.Errorf("convert yaml to json: %w", err)
-	}
-
-	expectedStampedObject := unstructured.Unstructured{}
-
-	if err = expectedStampedObject.UnmarshalJSON(expectedJson); err != nil {
-		return nil, fmt.Errorf("unmarshall json: %w", err)
-	}
-
-	return &expectedStampedObject, nil
-}
-
 func (i *TemplateTestInputs) preprocessYtt() (string, error) {
 	yt := YTT()
 	yt.Values(i.YttValues)
@@ -341,6 +342,15 @@ func (i *TemplateTestInputs) preprocessYtt() (string, error) {
 	}
 
 	return f.Name(), nil
+}
+
+func (i *TemplateTestInputs) completeLabels(workload v1alpha1.Workload, template templates.Template) {
+	i.labels = map[string]string{}
+
+	i.labels["carto.run/workload-name"] = workload.GetName()
+	i.labels["carto.run/workload-namespace"] = workload.GetNamespace()
+	i.labels["carto.run/template-kind"] = template.GetKind()
+	i.labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
 func (i *TemplateTestInputs) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {

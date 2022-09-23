@@ -41,7 +41,7 @@ func TestTemplateExample(t *testing.T) {
 
 	expectedDeliverable := createExpectedDeliverable(deliverable)
 
-	expectedUnstructured := getExpectedUnstructured()
+	expectedUnstructured := createExpectedUnstructured()
 
 	testSuite := template_tester.TemplateTestSuite{
 		"template, workload and expected defined in files": {
@@ -99,7 +99,6 @@ func TestTemplateExample(t *testing.T) {
 			Expectations: template_tester.TemplateTestExpectations{
 				ExpectedUnstructured: &expectedUnstructured,
 			},
-			Focus: true,
 		},
 
 		"clustertemplate uses ytt field": {
@@ -154,14 +153,119 @@ func TestTemplateExample(t *testing.T) {
 				ExpectedFile: "expected-kpack.yaml",
 			},
 			IgnoreMetadata: true,
-			Focus:          true,
 		},
 	}
 
 	testSuite.Run(t)
 }
 
-func getExpectedUnstructured() unstructured.Unstructured {
+func createWorkload() *v1alpha1.Workload {
+	url := "some-url"
+	branch := "some-branch"
+
+	workload := v1alpha1.Workload{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Workload",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Generation: 1,
+			Name:       "my-workload-name",
+			Namespace:  "my-namespace",
+		},
+		Spec: v1alpha1.WorkloadSpec{
+			ServiceAccountName: "such-a-good-sa",
+			Params: []v1alpha1.OwnerParam{
+				{
+					Name:  "gitops_url",
+					Value: apiextensionsv1.JSON{Raw: []byte(`"https://github.com/vmware-tanzu/cartographer/"`)},
+				},
+			},
+			Source: &v1alpha1.Source{
+				Git: &v1alpha1.GitSource{
+					URL: &url,
+					Ref: &v1alpha1.GitRef{
+						Branch: &branch}}}},
+	}
+
+	return &workload
+}
+
+func createDeliverable() *v1alpha1.Deliverable {
+	deliverableURL := `$(params.gitops_url)$`
+	deliverableBranch := `$(params.gitops_branch)$`
+
+	deliverable := &v1alpha1.Deliverable{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deliverable",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: `$(workload.metadata.name)$`,
+		},
+		Spec: v1alpha1.DeliverableSpec{
+			ServiceAccountName: `$(workload.spec.serviceAccountName)$`,
+			Params: []v1alpha1.OwnerParam{
+				{
+					Name:  "gitops_ssh_secret",
+					Value: apiextensionsv1.JSON{Raw: []byte(`"$(params.gitops_ssh_secret)$"`)},
+				},
+			},
+			Source: &v1alpha1.Source{
+				Git: &v1alpha1.GitSource{
+					URL: &deliverableURL,
+					Ref: &v1alpha1.GitRef{
+						Branch: &deliverableBranch,
+					},
+				},
+			},
+		},
+	}
+	return deliverable
+}
+
+func createTemplate(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterTemplate, error) {
+	dbytes, err := json.Marshal(deliverable)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deliverable: %w", err)
+	}
+
+	template := v1alpha1.ClusterTemplate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterTemplate",
+			APIVersion: "carto.run/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "create-deliverable",
+		},
+		Spec: v1alpha1.TemplateSpec{
+			Template: &runtime.RawExtension{Raw: dbytes},
+			Params: []v1alpha1.TemplateParam{
+				{
+					Name:         "gitops_ssh_secret",
+					DefaultValue: apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)},
+				},
+			},
+		},
+	}
+	return &template, nil
+}
+
+func createExpectedDeliverable(deliverable *v1alpha1.Deliverable) *v1alpha1.Deliverable {
+	newDeliverable := *deliverable
+
+	url := "https://github.com/vmware-tanzu/cartographer/"
+	branch := "main"
+
+	deliverable.Spec.Source.Git.URL = &url
+	deliverable.Spec.Source.Git.Ref.Branch = &branch
+	newDeliverable.Spec.Params[0].Value = apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)}
+	newDeliverable.Spec.ServiceAccountName = "such-a-good-sa"
+
+	return &newDeliverable
+}
+
+func createExpectedUnstructured() unstructured.Unstructured {
 	expectedUnstructured := unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": "carto.run/v1alpha1",
@@ -203,110 +307,4 @@ func getExpectedUnstructured() unstructured.Unstructured {
 		},
 	}
 	return expectedUnstructured
-}
-
-func createTemplate(deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterTemplate, error) {
-	dbytes, err := json.Marshal(deliverable)
-	if err != nil {
-		return nil, fmt.Errorf("marshal deliverable: %w", err)
-	}
-
-	template := v1alpha1.ClusterTemplate{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterTemplate",
-			APIVersion: "carto.run/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "create-deliverable",
-		},
-		Spec: v1alpha1.TemplateSpec{
-			Template: &runtime.RawExtension{Raw: dbytes},
-			Params: []v1alpha1.TemplateParam{
-				{
-					Name:         "gitops_ssh_secret",
-					DefaultValue: apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)},
-				},
-			},
-		},
-	}
-	return &template, nil
-}
-
-func createDeliverable() *v1alpha1.Deliverable {
-	deliverableURL := `$(params.gitops_url)$`
-	deliverableBranch := `$(params.gitops_branch)$`
-
-	deliverable := &v1alpha1.Deliverable{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deliverable",
-			APIVersion: "carto.run/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: `$(workload.metadata.name)$`,
-		},
-		Spec: v1alpha1.DeliverableSpec{
-			ServiceAccountName: `$(workload.spec.serviceAccountName)$`,
-			Params: []v1alpha1.OwnerParam{
-				{
-					Name:  "gitops_ssh_secret",
-					Value: apiextensionsv1.JSON{Raw: []byte(`"$(params.gitops_ssh_secret)$"`)},
-				},
-			},
-			Source: &v1alpha1.Source{
-				Git: &v1alpha1.GitSource{
-					URL: &deliverableURL,
-					Ref: &v1alpha1.GitRef{
-						Branch: &deliverableBranch,
-					},
-				},
-			},
-		},
-	}
-	return deliverable
-}
-
-func createExpectedDeliverable(deliverable *v1alpha1.Deliverable) *v1alpha1.Deliverable {
-	newDeliverable := *deliverable
-
-	url := "https://github.com/vmware-tanzu/cartographer/"
-	branch := "main"
-
-	deliverable.Spec.Source.Git.URL = &url
-	deliverable.Spec.Source.Git.Ref.Branch = &branch
-	newDeliverable.Spec.Params[0].Value = apiextensionsv1.JSON{Raw: []byte(`"some-secret"`)}
-	newDeliverable.Spec.ServiceAccountName = "such-a-good-sa"
-
-	return &newDeliverable
-}
-
-func createWorkload() *v1alpha1.Workload {
-	url := "some-url"
-	branch := "some-branch"
-
-	workload := v1alpha1.Workload{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Workload",
-			APIVersion: "carto.run/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Generation: 1,
-			Name:       "my-workload-name",
-			Namespace:  "my-namespace",
-		},
-		Spec: v1alpha1.WorkloadSpec{
-			ServiceAccountName: "such-a-good-sa",
-			Params: []v1alpha1.OwnerParam{
-				{
-					Name:  "gitops_url",
-					Value: apiextensionsv1.JSON{Raw: []byte(`"https://github.com/vmware-tanzu/cartographer/"`)},
-				},
-			},
-			Source: &v1alpha1.Source{
-				Git: &v1alpha1.GitSource{
-					URL: &url,
-					Ref: &v1alpha1.GitRef{
-						Branch: &branch}}}},
-	}
-
-	return &workload
 }
