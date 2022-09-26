@@ -41,6 +41,8 @@ jobs:
 
       - name: setup carvel tooling binaries
         uses: vmware-tanzu/carvel-setup-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: run upgrade test
         run: |-
