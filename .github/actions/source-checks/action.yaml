@@ -42,6 +42,11 @@ runs:
         sudo apt update && sudo apt install -y curl tar
         ./hack/ci/install-binaries.sh kubebuilder kuttl grype
 
+    - name: check inclusiveness
+      shell: bash
+      run: |
+        ./hack/inclusive.sh
+
     - name: run tests
       shell: bash
       env:

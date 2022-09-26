@@ -1,0 +1,63 @@
+# Exclusion file for `check inclusiveness` action
+# everything after a `#` is ignored
+
+########## Stuff that's outside our control ##########
+
+./CONTRIBUTING.md:32:                               # controller-runtime still uses less-inclusive branch names
+./CONTRIBUTING.md:35:                               # controller-runtime still uses less-inclusive branch names
+
+./hack/ci/trust-local-registry.sh:26:               # kill does not have a unix alternative
+./hack/upgrade-test.sh:101:                         # kill does not have a unix alternative
+
+./pkg/apis/v1alpha1/cluster_delivery.go:49:         # sig-arch still uses less-inclusive branch names
+./pkg/apis/v1alpha1/cluster_supply_chain.go:49:     # sig-arch still uses less-inclusive branch names
+./pkg/apis/v1alpha1/common.go:40:                   # sig-arch still uses less-inclusive branch names
+./pkg/apis/v1alpha1/common.go:224:                  # sig-arch still uses less-inclusive branch names
+./pkg/apis/v1alpha1/deliverable.go:57:              # sig-arch still uses less-inclusive branch names
+./pkg/apis/v1alpha1/runnable.go:42:                 # sig-arch still uses less-inclusive branch names
+./pkg/apis/v1alpha1/workload.go:70:                 # sig-arch still uses less-inclusive branch names
+./pkg/conditions/condition_manager.go:26:           # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:480:                    # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:1474:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:1808:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:1811:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:1875:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:2130:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:2511:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:2514:                   # sig-arch still uses less-inclusive branch names
+./release/cartographer.yaml:2566:                   # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_clusterdeliveries.yaml:380:    # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_clustersupplychains.yaml:386:  # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_deliverables.yaml:125:         # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_deliverables.yaml:130:         # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_deliverables.yaml:226:         # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_runnables.yaml:139:            # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_workloads.yaml:409:            # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_workloads.yaml:414:            # sig-arch still uses less-inclusive branch names
+./config/crd/bases/carto.run_workloads.yaml:497:            # sig-arch still uses less-inclusive branch names
+
+./pkg/satoken/token_manager.go:5                    # kubernetes-core still uses less-inclusive branch names
+
+./rfc/rfc-0023-k8s-events.md:17:                    # sig-arch still uses less-inclusive branch names
+./rfc/rfc-0023-k8s-events.md:35:                    # sig-arch still uses less-inclusive branch names
+
+
+######### Stuff we can definitely improve #########
+
+./pkg/realizer/healthcheck/healthcheck_test.go:299:  # I think we can improve these?
+./pkg/realizer/healthcheck/healthcheck_test.go:380:
+./pkg/realizer/healthcheck/healthcheck_test.go:524:
+./pkg/realizer/healthcheck/healthcheck_test.go:556:
+
+./tests/integration/delivery/delivery_selection_test.go:297:
+./tests/integration/delivery/delivery_selection_test.go:303:
+./tests/integration/delivery/delivery_selection_test.go:309:
+./tests/integration/supplychain/supply_chain_selection_test.go:452:
+./tests/integration/supplychain/supply_chain_selection_test.go:458:
+./tests/integration/supplychain/supply_chain_selection_test.go:464:
+
+
+
+
+########## new
+
