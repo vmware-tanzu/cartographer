@@ -1,0 +1,10 @@
+# Dockerfile for testing with a mac
+# todo switch to ubuntu to be more like GHA
+FROM ubuntu:latest
+RUN apt-get update && apt-get install -y curl bash grep tar perl golang make
+RUN curl -L https://carvel.dev/install.sh | bash
+VOLUME /app
+WORKDIR /app
+RUN --mount=target=/app,type=bind,source=. ./hack/ci/install-binaries.sh kubebuilder kuttl grype
+RUN --mount=target=/app,type=bind,source=. cd ./hack/tools && go mod download
+RUN --mount=target=/app,type=bind,source=. go mod download
