@@ -135,7 +135,6 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
-
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -143,23 +142,16 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
+	var reconcileErr error
 	resourceStatuses := statuses.NewResourceStatuses(workload.Status.Resources, conditions.AddConditionForResourceSubmittedWorkload)
-	err = r.Realizer.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 
+	err = r.Realizer.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 	if err != nil {
 		conditions.AddConditionForResourceSubmittedWorkload(&r.conditionManager, true, err)
+		log.V(logger.DEBUG).Info("failed to realize")
+		reconcileErr = cerrors.WrapUnhandledError(err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
-	}
-
-	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), workload.Status.Conditions))
-
-	if err != nil {
-		log.V(logger.DEBUG).Info("failed to realize")
-		if cerrors.IsUnhandledErrorType(err) {
-			err = cerrors.NewUnhandledError(err)
-		}
-	} else {
 		if log.V(logger.DEBUG).Enabled() {
 			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
@@ -167,6 +159,8 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 	}
+
+	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), workload.Status.Conditions))
 
 	r.trackDependencies(workload, resourceStatuses.GetCurrent(), serviceAccountName, serviceAccountNS)
 
@@ -187,14 +181,14 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object",
 				"object", resource.StampedRef)
-			err = cerrors.NewUnhandledError(trackingError)
+			reconcileErr = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object",
 				"object", resource.StampedRef)
 		}
 	}
 
-	return r.completeReconciliation(ctx, workload, resourceStatuses, err)
+	return r.completeReconciliation(ctx, workload, resourceStatuses, reconcileErr)
 }
 
 func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {
