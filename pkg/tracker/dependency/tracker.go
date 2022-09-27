@@ -44,9 +44,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 )
 
-//counterfeiter:generate . DependencyTracker
 // DependencyTracker defines the interface through which an object can register
 // that it is tracking another object by reference.
+//
+//counterfeiter:generate . DependencyTracker
 type DependencyTracker interface {
 	// Track tells us that "obj" is tracking changes to the
 	// referenced object.
