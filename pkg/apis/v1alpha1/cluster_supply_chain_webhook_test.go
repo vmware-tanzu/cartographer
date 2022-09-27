@@ -893,7 +893,7 @@ var _ = Describe("Webhook Validation", func() {
 
 		Context("option has invalid label selector", func() {
 			BeforeEach(func() {
-				supplyChain.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{ "not-valid-": "like-this-" }
+				supplyChain.Spec.Resources[0].TemplateRef.Options[0].Selector.LabelSelector.MatchLabels = map[string]string{"not-valid-": "like-this-"}
 			})
 
 			It("on create, it rejects the Resource", func() {
