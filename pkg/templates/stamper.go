@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -39,6 +40,40 @@ import (
 )
 
 type Labels map[string]string
+
+type pathStack []interface{}
+
+func (s *pathStack) pushString(str string) {
+	*s = append(*s, str)
+}
+
+func (s *pathStack) pushInt(i int) {
+	*s = append(*s, i)
+}
+
+func (s *pathStack) pop() {
+	index := len(*s) - 1
+	*s = (*s)[:index]
+}
+
+func (s *pathStack) string() string {
+	var sb strings.Builder
+	skipDot := true
+	for _, component := range *s {
+		if !skipDot {
+			sb.WriteString(".")
+		}
+		switch v := component.(type) {
+		case int:
+			sb.WriteString(fmt.Sprintf("[%d]", v))
+			skipDot = true
+		case string:
+			sb.WriteString(v)
+			skipDot = false
+		}
+	}
+	return sb.String()
+}
 
 // JsonPathContext is any structure that you intend for jsonpath to treat as it's context.
 // typically any struct with template-specific json structure tags
@@ -58,65 +93,29 @@ func StamperBuilder(owner client.Object, templatingContext JsonPathContext, labe
 	}
 }
 
-type loopDetector []string
-
-func (d loopDetector) checkItem(item string) (loopDetector, error) {
-	var potentialLoop []string
-	newStack := append(d, item)
-	for _, currentItem := range newStack {
-		if currentItem == item {
-			potentialLoop = append(potentialLoop, currentItem)
-		} else if len(potentialLoop) > 0 {
-			potentialLoop = append(potentialLoop, currentItem)
-		}
-	}
-	if len(potentialLoop) > 1 {
-		return newStack, fmt.Errorf("infinite tag loop detected: %+v", formatExpressionLoop(potentialLoop))
-	}
-
-	return newStack, nil
-}
-
-func formatExpressionLoop(expressionLoop []string) string {
-	result := ""
-	for _, expression := range expressionLoop {
-		if result != "" {
-			result = result + " -> "
-		}
-		result = result + expression
-	}
-	return result
-}
-
-func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetector loopDetector) (interface{}, error) {
+func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, pathStack pathStack) (interface{}, error) {
 	switch typedJSONValue := jsonValue.(type) {
 	case string:
 		stamperTagInterpolator := StandardTagInterpolator{
 			Context:   s.TemplatingContext,
 			Evaluator: eval.EvaluatorBuilder(),
 		}
-		loopDetector, err := loopDetector.checkItem(typedJSONValue)
-		if err != nil {
-			return nil, err
-		}
 
 		stampedLeafNode, err := InterpolateLeafNode(fasttemplate.ExecuteFuncStringWithErr, []byte(typedJSONValue), stamperTagInterpolator)
 		if err != nil {
-			return nil, fmt.Errorf("failed to interpolate leaf node: %w", err)
+			return nil, fmt.Errorf("failed to interpolate template at path [%s]: %w", pathStack.string(), err)
 		}
-		if jsonValue == stampedLeafNode {
-			return stampedLeafNode, nil
-		} else {
-			return s.recursivelyEvaluateTemplates(stampedLeafNode, loopDetector)
-		}
+		return stampedLeafNode, nil
 	case map[string]interface{}:
 		stampedMap := make(map[string]interface{})
 		for key, value := range typedJSONValue {
-			stampedValue, err := s.recursivelyEvaluateTemplates(value, loopDetector)
+			pathStack.pushString(key)
+			stampedValue, err := s.recursivelyEvaluateTemplates(value, pathStack)
 			if err != nil {
-				return nil, fmt.Errorf("failed to interpolate map value [%v]: %w", value, err)
+				return nil, err
 			}
 			stampedMap[key] = stampedValue
+			pathStack.pop()
 		}
 		return stampedMap, nil
 	case []interface{}:
@@ -125,12 +124,14 @@ func (s *Stamper) recursivelyEvaluateTemplates(jsonValue interface{}, loopDetect
 		}
 
 		var stampedSlice []interface{}
-		for _, sliceElement := range typedJSONValue {
-			stampedElement, err := s.recursivelyEvaluateTemplates(sliceElement, loopDetector)
+		for index, sliceElement := range typedJSONValue {
+			pathStack.pushInt(index)
+			stampedElement, err := s.recursivelyEvaluateTemplates(sliceElement, pathStack)
 			if err != nil {
-				return nil, fmt.Errorf("failed to interpolate array value [%v]: %w", sliceElement, err)
+				return nil, err
 			}
 			stampedSlice = append(stampedSlice, stampedElement)
+			pathStack.pop()
 		}
 		return stampedSlice, nil
 	default:
@@ -183,7 +184,7 @@ func (s *Stamper) applyTemplate(resourceTemplateJSON []byte) (*unstructured.Unst
 		return nil, fmt.Errorf("failed to unmarshal json resource template: %w", err)
 	}
 
-	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplate, loopDetector{})
+	stampedObjectJSON, err := s.recursivelyEvaluateTemplates(resourceTemplate, pathStack{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to recursively evaluate template: %w", err)
 	}

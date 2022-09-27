@@ -604,6 +604,8 @@ var _ = Describe("DeliverableReconciler", func() {
 						ResourceName:  "some-name",
 						BlueprintName: "some-delivery",
 						BlueprintType: cerrors.Delivery,
+						TemplateName:  "some-template",
+						TemplateKind:  "ClusterDeploymentTemplate",
 					}
 					resourceStatuses.Add(
 						&v1alpha1.RealizedResource{
@@ -661,7 +663,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
 					Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 					Expect(out).To(Say(`"delivery":"some-delivery"`))
-					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] in delivery \[some-delivery\]: some error"`))
+					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] for template \[ClusterDeploymentTemplate/some-template\] in delivery \[some-delivery\]: some error"`))
 				})
 
 				It("does track the template", func() {
