@@ -43,11 +43,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-
       - run: ytt version
 
       - name: run source checks
         uses: ./.github/actions/source-checks
+
+      - name: Inclusive terminology SonarQube scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       - name: generate and test a cartographer release
         uses: ./.github/actions/create-and-test-release
