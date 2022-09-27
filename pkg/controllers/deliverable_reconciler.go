@@ -139,23 +139,16 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
+	var reconcileErr error
 	resourceStatuses := statuses.NewResourceStatuses(deliverable.Status.Resources, conditions.AddConditionForResourceSubmittedDeliverable)
-	err = r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 
+	err = r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 	if err != nil {
 		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, err)
+		log.V(logger.DEBUG).Info("failed to realize")
+		reconcileErr = cerrors.WrapUnhandledError(err)
 	} else {
 		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
-	}
-
-	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), deliverable.Status.Conditions))
-
-	if err != nil {
-		log.V(logger.DEBUG).Info("failed to realize")
-		if cerrors.IsUnhandledErrorType(err) {
-			err = cerrors.NewUnhandledError(err)
-		}
-	} else {
 		if log.V(logger.DEBUG).Enabled() {
 			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
@@ -163,6 +156,8 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 	}
+
+	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), deliverable.Status.Conditions))
 
 	r.trackDependencies(deliverable, resourceStatuses.GetCurrent(), serviceAccountName, serviceAccountNS)
 
@@ -183,14 +178,14 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object",
 				"object", resource.StampedRef)
-			err = cerrors.NewUnhandledError(trackingError)
+			reconcileErr = cerrors.NewUnhandledError(trackingError)
 		} else {
 			log.V(logger.DEBUG).Info("added informer for object",
 				"object", resource.StampedRef)
 		}
 	}
 
-	return r.completeReconciliation(ctx, deliverable, resourceStatuses, err)
+	return r.completeReconciliation(ctx, deliverable, resourceStatuses, reconcileErr)
 }
 
 func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {

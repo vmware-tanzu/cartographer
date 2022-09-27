@@ -169,6 +169,13 @@ func (e RetrieveOutputError) GetResourceName() string {
 	return e.ResourceName
 }
 
+func WrapUnhandledError(err error) error {
+	if IsUnhandledErrorType(err) {
+		return NewUnhandledError(err)
+	}
+	return err
+}
+
 func IsUnhandledErrorType(err error) bool {
 	switch typedErr := err.(type) {
 	case GetTemplateError:
