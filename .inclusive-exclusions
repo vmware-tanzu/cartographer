@@ -3,6 +3,8 @@
 
 ########## Stuff that's outside our control ##########
 
+./.github/workflows/validation.yaml:52              # Ironically, the scanning plugin url we use for the internal vmware sensitive terms scanner, uses a less-inclusive term.
+
 ./CONTRIBUTING.md:32:                               # controller-runtime still uses less-inclusive branch names
 ./CONTRIBUTING.md:35:                               # controller-runtime still uses less-inclusive branch names
 
