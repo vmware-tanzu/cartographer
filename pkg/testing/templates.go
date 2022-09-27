@@ -36,6 +36,7 @@ type templateType interface {
 	client.Object
 }
 
+// TemplateTestSuite is a collection of named template tests which may be run together
 type TemplateTestSuite map[string]*TemplateTestCase
 
 func (s *TemplateTestSuite) Run(t *testing.T) {
@@ -87,6 +88,12 @@ func (s *TemplateTestSuite) getTestsToRun() (TemplateTestSuite, bool) {
 	return testsToRun, focused
 }
 
+// TemplateTestCase is an individual template test.
+// Given and Expect values must be provided.
+// Fields in the expected object's metadata may be ignored
+// When run as part of a TemplateTestSuite, an individual case(s) may be focused.
+// This will exercise the individual test(s).
+// Note that the overall suite will fail (preventing focused tests from passing CI).
 type TemplateTestCase struct {
 	Given                TemplateTestGivens
 	Expect               TemplateTestExpectation
@@ -149,6 +156,10 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 	}
 }
 
+// TemplateTestExpectation must provide the expected object as
+// an object,
+// an unstructured.Unstructured, or as
+// a yaml file.
 type TemplateTestExpectation struct {
 	ExpectedFile         string
 	ExpectedObject       client.Object
@@ -207,6 +218,12 @@ func (e *TemplateTestExpectation) getExpectedObjectFromFile() (*unstructured.Uns
 	return &expectedStampedObject, nil
 }
 
+// TemplateTestGivens must specify a template and a workload.
+// These can be specified as yaml files or as objects.
+// If the template is a yaml file, it may be pre-processed with ytt and values provided
+// as objects or in a values yaml file.
+// Any outputs expected from earlier templates in a supply chain may be provided in SupplyChainInputs.
+// Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
 	TemplateFile      string
 	Template          templateType
@@ -392,12 +409,17 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 	return templatingContext
 }
 
+// StringParam is a helper struct for use with the BuildBlueprintStringParams method
+// Either a Value or a DefaultValue should be specified for every StringParam
+// A Name is required for every StringParam
 type StringParam struct {
 	Name         string
 	Value        string
 	DefaultValue string
 }
 
+// BuildBlueprintStringParams is a helper method for creating string BlueprintParams for Givens.
+// BlueprintParams that hold other valid JSON values must be constructed by hand.
 func BuildBlueprintStringParams(candidateParams []StringParam) ([]v1alpha1.BlueprintParam, error) {
 	var completeParams []v1alpha1.BlueprintParam
 
