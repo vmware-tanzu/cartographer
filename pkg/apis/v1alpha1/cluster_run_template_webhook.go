@@ -51,6 +51,21 @@ func (t *RunTemplateSpec) validate() error {
 		return fmt.Errorf("invalid template: template should not set metadata.namespace on the child object")
 	}
 
+	var resourceTemplate interface{}
+	err := json.Unmarshal(t.Template.Raw, &resourceTemplate)
+	if err != nil {
+		return fmt.Errorf("invalid template: failed to unmarshal: %w", err)
+	}
+
+	unstructuredContent, ok := resourceTemplate.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid template: not a map[string]interface{}; templated object: %+v", resourceTemplate)
+	}
+
+	if _, ok := unstructuredContent["spec"]; !ok {
+		return fmt.Errorf("invalid template: object must have a spec; templated object: %+v", resourceTemplate)
+	}
+
 	return nil
 }
 
