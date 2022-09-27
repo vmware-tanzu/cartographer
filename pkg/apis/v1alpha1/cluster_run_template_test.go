@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -88,6 +89,31 @@ var _ = Describe("ClusterRunTemplate", func() {
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
+
+			Context("templated object does not have a spec", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(v1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "another-name",
+						},
+						Data: map[string]string{
+							"greeting":   "hi",
+							"salutation": "bye",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = runtime.RawExtension{Raw: raw}
+				})
+
+				It("returns an error", func() {
+					Expect(template.ValidateCreate()).
+						To(MatchError(ContainSubstring("invalid template: object must have a spec; templated object:")))
+				})
+			})
 		})
 
 		Describe("#Update", func() {
@@ -136,6 +162,31 @@ var _ = Describe("ClusterRunTemplate", func() {
 				It("returns an error", func() {
 					Expect(template.ValidateUpdate(nil)).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
+				})
+			})
+
+			Context("templated object does not have a spec", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(v1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "another-name",
+						},
+						Data: map[string]string{
+							"greeting":   "hi",
+							"salutation": "bye",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = runtime.RawExtension{Raw: raw}
+				})
+
+				It("returns an error", func() {
+					Expect(template.ValidateCreate()).
+						To(MatchError(ContainSubstring("invalid template: object must have a spec; templated object:")))
 				})
 			})
 		})
