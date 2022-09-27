@@ -392,17 +392,17 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 	return templatingContext
 }
 
-type StringParams []struct {
+type StringParam struct {
 	Name         string
 	Value        string
 	DefaultValue string
 }
 
-func BuildBlueprintStringParams(candidateParams StringParams) ([]v1alpha1.BlueprintParam, error) {
+func BuildBlueprintStringParams(candidateParams []StringParam) ([]v1alpha1.BlueprintParam, error) {
 	var completeParams []v1alpha1.BlueprintParam
 
 	for _, stringParam := range candidateParams {
-		newParam, err := BuildBlueprintStringParam(stringParam.Name, stringParam.Value, stringParam.DefaultValue)
+		newParam, err := buildBlueprintStringParam(stringParam.Name, stringParam.Value, stringParam.DefaultValue)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build param: %w", err)
 		}
@@ -412,7 +412,7 @@ func BuildBlueprintStringParams(candidateParams StringParams) ([]v1alpha1.Bluepr
 	return completeParams, nil
 }
 
-func BuildBlueprintStringParam(name string, value string, defaultValue string) (*v1alpha1.BlueprintParam, error) {
+func buildBlueprintStringParam(name string, value string, defaultValue string) (*v1alpha1.BlueprintParam, error) {
 	if (value == "" && defaultValue == "") ||
 		value != "" && defaultValue != "" {
 		return nil, fmt.Errorf("exactly one of value or defaultValue must be set")

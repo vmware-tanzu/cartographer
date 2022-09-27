@@ -30,7 +30,7 @@ import (
 )
 
 func TestTemplateExample(t *testing.T) {
-	params, err := cartotesting.BuildBlueprintStringParams(cartotesting.StringParams{
+	params, err := cartotesting.BuildBlueprintStringParams([]cartotesting.StringParam{
 		{
 			Name:         "gitops_url",
 			DefaultValue: "https://github.com/vmware-tanzu/cartographer/",
