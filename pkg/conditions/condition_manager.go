@@ -41,7 +41,8 @@ const Negative Polarity = "Negative"
 //
 // TBD: either error or warn if the same Condition.Type is reused
 // TBD2: should accept an existing []Condition slice to compare against
-//		should only update LastTransitionTime if the other fields have changed
+//
+//	should only update LastTransitionTime if the other fields have changed
 type ConditionManager interface {
 	// Add a condition and associate a polarity with it.
 	Add(condition metav1.Condition, positive Polarity)
