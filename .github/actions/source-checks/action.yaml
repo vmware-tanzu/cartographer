@@ -33,6 +33,7 @@ runs:
     - name: lint
       shell: bash
       run: |
+        go install github.com/get-woke/woke@latest
         make lint
         [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
