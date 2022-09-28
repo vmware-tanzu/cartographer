@@ -97,10 +97,10 @@ var _ = Describe("Resource", func() {
 
 		theAuthToken = "tis-but-a-flesh-wound"
 
-		dummyLabeler := func(resource realizer.OwnerResource) templates.Labels {
-			return templates.Labels{"expected-labels-from-labeller-dummy": "labeller"}
+		placeholderLabeler := func(resource realizer.OwnerResource) templates.Labels {
+			return templates.Labels{"expected-labels-from-labeler-placeholder": "labeler"}
 		}
-		r, err = resourceRealizerBuilder(theAuthToken, &workload, []v1alpha1.OwnerParam{}, &fakeSystemRepo, supplyChainParams, dummyLabeler)
+		r, err = resourceRealizerBuilder(theAuthToken, &workload, []v1alpha1.OwnerParam{}, &fakeSystemRepo, supplyChainParams, placeholderLabeler)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -194,7 +194,7 @@ var _ = Describe("Resource", func() {
 					},
 				}))
 				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeller-dummy": "labeller"}))
+				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
 
 				Expect(out.Source.Revision).To(Equal("some-revision"))
 				Expect(out.Source.URL).To(Equal("some-url"))

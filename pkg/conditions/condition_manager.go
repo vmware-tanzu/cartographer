@@ -23,7 +23,7 @@ import (
 )
 
 // To learn more about condition conventions:
-// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties // wokeignore:rule=master K8s uses this term a lot
 
 // Polarity represents how a Status is represented as success.
 type Polarity string

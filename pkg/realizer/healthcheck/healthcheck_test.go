@@ -296,7 +296,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
 							{
 								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
-									Key:      `.status.killswitch`,
+									Key:      `.status.stopsign`,
 									Operator: "Exists",
 								},
 								MessagePath: "status.usefulErrorMessage",
@@ -377,7 +377,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
 							{
 								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
-									Key:      `.status.killswitch`,
+									Key:      `.status.stopsign`,
 									Operator: "Exists",
 								},
 								MessagePath: "status.usefulErrorMessage",
@@ -521,7 +521,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 				status:
                   howgood: VeryGood
                   greenlight: true
-                  killswitch: true
+                  stopsign: true
                   usefulErrorMessage: "this would contain some useful context for the reader"
 				  conditions:
 				    - type: HealthyCond1
@@ -553,7 +553,7 @@ var _ = Describe("DetermineHealthCondition", func() {
 				  namespace: somens
 				spec:
 				status:
-                  killswitch: true
+                  stopsign: true
 				  conditions: []
 			`)
 

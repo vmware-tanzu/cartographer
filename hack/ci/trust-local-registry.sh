@@ -23,4 +23,5 @@ readonly config_file=/etc/docker/daemon.json
 
 echo "$(jq ". + {\"insecure-registries\": [\"$local_registry\"]}" $config_file)" >$config_file
 
+# wokeignore:rule=kill no alternatives in *NIX
 kill -s SIGHUP $(pidof dockerd)

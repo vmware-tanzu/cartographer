@@ -1,0 +1,35 @@
+lint-config.yaml
+kuttl-control-plane.config
+go.mod
+go.sum
+hack/tools/go.mod
+hack/tools/go.sum
+
+
+## cannot use marker in markdown
+rfc/rfc-0023-k8s-events.md
+CONTRIBUTING.md
+
+## cannot use marker in generated yaml
+config/crd/bases/carto.run_clustersupplychains.yaml
+config/crd/bases/carto.run_clusterdeliveries.yaml
+config/crd/bases/carto.run_deliverables.yaml
+config/crd/bases/carto.run_workloads.yaml
+config/crd/bases/carto.run_runnables.yaml
+
+## avoid marker in godoc comments
+pkg/apis/v1alpha1/runnable.go
+pkg/apis/v1alpha1/deliverable.go
+pkg/realizer/component_test.go
+pkg/apis/v1alpha1/cluster_delivery.go
+pkg/apis/v1alpha1/workload.go
+pkg/apis/v1alpha1/common.go
+pkg/apis/v1alpha1/cluster_supply_chain.go
+
+## needs fixing
+tests/integration/delivery/delivery_selection_test.go
+tests/integration/runnable/runnable_test.go
+tests/integration/supplychain/supply_chain_selection_test.go
+tests/kuttl/delivery/deliverable-status/00-templates.yaml
+tests/kuttl/runnable/multi-label-selector/00-selectable-dummies.yaml
+tests/kuttl/supplychain/workload-status/00-templates.yaml

@@ -33,6 +33,7 @@ runs:
     - name: lint
       shell: bash
       run: |
+        go install github.com/get-woke/woke@latest
         make lint
         [ -z "$(git status --porcelain)" ] || git diff HEAD --exit-code
 
@@ -41,11 +42,6 @@ runs:
       run: |
         sudo apt update && sudo apt install -y curl tar
         ./hack/ci/install-binaries.sh kubebuilder kuttl grype
-
-    - name: check inclusiveness
-      shell: bash
-      run: |
-        ./hack/inclusive.sh
 
     - name: run tests
       shell: bash

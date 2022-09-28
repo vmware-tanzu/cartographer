@@ -24,7 +24,7 @@ import (
 func GenerateConfigFile(env *envtest.Environment) (string, error) {
 	user, err := env.ControlPlane.AddUser(envtest.User{
 		Name:   "envtest-admin",
-		Groups: []string{"system:masters"},
+		Groups: []string{"system:masters"}, // wokeignore:rule=master K8s is riddled with this term
 	}, nil)
 	if err != nil {
 		return "", fmt.Errorf("add user: %w", err)

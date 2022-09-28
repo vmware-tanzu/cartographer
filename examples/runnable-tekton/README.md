@@ -121,8 +121,8 @@ kubectl logs Pod/test-zctzd-pod
 ```console
 ...
 + go test -v ./...
-=== RUN   TestDummy
---- FAIL: TestDummy (0.00s)
+=== RUN   TestThing
+--- FAIL: TestThing (0.00s)
 FAIL
 FAIL    github.com/carto-run/hello-world 0.009s
 FAIL

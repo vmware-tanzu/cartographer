@@ -17,6 +17,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# wokeignore:rule=disable no shellcheck alternative
 # shellcheck disable=SC2155
 readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
@@ -25,6 +26,7 @@ readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.24.2}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
 readonly RELEASE_YAML_PATH=${RELEASE_YAML_PATH:-"./release/cartographer.yaml"}
+# wokeignore:rule=disable no shellcheck alternative
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
 
