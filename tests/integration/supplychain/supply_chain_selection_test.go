@@ -448,7 +448,7 @@ var _ = Describe("Supply Chain selection for workloads", func() {
 							kind: ClusterTemplate
 							name: my-template
 				`))
-
+			// wokeignore:rule=master todo: we can remove the references to master in tests and examples
 			// web-on-main-or-master-sc: supply chain that matches on type:web and is git and is on main or master [should match, most specific]
 			apply(utils.HereYaml(`
 					---

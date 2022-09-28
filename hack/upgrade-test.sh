@@ -17,11 +17,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# wokeignore:rule=disable no shellcheck alternative
 # shellcheck disable=SC2155
 readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
+# wokeignore:rule=disable no shellcheck alternative
 # shellcheck disable=SC2034  # This _should_ be marked as an extern but I clearly don't understand how it operates in github actions
 readonly DOCKER_CONFIG=${DOCKER_CONFIG:-"/tmp/cartographer-docker"}
 
@@ -97,8 +99,9 @@ setup_git_server() {
   done
 
   kubectl port-forward service/git-server $port:80 &
+  # wokeignore:rule=disable no shellcheck alternative
   # shellcheck disable=SC2064
-  trap "kill $! || true" EXIT
+  trap "kill $! || true" EXIT # wokeignore:rule=kill no *NIX alternative
   sleep 5
 }
 

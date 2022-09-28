@@ -16,6 +16,7 @@
 apiVersion: test.run/v1alpha1
 kind: Test
 metadata:
+  # wokeignore:rule=dummy todo: remove uninclusive term and rename file
   name: dummy-selected-1---runnables-by-label-selector
   labels:
     runnables.carto.run/group: dev---runnables-by-label-selector

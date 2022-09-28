@@ -1,8 +1,8 @@
 // Copyright 2022 VMware, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-// This file is a modified version of
-// https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/token/token_manager.go
+// wokeignore:rule=master K8s uses this term a lot
+// This file is a modified version of https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/token/token_manager.go
 
 package satoken
 
