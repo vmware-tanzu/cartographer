@@ -4,6 +4,7 @@ GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
 GCI_LINT ?= go run -modfile hack/tools/go.mod github.com/daixiang0/gci
 CONTROL_PLANE_KUTTL ?= kubectl kuttl test --control-plane-config=kuttl-control-plane.config
+WOKE ?= go run -modfile hack/tools/go.mod github.com/get-woke/woke
 UNAME := $(shell uname)
 
 ifndef ($LOG_LEVEL)
@@ -138,7 +139,7 @@ coverage:
 
 .PHONY: woke
 woke:
-	woke -c https://via.vmw.com/its-woke-rules
+	$(WOKE) -c https://via.vmw.com/its-woke-rules
 
 .PHONY: lint
 lint: copyright woke
