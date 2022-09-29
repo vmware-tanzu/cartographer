@@ -1,0 +1,4 @@
+- name: "gitops_url"
+  default: "https://github.com/vmware-tanzu/cartographer/"
+- name: "gitops_branch"
+  value: "main"
