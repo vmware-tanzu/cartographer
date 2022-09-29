@@ -17,6 +17,7 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -60,12 +61,12 @@ func TestTemplateExample(t *testing.T) {
 	testSuite := cartotesting.TemplateTestSuite{
 		"template, workload and expected defined in files": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    "template.yaml",
-				WorkloadFile:    "workload.yaml",
+				TemplateFile:    filepath.Join("deliverable", "template.yaml"),
+				WorkloadFile:    filepath.Join("deliverable", "workload.yaml"),
 				BlueprintParams: params,
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected.yaml",
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
 			},
 		},
 
@@ -73,30 +74,41 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.TemplateTestGivens{
 				Template:        templateOfDeliverable,
 				BlueprintParams: params,
-				WorkloadFile:    "workload.yaml",
+				WorkloadFile:    filepath.Join("deliverable", "workload.yaml"),
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected.yaml",
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
 			},
 			IgnoreMetadataFields: []string{"creationTimestamp"},
 		},
 
 		"workload defined as an object": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    "template.yaml",
+				TemplateFile:    filepath.Join("deliverable", "template.yaml"),
 				Workload:        workload,
 				BlueprintParams: params,
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected.yaml",
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
+			},
+		},
+
+		"blueprints defined as a file": {
+			Given: cartotesting.TemplateTestGivens{
+				TemplateFile:        filepath.Join("deliverable", "template.yaml"),
+				WorkloadFile:        filepath.Join("deliverable", "workload.yaml"),
+				BlueprintParamsFile: filepath.Join("deliverable", "params.yaml"),
+			},
+			Expect: cartotesting.TemplateTestExpectation{
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
 			},
 		},
 
 		"expected defined as an object": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    "template.yaml",
+				TemplateFile:    filepath.Join("deliverable", "template.yaml"),
 				BlueprintParams: params,
-				WorkloadFile:    "workload.yaml",
+				WorkloadFile:    filepath.Join("deliverable", "workload.yaml"),
 			},
 			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedObject: expectedDeliverable,
@@ -106,9 +118,9 @@ func TestTemplateExample(t *testing.T) {
 
 		"expected defined as an unstructured": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    "template.yaml",
+				TemplateFile:    filepath.Join("deliverable", "template.yaml"),
+				WorkloadFile:    filepath.Join("deliverable", "workload.yaml"),
 				BlueprintParams: params,
-				WorkloadFile:    "workload.yaml",
 			},
 			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedUnstructured: &expectedUnstructured,
@@ -117,45 +129,45 @@ func TestTemplateExample(t *testing.T) {
 
 		"clustertemplate uses ytt field": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    "template-ytt.yaml",
+				TemplateFile:    filepath.Join("deliverable", "template-ytt.yaml"),
+				WorkloadFile:    filepath.Join("deliverable", "workload.yaml"),
 				BlueprintParams: params,
-				WorkloadFile:    "workload.yaml",
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected.yaml",
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in object": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    "template-requires-preprocess.yaml",
+				TemplateFile:    filepath.Join("deliverable", "template-requires-preprocess.yaml"),
+				WorkloadFile:    filepath.Join("deliverable", "workload.yaml"),
 				BlueprintParams: params,
-				WorkloadFile:    "workload.yaml",
 				YttValues: cartotesting.Values{
 					"kind": "Deliverable",
 				},
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected.yaml",
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in files": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile: "template-requires-preprocess.yaml",
-				WorkloadFile: "workload.yaml",
-				YttFiles:     []string{"values.yaml"},
+				TemplateFile: filepath.Join("deliverable", "template-requires-preprocess.yaml"),
+				WorkloadFile: filepath.Join("deliverable", "workload.yaml"),
+				YttFiles:     []string{filepath.Join("deliverable", "ytt-values.yaml")},
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected.yaml",
+				ExpectedFile: filepath.Join("deliverable", "expected.yaml"),
 			},
 		},
 
 		"template that requires a supply chain input": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile: "template-kpack.yaml",
-				WorkloadFile: "workload.yaml",
-				SupplyChainInputs: templates.Inputs{
+				TemplateFile: filepath.Join("kpack", "template.yaml"),
+				WorkloadFile: filepath.Join("kpack", "workload.yaml"),
+				SupplyChainInputs: &templates.Inputs{
 					Sources: map[string]templates.SourceInput{
 						"source": {
 							URL: "some-passed-on-url",
@@ -164,7 +176,19 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: "expected-kpack.yaml",
+				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
+			},
+			IgnoreMetadata: true,
+		},
+
+		"providing a supply chain input file": {
+			Given: cartotesting.TemplateTestGivens{
+				TemplateFile:          filepath.Join("kpack", "template.yaml"),
+				WorkloadFile:          filepath.Join("kpack", "workload.yaml"),
+				SupplyChainInputsFile: filepath.Join("kpack", "inputs.yaml"),
+			},
+			Expect: cartotesting.TemplateTestExpectation{
+				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
 			},
 			IgnoreMetadata: true,
 		},

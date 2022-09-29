@@ -39,6 +39,39 @@ type templateType interface {
 // TemplateTestSuite is a collection of named template tests which may be run together
 type TemplateTestSuite map[string]*TemplateTestCase
 
+type FailedTest struct {
+	name string
+	err  error
+}
+
+// Assert allows testing a TemplateTestSuite when a *testing.T is not available,
+// e.g. when tests are not run from 'go test'
+// It returns a list of the named tests that passed and a list of the named tests that failed with their errors
+func (s *TemplateTestSuite) Assert() ([]string, []*FailedTest) {
+	var (
+		passedTests []string
+		failedTests []*FailedTest
+	)
+
+	testsToRun, _ := s.getTestsToRun()
+
+	for name, testCase := range testsToRun {
+		err := testCase.Run()
+		if err != nil {
+			failedTests = append(failedTests, &FailedTest{name: name, err: err})
+		} else {
+			passedTests = append(passedTests, name)
+		}
+	}
+
+	return passedTests, failedTests
+}
+
+func (s *TemplateTestSuite) HasFocusedTests() bool {
+	_, focused := s.getTestsToRun()
+	return focused
+}
+
 func (s *TemplateTestSuite) Run(t *testing.T) {
 	testsToRun, focused := s.getTestsToRun()
 
@@ -49,7 +82,10 @@ func (s *TemplateTestSuite) Run(t *testing.T) {
 	for name, testCase := range testsToRun {
 		tc := testCase
 		t.Run(name, func(t *testing.T) {
-			tc.Run(t)
+			err := tc.Run()
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -65,7 +101,10 @@ func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
 		tc := testCase
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			tc.Run(t)
+			err := tc.Run()
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -104,22 +143,24 @@ type TemplateTestCase struct {
 	Focus                bool
 }
 
-func (c *TemplateTestCase) Run(t *testing.T) {
+func (c *TemplateTestCase) Run() error {
 	expectedObject, err := c.Expect.getExpectedObject()
 	if err != nil {
-		t.Fatalf("failed to get expected object: %v", err)
+		return fmt.Errorf("failed to get expected object: %v", err)
 	}
 
 	actualObject, err := c.Given.getActualObject()
 	if err != nil {
-		t.Fatalf("failed to get actual object: %v", err)
+		return fmt.Errorf("failed to get actual object: %v", err)
 	}
 
 	c.stripIgnoredFields(expectedObject, actualObject)
 
 	if diff := cmp.Diff(expectedObject.Object, actualObject.Object); diff != "" {
-		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
+		return fmt.Errorf("expected does not equal actual: (-expected +actual):\n%s", diff)
 	}
+
+	return nil
 }
 
 func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
@@ -225,15 +266,17 @@ func (e *TemplateTestExpectation) getExpectedObjectFromFile() (*unstructured.Uns
 // Any outputs expected from earlier templates in a supply chain may be provided in SupplyChainInputs.
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
-	TemplateFile      string
-	Template          templateType
-	WorkloadFile      string
-	Workload          *v1alpha1.Workload
-	BlueprintParams   []v1alpha1.BlueprintParam
-	YttValues         Values
-	YttFiles          []string
-	labels            map[string]string
-	SupplyChainInputs templates.Inputs
+	TemplateFile          string
+	Template              templateType
+	WorkloadFile          string
+	Workload              *v1alpha1.Workload
+	BlueprintParams       []v1alpha1.BlueprintParam
+	BlueprintParamsFile   string
+	YttValues             Values
+	YttFiles              []string
+	labels                map[string]string
+	SupplyChainInputs     *templates.Inputs
+	SupplyChainInputsFile string
 }
 
 func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
@@ -260,9 +303,17 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 
 	i.completeLabels(*workload, template)
 
-	params := templates.ParamsBuilder(template.GetDefaultParams(), i.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
+	blueprintParams, err := i.getBlueprintParams()
+	if err != nil {
+		return nil, fmt.Errorf("get blueprint params failed: %v", err)
+	}
 
-	templatingContext := i.createTemplatingContext(*workload, params)
+	params := templates.ParamsBuilder(template.GetDefaultParams(), blueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
+
+	templatingContext, err := i.createTemplatingContext(*workload, params)
+	if err != nil {
+		return nil, fmt.Errorf("create templating context: %w", err)
+	}
 
 	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
 	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
@@ -385,8 +436,13 @@ func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template
 	i.labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
-func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
-	inputs := i.SupplyChainInputs
+func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) (map[string]interface{}, error) {
+	var inputs *templates.Inputs
+
+	inputs, err := i.getSupplyChainInputs()
+	if err != nil {
+		return nil, fmt.Errorf("get supply chain inputs: %w", err)
+	}
 
 	templatingContext := map[string]interface{}{
 		"workload": workload,
@@ -406,7 +462,158 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 	if inputs.OnlySource() != nil {
 		templatingContext["source"] = inputs.OnlySource()
 	}
-	return templatingContext
+	return templatingContext, nil
+}
+
+func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, error) {
+	if i.BlueprintParamsFile != "" && i.BlueprintParams != nil {
+		return nil, fmt.Errorf("only one of blueprintParams or blueprintParamsFile may be set")
+	}
+
+	if i.BlueprintParamsFile == "" && i.BlueprintParams == nil {
+		return []v1alpha1.BlueprintParam{}, nil
+	}
+
+	if i.BlueprintParams != nil {
+		return i.BlueprintParams, nil
+	}
+
+	paramsFile, err := os.ReadFile(i.BlueprintParamsFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
+	}
+
+	var paramsData []v1alpha1.BlueprintParam
+
+	err = yaml.Unmarshal(paramsFile, &paramsData)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshall params: %w", err)
+	}
+
+	return paramsData, nil // TODO: document
+}
+
+func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
+	if i.SupplyChainInputsFile != "" && i.SupplyChainInputs != nil {
+		return nil, fmt.Errorf("only one of blueprintParams or blueprintParamsFile may be set")
+	}
+
+	if i.SupplyChainInputsFile == "" && i.SupplyChainInputs == nil {
+		return &templates.Inputs{}, nil
+	}
+
+	if i.SupplyChainInputs != nil {
+		return i.SupplyChainInputs, nil
+	}
+
+	inputsFile, err := os.ReadFile(i.SupplyChainInputsFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
+	}
+
+	inputData := make(map[string]interface{})
+
+	err = yaml.Unmarshal(inputsFile, &inputData)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshall params: %w", err)
+	}
+
+	var inputs templates.Inputs
+
+	if val, ok := inputData["sources"]; ok {
+		switch sources := val.(type) {
+		case map[string]interface{}:
+			inputs.Sources, err = extractSources(sources)
+			if err != nil {
+				return nil, fmt.Errorf("extract sources: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("type assertion failed, expected \"sources\" to be type map[string]interface{} but found: %v", val)
+		}
+	}
+
+	if val, ok := inputData["images"]; ok {
+		switch images := val.(type) {
+		case map[string]interface{}:
+			inputs.Images, err = extractImages(images)
+			if err != nil {
+				return nil, fmt.Errorf("extract images: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("type assertion failed, expected \"images\" to be type map[string]interface{} but found: %v", val)
+		}
+	}
+
+	if val, ok := inputData["configs"]; ok {
+		switch configs := val.(type) {
+		case map[string]interface{}:
+			inputs.Configs, err = extractConfigs(configs)
+			if err != nil {
+				return nil, fmt.Errorf("extract configs: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("type assertion failed, expected \"configs\" to be type map[string]interface{} but found: %v", val)
+		}
+	}
+
+	return &inputs, nil
+}
+
+func extractSources(sources map[string]interface{}) (map[string]templates.SourceInput, error) {
+	inputSources := make(map[string]templates.SourceInput)
+	for name, v := range sources {
+		switch source := v.(type) {
+		case map[string]interface{}:
+			inputSource := templates.SourceInput{}
+			inputSource.Name = name
+			if url, ok := source["url"]; ok {
+				inputSource.URL = url
+			}
+			if revision, ok := source["revision"]; ok {
+				inputSource.Revision = revision
+			}
+			inputSources[name] = inputSource
+		default:
+			return nil, fmt.Errorf("type assertion failed: expected sources[\"%s\"] to be map[string]interface{}, but found: %v", name, source)
+		}
+	}
+	return inputSources, nil
+}
+
+func extractImages(images map[string]interface{}) (map[string]templates.ImageInput, error) {
+	inputImages := make(map[string]templates.ImageInput)
+	for name, v := range images {
+		switch image := v.(type) {
+		case map[string]interface{}:
+			inputImage := templates.ImageInput{}
+			inputImage.Name = name
+			if i, ok := image["image"]; ok {
+				inputImage.Image = i
+			}
+			inputImages[name] = inputImage
+		default:
+			return nil, fmt.Errorf("type assertion failed: expected images[\"%s\"] to be map[string]interface{}, but found: %v", name, image)
+		}
+	}
+	return inputImages, nil
+}
+
+func extractConfigs(configs map[string]interface{}) (map[string]templates.ConfigInput, error) {
+	inputConfigs := make(map[string]templates.ConfigInput)
+	for name, v := range configs {
+		switch config := v.(type) {
+		case map[string]interface{}:
+			inputConfig := templates.ConfigInput{}
+			inputConfig.Name = name
+			if c, ok := config["config"]; ok {
+				inputConfig.Config = c
+			}
+			inputConfigs[name] = inputConfig
+		default:
+			return nil, fmt.Errorf("type assertion failed: expected configs[\"%s\"] to be map[string]interface{}, but found: %v", name, config)
+		}
+	}
+	return inputConfigs, nil
 }
 
 // StringParam is a helper struct for use with the BuildBlueprintStringParams method
