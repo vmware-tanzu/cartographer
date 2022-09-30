@@ -7,12 +7,19 @@ import (
 	"os"
 	"path/filepath"
 
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
 )
 
 type testCaseReporter struct {
-	err                     error
-	path, name, description string
+	err  error
+	path string
+	info *testInfo
+}
+
+type testInfo struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
 }
 
 func reportTestResults(passedTests []string, failedTests []*FailedTest, hasFocusedTests bool) error {
@@ -23,11 +30,19 @@ func reportTestResults(passedTests []string, failedTests []*FailedTest, hasFocus
 	)
 
 	for _, passedTest := range passedTests {
-		tests = append(tests, *newTestCaseReporter(passedTest, nil))
+		testCase, err := newTestCaseReporter(passedTest, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create new test case reporter for test %s: %w", passedTest, err)
+		}
+		tests = append(tests, *testCase)
 	}
 
 	for _, failedTest := range failedTests {
-		tests = append(tests, *newTestCaseReporter(failedTest.name, failedTest.err))
+		testCase, err := newTestCaseReporter(failedTest.name, failedTest.err)
+		if err != nil {
+			return fmt.Errorf("failed to create new test case reporter for test %s: %w", failedTest.name, err)
+		}
+		tests = append(tests, *testCase)
 		errorOccurred = true
 	}
 
@@ -58,15 +73,22 @@ func reportTestResults(passedTests []string, failedTests []*FailedTest, hasFocus
 	return nil
 }
 
-func newTestCaseReporter(path string, err error) *testCaseReporter {
+func newTestCaseReporter(path string, err error) (*testCaseReporter, error) {
 	tcr := testCaseReporter{
 		err:  err,
 		path: path,
 	}
-	tcr.name, _ = getTestInfo(path, "name")
-	tcr.description, _ = getTestInfo(path, "description")
 
-	return &tcr
+	infoFilepath := filepath.Join(path, "info.yaml")
+
+	info, err := populateInfo(infoFilepath)
+	if err != nil {
+		return nil, fmt.Errorf("populate test info: %w", err)
+	}
+
+	tcr.info = info
+
+	return &tcr, nil
 }
 
 func (t *testCaseReporter) report(verbose bool) string {
@@ -77,8 +99,8 @@ func (t *testCaseReporter) report(verbose bool) string {
 }
 
 func (t *testCaseReporter) reportPassed(verbose bool) string {
-	if verbose && t.name != "" {
-		return fmt.Sprintf("PASS: %s %s", t.path, t.name)
+	if verbose && t.info.Name != "" {
+		return fmt.Sprintf("PASS: %s %s", t.path, t.info.Name)
 	}
 	return fmt.Sprintf("PASS: %s", t.path)
 }
@@ -86,12 +108,12 @@ func (t *testCaseReporter) reportPassed(verbose bool) string {
 func (t *testCaseReporter) reportFailed(verbose bool) string {
 	returnString := fmt.Sprintf("FAIL: %s", t.path)
 
-	if verbose && t.name != "" {
-		returnString = fmt.Sprintf("%s\nName: %s", returnString, t.name)
+	if verbose && t.info.Name != "" {
+		returnString = fmt.Sprintf("%s\nName: %s", returnString, t.info.Name)
 	}
 
-	if verbose && t.description != "" {
-		returnString = fmt.Sprintf("%s\nDescription: %s", returnString, t.description)
+	if verbose && t.info.Description != "" {
+		returnString = fmt.Sprintf("%s\nDescription: %s", returnString, t.info.Description)
 	}
 
 	if verbose && t.err != nil {
@@ -101,29 +123,21 @@ func (t *testCaseReporter) reportFailed(verbose bool) string {
 	return returnString
 }
 
-func getTestInfo(path string, field string) (string, error) {
-	infoFilepath := filepath.Join(path, "info.yaml")
-
-	infoFile, err := os.ReadFile(infoFilepath)
+func populateInfo(filePath string) (*testInfo, error) {
+	var infoStruct testInfo
+	infoFile, err := os.ReadFile(filePath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return "", fmt.Errorf("file does not exist: %s", infoFilepath)
+			log.Debugf("populate info failed, did not find %s", filePath)
+			return &infoStruct, nil
 		}
-		return "", fmt.Errorf("unable to read file: %s", infoFilepath)
+		return nil, fmt.Errorf("unable to read file: %s", filePath)
 	}
 
-	infoData := make(map[string]interface{})
-
-	err = yaml.Unmarshal(infoFile, &infoData)
+	err = yaml.Unmarshal(infoFile, &infoStruct)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal %s", infoFilepath)
+		return nil, fmt.Errorf("failed to unmarshal %s", filePath)
 	}
 
-	if val, ok := infoData[field]; ok {
-		if stringVal, ok := val.(string); ok {
-			return stringVal, nil
-		}
-	}
-
-	return "", fmt.Errorf("field not found: %s", field)
+	return &infoStruct, nil
 }
