@@ -1,5 +1,3 @@
-template: template-ytt.yaml
-
 blueprintParams:
   - name: "gitops_branch"
     value: "main"
