@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
@@ -51,74 +52,22 @@ var rootCmd = &cobra.Command{
    
 Read more at cartographer.sh`,
 	Args: cobra.NoArgs,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		log.SetFormatter(&log.TextFormatter{})
+		if verbose {
+			log.SetLevel(log.DebugLevel)
+		}
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := validateFilesExist()
 		if err != nil {
 			return fmt.Errorf("failed to validate all files exist: %w", err)
 		}
 
-		//var testCases []TemplateTestCase
-		//testCases = buildTestCases(TemplateTestCase{},directory)
-
-		testCase := TemplateTestCase{
-			Given: TemplateTestGivens{
-				TemplateFile: template,
-				WorkloadFile: filepath.Join(directory, "workload.yaml"),
-			},
-			Expect: TemplateTestExpectation{
-				ExpectedFile: filepath.Join(directory, "expected.yaml"),
-			},
-		}
-
-		yttFilepath := filepath.Join(directory, "ytt-values.yaml")
-		_, err = os.Stat(yttFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.Given.YttFiles = []string{yttFilepath}
-		}
-
-		inputsFilepath := filepath.Join(directory, "inputs.yaml")
-		_, err = os.Stat(inputsFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.Given.SupplyChainInputsFile = inputsFilepath
-		}
-
-		paramsFilepath := filepath.Join(directory, "params.yaml")
-		_, err = os.Stat(paramsFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.Given.BlueprintParamsFile = paramsFilepath
-		}
-
-		focusFilepath := filepath.Join(directory, "focus")
-		_, err = os.Stat(focusFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.Focus = true
-		}
-
-		ignoreMetadataFilepath := filepath.Join(directory, "ignoreMetadata")
-		_, err = os.Stat(ignoreMetadataFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.IgnoreMetadata = true
-		}
-
-		ignoreOwnerRefsFilepath := filepath.Join(directory, "ignoreOwnerRefs")
-		_, err = os.Stat(ignoreOwnerRefsFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.IgnoreOwnerRefs = true
-		}
-
-		ignoreLabelsFilepath := filepath.Join(directory, "ignoreLabels")
-		_, err = os.Stat(ignoreLabelsFilepath)
-		if !errors.Is(err, fs.ErrNotExist) {
-			testCase.IgnoreLabels = true
-		}
-
-		testCase.IgnoreMetadataFields, err = getIgnoredFields()
+		var testSuite TemplateTestSuite
+		testSuite, err = buildTestCases(TemplateTestCase{Given: TemplateTestGivens{TemplateFile: template}}, directory)
 		if err != nil {
-			return fmt.Errorf("get ignored fields: %w", err)
-		}
-
-		testSuite := TemplateTestSuite{
-			directory: &testCase,
+			return fmt.Errorf("build test cases: %w", err)
 		}
 
 		cmd.SilenceUsage = true
@@ -167,6 +116,104 @@ Read more at cartographer.sh`,
 
 		return nil
 	},
+}
+
+func buildTestCases(testCase TemplateTestCase, directory string) (TemplateTestSuite, error) {
+	var err error
+
+	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "workload.yaml")
+	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, "expected.yaml")
+	testCase.Given.SupplyChainInputsFile = replaceIfFound(testCase.Given.SupplyChainInputsFile, directory, "inputs.yaml")
+	testCase.Given.BlueprintParamsFile = replaceIfFound(testCase.Given.BlueprintParamsFile, directory, "params.yaml")
+	testCase.Given.YttFiles = replaceYttIfFound(testCase.Given.YttFiles)
+
+	testCase.Focus = testCase.Focus || trueIfFound(directory, "focus")
+	testCase.IgnoreMetadata = testCase.IgnoreMetadata || trueIfFound(directory, "ignoreMetadata")
+	testCase.IgnoreOwnerRefs = testCase.IgnoreOwnerRefs || trueIfFound(directory, "ignoreOwnerRefs")
+	testCase.IgnoreLabels = testCase.IgnoreLabels || trueIfFound(directory, "ignoreLabels")
+
+	newIgnoreFields, err := getIgnoredFields(directory)
+	if err != nil {
+		return nil, fmt.Errorf("get ignored fields: %w", err)
+	}
+
+	testCase.IgnoreMetadataFields = append(testCase.IgnoreMetadataFields, newIgnoreFields...)
+
+	subdirectories, err := getSubdirectories(directory)
+	if err != nil {
+		return nil, fmt.Errorf("get subdirectories: %w", err)
+	}
+
+	if len(subdirectories) > 0 {
+		testSuite := make(TemplateTestSuite)
+		for _, subdirectory := range subdirectories {
+			newCase := testCase
+			var tempTestSuite TemplateTestSuite
+			tempTestSuite, err = buildTestCases(newCase, filepath.Join(directory, subdirectory))
+			if err != nil {
+				return nil, fmt.Errorf("failed building test case for subdirectory: %s: %w", subdirectory, err)
+			}
+			for name, aCase := range tempTestSuite {
+				testSuite[name] = aCase
+			}
+		}
+		return testSuite, nil
+	}
+
+	return TemplateTestSuite{
+		directory: &testCase,
+	}, nil
+}
+
+func getSubdirectories(directory string) ([]string, error) {
+	var subdirectories []string
+	files, err := os.ReadDir(directory)
+	if err != nil {
+		return nil, fmt.Errorf("read dir: %w", err)
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			subdirectories = append(subdirectories, file.Name())
+		}
+	}
+	return subdirectories, nil
+}
+
+func trueIfFound(directory string, file string) bool {
+	filePath := filepath.Join(directory, file)
+	_, err := os.Stat(filePath)
+	if !errors.Is(err, fs.ErrNotExist) {
+		log.Debugf("set %s for directory %s and its subdirectories", file, directory)
+		return true
+	}
+	return false
+}
+
+func replaceYttIfFound(yttFiles []string) []string {
+	yttFilepath := filepath.Join(directory, "ytt-values.yaml")
+	_, err := os.Stat(yttFilepath)
+	if !errors.Is(err, fs.ErrNotExist) {
+		if len(yttFiles) > 0 {
+			log.Debugf("%s concatenated with yttfiles in a parent directory", yttFilepath)
+			return append(yttFiles, yttFilepath)
+		} else {
+			return []string{yttFilepath}
+		}
+	}
+	return yttFiles
+}
+
+func replaceIfFound(originalPath string, directory, filename string) string {
+	candidatePath := filepath.Join(directory, filename)
+	_, err := os.Stat(candidatePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return originalPath
+	}
+	if originalPath != "" {
+		log.Debugf("%s replaced a value found in a parent directory", candidatePath)
+	}
+	return candidatePath
 }
 
 type testCaseReporter struct {
@@ -244,7 +291,7 @@ func getTestInfo(path string, field string) (string, error) {
 	return "", fmt.Errorf("field not found: %s", field)
 }
 
-func getIgnoredFields() ([]string, error) {
+func getIgnoredFields(directory string) ([]string, error) {
 	var (
 		ignoredFields []string
 		err           error
