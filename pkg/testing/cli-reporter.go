@@ -17,11 +17,6 @@ type testCaseReporter struct {
 	info *testInfo
 }
 
-type testInfo struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
-}
-
 func reportTestResults(passedTests []string, failedTests []*FailedTest, hasFocusedTests bool) error {
 	var (
 		tests         []testCaseReporter
@@ -79,9 +74,7 @@ func newTestCaseReporter(path string, err error) (*testCaseReporter, error) {
 		path: path,
 	}
 
-	infoFilepath := filepath.Join(path, "info.yaml")
-
-	info, err := populateInfo(infoFilepath)
+	info, err := populateInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("populate test info: %w", err)
 	}
@@ -99,8 +92,8 @@ func (t *testCaseReporter) report(verbose bool) string {
 }
 
 func (t *testCaseReporter) reportPassed(verbose bool) string {
-	if verbose && t.info.Name != "" {
-		return fmt.Sprintf("PASS: %s %s", t.path, t.info.Name)
+	if verbose && t.info.Name != nil {
+		return fmt.Sprintf("PASS: %s %s", t.path, *t.info.Name)
 	}
 	return fmt.Sprintf("PASS: %s", t.path)
 }
@@ -108,12 +101,12 @@ func (t *testCaseReporter) reportPassed(verbose bool) string {
 func (t *testCaseReporter) reportFailed(verbose bool) string {
 	returnString := fmt.Sprintf("FAIL: %s", t.path)
 
-	if verbose && t.info.Name != "" {
-		returnString = fmt.Sprintf("%s\nName: %s", returnString, t.info.Name)
+	if verbose && t.info.Name != nil {
+		returnString = fmt.Sprintf("%s\nName: %s", returnString, *t.info.Name)
 	}
 
-	if verbose && t.info.Description != "" {
-		returnString = fmt.Sprintf("%s\nDescription: %s", returnString, t.info.Description)
+	if verbose && t.info.Description != nil {
+		returnString = fmt.Sprintf("%s\nDescription: %s", returnString, *t.info.Description)
 	}
 
 	if verbose && t.err != nil {
@@ -123,20 +116,22 @@ func (t *testCaseReporter) reportFailed(verbose bool) string {
 	return returnString
 }
 
-func populateInfo(filePath string) (*testInfo, error) {
+func populateInfo(directory string) (*testInfo, error) {
 	var infoStruct testInfo
+
+	filePath := filepath.Join(directory, "info.yaml")
 	infoFile, err := os.ReadFile(filePath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			log.Debugf("populate info failed, did not find %s", filePath)
 			return &infoStruct, nil
 		}
-		return nil, fmt.Errorf("unable to read file: %s", filePath)
+		return nil, fmt.Errorf("read file failed: %s: %w", filePath, err)
 	}
 
 	err = yaml.Unmarshal(infoFile, &infoStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal %s", filePath)
+		return nil, fmt.Errorf("unmarshal failed: %s: %w", filePath, err)
 	}
 
 	return &infoStruct, nil
