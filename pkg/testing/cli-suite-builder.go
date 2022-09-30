@@ -3,39 +3,82 @@ package testing
 import (
 	"errors"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"io/fs"
 	"os"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
-	"sigs.k8s.io/yaml"
 )
 
+type testInfo struct {
+	Name                  *string                   `yaml:"name"`
+	Description           *string                   `yaml:"description"`
+	Template              *string                   `yaml:"template"`
+	Workload              *string                   `yaml:"workload"`
+	Expected              *string                   `yaml:"expected"`
+	YttFile               *string                   `yaml:"ytt"`
+	SupplyChainInputsFile *string                   `yaml:"supplyChainInputsFile"`
+	SupplyChainInputs     *templates.Inputs         `yaml:"supplyChainInputs"`
+	BlueprintParams       []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
+	BlueprintParamsFile   *string                   `yaml:"blueprintParamsFile"`
+	Focus                 *bool                     `yaml:"focus"`
+	IgnoreMetadata        *bool                     `yaml:"ignoreMetadata"`
+	IgnoreOwnerRefs       *bool                     `yaml:"ignoreOwnerRefs"`
+	IgnoreLabels          *bool                     `yaml:"ignoreLabels"`
+	IgnoreMetadataFields  []string                  `yaml:"ignoreMetadataFields"`
+}
+
 func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSuite, error) {
-	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "template.yaml")
-	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "workload.yaml")
-	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, "expected.yaml")
-	testCase.Given.SupplyChainInputsFile = replaceIfFound(testCase.Given.SupplyChainInputsFile, directory, "inputs.yaml")
-	testCase.Given.BlueprintParamsFile = replaceIfFound(testCase.Given.BlueprintParamsFile, directory, "params.yaml")
-	testCase.Given.YttFiles = replaceYttIfFound(testCase.Given.YttFiles)
-
-	testCase.Focus = testCase.Focus || trueIfFound(directory, "focus")
-	testCase.IgnoreMetadata = testCase.IgnoreMetadata || trueIfFound(directory, "ignoreMetadata")
-	testCase.IgnoreOwnerRefs = testCase.IgnoreOwnerRefs || trueIfFound(directory, "ignoreOwnerRefs")
-	testCase.IgnoreLabels = testCase.IgnoreLabels || trueIfFound(directory, "ignoreLabels")
-
-	newIgnoreFields, err := getIgnoredFields(directory)
+	info, err := populateInfo(directory)
 	if err != nil {
-		return nil, fmt.Errorf("get ignored fields: %w", err)
+		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	testCase.IgnoreMetadataFields = append(testCase.IgnoreMetadataFields, newIgnoreFields...)
+	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "template.yaml", info.Template)
+	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "workload.yaml", info.Workload)
+	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, "expected.yaml", info.Expected)
+
+	yttFile := ""
+	if testCase.Given.YttFiles != nil {
+		yttFile = testCase.Given.YttFiles[0]
+	}
+	yttFile = replaceIfFound(yttFile, directory, "ytt-values.yaml", info.YttFile)
+	if yttFile != "" {
+		testCase.Given.YttFiles = []string{yttFile}
+	}
+
+	if info.Focus != nil {
+		testCase.Focus = *info.Focus
+	}
+	if info.IgnoreMetadata != nil {
+		testCase.IgnoreMetadata = *info.IgnoreMetadata
+	}
+	if info.IgnoreOwnerRefs != nil {
+		testCase.IgnoreOwnerRefs = *info.IgnoreOwnerRefs
+	}
+	if info.IgnoreLabels != nil {
+		testCase.IgnoreLabels = *info.IgnoreLabels
+	}
+	if info.IgnoreMetadataFields != nil {
+		testCase.IgnoreMetadataFields = info.IgnoreMetadataFields
+	}
+
+	if info.SupplyChainInputs != nil {
+		testCase.Given.SupplyChainInputs = info.SupplyChainInputs
+	}
+
+	if info.BlueprintParams != nil {
+		testCase.Given.BlueprintParams = info.BlueprintParams
+	}
 
 	subdirectories, err := getSubdirectories(directory)
 	if err != nil {
 		return nil, fmt.Errorf("get subdirectories: %w", err)
 	}
 
+	// recurse
 	if len(subdirectories) > 0 {
 		testSuite := make(TemplateTestSuite)
 		for _, subdirectory := range subdirectories {
@@ -72,31 +115,10 @@ func getSubdirectories(directory string) ([]string, error) {
 	return subdirectories, nil
 }
 
-func trueIfFound(directory string, file string) bool {
-	filePath := filepath.Join(directory, file)
-	_, err := os.Stat(filePath)
-	if !errors.Is(err, fs.ErrNotExist) {
-		log.Debugf("set %s for directory %s and its subdirectories", file, directory)
-		return true
+func replaceIfFound(originalPath string, directory, filename string, priorityPath *string) string {
+	if priorityPath != nil {
+		return filepath.Join(directory, *priorityPath)
 	}
-	return false
-}
-
-func replaceYttIfFound(yttFiles []string) []string {
-	yttFilepath := filepath.Join(directory, "ytt-values.yaml")
-	_, err := os.Stat(yttFilepath)
-	if !errors.Is(err, fs.ErrNotExist) {
-		if len(yttFiles) > 0 {
-			log.Debugf("%s concatenated with yttfiles in a parent directory", yttFilepath)
-			return append(yttFiles, yttFilepath)
-		} else {
-			return []string{yttFilepath}
-		}
-	}
-	return yttFiles
-}
-
-func replaceIfFound(originalPath string, directory, filename string) string {
 	candidatePath := filepath.Join(directory, filename)
 	_, err := os.Stat(candidatePath)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -106,24 +128,4 @@ func replaceIfFound(originalPath string, directory, filename string) string {
 		log.Debugf("%s replaced a value found in a parent directory", candidatePath)
 	}
 	return candidatePath
-}
-
-func getIgnoredFields(directory string) ([]string, error) {
-	var (
-		ignoredFields []string
-		err           error
-	)
-
-	ignoreFieldsFilepath := filepath.Join(directory, "ignore.yaml")
-	ignoreFieldsFile, err := os.ReadFile(ignoreFieldsFilepath)
-	if err != nil {
-		return ignoredFields, nil
-	}
-
-	err = yaml.Unmarshal(ignoreFieldsFile, &ignoredFields)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshall ignore.yaml: %w", err)
-	}
-
-	return ignoredFields, nil
 }

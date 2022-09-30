@@ -513,109 +513,14 @@ func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
 		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
 	}
 
-	inputData := make(map[string]interface{})
+	var inputs templates.Inputs
 
-	err = yaml.Unmarshal(inputsFile, &inputData)
+	err = yaml.Unmarshal(inputsFile, &inputs)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshall params: %w", err)
 	}
 
-	var inputs templates.Inputs
-
-	if val, ok := inputData["sources"]; ok {
-		switch sources := val.(type) {
-		case map[string]interface{}:
-			inputs.Sources, err = extractSources(sources)
-			if err != nil {
-				return nil, fmt.Errorf("extract sources: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("type assertion failed, expected \"sources\" to be type map[string]interface{} but found: %v", val)
-		}
-	}
-
-	if val, ok := inputData["images"]; ok {
-		switch images := val.(type) {
-		case map[string]interface{}:
-			inputs.Images, err = extractImages(images)
-			if err != nil {
-				return nil, fmt.Errorf("extract images: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("type assertion failed, expected \"images\" to be type map[string]interface{} but found: %v", val)
-		}
-	}
-
-	if val, ok := inputData["configs"]; ok {
-		switch configs := val.(type) {
-		case map[string]interface{}:
-			inputs.Configs, err = extractConfigs(configs)
-			if err != nil {
-				return nil, fmt.Errorf("extract configs: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("type assertion failed, expected \"configs\" to be type map[string]interface{} but found: %v", val)
-		}
-	}
-
 	return &inputs, nil
-}
-
-func extractSources(sources map[string]interface{}) (map[string]templates.SourceInput, error) {
-	inputSources := make(map[string]templates.SourceInput)
-	for name, v := range sources {
-		switch source := v.(type) {
-		case map[string]interface{}:
-			inputSource := templates.SourceInput{}
-			inputSource.Name = name
-			if url, ok := source["url"]; ok {
-				inputSource.URL = url
-			}
-			if revision, ok := source["revision"]; ok {
-				inputSource.Revision = revision
-			}
-			inputSources[name] = inputSource
-		default:
-			return nil, fmt.Errorf("type assertion failed: expected sources[\"%s\"] to be map[string]interface{}, but found: %v", name, source)
-		}
-	}
-	return inputSources, nil
-}
-
-func extractImages(images map[string]interface{}) (map[string]templates.ImageInput, error) {
-	inputImages := make(map[string]templates.ImageInput)
-	for name, v := range images {
-		switch image := v.(type) {
-		case map[string]interface{}:
-			inputImage := templates.ImageInput{}
-			inputImage.Name = name
-			if i, ok := image["image"]; ok {
-				inputImage.Image = i
-			}
-			inputImages[name] = inputImage
-		default:
-			return nil, fmt.Errorf("type assertion failed: expected images[\"%s\"] to be map[string]interface{}, but found: %v", name, image)
-		}
-	}
-	return inputImages, nil
-}
-
-func extractConfigs(configs map[string]interface{}) (map[string]templates.ConfigInput, error) {
-	inputConfigs := make(map[string]templates.ConfigInput)
-	for name, v := range configs {
-		switch config := v.(type) {
-		case map[string]interface{}:
-			inputConfig := templates.ConfigInput{}
-			inputConfig.Name = name
-			if c, ok := config["config"]; ok {
-				inputConfig.Config = c
-			}
-			inputConfigs[name] = inputConfig
-		default:
-			return nil, fmt.Errorf("type assertion failed: expected configs[\"%s\"] to be map[string]interface{}, but found: %v", name, config)
-		}
-	}
-	return inputConfigs, nil
 }
 
 // StringParam is a helper struct for use with the BuildBlueprintStringParams method
