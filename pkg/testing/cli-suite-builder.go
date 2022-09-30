@@ -12,8 +12,7 @@ import (
 )
 
 func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSuite, error) {
-	var err error
-
+	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "template.yaml")
 	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "workload.yaml")
 	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, "expected.yaml")
 	testCase.Given.SupplyChainInputsFile = replaceIfFound(testCase.Given.SupplyChainInputsFile, directory, "inputs.yaml")
