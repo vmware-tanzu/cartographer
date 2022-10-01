@@ -13,21 +13,19 @@ import (
 )
 
 type testInfo struct {
-	Name                  *string                   `yaml:"name"`
-	Description           *string                   `yaml:"description"`
-	Template              *string                   `yaml:"template"`
-	Workload              *string                   `yaml:"workload"`
-	Expected              *string                   `yaml:"expected"`
-	YttFile               *string                   `yaml:"ytt"`
-	SupplyChainInputsFile *string                   `yaml:"supplyChainInputsFile"`
-	SupplyChainInputs     *templates.Inputs         `yaml:"supplyChainInputs"`
-	BlueprintParams       []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
-	BlueprintParamsFile   *string                   `yaml:"blueprintParamsFile"`
-	Focus                 *bool                     `yaml:"focus"`
-	IgnoreMetadata        *bool                     `yaml:"ignoreMetadata"`
-	IgnoreOwnerRefs       *bool                     `yaml:"ignoreOwnerRefs"`
-	IgnoreLabels          *bool                     `yaml:"ignoreLabels"`
-	IgnoreMetadataFields  []string                  `yaml:"ignoreMetadataFields"`
+	Name                 *string                   `yaml:"name"`
+	Description          *string                   `yaml:"description"`
+	Template             *string                   `yaml:"template"`
+	Workload             *string                   `yaml:"workload"`
+	Expected             *string                   `yaml:"expected"`
+	Ytt                  *string                   `yaml:"ytt"`
+	SupplyChainInputs    *templates.Inputs         `yaml:"supplyChainInputs"`
+	BlueprintParams      []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
+	Focus                *bool                     `yaml:"focus"`
+	IgnoreMetadata       *bool                     `yaml:"ignoreMetadata"`
+	IgnoreOwnerRefs      *bool                     `yaml:"ignoreOwnerRefs"`
+	IgnoreLabels         *bool                     `yaml:"ignoreLabels"`
+	IgnoreMetadataFields []string                  `yaml:"ignoreMetadataFields"`
 }
 
 func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSuite, error) {
@@ -44,7 +42,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 	if testCase.Given.YttFiles != nil {
 		yttFile = testCase.Given.YttFiles[0]
 	}
-	yttFile = replaceIfFound(yttFile, directory, "ytt-values.yaml", info.YttFile)
+	yttFile = replaceIfFound(yttFile, directory, "ytt-values.yaml", info.Ytt)
 	if yttFile != "" {
 		testCase.Given.YttFiles = []string{yttFile}
 	}
