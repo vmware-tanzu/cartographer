@@ -1,0 +1,11 @@
+sources:
+  unused-source:
+    url: some-unused-url
+    distracting-key: is-never-read
+  source:
+    url: some-passed-on-url
+    revision:
+      branch: "some_unused_branch"
+images:
+  some-unused-name:
+    image: some-image-location

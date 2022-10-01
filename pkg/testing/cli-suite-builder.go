@@ -34,7 +34,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "template.yaml", info.Template)
+	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.TemplateFile, directory, "template.yaml", info.Template)
 	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "workload.yaml", info.Workload)
 	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, "expected.yaml", info.Expected)
 
