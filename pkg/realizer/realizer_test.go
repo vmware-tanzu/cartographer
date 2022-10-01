@@ -238,8 +238,8 @@ var _ = Describe("Realize", func() {
 
 			Expect(recordedEvents).To(ConsistOf(
 				event{"Normal", events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", "obj1", []interface{}{"resource1"}},
-				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found a new healthy status in [%Q]", "obj1", []interface{}{"resource1"}},
-				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found a new healthy status in [%Q]", "obj2", []interface{}{"resource2"}},
+				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", "obj1", []interface{}{"resource1", metav1.ConditionTrue}},
+				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", "obj2", []interface{}{"resource2", metav1.ConditionTrue}},
 			))
 		})
 
@@ -495,8 +495,8 @@ var _ = Describe("Realize", func() {
 			evType, reason, messageFmt, resourceObj, fmtArgs = rec.ResourceEventfArgsForCall(1)
 			Expect(evType).To(Equal("Normal"))
 			Expect(reason).To(Equal(events.ResourceHealthyStatusChangedReason))
-			Expect(messageFmt).To(Equal("[%s] found a new healthy status in [%Q]"))
-			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
+			Expect(messageFmt).To(Equal("[%s] found healthy status in [%Q] changed to [%s]"))
+			Expect(fmtArgs).To(Equal([]interface{}{"resource1", metav1.ConditionTrue}))
 			Expect(resourceObj).To(Equal(stampedObj1))
 		})
 

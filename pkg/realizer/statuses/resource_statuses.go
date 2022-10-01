@@ -21,13 +21,14 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type ResourceStatuses interface {
 	ChangedConditionTypes(realizedResourceName string) []string
 	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
 	Add(status *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition)
-	GetCurrent() []v1alpha1.ResourceStatus
+	GetCurrent() ResourceStatusList
 	IsChanged() bool
 }
 
@@ -62,6 +63,17 @@ type resourceStatuses struct {
 	addConditionsFunc AddConditionsFunc
 }
 
+type ResourceStatusList []v1alpha1.ResourceStatus
+
+func (rsl ResourceStatusList) ConditionsForResourceNamed(resourceName string) utils.ConditionList {
+	for _, status := range rsl {
+		if status.Name == resourceName {
+			return status.Conditions
+		}
+	}
+	return nil
+}
+
 func (r *resourceStatuses) IsChanged() bool {
 	for _, status := range r.statuses {
 		if status.current == nil {
@@ -80,7 +92,7 @@ func (r *resourceStatuses) IsChanged() bool {
 	return false
 }
 
-func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
+func (r *resourceStatuses) GetCurrent() ResourceStatusList {
 	var currentStatuses []v1alpha1.ResourceStatus
 
 	for _, status := range r.statuses {

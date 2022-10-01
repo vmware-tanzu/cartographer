@@ -151,7 +151,12 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 		}
 		resourceStatuses.Add(realizedResource, err, additionalConditions...)
 		if slices.Contains(resourceStatuses.ChangedConditionTypes(realizedResource.Name), v1alpha1.ResourceHealthy) {
-			events.FromContextOrDie(ctx).ResourceEventf(events.NormalType, events.ResourceHealthyStatusChangedReason, "[%s] found a new healthy status in [%Q]", stampedObject, realizedResource.Name)
+			newStatus := metav1.ConditionUnknown
+			newHealthyCondition := resourceStatuses.GetCurrent().ConditionsForResourceNamed(realizedResource.Name).ConditionWithType(v1alpha1.ResourceHealthy)
+			if newHealthyCondition != nil {
+				newStatus = newHealthyCondition.Status
+			}
+			events.FromContextOrDie(ctx).ResourceEventf(events.NormalType, events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", stampedObject, realizedResource.Name, newStatus)
 		}
 	}
 
