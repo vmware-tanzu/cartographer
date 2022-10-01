@@ -495,7 +495,7 @@ func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, er
 
 func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
 	if i.SupplyChainInputsFile != "" && i.SupplyChainInputs != nil {
-		return nil, fmt.Errorf("only one of blueprintParams or blueprintParamsFile may be set")
+		return nil, fmt.Errorf("only one of supplyChainInputs or supplyChainInputsFile may be set")
 	}
 
 	if i.SupplyChainInputsFile == "" && i.SupplyChainInputs == nil {
@@ -508,7 +508,7 @@ func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
 
 	inputsFile, err := os.ReadFile(i.SupplyChainInputsFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
+		return nil, fmt.Errorf("could not read supplyChainInputsFile: %w", err)
 	}
 
 	var inputs templates.Inputs
