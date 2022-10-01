@@ -1,0 +1,2 @@
+expected: common-expectation.yaml
+workload: common-workload.yaml
