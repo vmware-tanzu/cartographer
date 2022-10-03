@@ -347,7 +347,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 			}
 		}
 		if orphaned {
-			orphanedObjs = append(orphanedObjs, prevResource.StampedRef)
+			orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
 		}
 	}
 
@@ -412,6 +412,8 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
+
+	// TODO: we need to get the client to the realizer, not just the repo
 	r.Realizer = realizer.NewRealizer(nil)
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,

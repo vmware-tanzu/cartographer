@@ -297,7 +297,7 @@ func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, prev
 			}
 		}
 		if orphaned {
-			orphanedObjs = append(orphanedObjs, prevResource.StampedRef)
+			orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
 		}
 	}
 

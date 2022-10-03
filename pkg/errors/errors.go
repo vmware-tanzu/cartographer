@@ -133,6 +133,8 @@ type RetrieveOutputError struct {
 	BlueprintType string
 }
 
+// TODO: Part 2
+// utils.GetFullyQualifiedType is wrong
 func (e RetrieveOutputError) Error() string {
 	if e.JsonPathExpression() == NoJsonpathContext {
 		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in %s [%s]: %w",

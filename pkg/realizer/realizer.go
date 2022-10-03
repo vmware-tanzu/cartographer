@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings/slices"
@@ -197,13 +198,24 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 		outputs = getOutputs(template, previousRealizedResource, output)
 	}
 
-	var stampedRef *corev1.ObjectReference
+	var stampedRef *v1alpha1.StampedRef
 	if stampedObject != nil {
-		stampedRef = &corev1.ObjectReference{
-			Kind:       stampedObject.GetKind(),
-			Namespace:  stampedObject.GetNamespace(),
-			Name:       stampedObject.GetName(),
-			APIVersion: stampedObject.GetAPIVersion(),
+		// TODO: need the client, we don't have it
+		// repositories are already built
+		var mapper meta.RESTMapper
+		resourceName, err := utils.GetQualifiedResourceName(mapper, stampedObject)
+		if err != nil {
+			panic("TODO - implement me")
+		}
+
+		stampedRef = &v1alpha1.StampedRef{
+			ObjectReference: &corev1.ObjectReference{
+				Kind:       stampedObject.GetKind(),
+				Namespace:  stampedObject.GetNamespace(),
+				Name:       stampedObject.GetName(),
+				APIVersion: stampedObject.GetAPIVersion(),
+			},
+			Resource: resourceName,
 		}
 	}
 

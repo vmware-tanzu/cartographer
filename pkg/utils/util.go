@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,6 +97,22 @@ func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) err
 	}
 }
 
+func GetQualifiedResourceName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+	gvk := obj.GroupVersionKind()
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return "", err
+	}
+	if mapping.Resource.Group == "" {
+		return fmt.Sprintf("%s/%s", mapping.Resource.Resource, obj.GetName()), nil
+	}
+	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName()), nil
+}
+
+// TODO: PART 2 - we failed
+// need to use rest mapper like events is
+// this will be helper that calls other method to get the real resource
+// Find kuttl test
 func GetFullyQualifiedType(obj *unstructured.Unstructured) string {
 	var fullyQualifiedType string
 	if obj.GetObjectKind().GroupVersionKind().Group == "" {
