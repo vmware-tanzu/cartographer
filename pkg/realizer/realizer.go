@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
@@ -149,6 +150,14 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 		resourceStatuses.Add(realizedResource, err, additionalConditions...)
+		if slices.Contains(resourceStatuses.ChangedConditionTypes(realizedResource.Name), v1alpha1.ResourceHealthy) {
+			newStatus := metav1.ConditionUnknown
+			newHealthyCondition := resourceStatuses.GetCurrent().ConditionsForResourceNamed(realizedResource.Name).ConditionWithType(v1alpha1.ResourceHealthy)
+			if newHealthyCondition != nil {
+				newStatus = newHealthyCondition.Status
+			}
+			events.FromContextOrDie(ctx).ResourceEventf(events.NormalType, events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", stampedObject, realizedResource.Name, newStatus)
+		}
 	}
 
 	return firstError
