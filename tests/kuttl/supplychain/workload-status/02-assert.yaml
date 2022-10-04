@@ -111,7 +111,7 @@ status:
         apiVersion: v1
         kind: ConfigMap
         name: example-second-configmap
-        resource: configmap
+        resource: configmaps
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterSourceTemplate
@@ -140,7 +140,7 @@ status:
         apiVersion: v1
         kind: ConfigMap
         name: example-image-configmap
-        resource: configmap
+        resource: configmaps
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterImageTemplate
@@ -167,7 +167,7 @@ status:
         apiVersion: v1
         kind: ConfigMap
         name: example-config-configmap
-        resource: configmap
+        resource: configmaps
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterConfigTemplate
@@ -195,7 +195,7 @@ status:
         apiVersion: v1
         kind: ConfigMap
         name: example-config
-        resource: configmap
+        resource: configmaps
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterTemplate

@@ -82,16 +82,18 @@ type Realizer interface {
 
 type realizer struct {
 	healthyConditionEvaluator HealthyConditionEvaluator
+	mapper                    meta.RESTMapper
 }
 
 type HealthyConditionEvaluator func(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition
 
-func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator) Realizer {
+func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator, mapper meta.RESTMapper) Realizer {
 	if healthyConditionEvaluator == nil {
 		healthyConditionEvaluator = healthcheck.DetermineHealthCondition
 	}
 	return &realizer{
 		healthyConditionEvaluator: healthyConditionEvaluator,
+		mapper:                    mapper,
 	}
 }
 
@@ -137,7 +139,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			if previousResourceStatus != nil {
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
-			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
+			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource, r.mapper)
 			var previousOutputs []v1alpha1.Output
 			if previousRealizedResource != nil {
 				previousOutputs = previousRealizedResource.Outputs
@@ -164,7 +166,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource, mapper meta.RESTMapper) *v1alpha1.RealizedResource {
 	if previousRealizedResource == nil {
 		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
@@ -200,10 +202,7 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 
 	var stampedRef *v1alpha1.StampedRef
 	if stampedObject != nil {
-		// TODO: need the client, we don't have it
-		// repositories are already built
-		var mapper meta.RESTMapper
-		resourceName, err := utils.GetQualifiedResourceName(mapper, stampedObject)
+		resourceName, err := utils.GetResourceName(mapper, stampedObject)
 		if err != nil {
 			panic("TODO - implement me")
 		}

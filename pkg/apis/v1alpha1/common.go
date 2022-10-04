@@ -200,7 +200,7 @@ type FieldSelectorRequirement struct {
 }
 
 type StampedRef struct {
-	*corev1.ObjectReference `json:"objectReference,omitempty"`
+	*corev1.ObjectReference `json:",inline,omitempty"`
 	Resource                string `json:"resource,omitempty"`
 }
 

@@ -97,9 +97,25 @@ func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) err
 	}
 }
 
-func GetQualifiedResourceName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+func getResourceMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) (*meta.RESTMapping, error) {
 	gvk := obj.GroupVersionKind()
 	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
+	}
+	return mapping, nil
+}
+
+func GetResourceName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+	mapping, err := getResourceMapping(mapper, obj)
+	if err != nil {
+		return "", err
+	}
+	return mapping.Resource.Resource, nil
+}
+
+func GetQualifiedResourceName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+	mapping, err := getResourceMapping(mapper, obj)
 	if err != nil {
 		return "", err
 	}

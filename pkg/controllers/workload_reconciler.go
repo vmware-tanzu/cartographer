@@ -413,8 +413,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		repository.NewCache(mgr.GetLogger().WithName("workload-stamping-repo-cache")),
 	)
 
-	// TODO: we need to get the client to the realizer, not just the repo
-	r.Realizer = realizer.NewRealizer(nil)
+	r.Realizer = realizer.NewRealizer(nil, r.RESTMapper)
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-workload"),
