@@ -17,6 +17,13 @@ endif
 build: gen-objects gen-manifests
 	go build -o build/cartographer ./cmd/cartographer
 
+.PHONY: build-cartotest
+build-cartotest:
+	GOOS=darwin GOARCH=arm64 go build -o build/cartotest_darwin_arm64 ./cmd/cartotest
+	GOOS=darwin GOARCH=amd64 go build -o build/cartotest_darwin_amd64 ./cmd/cartotest
+	GOOS=linux GOARCH=amd64 go build -o build/cartotest_linux_amd64 ./cmd/cartotest
+	GOOS=windows GOARCH=amd64 go build -o build/cartotest_windows_amd64 ./cmd/cartotest
+
 .PHONY: run
 run: build
 	build/cartographer --pprof-port 9999 --metrics-port 9998
@@ -83,6 +90,17 @@ clean-fakes:
 generate: clean-fakes
 	go generate ./...
 
+.PHONY: test-cartotest
+test-cartotest: test-cartotest-go test-cartotest-cli
+
+.PHONY: test-cartotest-cli
+test-cartotest-cli:
+	go run ./cmd/cartotest/main.go --directory ./tests/templates/
+
+.PHONY: test-cartotest-go
+test-cartotest-go:
+	go test ./tests/templates
+
 .PHONY: test-unit
 test-unit: test-gen-objects
 	$(GINKGO) -r pkg
@@ -120,7 +138,7 @@ test-kuttl-kind: build
 	kubectl kuttl test --start-kind=true --start-control-plane=false --artifacts-dir=/dev/null
 
 .PHONY: test
-test: test-unit test-kuttl test-integration
+test: test-unit test-kuttl test-integration test-cartotest
 
 .PHONY: install
 install:

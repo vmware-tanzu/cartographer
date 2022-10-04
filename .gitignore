@@ -5,7 +5,7 @@
 /site/public/
 /site/resources/
 
-build/cartographer
+build/*
 cmd/random
 coverage.*
 
