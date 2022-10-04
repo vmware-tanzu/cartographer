@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -34,6 +35,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 //counterfeiter:generate . Realizer
@@ -41,11 +43,15 @@ type Realizer interface {
 	Realize(ctx context.Context, runnable *v1alpha1.Runnable, systemRepo repository.Repository, runnableRepo repository.Repository, discoveryClient discovery.DiscoveryInterface) (*unstructured.Unstructured, templates.Outputs, error)
 }
 
-func NewRealizer() Realizer {
-	return &runnableRealizer{}
+func NewRealizer(mapper meta.RESTMapper) Realizer {
+	return &runnableRealizer{
+		mapper: mapper,
+	}
 }
 
-type runnableRealizer struct{}
+type runnableRealizer struct {
+	mapper meta.RESTMapper
+}
 
 type TemplatingContext struct {
 	Runnable *v1alpha1.Runnable     `json:"runnable"`
@@ -133,10 +139,16 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
 		}
 		log.Error(err, "failed to retrieve output from object")
+		qualifiedResourceName, err := utils.GetQualifiedResourceName(r.mapper, stampedObject)
+		if err != nil {
+			panic("todo")
+		}
+
 		return stampedObject, nil, errors.RunnableRetrieveOutputError{
-			Err:           err,
-			StampedObject: stampedObject,
-			TemplateRef:   &runnable.Spec.RunTemplateRef,
+			Err:                   err,
+			StampedObject:         stampedObject,
+			TemplateRef:           &runnable.Spec.RunTemplateRef,
+			QualifiedResourceName: qualifiedResourceName,
 		}
 	}
 

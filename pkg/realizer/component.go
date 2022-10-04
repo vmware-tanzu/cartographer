@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -56,15 +58,16 @@ type resourceRealizer struct {
 	ownerRepo       repository.Repository
 	blueprintParams []v1alpha1.BlueprintParam
 	resourceLabeler ResourceLabeler
+	mapper          meta.RESTMapper
 }
 
 type ResourceLabeler func(resource OwnerResource) templates.Labels
 
-type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler, mapper meta.RESTMapper) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
+	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler, mapper meta.RESTMapper) (ResourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(authToken, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -79,6 +82,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 			ownerRepo:       ownerRepo,
 			blueprintParams: supplyChainParams,
 			resourceLabeler: resourceLabeler,
+			mapper:          mapper,
 		}, nil
 	}
 }
@@ -174,12 +178,18 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+		qualifiedResourceName, err := utils.GetQualifiedResourceName(r.mapper, stampedObject)
+		if err != nil {
+			panic("todo")
+		}
+
 		return template, stampedObject, nil, errors.RetrieveOutputError{
-			Err:           err,
-			ResourceName:  resource.Name,
-			StampedObject: stampedObject,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+			Err:                   err,
+			ResourceName:          resource.Name,
+			StampedObject:         stampedObject,
+			BlueprintName:         blueprintName,
+			BlueprintType:         errors.SupplyChain,
+			QualifiedResourceName: qualifiedResourceName,
 		}
 	}
 

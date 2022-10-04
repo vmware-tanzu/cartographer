@@ -124,18 +124,3 @@ func GetQualifiedResourceName(mapper meta.RESTMapper, obj *unstructured.Unstruct
 	}
 	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName()), nil
 }
-
-// TODO: PART 2 - we failed
-// need to use rest mapper like events is
-// this will be helper that calls other method to get the real resource
-// Find kuttl test
-func GetFullyQualifiedType(obj *unstructured.Unstructured) string {
-	var fullyQualifiedType string
-	if obj.GetObjectKind().GroupVersionKind().Group == "" {
-		fullyQualifiedType = strings.ToLower(obj.GetKind())
-	} else {
-		fullyQualifiedType = fmt.Sprintf("%s.%s", strings.ToLower(obj.GetKind()),
-			obj.GetObjectKind().GroupVersionKind().Group)
-	}
-	return fullyQualifiedType
-}

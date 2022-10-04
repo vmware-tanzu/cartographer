@@ -132,7 +132,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery))
+	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, deliverable, deliverable.Spec.Params, r.Repo, delivery.Spec.Params, buildDeliverableResourceLabeler(deliverable, delivery), r.RESTMapper)
 
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
