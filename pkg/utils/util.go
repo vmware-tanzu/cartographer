@@ -106,7 +106,7 @@ func getResourceMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) 
 	return mapping, nil
 }
 
-func GetResourceName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+func GetResourceType(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
 	mapping, err := getResourceMapping(mapper, obj)
 	if err != nil {
 		return "", err
@@ -119,8 +119,13 @@ func GetQualifiedResourceName(mapper meta.RESTMapper, obj *unstructured.Unstruct
 	if err != nil {
 		return "", err
 	}
-	if mapping.Resource.Group == "" {
-		return fmt.Sprintf("%s/%s", mapping.Resource.Resource, obj.GetName()), nil
+	objName := obj.GetName()
+	if objName == "" {
+		objName = obj.GetGenerateName()
 	}
-	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, obj.GetName()), nil
+
+	if mapping.Resource.Group == "" {
+		return fmt.Sprintf("%s/%s", mapping.Resource.Resource, objName), nil
+	}
+	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, objName), nil
 }

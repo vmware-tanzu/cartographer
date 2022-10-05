@@ -139,17 +139,17 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
 		}
 		log.Error(err, "failed to retrieve output from object")
-		qualifiedResourceName, qrErr := utils.GetQualifiedResourceName(r.mapper, stampedObject)
-		if qrErr != nil {
+		resourceType, rErr := utils.GetResourceType(r.mapper, stampedObject)
+		if rErr != nil {
 			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
-			qualifiedResourceName = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
+			resourceType = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
 		}
 
 		return stampedObject, nil, errors.RunnableRetrieveOutputError{
-			Err:                   err,
-			StampedObject:         stampedObject,
-			TemplateRef:           &runnable.Spec.RunTemplateRef,
-			QualifiedResourceName: qualifiedResourceName,
+			Err:           err,
+			StampedObject: stampedObject,
+			TemplateRef:   &runnable.Spec.RunTemplateRef,
+			ResourceType:  resourceType,
 		}
 	}
 

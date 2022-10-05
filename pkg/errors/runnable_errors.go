@@ -94,10 +94,10 @@ func (e RunnableListCreatedObjectsError) Error() string {
 }
 
 type RunnableRetrieveOutputError struct {
-	Err                   error
-	StampedObject         *unstructured.Unstructured
-	TemplateRef           *v1alpha1.TemplateReference
-	QualifiedResourceName string
+	Err           error
+	StampedObject *unstructured.Unstructured
+	TemplateRef   *v1alpha1.TemplateReference
+	ResourceType  string
 }
 
 func (e RunnableRetrieveOutputError) Error() string {
@@ -109,7 +109,7 @@ func (e RunnableRetrieveOutputError) Error() string {
 	return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for run template [%s]: %w",
 		e.StampedObject.GetNamespace(),
 		name,
-		e.QualifiedResourceName,
+		e.ResourceType,
 		e.TemplateRef.Name,
 		e.Err,
 	).Error()

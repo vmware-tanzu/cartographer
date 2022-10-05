@@ -87,6 +87,7 @@ type realizer struct {
 
 type HealthyConditionEvaluator func(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition
 
+//counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
 func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator, mapper meta.RESTMapper) Realizer {
 	if healthyConditionEvaluator == nil {
 		healthyConditionEvaluator = healthcheck.DetermineHealthCondition
@@ -202,7 +203,7 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 
 	var stampedRef *v1alpha1.StampedRef
 	if stampedObject != nil {
-		resourceName, err := utils.GetResourceName(mapper, stampedObject)
+		resourceName, err := utils.GetResourceType(mapper, stampedObject)
 		if err != nil {
 			panic("TODO - implement me")
 		}

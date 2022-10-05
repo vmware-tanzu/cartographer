@@ -176,19 +176,19 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		qualifiedResourceName, qrErr := utils.GetQualifiedResourceName(mapper, stampedObject)
-		if qrErr != nil {
+		resourceType, rErr := utils.GetResourceType(mapper, stampedObject)
+		if rErr != nil {
 			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
-			qualifiedResourceName = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
+			resourceType = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
 		}
 
 		return template, stampedObject, nil, errors.RetrieveOutputError{
-			Err:                   err,
-			ResourceName:          resource.Name,
-			StampedObject:         stampedObject,
-			BlueprintName:         blueprintName,
-			BlueprintType:         errors.SupplyChain,
-			QualifiedResourceName: qualifiedResourceName,
+			Err:           err,
+			ResourceName:  resource.Name,
+			StampedObject: stampedObject,
+			BlueprintName: blueprintName,
+			BlueprintType: errors.SupplyChain,
+			ResourceType:  resourceType,
 		}
 	}
 

@@ -642,13 +642,14 @@ var _ = Describe("Reconcile", func() {
 						Err:           errors.New("some error"),
 						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
 						StampedObject: stampedObject,
+						ResourceType:  "mything.thing.io",
 					}
 					rlzr.RealizeReturns(nil, nil, err)
 				})
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, request)
-					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.OutputPathNotSatisfiedCondition(stampedObject, err.Error())))
+					Expect(conditionManager.AddPositiveArgsForCall(0)).To(Equal(conditions.OutputPathNotSatisfiedCondition(stampedObject, "mything.thing.io", err.Error())))
 				})
 
 				It("does not return an error", func() {

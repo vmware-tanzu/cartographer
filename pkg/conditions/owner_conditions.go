@@ -55,7 +55,7 @@ func TemplateObjectRetrievalFailureCondition(isOwner bool, err error) metav1.Con
 	}
 }
 
-func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string, qualifiedResourceName string) metav1.Condition {
+func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string, resourceType string) metav1.Condition {
 	var namespaceMsg string
 	if obj.GetNamespace() != "" {
 		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
@@ -65,7 +65,7 @@ func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, e
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
 		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
-			expression, qualifiedResourceName, obj.GetName(), namespaceMsg),
+			expression, resourceType, obj.GetName(), namespaceMsg),
 	}
 }
 
