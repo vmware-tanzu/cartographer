@@ -169,7 +169,6 @@ var _ = Describe("Realize", func() {
 				return template, stampedObj, &templates.Output{}, nil
 			})
 
-			// TODO
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
 				Resource: schema.GroupVersionResource{
 					Group:    "EXAMPLE.COM",
@@ -204,6 +203,7 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses[0].Name).To(Equal(resource1.Name))
 			Expect(currentResourceStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
 			Expect(currentResourceStatuses[0].StampedRef.Name).To(Equal("obj1"))
+			Expect(currentResourceStatuses[0].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
 			Expect(currentResourceStatuses[0].Inputs).To(BeNil())
 			Expect(len(currentResourceStatuses[0].Outputs)).To(Equal(1))
 			Expect(currentResourceStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
@@ -232,6 +232,7 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
 			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
 			Expect(currentResourceStatuses[1].StampedRef.Name).To(Equal("obj2"))
+			Expect(currentResourceStatuses[1].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
 			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
 			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(currentResourceStatuses[1].Outputs).To(BeNil())
@@ -328,7 +329,7 @@ var _ = Describe("Realize", func() {
 								Name:       "",
 								APIVersion: "",
 							},
-							Resource: "",
+							Resource: "image",
 						},
 						TemplateRef: &corev1.ObjectReference{
 							Kind:       "ClusterImageTemplate",
@@ -367,7 +368,7 @@ var _ = Describe("Realize", func() {
 								Name:       "PreviousStampedObj",
 								APIVersion: "",
 							},
-							Resource: "",
+							Resource: "config",
 						},
 						TemplateRef: &corev1.ObjectReference{
 							Kind:       "ClusterConfigTemplate",
@@ -442,7 +443,6 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(1, templateModel2, &unstructured.Unstructured{}, nil, nil)
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, &unstructured.Unstructured{}, nil, nil)
 
-			// TODO
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
 				Resource: schema.GroupVersionResource{
 					Group:    "EXAMPLE.COM",

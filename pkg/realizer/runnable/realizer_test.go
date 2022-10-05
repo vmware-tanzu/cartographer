@@ -82,21 +82,6 @@ var _ = Describe("Realizer", func() {
 				},
 			},
 		}
-
-		// TODO
-		fakeMapper.RESTMappingReturns(&meta.RESTMapping{
-			Resource: schema.GroupVersionResource{
-				Group:    "EXAMPLE.COM",
-				Version:  "v1",
-				Resource: "athing",
-			},
-			GroupVersionKind: schema.GroupVersionKind{
-				Group:   "",
-				Version: "",
-				Kind:    "",
-			},
-			Scope: nil,
-		}, nil)
 	})
 
 	Context("with a valid ClusterRunTemplate", func() {
@@ -531,12 +516,26 @@ var _ = Describe("Realizer", func() {
 			}
 
 			runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{createdUnstructured}, nil)
+
+			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "EXAMPLE.COM",
+					Version:  "v1",
+					Resource: "athing",
+				},
+				GroupVersionKind: schema.GroupVersionKind{
+					Group:   "",
+					Version: "",
+					Kind:    "",
+				},
+				Scope: nil,
+			}, nil)
 		})
 
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [athing] for run template [my-template]: failed to evaluate path [data.hasnot]: jsonpath returned empty list: data.hasnot`))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [athing.EXAMPLE.COM] for run template [my-template]: failed to evaluate path [data.hasnot]: jsonpath returned empty list: data.hasnot`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableRetrieveOutputError"))
 		})
 	})

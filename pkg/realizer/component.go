@@ -176,7 +176,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		resourceType, rErr := utils.GetResourceType(mapper, stampedObject)
+		resourceType, rErr := utils.GetQualifiedType(mapper, stampedObject)
 		if rErr != nil {
 			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
 			resourceType = "could not fetch - see logs for 'failed to retrieve qualified resource name'"

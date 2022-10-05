@@ -109,20 +109,6 @@ var _ = Describe("Resource", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeMapper = &realizerfakes.FakeRESTMapper{}
-		// TODO
-		fakeMapper.RESTMappingReturns(&meta.RESTMapping{
-			Resource: schema.GroupVersionResource{
-				Group:    "EXAMPLE.COM",
-				Version:  "v1",
-				Resource: "FOO",
-			},
-			GroupVersionKind: schema.GroupVersionKind{
-				Group:   "",
-				Version: "",
-				Kind:    "",
-			},
-			Scope: nil,
-		}, nil)
 	})
 
 	It("creates a resource realizer with the existing client, as well as one with the the supplied secret mixed in", func() {
@@ -334,6 +320,20 @@ var _ = Describe("Resource", func() {
 
 				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
+
+				fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+					Resource: schema.GroupVersionResource{
+						Group:    "EXAMPLE.COM",
+						Version:  "v1",
+						Resource: "FOO",
+					},
+					GroupVersionKind: schema.GroupVersionKind{
+						Group:   "",
+						Version: "",
+						Kind:    "",
+					},
+					Scope: nil,
+				}, nil)
 			})
 
 			It("returns RetrieveOutputError", func() {
@@ -344,6 +344,7 @@ var _ = Describe("Resource", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
+				Expect(err.Error()).To(ContainSubstring("of type [FOO.EXAMPLE.COM]"))
 				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RetrieveOutputError"))
 			})
 		})

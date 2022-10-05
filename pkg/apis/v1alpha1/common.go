@@ -201,8 +201,11 @@ type FieldSelectorRequirement struct {
 
 // TODO: document
 type StampedRef struct {
+	// ObjectReference
 	*corev1.ObjectReference `json:",inline,omitempty"`
-	Resource                string `json:"resource,omitempty"`
+
+	// Resource
+	Resource string `json:"resource,omitempty"`
 }
 
 type RealizedResource struct {

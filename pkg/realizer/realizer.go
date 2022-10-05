@@ -203,7 +203,7 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 
 	var stampedRef *v1alpha1.StampedRef
 	if stampedObject != nil {
-		resourceName, err := utils.GetResourceType(mapper, stampedObject)
+		resourceName, err := utils.GetQualifiedType(mapper, stampedObject)
 		if err != nil {
 			panic("TODO - implement me")
 		}

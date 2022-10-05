@@ -116,7 +116,6 @@ func UnknownErrorCondition(err error) metav1.Condition {
 	}
 }
 
-// TODO: unused??
 func RunnableServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    v1alpha1.RunTemplateReady,
