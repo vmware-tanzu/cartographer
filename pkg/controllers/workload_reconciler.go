@@ -134,7 +134,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain), r.RESTMapper)
+	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")

@@ -107,7 +107,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",

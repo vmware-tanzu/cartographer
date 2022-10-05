@@ -48,7 +48,7 @@ type OwnerResource struct {
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -58,16 +58,15 @@ type resourceRealizer struct {
 	ownerRepo       repository.Repository
 	blueprintParams []v1alpha1.BlueprintParam
 	resourceLabeler ResourceLabeler
-	mapper          meta.RESTMapper
 }
 
 type ResourceLabeler func(resource OwnerResource) templates.Labels
 
-type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler, mapper meta.RESTMapper) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler, mapper meta.RESTMapper) (ResourceRealizer, error) {
+	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(authToken, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -82,12 +81,11 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 			ownerRepo:       ownerRepo,
 			blueprintParams: supplyChainParams,
 			resourceLabeler: resourceLabeler,
-			mapper:          mapper,
 		}, nil
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -178,7 +176,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		qualifiedResourceName, err := utils.GetQualifiedResourceName(r.mapper, stampedObject)
+		qualifiedResourceName, err := utils.GetQualifiedResourceName(mapper, stampedObject)
 		if err != nil {
 			panic("todo")
 		}
