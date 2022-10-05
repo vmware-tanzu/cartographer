@@ -50,7 +50,7 @@ func NewClientBuilder(restConfig *rest.Config) ClientBuilder {
 	}
 }
 
-//TODO: this must be removed --- compare what is tested in client_test ?
+// TODO: this must be removed --- compare what is tested in client_test ?
 func AddBearerToken(secret *corev1.Secret, restConfig *rest.Config) (*rest.Config, error) {
 	tokenBytes, found := secret.Data[corev1.ServiceAccountTokenKey]
 	if !found {

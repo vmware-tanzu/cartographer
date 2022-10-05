@@ -37,7 +37,7 @@ func TestV1alpha1(t *testing.T) {
 type ArbitraryObject struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ArbitrarySpec
+	Spec              ArbitrarySpec `json:"spec"`
 }
 
 type ArbitrarySpec struct {

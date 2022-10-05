@@ -21,12 +21,14 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type ResourceStatuses interface {
+	ChangedConditionTypes(realizedResourceName string) []string
 	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
 	Add(status *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition)
-	GetCurrent() []v1alpha1.ResourceStatus
+	GetCurrent() ResourceStatusList
 	IsChanged() bool
 }
 
@@ -61,6 +63,17 @@ type resourceStatuses struct {
 	addConditionsFunc AddConditionsFunc
 }
 
+type ResourceStatusList []v1alpha1.ResourceStatus
+
+func (rsl ResourceStatusList) ConditionsForResourceNamed(resourceName string) utils.ConditionList {
+	for _, status := range rsl {
+		if status.Name == resourceName {
+			return status.Conditions
+		}
+	}
+	return nil
+}
+
 func (r *resourceStatuses) IsChanged() bool {
 	for _, status := range r.statuses {
 		if status.current == nil {
@@ -79,7 +92,7 @@ func (r *resourceStatuses) IsChanged() bool {
 	return false
 }
 
-func (r *resourceStatuses) GetCurrent() []v1alpha1.ResourceStatus {
+func (r *resourceStatuses) GetCurrent() ResourceStatusList {
 	var currentStatuses []v1alpha1.ResourceStatus
 
 	for _, status := range r.statuses {
@@ -123,6 +136,33 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 		RealizedResource: *realizedResource,
 		Conditions:       r.createConditions(name, err, furtherConditions...),
 	}
+}
+
+func (r *resourceStatuses) ChangedConditionTypes(realizedResourceName string) []string {
+	var changed []string
+	for _, status := range r.statuses {
+		if status.name == realizedResourceName {
+			if status.current != nil {
+				for _, condition := range status.current.Conditions {
+					if conditionChanged(status.previous, condition) {
+						changed = append(changed, condition.Type)
+					}
+				}
+			}
+		}
+	}
+	return changed
+}
+
+func conditionChanged(previousResourceStatus *v1alpha1.ResourceStatus, newCondition metav1.Condition) bool {
+	if previousResourceStatus != nil {
+		for _, previousCondition := range previousResourceStatus.Conditions {
+			if previousCondition.Type == newCondition.Type {
+				return previousCondition.Status != newCondition.Status
+			}
+		}
+	}
+	return newCondition.Status != "Unknown"
 }
 
 func (r *resourceStatuses) createConditions(name string, err error, furtherConditions ...metav1.Condition) []metav1.Condition {

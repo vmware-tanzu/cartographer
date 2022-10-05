@@ -23,7 +23,7 @@ import (
 )
 
 // To learn more about condition conventions:
-// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties // wokeignore:rule=master K8s uses this term a lot
 
 // Polarity represents how a Status is represented as success.
 type Polarity string
@@ -41,7 +41,8 @@ const Negative Polarity = "Negative"
 //
 // TBD: either error or warn if the same Condition.Type is reused
 // TBD2: should accept an existing []Condition slice to compare against
-//		should only update LastTransitionTime if the other fields have changed
+//
+//	should only update LastTransitionTime if the other fields have changed
 type ConditionManager interface {
 	// Add a condition and associate a polarity with it.
 	Add(condition metav1.Condition, positive Polarity)

@@ -12,9 +12,10 @@ The Cartographer project team welcomes contributions from the community. If you 
 - [`kbld`]: for resolving image references to absolute ones
 - [`kind`]: to run a local cluster
 - [`ko`]: for building and pushing the controller's container image
-- [`kuttl`]: for integration testing
+- [`kuttl`]: for integration testing. *MUST* use version >1.13
 - [`shellcheck`]: for shell script linting
-  [`ytt`]: for Cluster Templates with `ytt:` sections
+- [`ytt`]: for Cluster Templates with `ytt:` sections
+- [`woke`]: for detecting non-inclusive terminology 
 
 [`ctlptl`]: https://github.com/tilt-dev/ctlptl
 [`go`]: https://golang.org/dl/
@@ -25,6 +26,7 @@ The Cartographer project team welcomes contributions from the community. If you 
 [`kuttl`]: https://github.com/kudobuilder/kuttl
 [`shellcheck`]: https://github.com/koalaman/shellcheck
 [`ytt`]: https://github.com/vmware-tanzu/carvel-ytt
+[`woke`]: https://docs.getwoke.tech/installation/#build-from-source
 
 ## Error handling and logging
 ### Best practices

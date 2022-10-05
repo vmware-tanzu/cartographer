@@ -39,6 +39,14 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
+type event struct {
+	EventType    string
+	Reason       string
+	Message      string
+	ResourceName string
+	FmtArgs      []interface{}
+}
+
 var _ = Describe("Realize", func() {
 	var (
 		resourceRealizer               *realizerfakes.FakeResourceRealizer
@@ -49,6 +57,7 @@ var _ = Describe("Realize", func() {
 		evaluatedRealizedResourceNames []string
 		evaluatedStampedObjectNames    []string
 		ctx                            context.Context
+		recordedEvents                 []event
 	)
 
 	BeforeEach(func() {
@@ -56,6 +65,10 @@ var _ = Describe("Realize", func() {
 		rec = &eventsfakes.FakeOwnerEventRecorder{}
 		ctx = events.NewContext(ctx, rec)
 
+		recordedEvents = nil
+		rec.ResourceEventfCalls(func(eventtype, reason, messageFmt string, resource *unstructured.Unstructured, i ...interface{}) {
+			recordedEvents = append(recordedEvents, event{eventtype, reason, messageFmt, resource.GetName(), i})
+		})
 		evaluatedHealthRules = []*v1alpha1.HealthRule{}
 		evaluatedRealizedResourceNames = []string{}
 		evaluatedStampedObjectNames = []string{}
@@ -219,20 +232,18 @@ var _ = Describe("Realize", func() {
 			})))
 		})
 
-		It("records an event for resource output changes", func() {
+		It("records an event for resource output changes and health status", func() {
 			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
 			Expect(rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)).To(Succeed())
 
-			Expect(rec.ResourceEventfCallCount()).To(Equal(1))
-			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
-			Expect(evType).To(Equal("Normal"))
-			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
-			Expect(messageFmt).To(Equal("[%s] found a new output in [%Q]"))
-			Expect(resourceObj.GetName()).To(Equal("obj1"))
-			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
+			Expect(recordedEvents).To(ConsistOf(
+				event{"Normal", events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", "obj1", []interface{}{"resource1"}},
+				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", "obj1", []interface{}{"resource1", metav1.ConditionTrue}},
+				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", "obj2", []interface{}{"resource2", metav1.ConditionTrue}},
+			))
 		})
 
-		It("does not record an event if there was no resource output change", func() {
+		It("does not record an ResourceOutputChanged event if there was no resource output change", func() {
 			previousResources := []v1alpha1.ResourceStatus{
 				{
 					RealizedResource: v1alpha1.RealizedResource{
@@ -252,7 +263,7 @@ var _ = Describe("Realize", func() {
 			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 			Expect(rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)).To(Succeed())
 
-			Expect(rec.Invocations()).To(BeEmpty())
+			Expect(recordedEvents).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Reason": Equal(events.ResourceOutputChangedReason)})))
 		})
 
 		It("returns the first error encountered realizing a resource and continues to realize", func() {
@@ -472,12 +483,20 @@ var _ = Describe("Realize", func() {
 			Expect(len(resource3Status.Outputs)).To(Equal(1))
 			Expect(resource3Status.Outputs[0].LastTransitionTime).To(Equal(previousTime))
 
-			Expect(rec.ResourceEventfCallCount()).To(Equal(1))
+			Expect(rec.ResourceEventfCallCount()).To(Equal(2))
+
 			evType, reason, messageFmt, resourceObj, fmtArgs := rec.ResourceEventfArgsForCall(0)
 			Expect(evType).To(Equal("Normal"))
 			Expect(reason).To(Equal(events.ResourceOutputChangedReason))
 			Expect(messageFmt).To(Equal("[%s] found a new output in [%Q]"))
 			Expect(fmtArgs).To(Equal([]interface{}{"resource1"}))
+			Expect(resourceObj).To(Equal(stampedObj1))
+
+			evType, reason, messageFmt, resourceObj, fmtArgs = rec.ResourceEventfArgsForCall(1)
+			Expect(evType).To(Equal("Normal"))
+			Expect(reason).To(Equal(events.ResourceHealthyStatusChangedReason))
+			Expect(messageFmt).To(Equal("[%s] found healthy status in [%Q] changed to [%s]"))
+			Expect(fmtArgs).To(Equal([]interface{}{"resource1", metav1.ConditionTrue}))
 			Expect(resourceObj).To(Equal(stampedObj1))
 		})
 

@@ -4,6 +4,7 @@ GOLANGCI_LINT ?= go run -modfile hack/tools/go.mod github.com/golangci/golangci-
 GINKGO ?= go run -modfile hack/tools/go.mod github.com/onsi/ginkgo/ginkgo
 GCI_LINT ?= go run -modfile hack/tools/go.mod github.com/daixiang0/gci
 CONTROL_PLANE_KUTTL ?= kubectl kuttl test --control-plane-config=kuttl-control-plane.config
+WOKE ?= go run -modfile hack/tools/go.mod github.com/get-woke/woke
 UNAME := $(shell uname)
 
 ifndef ($LOG_LEVEL)
@@ -154,8 +155,12 @@ coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	open coverage.html
 
+.PHONY: woke
+woke:
+	$(WOKE) -c https://via.vmw.com/its-woke-rules
+
 .PHONY: lint
-lint: copyright
+lint: copyright woke
 	$(GCI_LINT) write -s standard -s default -s "prefix(github.com/vmware-tanzu/cartographer)" $$(find ./pkg ! -name "fake_*" -type f)
 	$(GOLANGCI_LINT) --config lint-config.yaml run
 	$(MAKE) -C hack lint
@@ -182,21 +187,6 @@ endif
 
 .PHONY: pre-push .pre-push-check
 .pre-push-check: copyright lint gen-manifests gen-objects test-gen-manifests test-gen-objects generate
-
-
-.PHONY: inclusive-container
-inclusive-container:
-ifeq ($(UNAME), Darwin)
-	docker build . -f ./Dockerfile.inclusive -t inclusive:latest
-endif
-
-.PHONY: inclusive
-inclusive: inclusive-container
-ifeq ($(UNAME), Darwin)
-	docker run -it -v $$(pwd):/app -w /app -it inclusive:latest /app/hack/inclusive.sh
-else
-	./hack/inclusive.sh
-endif
 
 # pre-push ensures that all generated content, copywrites and lints are
 # run and ends with an error if a mutation is caused.
