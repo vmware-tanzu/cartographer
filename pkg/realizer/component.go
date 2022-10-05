@@ -176,9 +176,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		qualifiedResourceName, err := utils.GetQualifiedResourceName(mapper, stampedObject)
-		if err != nil {
-			panic("todo")
+		qualifiedResourceName, qrErr := utils.GetQualifiedResourceName(mapper, stampedObject)
+		if qrErr != nil {
+			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
+			qualifiedResourceName = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
 		}
 
 		return template, stampedObject, nil, errors.RetrieveOutputError{
