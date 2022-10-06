@@ -111,6 +111,10 @@ func GetQualifiedType(mapper meta.RESTMapper, obj *unstructured.Unstructured) (s
 	if err != nil {
 		return "", err
 	}
+
+	if mapping.Resource.Group == "" {
+		return mapping.Resource.Resource, nil
+	}
 	return fmt.Sprintf("%s.%s", mapping.Resource.Resource, mapping.Resource.Group), nil
 }
 

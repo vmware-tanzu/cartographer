@@ -372,6 +372,8 @@ spec:
                           description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
                           type: string
                         resource:
+                          description: Resource refers to the resource name and group
+                            [NAME(.GROUP)]
                           type: string
                         resourceVersion:
                           description: 'Specific resourceVersion to which this reference

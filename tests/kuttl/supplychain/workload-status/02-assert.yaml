@@ -65,7 +65,7 @@ status:
         apiVersion: test.run/v1alpha1
         kind: Test
         name: example-first-configmap
-        resource: tests
+        resource: tests.test.run
       templateRef:
         apiVersion: carto.run/v1alpha1
         kind: ClusterSourceTemplate
