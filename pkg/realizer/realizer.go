@@ -121,6 +121,9 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 
 		outs.AddOutput(resource.Name, out)
 
+		// should we bail out here if passthrough??
+		// what should the status.resource be??
+
 		previousResourceStatus := resourceStatuses.GetPreviousResourceStatus(resource.Name)
 
 		var realizedResource *v1alpha1.RealizedResource

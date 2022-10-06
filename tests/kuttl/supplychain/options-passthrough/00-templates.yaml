@@ -17,7 +17,7 @@ kind: ClusterSourceTemplate
 metadata:
   name: source---options-passthrough
 spec:
-  urlPath: .spec.value
+  urlPath: .spec.value.env
   revisionPath: .metadata.name
   template:
     apiVersion: test.run/v1alpha1
@@ -34,7 +34,7 @@ kind: ClusterSourceTemplate
 metadata:
   name: test---options-passthrough
 spec:
-  urlPath: .spec.value
+  urlPath: .spec.value.env
   revisionPath: .metadata.name
   template:
     apiVersion: test.run/v1alpha1
@@ -51,7 +51,7 @@ kind: ClusterImageTemplate
 metadata:
   name: image---options-passthrough
 spec:
-  imagePath: .spec.value
+  imagePath: .spec.value.env
   template:
     apiVersion: test.run/v1alpha1
     kind: Test

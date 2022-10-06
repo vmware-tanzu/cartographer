@@ -90,9 +90,28 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	var templateName string
 	var err error
 	if len(resource.TemplateOptions) > 0 {
-		templateName, err = r.findMatchingTemplateName(resource, blueprintName)
+		templateOption, err := r.findMatchingTemplateOption(resource, blueprintName)
 		if err != nil {
 			return nil, nil, nil, err
+		}
+		if templateOption.Name == "" {
+			// passthrough
+
+			inputs := outputs.GenerateInputs(resource)
+			source := inputs.Sources[templateOption.Passthrough]
+			//image := inputs.Images[templateOption.Passthrough]
+			//config := inputs.Configs[templateOption.Passthrough]
+
+			// this is obviously not longterm, trying to get kuttl test passing
+			output := &templates.Output{
+				Source: &templates.Source{
+					URL:      source.URL,
+					Revision: source.Revision,
+				},
+			}
+			return nil, nil, output, nil
+		} else {
+			templateName = templateOption.Name
 		}
 	} else {
 		templateName = resource.TemplateRef.Name
@@ -186,11 +205,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	return template, stampedObject, output, nil
 }
 
-func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supplyChainName string) (string, error) {
+func (r *resourceRealizer) findMatchingTemplateOption(resource OwnerResource, supplyChainName string) (v1alpha1.TemplateOption, error) {
 	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateOptions))
 
 	if err != nil {
-		return "", errors.ResolveTemplateOptionError{
+		return v1alpha1.TemplateOption{}, errors.ResolveTemplateOptionError{
 			Err:           err,
 			ResourceName:  resource.Name,
 			OptionName:    resource.TemplateOptions[err.SelectorIndex()].Name,
@@ -202,10 +221,14 @@ func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supp
 	if len(bestMatchingTemplateOptionsIndices) != 1 {
 		var optionNames []string
 		for _, optionIndex := range bestMatchingTemplateOptionsIndices {
-			optionNames = append(optionNames, resource.TemplateOptions[optionIndex].Name)
+			if resource.TemplateOptions[optionIndex].Name == "" {
+				optionNames = append(optionNames, "passthrough")
+			} else {
+				optionNames = append(optionNames, resource.TemplateOptions[optionIndex].Name)
+			}
 		}
 
-		return "", errors.TemplateOptionsMatchError{
+		return v1alpha1.TemplateOption{}, errors.TemplateOptionsMatchError{
 			ResourceName:  resource.Name,
 			OptionNames:   optionNames,
 			BlueprintName: supplyChainName,
@@ -213,5 +236,5 @@ func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supp
 		}
 	}
 
-	return resource.TemplateOptions[bestMatchingTemplateOptionsIndices[0]].Name, nil
+	return resource.TemplateOptions[bestMatchingTemplateOptionsIndices[0]], nil
 }

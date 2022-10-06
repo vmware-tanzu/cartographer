@@ -190,10 +190,17 @@ spec:
                             Options can be specified. Minimum number of items in list
                             is two.
                           items:
+                            description: 'TODO: validate name or passthrough TODO:
+                              pass through is two words'
                             properties:
                               name:
-                                description: Name of the template to apply
+                                description: Name of the template to apply Name or
+                                  Passthrough must be specified
                                 minLength: 1
+                                type: string
+                              passthrough:
+                                description: Passthrough the input Name or Passthrough
+                                  must be specified
                                 type: string
                               selector:
                                 description: Selector is a criteria to match against  a
@@ -281,7 +288,6 @@ spec:
                                 type: object
                                 x-kubernetes-map-type: atomic
                             required:
-                            - name
                             - selector
                             type: object
                           minItems: 2

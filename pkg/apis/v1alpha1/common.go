@@ -160,10 +160,17 @@ func GetAPITemplate(templateKind string) (client.Object, error) {
 	return template, nil
 }
 
+// TODO: validate name or passthrough
+// TODO: pass through is two words
 type TemplateOption struct {
 	// Name of the template to apply
+	// Name or Passthrough must be specified
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
+
+	// Passthrough the input
+	// Name or Passthrough must be specified
+	Passthrough string `json:"passthrough,omitempty"`
 
 	// Selector is a criteria to match against  a workload or deliverable resource.
 	Selector Selector `json:"selector"`

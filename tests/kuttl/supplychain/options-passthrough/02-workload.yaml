@@ -18,6 +18,7 @@ metadata:
   name: petclinic
   labels:
     integration-test: "options-passthrough"
+#    has-tests: "true"
 spec:
   serviceAccountName: my-service-account
   params:

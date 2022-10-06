@@ -38,7 +38,7 @@ spec:
         - passthrough: source
           selector:
             matchExpressions:
-              - { key: has-tests, operator: NotExists }
+              - { key: has-tests, operator: DoesNotExist }
     - name: image-provider
       templateRef:
         kind: ClusterImageTemplate
