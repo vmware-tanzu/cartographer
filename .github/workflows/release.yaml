@@ -88,42 +88,24 @@ jobs:
           asset_name: cartographer.yaml
           asset_content_type: application/x-yaml
 
-      - name: Upload Cartotest OSX Legacy artifact to release
-        uses: actions/upload-release-asset@v1.0.2
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      # More assembly might be required: Docker logins, GPG, etc. It all depends
+      # on your needs.
+      - uses: goreleaser/goreleaser-action@v2
+        with:
+          # either 'goreleaser' (default) or 'goreleaser-pro'
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cartotest_darwin_amd64
-          asset_name: cartotest_darwin_amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Cartotest OSX AMD (M1/M2) artifact to release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cartotest_darwin_arm64
-          asset_name: cartotest_darwin_arm64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Cartotest Linux artifact to release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cartotest_linux_amd64
-          asset_name: cartotest_linux_amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Cartotest Windows artifact to release
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: cartotest_windows_amd64
-          asset_name: cartotest_windows_amd64
-          asset_content_type: application/octet-stream

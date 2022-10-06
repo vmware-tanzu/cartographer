@@ -1,3 +1,5 @@
+project_name: cartotest
+
 builds:
   - main: ./cmd/cartotest
     id: cartotest
@@ -9,8 +11,61 @@ builds:
 
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+universal_binaries:
+  - replace: true
+
 archives:
  - files:
     - src: cmd/cartotest/README.md
       strip_parent: true
     - LICENSE
+
+release:
+  github:
+    owner: vmware-tanzu
+    name: cartographer
+
+  # If set to true, will not auto-publish the release.
+  draft: true
+
+  # Useful if you want to delay the creation of the tag in the remote.
+  # You can create the tag locally, but not push it, and run GoReleaser.
+  target_commitish: '{{ .Commit }}'
+
+brews:
+  - name: cartotest
+
+
+    # NOTE: make sure the url_template, the token and given repo (github or
+    # gitlab) owner and name are from the same kind.
+    # We will probably unify this in the next major version like it is
+    # done with scoop.
+
+    # GitHub/GitLab repository to push the formula to
+    tap:
+      owner: waciumawanjohi
+      name: homebrew-cartographer
+
+      # Optionally a token can be provided, if it differs from the token
+      # provided to GoReleaser
+      token: "{{ .Env.GITHUB_TOKEN }}"
+
+    # Git author used to commit to the repository.
+    # Defaults are shown.
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    # The project name and current git tag are used in the format string.
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+
+    # Your app's homepage.
+    homepage: "https://cartographer.sh/"
+
+    # Template of your app's description.
+    # Default is empty.
+    description: "CLI to test Cartographer Templates"
+
+    # SPDX identifier of your app's license.
+    # Default is empty.
+    license: "Apache-2.0"
