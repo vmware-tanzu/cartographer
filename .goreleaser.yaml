@@ -1,10 +1,16 @@
 builds:
   - main: ./cmd/cartotest
-    binary: cli
+    id: cartotest
+    binary: cartotest
     goos:
-      - linux
       - darwin
+      - linux
       - windows
 
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+archives:
+ - files:
+    - src: cmd/cartotest/README.md
+      strip_parent: true
+    - LICENSE
