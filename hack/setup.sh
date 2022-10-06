@@ -23,7 +23,8 @@ readonly DIR="$(cd "$(dirname "$0")" && pwd)"
 readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
-readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.24.2}
+#readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.24.6}
+readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.25.3}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
 readonly RELEASE_YAML_PATH=${RELEASE_YAML_PATH:-"./release/cartographer.yaml"}
 # wokeignore:rule=disable no shellcheck alternative
@@ -34,11 +35,11 @@ readonly REGISTRY_CONTAINER_NAME=cartographer-registry
 readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
 readonly CERT_MANAGER_VERSION=1.5.3
-readonly KAPP_CONTROLLER_VERSION=0.38.4
-readonly KNATIVE_SERVING_VERSION=0.26.0
+readonly KAPP_CONTROLLER_VERSION=0.41.2
+readonly KNATIVE_SERVING_VERSION=1.7.2
 readonly KPACK_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
-readonly TEKTON_VERSION=0.30.0
+readonly TEKTON_VERSION=0.41.0
 readonly GIT_SERVE_VERSION=0.0.5
 
 readonly GITOPS_REPO="http://git-server.default.svc.cluster.local:80/gitops-test.git"
@@ -266,8 +267,8 @@ install_kapp_controller() {
 
 install_knative_serving() {
         ytt --ignore-unknown-comments \
-                -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml \
-                -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml \
+                -f https://github.com/knative/serving/releases/download/knative-v$KNATIVE_SERVING_VERSION/serving-core.yaml \
+                -f https://github.com/knative/serving/releases/download/knative-v$KNATIVE_SERVING_VERSION/serving-crds.yaml \
                 -f "$DIR/overlays/remove-resource-requests-from-deployments.yaml" |
                 kapp deploy --yes -a knative-serving -f-
 }
@@ -280,7 +281,7 @@ install_tekton() {
 }
 
 install_tekton_git_cli_task() {
-  kapp deploy --yes -a tekton-git-cli -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.2/git-cli.yaml
+  kapp deploy --yes -a tekton-git-cli -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-cli/0.4/git-cli.yaml
 }
 
 setup_example_sc() {
