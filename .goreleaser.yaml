@@ -1,0 +1,10 @@
+builds:
+  - main: ./cmd/cartotest
+    binary: cli
+    goos:
+      - linux
+      - darwin
+      - windows
+
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
