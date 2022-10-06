@@ -48,9 +48,9 @@ func Execute() {
 }
 
 var (
-	version             = "0.5.3" // TODO remove hard coding
-	directory, template string
-	verbose             bool
+	version   = "0.5.3" // TODO remove hard coding
+	directory string
+	verbose   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -72,9 +72,6 @@ Read more at cartographer.sh`,
 		cmd.SilenceErrors = true
 
 		baseTestCase := TemplateTestCase{}
-		if template != "" {
-			baseTestCase.Given = TemplateTestGivens{TemplateFile: template}
-		}
 		testSuite, err := buildTestSuite(baseTestCase, directory)
 		if err != nil {
 			return fmt.Errorf("build test cases: %w", err)
@@ -88,7 +85,6 @@ Read more at cartographer.sh`,
 
 func init() {
 	rootCmd.Flags().StringVarP(&directory, "directory", "d", "", "directory to test")
-	rootCmd.Flags().StringVarP(&template, "template", "t", "", "template file to test")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "output logs and increase test failure verbosity")
 
 	_ = rootCmd.MarkFlagRequired("directory")
