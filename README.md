@@ -47,6 +47,7 @@ Detailed documentation for Cartographer can be found in the `site` folder of thi
 
 * [About Cartographer](https://cartographer.sh/docs/latest/): details the design and philosophy of Cartographer
 * [Architecture](https://cartographer.sh/docs/latest/architecture/): covers the concepts and theory of operation
+* [Tutorials](https://cartographer.sh/docs/latest/tutorials/first-supply-chain/): gives a quickstart guide to working with Cartographer
 * [Examples](https://github.com/vmware-tanzu/cartographer/tree/main/examples): contains a collection of examples that demonstrate how common patterns can be implemented in Cartographer 
 * Spec Reference: detailed descriptions of the CRD Specs for Cartographer
   * [GVK](https://cartographer.sh/docs/latest/reference/gvk/)
@@ -54,6 +55,7 @@ Detailed documentation for Cartographer can be found in the `site` folder of thi
   * [Deliverable and Delivery](https://cartographer.sh/docs/latest/reference/deliverable/)
   * [Templates](https://cartographer.sh/docs/latest/reference/template/)
   * [Runnable](https://cartographer.sh/docs/latest/reference/runnable/)
+* [Cartotest](https://cartographer.sh/docs/latest/testing-templates/): explains how to use the cartotest CLI to affirm your templates
 
 ## 🤗 Community, discussion, contribution, and support
 
