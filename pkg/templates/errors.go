@@ -56,7 +56,6 @@ type DeploymentConditionError struct {
 	Err error
 }
 
-// TODO: not used
 func NewDeploymentConditionError(err error) DeploymentConditionError {
 	return DeploymentConditionError{
 		Err: err,
