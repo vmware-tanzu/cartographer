@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -46,7 +48,7 @@ type OwnerResource struct {
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -83,7 +85,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -174,12 +176,19 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	output, err := template.GetOutput()
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+		qualifiedResource, rErr := utils.GetQualifiedResource(mapper, stampedObject)
+		if rErr != nil {
+			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
+			qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
+		}
+
 		return template, stampedObject, nil, errors.RetrieveOutputError{
-			Err:           err,
-			ResourceName:  resource.Name,
-			StampedObject: stampedObject,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+			Err:               err,
+			ResourceName:      resource.Name,
+			StampedObject:     stampedObject,
+			BlueprintName:     blueprintName,
+			BlueprintType:     errors.SupplyChain,
+			QualifiedResource: qualifiedResource,
 		}
 	}
 

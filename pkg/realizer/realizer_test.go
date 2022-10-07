@@ -25,9 +25,11 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -58,6 +60,7 @@ var _ = Describe("Realize", func() {
 		evaluatedStampedObjectNames    []string
 		ctx                            context.Context
 		recordedEvents                 []event
+		fakeMapper                     *realizerfakes.FakeRESTMapper
 	)
 
 	BeforeEach(func() {
@@ -82,7 +85,8 @@ var _ = Describe("Realize", func() {
 				Reason: "EvaluatorSaysSo",
 			}
 		}
-		rlzr = realizer.NewRealizer(healthyConditionEvaluator)
+		fakeMapper = &realizerfakes.FakeRESTMapper{}
+		rlzr = realizer.NewRealizer(healthyConditionEvaluator, fakeMapper)
 		resourceRealizer = &realizerfakes.FakeResourceRealizer{}
 	})
 
@@ -141,7 +145,7 @@ var _ = Describe("Realize", func() {
 
 			outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 				executedResourceOrder = append(executedResourceOrder, resource.Name)
 				Expect(blueprintName).To(Equal("greatest-supply-chain"))
 				if resource.Name == "resource1" {
@@ -165,6 +169,20 @@ var _ = Describe("Realize", func() {
 				return template, stampedObj, &templates.Output{}, nil
 			})
 
+			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "EXAMPLE.COM",
+					Version:  "v1",
+					Resource: "FOO",
+				},
+				GroupVersionKind: schema.GroupVersionKind{
+					Group:   "",
+					Version: "",
+					Kind:    "",
+				},
+				Scope: nil,
+			}, nil)
+
 		})
 
 		It("realizes each resource in supply chain order, accumulating output for each subsequent resource", func() {
@@ -185,6 +203,7 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses[0].Name).To(Equal(resource1.Name))
 			Expect(currentResourceStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
 			Expect(currentResourceStatuses[0].StampedRef.Name).To(Equal("obj1"))
+			Expect(currentResourceStatuses[0].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
 			Expect(currentResourceStatuses[0].Inputs).To(BeNil())
 			Expect(len(currentResourceStatuses[0].Outputs)).To(Equal(1))
 			Expect(currentResourceStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
@@ -213,6 +232,7 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
 			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
 			Expect(currentResourceStatuses[1].StampedRef.Name).To(Equal("obj2"))
+			Expect(currentResourceStatuses[1].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
 			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
 			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(currentResourceStatuses[1].Outputs).To(BeNil())
@@ -302,11 +322,14 @@ var _ = Describe("Realize", func() {
 				{
 					RealizedResource: v1alpha1.RealizedResource{
 						Name: "resource2",
-						StampedRef: &corev1.ObjectReference{
-							Kind:       "Image",
-							Namespace:  "",
-							Name:       "",
-							APIVersion: "",
+						StampedRef: &v1alpha1.StampedRef{
+							ObjectReference: &corev1.ObjectReference{
+								Kind:       "Image",
+								Namespace:  "",
+								Name:       "",
+								APIVersion: "",
+							},
+							Resource: "image",
 						},
 						TemplateRef: &corev1.ObjectReference{
 							Kind:       "ClusterImageTemplate",
@@ -338,11 +361,14 @@ var _ = Describe("Realize", func() {
 				{
 					RealizedResource: v1alpha1.RealizedResource{
 						Name: "resource3",
-						StampedRef: &corev1.ObjectReference{
-							Kind:       "Config",
-							Namespace:  "",
-							Name:       "PreviousStampedObj",
-							APIVersion: "",
+						StampedRef: &v1alpha1.StampedRef{
+							ObjectReference: &corev1.ObjectReference{
+								Kind:       "Config",
+								Namespace:  "",
+								Name:       "PreviousStampedObj",
+								APIVersion: "",
+							},
+							Resource: "config",
 						},
 						TemplateRef: &corev1.ObjectReference{
 							Kind:       "ClusterConfigTemplate",
@@ -416,6 +442,20 @@ var _ = Describe("Realize", func() {
 			resourceRealizer.DoReturnsOnCall(0, templateModel1, &unstructured.Unstructured{}, nil, nil)
 			resourceRealizer.DoReturnsOnCall(1, templateModel2, &unstructured.Unstructured{}, nil, nil)
 			resourceRealizer.DoReturnsOnCall(2, templateModel3, &unstructured.Unstructured{}, nil, nil)
+
+			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "EXAMPLE.COM",
+					Version:  "v1",
+					Resource: "FOO",
+				},
+				GroupVersionKind: schema.GroupVersionKind{
+					Group:   "",
+					Version: "",
+					Kind:    "",
+				},
+				Scope: nil,
+			}, nil)
 		})
 
 		It("realizes each resource and does not update last transition time on resources that have not changed", func() {

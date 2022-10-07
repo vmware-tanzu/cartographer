@@ -43,9 +43,12 @@ var _ = Describe("DetermineHealthCondition", func() {
 
 	It("is always healthy for no rule on ClusterTemplates if a stamped object exists", func() {
 		realizedResource := &v1alpha1.RealizedResource{
-			StampedRef: &corev1.ObjectReference{
-				Kind:       "Anything",
-				APIVersion: "of-any/kind",
+			StampedRef: &v1alpha1.StampedRef{
+				ObjectReference: &corev1.ObjectReference{
+					Kind:       "Anything",
+					APIVersion: "of-any/kind",
+				},
+				Resource: "",
 			},
 			TemplateRef: &corev1.ObjectReference{
 				Kind:       "ClusterTemplate",

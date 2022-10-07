@@ -159,8 +159,11 @@ var _ = Describe("ResourceStatuses", func() {
 			It("the resourceStatuses reports IsChanged is true", func() {
 				resourceStatuses.Add(&v1alpha1.RealizedResource{
 					Name: "resource1",
-					StampedRef: &corev1.ObjectReference{
-						Name: "Fred",
+					StampedRef: &v1alpha1.StampedRef{
+						ObjectReference: &corev1.ObjectReference{
+							Name: "Fred",
+						},
+						Resource: "",
 					},
 					TemplateRef: nil,
 					Inputs:      nil,

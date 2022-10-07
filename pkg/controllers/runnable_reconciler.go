@@ -139,7 +139,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			r.conditionManager.AddPositive(conditions.FailedToListCreatedObjectsCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		case cerrors.RunnableRetrieveOutputError:
-			r.conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.Error()))
+			r.conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.QualifiedResource, typedErr.Error()))
 		default:
 			r.conditionManager.AddPositive(conditions.UnknownErrorCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
@@ -248,7 +248,7 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		repository.NewCache(mgr.GetLogger().WithName("runnable-repo-cache")),
 	)
 
-	r.Realizer = realizer.NewRealizer()
+	r.Realizer = realizer.NewRealizer(mgr.GetRESTMapper())
 	r.RunnableCache = repository.NewCache(mgr.GetLogger().WithName("runnable-stamping-repo-cache"))
 	r.RepositoryBuilder = repository.NewRepository
 	r.ClientBuilder = realizerclient.NewClientBuilder(mgr.GetConfig())

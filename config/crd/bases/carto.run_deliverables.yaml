@@ -371,6 +371,11 @@ spec:
                         namespace:
                           description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
                           type: string
+                        resource:
+                          description: Resource refers to the resource name and group
+                            [NAME(.GROUP)] The NAME segment is the CRD's plural value.
+                            You can use this to fully qualify a kubectl reference.
+                          type: string
                         resourceVersion:
                           description: 'Specific resourceVersion to which this reference
                             is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'

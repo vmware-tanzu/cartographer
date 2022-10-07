@@ -297,7 +297,7 @@ func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, prev
 			}
 		}
 		if orphaned {
-			orphanedObjs = append(orphanedObjs, prevResource.StampedRef)
+			orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
 		}
 	}
 
@@ -408,7 +408,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		realizerclient.NewClientBuilder(mgr.GetConfig()),
 		repository.NewCache(mgr.GetLogger().WithName("deliverable-stamping-repo-cache")),
 	)
-	r.Realizer = realizer.NewRealizer(nil)
+	r.Realizer = realizer.NewRealizer(nil, r.RESTMapper)
 	r.DependencyTracker = dependency.NewDependencyTracker(
 		2*utils.DefaultResyncTime,
 		mgr.GetLogger().WithName("tracker-deliverable"),

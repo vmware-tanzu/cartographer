@@ -253,9 +253,12 @@ var _ = Describe("WorkloadReconciler", func() {
 			resourceStatuses.Add(
 				&v1alpha1.RealizedResource{
 					Name: "resource1",
-					StampedRef: &corev1.ObjectReference{
-						Kind:       "MyThing",
-						APIVersion: "thing.io/alphabeta1",
+					StampedRef: &v1alpha1.StampedRef{
+						ObjectReference: &corev1.ObjectReference{
+							Kind:       "MyThing",
+							APIVersion: "thing.io/alphabeta1",
+						},
+						Resource: "mything",
 					},
 					TemplateRef: &corev1.ObjectReference{
 						Kind:       "my-image-kind",
@@ -267,9 +270,12 @@ var _ = Describe("WorkloadReconciler", func() {
 			resourceStatuses.Add(
 				&v1alpha1.RealizedResource{
 					Name: "resource2",
-					StampedRef: &corev1.ObjectReference{
-						Kind:       "NiceToSeeYou",
-						APIVersion: "hello.io/goodbye",
+					StampedRef: &v1alpha1.StampedRef{
+						ObjectReference: &corev1.ObjectReference{
+							Kind:       "NiceToSeeYou",
+							APIVersion: "hello.io/goodbye",
+						},
+						Resource: "nicetoseeyou",
 					},
 					TemplateRef: &corev1.ObjectReference{
 						Kind:       "my-config-kind",
@@ -821,11 +827,12 @@ var _ = Describe("WorkloadReconciler", func() {
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = cerrors.RetrieveOutputError{
-						Err:           jsonPathError,
-						ResourceName:  "some-resource",
-						StampedObject: stampedObject,
-						BlueprintName: supplyChainName,
-						BlueprintType: cerrors.SupplyChain,
+						Err:               jsonPathError,
+						ResourceName:      "some-resource",
+						StampedObject:     stampedObject,
+						BlueprintName:     supplyChainName,
+						BlueprintType:     cerrors.SupplyChain,
+						QualifiedResource: "mything.thing.io",
 					}
 					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)
@@ -839,7 +846,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
 					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything")))
+						Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io")))
 				})
 
 				It("does not return an error", func() {
@@ -1262,10 +1269,13 @@ var _ = Describe("WorkloadReconciler", func() {
 			resourceStatuses.Add(
 				&v1alpha1.RealizedResource{
 					Name: "some-resource",
-					StampedRef: &corev1.ObjectReference{
-						APIVersion: "some-api-version",
-						Kind:       "some-kind",
-						Name:       "some-new-stamped-obj-name",
+					StampedRef: &v1alpha1.StampedRef{
+						ObjectReference: &corev1.ObjectReference{
+							APIVersion: "some-api-version",
+							Kind:       "some-kind",
+							Name:       "some-new-stamped-obj-name",
+						},
+						Resource: "some-kind",
 					},
 				}, nil,
 			)
@@ -1283,10 +1293,13 @@ var _ = Describe("WorkloadReconciler", func() {
 					{
 						RealizedResource: v1alpha1.RealizedResource{
 							Name: "some-resource",
-							StampedRef: &corev1.ObjectReference{
-								APIVersion: "some-api-version",
-								Kind:       "some-kind",
-								Name:       "some-new-stamped-obj-name",
+							StampedRef: &v1alpha1.StampedRef{
+								ObjectReference: &corev1.ObjectReference{
+									APIVersion: "some-api-version",
+									Kind:       "some-kind",
+									Name:       "some-new-stamped-obj-name",
+								},
+								Resource: "some-kind",
 							},
 						},
 					},
@@ -1308,10 +1321,13 @@ var _ = Describe("WorkloadReconciler", func() {
 					{
 						RealizedResource: v1alpha1.RealizedResource{
 							Name: "some-resource",
-							StampedRef: &corev1.ObjectReference{
-								APIVersion: "some-api-version",
-								Kind:       "some-kind",
-								Name:       "some-old-stamped-obj-name",
+							StampedRef: &v1alpha1.StampedRef{
+								ObjectReference: &corev1.ObjectReference{
+									APIVersion: "some-api-version",
+									Kind:       "some-kind",
+									Name:       "some-old-stamped-obj-name",
+								},
+								Resource: "some-kind",
 							},
 						},
 					},

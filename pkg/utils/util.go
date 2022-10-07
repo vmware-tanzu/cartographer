@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,13 +97,39 @@ func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) err
 	}
 }
 
-func GetFullyQualifiedType(obj *unstructured.Unstructured) string {
-	var fullyQualifiedType string
-	if obj.GetObjectKind().GroupVersionKind().Group == "" {
-		fullyQualifiedType = strings.ToLower(obj.GetKind())
-	} else {
-		fullyQualifiedType = fmt.Sprintf("%s.%s", strings.ToLower(obj.GetKind()),
-			obj.GetObjectKind().GroupVersionKind().Group)
+func getResourceMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) (*meta.RESTMapping, error) {
+	gvk := obj.GroupVersionKind()
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, err
 	}
-	return fullyQualifiedType
+	return mapping, nil
+}
+
+func GetQualifiedResource(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+	mapping, err := getResourceMapping(mapper, obj)
+	if err != nil {
+		return "", err
+	}
+
+	if mapping.Resource.Group == "" {
+		return mapping.Resource.Resource, nil
+	}
+	return fmt.Sprintf("%s.%s", mapping.Resource.Resource, mapping.Resource.Group), nil
+}
+
+func GetQualifiedResourceWithName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+	mapping, err := getResourceMapping(mapper, obj)
+	if err != nil {
+		return "", err
+	}
+	objName := obj.GetName()
+	if objName == "" {
+		objName = obj.GetGenerateName()
+	}
+
+	if mapping.Resource.Group == "" {
+		return fmt.Sprintf("%s/%s", mapping.Resource.Resource, objName), nil
+	}
+	return fmt.Sprintf("%s.%s/%s", mapping.Resource.Resource, mapping.Resource.Group, objName), nil
 }
