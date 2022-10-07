@@ -75,8 +75,8 @@ var _ = Describe("Stamper", func() {
 					"Kind":               Equal("ConfigMap"),
 					"APIVersion":         Equal("v1"),
 					"UID":                Equal(types.UID("1234567890abcdef")),
-					"BlockOwnerDeletion": Equal(pointer.BoolPtr(true)),
-					"Controller":         Equal(pointer.BoolPtr(true)),
+					"BlockOwnerDeletion": Equal(pointer.Bool(true)),
+					"Controller":         Equal(pointer.Bool(true)),
 				}))
 			})
 

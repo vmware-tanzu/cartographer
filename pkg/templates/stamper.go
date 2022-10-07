@@ -167,8 +167,8 @@ func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateS
 			Kind:               kind,
 			UID:                s.Owner.GetUID(),
 			Name:               s.Owner.GetName(),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
-			Controller:         pointer.BoolPtr(true),
+			BlockOwnerDeletion: pointer.Bool(true),
+			Controller:         pointer.Bool(true),
 		},
 	})
 
