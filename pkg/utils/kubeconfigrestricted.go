@@ -21,11 +21,11 @@ func NewKubeconfigRestricted(input string) (*KubeconfigRestricted, error) {
 
 	err := yaml.Unmarshal([]byte(input), &inputConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Parsing kubeconfig: %s", err)
+		return nil, fmt.Errorf("parsing kubeconfig: %s", err)
 	}
 
 	if len(inputConfig.Clusters) == 0 {
-		return nil, fmt.Errorf("Expected to find at least one cluster in kubeconfig")
+		return nil, fmt.Errorf("expected to find at least one cluster in kubeconfig")
 	}
 
 	resultConfig := clientcmd.Config{
@@ -77,7 +77,7 @@ func NewKubeconfigRestricted(input string) (*KubeconfigRestricted, error) {
 
 	bs, err := yaml.Marshal(resultConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Marshaling kubeconfig: %s", err)
+		return nil, fmt.Errorf("marshaling kubeconfig: %s", err)
 	}
 
 	return &KubeconfigRestricted{string(bs)}, nil
