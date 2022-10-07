@@ -127,7 +127,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	ownerTemplatingContext := map[string]interface{}{
 		"workload":    r.owner,
 		"deliverable": r.owner,
-		"params":      paramGenerator.GetParams(template.GetDefaultParams()),
+		"params":      paramGenerator.GetParams(template),
 		"sources":     inputs.Sources,
 		"images":      inputs.Images,
 		"deployment":  inputs.Deployment,

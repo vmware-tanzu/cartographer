@@ -20,8 +20,12 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
+type TemplateParams interface {
+	GetDefaultParams() v1alpha1.TemplateParams
+}
+
 type ContextParams interface {
-	GetParams(templateParams []v1alpha1.TemplateParam) map[string]apiextensionsv1.JSON
+	GetParams(templateParams TemplateParams) map[string]apiextensionsv1.JSON
 }
 
 func NewParamGenerator(resourceParams []v1alpha1.BlueprintParam, blueprintParams []v1alpha1.BlueprintParam, ownerParams []v1alpha1.OwnerParam) ContextParams {
@@ -38,10 +42,10 @@ type ParamGenerator struct {
 	ownerParams     []v1alpha1.OwnerParam
 }
 
-func (p ParamGenerator) GetParams(templateParams []v1alpha1.TemplateParam) map[string]apiextensionsv1.JSON {
+func (p ParamGenerator) GetParams(templateParams TemplateParams) map[string]apiextensionsv1.JSON {
 	newParams := map[string]apiextensionsv1.JSON{}
 
-	for _, param := range templateParams {
+	for _, param := range templateParams.GetDefaultParams() {
 		newParams[param.Name] = param.DefaultValue
 	}
 
