@@ -20,22 +20,34 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-type Params map[string]apiextensionsv1.JSON
+type ContextParams interface {
+	GetParams(templateParams []v1alpha1.TemplateParam) map[string]apiextensionsv1.JSON
+}
 
-func ParamsBuilder(
-	templateParams []v1alpha1.TemplateParam,
-	blueprintParams []v1alpha1.BlueprintParam,
-	resourceParams []v1alpha1.BlueprintParam,
-	ownerParams []v1alpha1.OwnerParam,
-) Params {
-	newParams := Params{}
+func NewParamGenerator(resourceParams []v1alpha1.BlueprintParam, blueprintParams []v1alpha1.BlueprintParam, ownerParams []v1alpha1.OwnerParam) ContextParams {
+	return &ParamGenerator{
+		blueprintParams: blueprintParams,
+		resourceParams:  resourceParams,
+		ownerParams:     ownerParams,
+	}
+}
+
+type ParamGenerator struct {
+	blueprintParams []v1alpha1.BlueprintParam
+	resourceParams  []v1alpha1.BlueprintParam
+	ownerParams     []v1alpha1.OwnerParam
+}
+
+func (p ParamGenerator) GetParams(templateParams []v1alpha1.TemplateParam) map[string]apiextensionsv1.JSON {
+	newParams := map[string]apiextensionsv1.JSON{}
+
 	for _, param := range templateParams {
 		newParams[param.Name] = param.DefaultValue
 	}
 
 	protectedFromOwnerOverride := make(map[string]bool)
 
-	for _, blueprintOverride := range blueprintParams {
+	for _, blueprintOverride := range p.blueprintParams {
 		key := blueprintOverride.Name
 		if blueprintOverride.Value != nil {
 			newParams[key] = *blueprintOverride.Value
@@ -46,7 +58,7 @@ func ParamsBuilder(
 		}
 	}
 
-	for _, resourceOverride := range resourceParams {
+	for _, resourceOverride := range p.resourceParams {
 		key := resourceOverride.Name
 		if resourceOverride.Value != nil {
 			newParams[key] = *resourceOverride.Value
@@ -57,7 +69,7 @@ func ParamsBuilder(
 		}
 	}
 
-	for _, ownerOverride := range ownerParams {
+	for _, ownerOverride := range p.ownerParams {
 		key := ownerOverride.Name
 		if ownerCanOverride(protectedFromOwnerOverride, key) {
 			newParams[key] = ownerOverride.Value
@@ -65,6 +77,7 @@ func ParamsBuilder(
 	}
 
 	return newParams
+
 }
 
 func ownerCanOverride(isProtected map[string]bool, key string) bool {
