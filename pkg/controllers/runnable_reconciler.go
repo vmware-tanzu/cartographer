@@ -139,7 +139,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			r.conditionManager.AddPositive(conditions.FailedToListCreatedObjectsCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		case cerrors.RunnableRetrieveOutputError:
-			r.conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.ResourceType, typedErr.Error()))
+			r.conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.QualifiedResource, typedErr.Error()))
 		default:
 			r.conditionManager.AddPositive(conditions.UnknownErrorCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)

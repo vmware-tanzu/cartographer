@@ -106,7 +106,7 @@ func getResourceMapping(mapper meta.RESTMapper, obj *unstructured.Unstructured) 
 	return mapping, nil
 }
 
-func GetQualifiedType(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+func GetQualifiedResource(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
 	mapping, err := getResourceMapping(mapper, obj)
 	if err != nil {
 		return "", err
@@ -118,7 +118,7 @@ func GetQualifiedType(mapper meta.RESTMapper, obj *unstructured.Unstructured) (s
 	return fmt.Sprintf("%s.%s", mapping.Resource.Resource, mapping.Resource.Group), nil
 }
 
-func GetQualifiedResourceName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
+func GetQualifiedResourceWithName(mapper meta.RESTMapper, obj *unstructured.Unstructured) (string, error) {
 	mapping, err := getResourceMapping(mapper, obj)
 	if err != nil {
 		return "", err

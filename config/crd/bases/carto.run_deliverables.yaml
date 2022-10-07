@@ -373,7 +373,8 @@ spec:
                           type: string
                         resource:
                           description: Resource refers to the resource name and group
-                            [NAME(.GROUP)]
+                            [NAME(.GROUP)] The NAME segment is the CRD's plural value.
+                            You can use this to fully qualify a kubectl reference.
                           type: string
                         resourceVersion:
                           description: 'Specific resourceVersion to which this reference

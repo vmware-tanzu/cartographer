@@ -51,7 +51,7 @@ func StampedObjectRejectedByAPIServerCondition(err error) metav1.Condition {
 	}
 }
 
-func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, resourceType string, errMsg string) metav1.Condition {
+func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, qualifiedResource string, errMsg string) metav1.Condition {
 	var namespaceMsg string
 	if obj.GetNamespace() != "" {
 		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
@@ -67,7 +67,7 @@ func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, resourceTyp
 		Status: metav1.ConditionFalse,
 		Reason: v1alpha1.OutputPathNotSatisfiedRunTemplateReason,
 		Message: fmt.Sprintf("waiting to read value from resource [%s/%s]%s: %s",
-			resourceType, name, namespaceMsg, errMsg),
+			qualifiedResource, name, namespaceMsg, errMsg),
 	}
 }
 

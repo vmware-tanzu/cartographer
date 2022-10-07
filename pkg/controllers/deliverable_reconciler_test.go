@@ -803,12 +803,12 @@ var _ = Describe("DeliverableReconciler", func() {
 					stampedObject.SetNamespace("my-ns")
 
 					retrieveError = cerrors.RetrieveOutputError{
-						Err:           wrappedError,
-						ResourceName:  "some-resource",
-						BlueprintName: deliveryName,
-						BlueprintType: cerrors.Delivery,
-						StampedObject: stampedObject,
-						ResourceType:  "mything.thing.io",
+						Err:               wrappedError,
+						ResourceName:      "some-resource",
+						BlueprintName:     deliveryName,
+						BlueprintType:     cerrors.Delivery,
+						StampedObject:     stampedObject,
+						QualifiedResource: "mything.thing.io",
 					}
 
 					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {

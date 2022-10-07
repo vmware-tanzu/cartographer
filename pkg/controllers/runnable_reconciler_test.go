@@ -639,10 +639,10 @@ var _ = Describe("Reconcile", func() {
 					stampedObject.SetNamespace("my-ns")
 
 					err = cerrors.RunnableRetrieveOutputError{
-						Err:           errors.New("some error"),
-						TemplateRef:   &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
-						StampedObject: stampedObject,
-						ResourceType:  "mything.thing.io",
+						Err:               errors.New("some error"),
+						TemplateRef:       &v1alpha1.TemplateReference{Kind: "ClusterRunTemplate", Name: "my-run-template"},
+						StampedObject:     stampedObject,
+						QualifiedResource: "mything.thing.io",
 					}
 					rlzr.RealizeReturns(nil, nil, err)
 				})

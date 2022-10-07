@@ -203,6 +203,7 @@ type StampedRef struct {
 	*corev1.ObjectReference `json:",inline,omitempty"`
 
 	// Resource refers to the resource name and group [NAME(.GROUP)]
+	// The NAME segment is the CRD's plural value. You can use this to fully qualify a kubectl reference.
 	Resource string `json:"resource,omitempty"`
 }
 

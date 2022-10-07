@@ -827,12 +827,12 @@ var _ = Describe("WorkloadReconciler", func() {
 					stampedObject.SetNamespace("my-ns")
 					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = cerrors.RetrieveOutputError{
-						Err:           jsonPathError,
-						ResourceName:  "some-resource",
-						StampedObject: stampedObject,
-						BlueprintName: supplyChainName,
-						BlueprintType: cerrors.SupplyChain,
-						ResourceType:  "mything.thing.io",
+						Err:               jsonPathError,
+						ResourceName:      "some-resource",
+						StampedObject:     stampedObject,
+						BlueprintName:     supplyChainName,
+						BlueprintType:     cerrors.SupplyChain,
+						QualifiedResource: "mything.thing.io",
 					}
 					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 						statusesVal := reflect.ValueOf(statuses)

@@ -124,12 +124,12 @@ func (e StampError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err           error
-	ResourceName  string
-	StampedObject *unstructured.Unstructured
-	BlueprintName string
-	BlueprintType string
-	ResourceType  string
+	Err               error
+	ResourceName      string
+	StampedObject     *unstructured.Unstructured
+	BlueprintName     string
+	BlueprintType     string
+	QualifiedResource string
 }
 
 func (e RetrieveOutputError) Error() string {
@@ -137,7 +137,7 @@ func (e RetrieveOutputError) Error() string {
 		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in %s [%s]: %w",
 			e.StampedObject.GetNamespace(),
 			e.StampedObject.GetName(),
-			e.ResourceType,
+			e.QualifiedResource,
 			e.ResourceName,
 			e.BlueprintType,
 			e.BlueprintName,
@@ -148,7 +148,7 @@ func (e RetrieveOutputError) Error() string {
 		e.JsonPathExpression(),
 		e.StampedObject.GetNamespace(),
 		e.StampedObject.GetName(),
-		e.ResourceType,
+		e.QualifiedResource,
 		e.ResourceName,
 		e.BlueprintType,
 		e.BlueprintName,
@@ -172,8 +172,8 @@ func (e RetrieveOutputError) GetResourceName() string {
 	return e.ResourceName
 }
 
-func (e RetrieveOutputError) GetResouceType() string {
-	return e.ResourceType
+func (e RetrieveOutputError) GetQualifiedResource() string {
+	return e.QualifiedResource
 }
 
 func WrapUnhandledError(err error) error {

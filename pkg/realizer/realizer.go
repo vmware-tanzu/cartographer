@@ -140,7 +140,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			if previousResourceStatus != nil {
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
-			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource, r.mapper)
+			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource)
 			var previousOutputs []v1alpha1.Output
 			if previousRealizedResource != nil {
 				previousOutputs = previousRealizedResource.Outputs
@@ -167,7 +167,9 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource, mapper meta.RESTMapper) *v1alpha1.RealizedResource {
+func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+	log := logr.FromContextOrDiscard(ctx)
+
 	if previousRealizedResource == nil {
 		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
@@ -203,9 +205,10 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 
 	var stampedRef *v1alpha1.StampedRef
 	if stampedObject != nil {
-		resourceName, err := utils.GetQualifiedType(mapper, stampedObject)
+		qualifiedResource, err := utils.GetQualifiedResource(r.mapper, stampedObject)
 		if err != nil {
-			panic("TODO - implement me")
+			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
+			qualifiedResource = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
 		}
 
 		stampedRef = &v1alpha1.StampedRef{
@@ -215,7 +218,7 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 				Name:       stampedObject.GetName(),
 				APIVersion: stampedObject.GetAPIVersion(),
 			},
-			Resource: resourceName,
+			Resource: qualifiedResource,
 		}
 	}
 
