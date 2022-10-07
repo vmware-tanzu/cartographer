@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package realizer
 
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -45,8 +45,10 @@ type ParamGenerator struct {
 func (p ParamGenerator) GetParams(templateParams TemplateParams) map[string]apiextensionsv1.JSON {
 	newParams := map[string]apiextensionsv1.JSON{}
 
-	for _, param := range templateParams.GetDefaultParams() {
-		newParams[param.Name] = param.DefaultValue
+	if templateParams != nil {
+		for _, param := range templateParams.GetDefaultParams() {
+			newParams[param.Name] = param.DefaultValue
+		}
 	}
 
 	protectedFromOwnerOverride := make(map[string]bool)

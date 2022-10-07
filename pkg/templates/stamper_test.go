@@ -152,7 +152,7 @@ var _ = Describe("Stamper", func() {
 						Raw: []byte(`{ "kind": "Silly", "key": "` + tmpl + `"}`),
 					},
 				}
-				params := templates.Params{
+				params := map[string]apiextensionsv1.JSON{
 					"sub": {
 						Raw: []byte(subJSON),
 					},
@@ -161,7 +161,7 @@ var _ = Describe("Stamper", func() {
 				owner := &v1.ConfigMap{}
 
 				templatingContext := struct {
-					Params templates.Params `json:"params"`
+					Params map[string]apiextensionsv1.JSON `json:"params"`
 				}{
 					Params: params,
 				}
@@ -226,14 +226,14 @@ kind: TestResource
 key: ` + tmpl + `
 `,
 				}
-				params := templates.Params{
-					"sub": apiextensionsv1.JSON{Raw: []byte(subJSON)},
+				params := map[string]apiextensionsv1.JSON{
+					"sub": {Raw: []byte(subJSON)},
 				}
 
 				owner := &v1.ConfigMap{}
 
 				templatingContext := struct {
-					Params templates.Params `json:"params"`
+					Params map[string]apiextensionsv1.JSON `json:"params"`
 				}{
 					Params: params,
 				}

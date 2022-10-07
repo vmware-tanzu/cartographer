@@ -109,13 +109,13 @@ var _ = Describe("Interpolator", func() {
 			}
 
 			tagInterpolator.Context = struct {
-				Params  templates.Params `json:"params"`
-				Generic GenericType      `json:"generic"`
+				Params  map[string]apiextensionsv1.JSON `json:"params"`
+				Generic GenericType                     `json:"generic"`
 			}{
 
-				Params: templates.Params{
-					"an-amazing-param": apiextensionsv1.JSON{Raw: []byte(`"exactly what you want"`)},
-					"another_param":    apiextensionsv1.JSON{Raw: []byte(`"everything you need"`)},
+				Params: map[string]apiextensionsv1.JSON{
+					"an-amazing-param": {Raw: []byte(`"exactly what you want"`)},
+					"another_param":    {Raw: []byte(`"everything you need"`)},
 				},
 				Generic: GenericType{
 					Name:  "generic-name",

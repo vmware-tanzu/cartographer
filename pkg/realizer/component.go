@@ -87,7 +87,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	paramGenerator := templates.NewParamGenerator(resource.Params, r.blueprintParams, r.ownerParams)
+	paramGenerator := NewParamGenerator(resource.Params, r.blueprintParams, r.ownerParams)
 
 	var templateName string
 	var err error
