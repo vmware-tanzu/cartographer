@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -260,7 +261,8 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 
 	i.completeLabels(*workload, template)
 
-	params := templates.ParamsBuilder(template.GetDefaultParams(), i.BlueprintParams, []v1alpha1.BlueprintParam{}, workload.Spec.Params)
+	paramGenerator := realizer.NewParamGenerator([]v1alpha1.BlueprintParam{}, i.BlueprintParams, workload.Spec.Params)
+	params := paramGenerator.GetParams(template)
 
 	templatingContext := i.createTemplatingContext(*workload, params)
 
@@ -385,7 +387,7 @@ func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template
 	i.labels["carto.run/cluster-template-name"] = template.GetName()
 }
 
-func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params templates.Params) map[string]interface{} {
+func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) map[string]interface{} {
 	inputs := i.SupplyChainInputs
 
 	templatingContext := map[string]interface{}{
