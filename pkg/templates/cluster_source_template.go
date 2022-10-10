@@ -26,31 +26,18 @@ import (
 )
 
 type clusterSourceTemplate struct {
-	template      *v1alpha1.ClusterSourceTemplate
-	evaluator     evaluator
-	stampedObject *unstructured.Unstructured
-}
-
-func (t *clusterSourceTemplate) GetKind() string {
-	return t.template.Kind
+	template  *v1alpha1.ClusterSourceTemplate
+	evaluator evaluator
 }
 
 func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template, evaluator: eval}
 }
 
-func (t *clusterSourceTemplate) GetName() string {
-	return t.template.Name
-}
-
 func (t *clusterSourceTemplate) SetInputs(_ Inputs) {}
 
-func (t *clusterSourceTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
-	t.stampedObject = stampedObject
-}
-
-func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
-	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, t.stampedObject.UnstructuredContent())
+func (t *clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
 			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
@@ -59,7 +46,7 @@ func (t *clusterSourceTemplate) GetOutput() (*Output, error) {
 		}
 	}
 
-	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, t.stampedObject.UnstructuredContent())
+	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
 			Err: fmt.Errorf("failed to evaluate the revision path [%s]: %w",

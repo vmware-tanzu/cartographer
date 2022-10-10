@@ -254,7 +254,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("template validation failed: %v", err)
 	}
 
-	template, err := templates.NewModelFromAPI(apiTemplate)
+	template, err := templates.NewReaderFromAPI(apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cluster template")
 	}
@@ -378,7 +378,7 @@ func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) 
 	return f.Name(), nil
 }
 
-func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template templates.Template) {
+func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template templates.Reader) {
 	i.labels = map[string]string{}
 
 	i.labels["carto.run/workload-name"] = workload.GetName()

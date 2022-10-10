@@ -163,7 +163,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func generateRealizedResource(resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+func generateRealizedResource(resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
 	if previousRealizedResource == nil {
 		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
@@ -187,10 +187,11 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 
 	var templateRef *corev1.ObjectReference
 	var outputs []v1alpha1.Output
+
 	if template != nil {
 		templateRef = &corev1.ObjectReference{
-			Kind:       template.GetKind(),
-			Name:       template.GetName(),
+			Kind:       resource.TemplateRef.Kind,
+			Name:       resource.TemplateRef.Name,
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
@@ -216,7 +217,7 @@ func generateRealizedResource(resource OwnerResource, template templates.Templat
 	}
 }
 
-func getOutputs(template templates.Template, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+func getOutputs(template templates.Reader, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
 	outputs, err := template.GenerateResourceOutput(output)
 	if err != nil {
 		outputs = previousRealizedResource.Outputs

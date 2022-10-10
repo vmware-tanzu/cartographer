@@ -66,7 +66,7 @@ func (o OwnerResource) GetSources() []v1alpha1.ResourceReference {
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type resourceRealizer struct {
@@ -103,7 +103,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -132,7 +132,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
-	template, err := templates.NewModelFromAPI(apiTemplate)
+	template, err := templates.NewReaderFromAPI(apiTemplate)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
 		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
@@ -172,11 +172,27 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	// This is for deployment pass through
 	// TODO we need to lose this input generator
 	inputGenerator := NewInputGenerator(resource, outputs)
-	template.SetInputs(inputGenerator)
+	//template.SetInputs(inputGenerator)
 	// FIXME why?!
-	template.SetStampedObject(stampedObject)
 
-	output, err := template.GetOutput()
+	switch kind {
+	case "ClusterDeploymentTemplate":
+		outputReader = NewClusterDeploymentOutputReader(stampedObject, inputGenerator)
+	case "ClusterSourceTemplate":
+		outputReader = NewClusterSourceOutputReader(outputPathGetter, stampedObject)
+	case "ClusterImageTemplate":
+		outputReader = NewClusterImageOutputReader(outputPathGetter, stampedObject)
+	case "ClusterConfigTemplate":
+		outputReader = NewClusterConfigOutputReader(outputPathGetter, stampedObject)
+	case "ClusterTemplate":
+		outputReader = NewNoOutputReader()
+	case "Passthrough":
+		outputReader = NewPassthroughOutputReader(inputType, inputGenerator)
+	}
+
+	output, err := outputReader.Read()
+
+	//output, err := template.GetOutput(stampedObject, inputGenerator)
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return template, stampedObject, nil, errors.RetrieveOutputError{

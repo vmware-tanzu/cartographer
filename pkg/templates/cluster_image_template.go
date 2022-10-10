@@ -28,31 +28,18 @@ import (
 )
 
 type clusterImageTemplate struct {
-	template      *v1alpha1.ClusterImageTemplate
-	evaluator     evaluator
-	stampedObject *unstructured.Unstructured
-}
-
-func (t *clusterImageTemplate) GetKind() string {
-	return t.template.Kind
+	template  *v1alpha1.ClusterImageTemplate
+	evaluator evaluator
 }
 
 func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate, eval evaluator) *clusterImageTemplate {
 	return &clusterImageTemplate{template: template, evaluator: eval}
 }
 
-func (t *clusterImageTemplate) GetName() string {
-	return t.template.Name
-}
-
 func (t *clusterImageTemplate) SetInputs(_ Inputs) {}
 
-func (t *clusterImageTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
-	t.stampedObject = stampedObject
-}
-
-func (t *clusterImageTemplate) GetOutput() (*Output, error) {
-	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, t.stampedObject.UnstructuredContent())
+func (t *clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
 			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",

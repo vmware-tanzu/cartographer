@@ -30,19 +30,28 @@ type Inputs interface {
 	GetDeployment() *SourceInput
 }
 
-type Template interface {
-	GetResourceTemplate() v1alpha1.TemplateSpec
+// Note: to become the interface that component consumes to describe the template loaded from etcd
+// READ Oriented
+type Reader interface {
 	GetDefaultParams() v1alpha1.TemplateParams
+
+	// GetResourceTemplate returns the actual representation of a resource to stamp, and how to handle it
+	// TODO: we should be expecting something with a [ytt|template] interface, the health rules and params should
+	// not be fetched here
+	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
-	GetOutput() (*Output, error)
-	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
-	SetInputs(inputs Inputs)
-	SetStampedObject(stampedObject *unstructured.Unstructured)
-	GetName() string
-	GetKind() string
 }
 
-func NewModelFromAPI(template client.Object) (Template, error) {
+// Ephemeral results of stamping shit out
+type StampedResult interface {
+	//SetInputs(inputs Inputs)
+	//GetOutput(stampedObject *unstructured.Unstructured) (*Output, error)
+	GetOutput(stampedObject *unstructured.Unstructured, inputs Inputs) (*Output, error)
+
+	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
+}
+
+func NewReaderFromAPI(template client.Object) (Reader, error) {
 	switch v := template.(type) {
 
 	case *v1alpha1.ClusterSourceTemplate:

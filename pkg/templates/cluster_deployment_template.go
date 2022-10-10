@@ -27,34 +27,21 @@ import (
 )
 
 type clusterDeploymentTemplate struct {
-	template      *v1alpha1.ClusterDeploymentTemplate
-	evaluator     evaluator
-	inputs        Inputs
-	stampedObject *unstructured.Unstructured
-}
-
-func (t *clusterDeploymentTemplate) GetKind() string {
-	return t.template.Kind
+	template  *v1alpha1.ClusterDeploymentTemplate
+	evaluator evaluator
+	inputs    Inputs
 }
 
 func NewClusterDeploymentTemplateModel(template *v1alpha1.ClusterDeploymentTemplate, eval evaluator) *clusterDeploymentTemplate {
 	return &clusterDeploymentTemplate{template: template, evaluator: eval}
 }
 
-func (t *clusterDeploymentTemplate) GetName() string {
-	return t.template.Name
-}
-
 func (t *clusterDeploymentTemplate) SetInputs(inputs Inputs) {
 	t.inputs = inputs
 }
 
-func (t *clusterDeploymentTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
-	t.stampedObject = stampedObject
-}
-
-func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
-	if err := t.outputReady(t.stampedObject); err != nil {
+func (t *clusterDeploymentTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+	if err := t.outputReady(stampedObject); err != nil {
 		return nil, err
 	}
 

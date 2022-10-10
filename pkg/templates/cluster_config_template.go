@@ -26,31 +26,18 @@ import (
 )
 
 type clusterConfigTemplate struct {
-	template      *v1alpha1.ClusterConfigTemplate
-	evaluator     evaluator
-	stampedObject *unstructured.Unstructured
-}
-
-func (t *clusterConfigTemplate) GetKind() string {
-	return t.template.Kind
+	template  *v1alpha1.ClusterConfigTemplate
+	evaluator evaluator
 }
 
 func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate, eval evaluator) *clusterConfigTemplate {
 	return &clusterConfigTemplate{template: template, evaluator: eval}
 }
 
-func (t *clusterConfigTemplate) GetName() string {
-	return t.template.Name
-}
-
 func (t *clusterConfigTemplate) SetInputs(_ Inputs) {}
 
-func (t *clusterConfigTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
-	t.stampedObject = stampedObject
-}
-
-func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
-	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, t.stampedObject.UnstructuredContent())
+func (t *clusterConfigTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
+	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
 	if err != nil {
 		return nil, JsonPathError{
 			Err: fmt.Errorf("failed to evaluate spec.configPath [%s]: %w",
