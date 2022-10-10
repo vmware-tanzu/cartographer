@@ -44,6 +44,26 @@ type OwnerResource struct {
 	Deployment      *v1alpha1.DeploymentReference
 }
 
+func (o OwnerResource) GetImages() []v1alpha1.ResourceReference {
+	return o.Images
+}
+
+func (o OwnerResource) GetConfigs() []v1alpha1.ResourceReference {
+	return o.Configs
+}
+
+func (o OwnerResource) GetDeployment() *v1alpha1.DeploymentReference {
+	return o.Deployment
+}
+
+func (o OwnerResource) GetName() string {
+	return o.Name
+}
+
+func (o OwnerResource) GetSources() []v1alpha1.ResourceReference {
+	return o.Sources
+}
+
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
 	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
@@ -87,8 +107,6 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
-	paramGenerator := NewParamGenerator(resource.Params, r.blueprintParams, r.ownerParams)
-
 	var templateName string
 	var err error
 	if len(resource.TemplateOptions) > 0 {
@@ -122,30 +140,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 	labels := r.resourceLabeler(resource)
 
-	inputs := outputs.GenerateInputs(resource)
+	// TODO: lift me out of component.go
+	ownerTemplatingContext := NewContextGenerator(r.owner, r.ownerParams, r.blueprintParams)
 
-	ownerTemplatingContext := map[string]interface{}{
-		"workload":    r.owner,
-		"deliverable": r.owner,
-		"params":      paramGenerator.GetParams(template),
-		"sources":     inputs.Sources,
-		"images":      inputs.Images,
-		"deployment":  inputs.Deployment,
-		"configs":     inputs.Configs,
-	}
-
-	if inputs.OnlyConfig() != nil {
-		ownerTemplatingContext["config"] = inputs.OnlyConfig()
-	}
-	if inputs.OnlyImage() != nil {
-		ownerTemplatingContext["image"] = inputs.OnlyImage()
-	}
-	if inputs.OnlySource() != nil {
-		ownerTemplatingContext["source"] = inputs.OnlySource()
-	}
-
-	stampContext := templates.StamperBuilder(r.owner, ownerTemplatingContext, labels)
-	stampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
+	stamper := templates.StamperBuilder(r.owner, ownerTemplatingContext.Generate(template, resource, outputs), labels)
+	stampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
 		return template, nil, nil, errors.StampError{
@@ -170,7 +169,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
-	template.SetInputs(inputs)
+	// This is for deployment pass through
+	// TODO we need to lose this input generator
+	inputGenerator := NewInputGenerator(resource, outputs)
+	template.SetInputs(inputGenerator)
+	// FIXME why?!
 	template.SetStampedObject(stampedObject)
 
 	output, err := template.GetOutput()

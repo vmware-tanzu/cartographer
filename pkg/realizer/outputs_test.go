@@ -38,7 +38,7 @@ var _ = Describe("Outputs", func() {
 				outs.AddOutput("source-output", sourceOutput)
 			})
 
-			Context("And the sources have a match with the outputs", func() {
+			Context("And the sources have a match with the Outputs", func() {
 				It("Adds sources to inputs", func() {
 					resource := realizer.OwnerResource{
 						Sources: []v1alpha1.ResourceReference{
@@ -56,7 +56,7 @@ var _ = Describe("Outputs", func() {
 				})
 			})
 
-			Context("And the sources do not have a match with the outputs", func() {
+			Context("And the sources do not have a match with the Outputs", func() {
 				It("Does not add sources to inputs", func() {
 					resource := realizer.OwnerResource{
 						Sources: []v1alpha1.ResourceReference{
@@ -82,7 +82,7 @@ var _ = Describe("Outputs", func() {
 				outs.AddOutput("image-output", imageOutput)
 			})
 
-			Context("And the images have a match with the outputs", func() {
+			Context("And the images have a match with the Outputs", func() {
 				It("Adds images to inputs", func() {
 					resource := realizer.OwnerResource{
 						Images: []v1alpha1.ResourceReference{
@@ -99,7 +99,7 @@ var _ = Describe("Outputs", func() {
 				})
 			})
 
-			Context("And the images do not have a match with the outputs", func() {
+			Context("And the images do not have a match with the Outputs", func() {
 				It("Does not add images to inputs", func() {
 					resource := realizer.OwnerResource{
 						Images: []v1alpha1.ResourceReference{
@@ -126,7 +126,7 @@ var _ = Describe("Outputs", func() {
 				outs.AddOutput("config-output", configOutput)
 			})
 
-			Context("And the configs have a match with the outputs", func() {
+			Context("And the configs have a match with the Outputs", func() {
 				It("Adds configs to inputs", func() {
 					resource := realizer.OwnerResource{
 						Configs: []v1alpha1.ResourceReference{
@@ -143,7 +143,7 @@ var _ = Describe("Outputs", func() {
 				})
 			})
 
-			Context("And the configs do not have a match with the outputs", func() {
+			Context("And the configs do not have a match with the Outputs", func() {
 				It("Does not add configs to inputs", func() {
 					resource := realizer.OwnerResource{
 						Configs: []v1alpha1.ResourceReference{

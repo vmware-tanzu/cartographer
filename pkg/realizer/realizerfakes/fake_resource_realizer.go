@@ -11,13 +11,13 @@ import (
 )
 
 type FakeResourceRealizer struct {
-	DoStub        func(context.Context, realizer.OwnerResource, string, realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	DoStub        func(context.Context, realizer.OwnerResource, string, realizer.outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 context.Context
 		arg2 realizer.OwnerResource
 		arg3 string
-		arg4 realizer.Outputs
+		arg4 realizer.outputs
 	}
 	doReturns struct {
 		result1 templates.Template
@@ -35,14 +35,14 @@ type FakeResourceRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerResource, arg3 string, arg4 realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerResource, arg3 string, arg4 realizer.outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
 		arg1 context.Context
 		arg2 realizer.OwnerResource
 		arg3 string
-		arg4 realizer.Outputs
+		arg4 realizer.outputs
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.DoStub
 	fakeReturns := fake.doReturns
@@ -63,13 +63,13 @@ func (fake *FakeResourceRealizer) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, realizer.OwnerResource, string, realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)) {
+func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, realizer.OwnerResource, string, realizer.outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
 }
 
-func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, realizer.OwnerResource, string, realizer.Outputs) {
+func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, realizer.OwnerResource, string, realizer.outputs) {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	argsForCall := fake.doArgsForCall[i]

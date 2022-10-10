@@ -261,8 +261,8 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 
 	i.completeLabels(*workload, template)
 
-	paramGenerator := realizer.NewParamGenerator([]v1alpha1.BlueprintParam{}, i.BlueprintParams, workload.Spec.Params)
-	params := paramGenerator.GetParams(template)
+	paramGenerator := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, i.BlueprintParams, workload.Spec.Params)
+	params := paramGenerator.Merge(template)
 
 	templatingContext := i.createTemplatingContext(*workload, params)
 

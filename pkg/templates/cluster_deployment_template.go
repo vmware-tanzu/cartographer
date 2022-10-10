@@ -29,7 +29,7 @@ import (
 type clusterDeploymentTemplate struct {
 	template      *v1alpha1.ClusterDeploymentTemplate
 	evaluator     evaluator
-	inputs        *Inputs
+	inputs        Inputs
 	stampedObject *unstructured.Unstructured
 }
 
@@ -45,7 +45,7 @@ func (t *clusterDeploymentTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t *clusterDeploymentTemplate) SetInputs(inputs *Inputs) {
+func (t *clusterDeploymentTemplate) SetInputs(inputs Inputs) {
 	t.inputs = inputs
 }
 
@@ -60,12 +60,13 @@ func (t *clusterDeploymentTemplate) GetOutput() (*Output, error) {
 
 	output := &Output{Source: &Source{}}
 
-	if t.inputs.Deployment == nil {
+	deployment := t.inputs.GetDeployment()
+	if deployment == nil {
 		return nil, fmt.Errorf("deployment not found in upstream template")
 	}
 
-	output.Source.URL = t.inputs.Deployment.URL
-	output.Source.Revision = t.inputs.Deployment.Revision
+	output.Source.URL = deployment.URL
+	output.Source.Revision = deployment.Revision
 
 	return output, nil
 }

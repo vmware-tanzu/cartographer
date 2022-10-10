@@ -115,7 +115,7 @@ var _ = Describe("Resource", func() {
 	})
 
 	Describe("Do", func() {
-		When("passed a owner with outputs", func() {
+		When("passed a owner with Outputs", func() {
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
@@ -168,7 +168,7 @@ var _ = Describe("Resource", func() {
 				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 			})
 
-			It("creates a stamped object and returns the outputs and stampedObjects", func() {
+			It("creates a stamped object and returns the Outputs and stampedObjects", func() {
 				template, returnedStampedObject, out, err := r.Do(ctx, resource, blueprintName, outputs)
 				Expect(err).ToNot(HaveOccurred())
 

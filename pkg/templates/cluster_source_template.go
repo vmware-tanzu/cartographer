@@ -43,7 +43,7 @@ func (t *clusterSourceTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t *clusterSourceTemplate) SetInputs(_ *Inputs) {}
+func (t *clusterSourceTemplate) SetInputs(_ Inputs) {}
 
 func (t *clusterSourceTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
 	t.stampedObject = stampedObject

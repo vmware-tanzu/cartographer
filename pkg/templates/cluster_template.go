@@ -36,7 +36,7 @@ func (t *clusterTemplate) GetName() string {
 	return t.template.Name
 }
 
-func (t *clusterTemplate) SetInputs(_ *Inputs) {}
+func (t *clusterTemplate) SetInputs(_ Inputs) {}
 
 func (t *clusterTemplate) SetStampedObject(_ *unstructured.Unstructured) {}
 

@@ -24,21 +24,21 @@ type TemplateParams interface {
 	GetDefaultParams() v1alpha1.TemplateParams
 }
 
-func NewParamGenerator(resourceParams []v1alpha1.BlueprintParam, blueprintParams []v1alpha1.BlueprintParam, ownerParams []v1alpha1.OwnerParam) *ParamGenerator {
-	return &ParamGenerator{
+func NewParamMerger(resourceParams []v1alpha1.BlueprintParam, blueprintParams []v1alpha1.BlueprintParam, ownerParams []v1alpha1.OwnerParam) *ParamMerger {
+	return &ParamMerger{
 		blueprintParams: blueprintParams,
 		resourceParams:  resourceParams,
 		ownerParams:     ownerParams,
 	}
 }
 
-type ParamGenerator struct {
+type ParamMerger struct {
 	blueprintParams []v1alpha1.BlueprintParam
 	resourceParams  []v1alpha1.BlueprintParam
 	ownerParams     []v1alpha1.OwnerParam
 }
 
-func (p ParamGenerator) GetParams(templateParams TemplateParams) map[string]apiextensionsv1.JSON {
+func (p ParamMerger) Merge(templateParams TemplateParams) map[string]apiextensionsv1.JSON {
 	newParams := map[string]apiextensionsv1.JSON{}
 
 	if templateParams != nil {
