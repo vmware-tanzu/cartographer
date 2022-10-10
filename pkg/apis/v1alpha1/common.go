@@ -199,12 +199,20 @@ type FieldSelectorRequirement struct {
 	Values []string `json:"values,omitempty"`
 }
 
+type StampedRef struct {
+	*corev1.ObjectReference `json:",inline,omitempty"`
+
+	// Resource refers to the resource name and group [NAME(.GROUP)]
+	// The NAME segment is the CRD's plural value. You can use this to fully qualify a kubectl reference.
+	Resource string `json:"resource,omitempty"`
+}
+
 type RealizedResource struct {
 	// Name is the name of the resource in the blueprint
 	Name string `json:"name"`
 
 	// StampedRef is a reference to the object that was created by the resource
-	StampedRef *corev1.ObjectReference `json:"stampedRef,omitempty"`
+	StampedRef *StampedRef `json:"stampedRef,omitempty"`
 
 	// TemplateRef is a reference to the template used to create the object in StampedRef
 	TemplateRef *corev1.ObjectReference `json:"templateRef,omitempty"`

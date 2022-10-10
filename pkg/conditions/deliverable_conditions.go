@@ -117,7 +117,7 @@ func AddConditionForResourceSubmittedDeliverable(conditionManager *ConditionMana
 		case templates.DeploymentConditionError:
 			(*conditionManager).AddPositive(DeploymentConditionNotMetCondition(typedErr))
 		case templates.JsonPathError:
-			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression()))
+			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
 		default:
 			(*conditionManager).AddPositive(UnknownResourceErrorCondition(isOwner, typedErr))
 		}
