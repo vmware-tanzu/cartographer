@@ -24,11 +24,7 @@ type TemplateParams interface {
 	GetDefaultParams() v1alpha1.TemplateParams
 }
 
-type ContextParams interface {
-	GetParams(templateParams TemplateParams) map[string]apiextensionsv1.JSON
-}
-
-func NewParamGenerator(resourceParams []v1alpha1.BlueprintParam, blueprintParams []v1alpha1.BlueprintParam, ownerParams []v1alpha1.OwnerParam) ContextParams {
+func NewParamGenerator(resourceParams []v1alpha1.BlueprintParam, blueprintParams []v1alpha1.BlueprintParam, ownerParams []v1alpha1.OwnerParam) *ParamGenerator {
 	return &ParamGenerator{
 		blueprintParams: blueprintParams,
 		resourceParams:  resourceParams,
