@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -120,77 +121,63 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
-	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
-	if err != nil {
-		log.Error(err, "failed to get cluster template")
-		return nil, nil, nil, errors.GetTemplateError{
-			Err:           err,
-			ResourceName:  resource.Name,
-			TemplateName:  templateName,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+	if passthrough() {
+		template := NewPasstrhoughTemplate()
+		output := Passthrough
+	} else {
+		apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
+		if err != nil {
+			log.Error(err, "failed to get cluster template")
+			return nil, nil, nil, errors.GetTemplateError{
+				Err:           err,
+				ResourceName:  resource.Name,
+				TemplateName:  templateName,
+				BlueprintName: blueprintName,
+				BlueprintType: errors.SupplyChain,
+			}
 		}
-	}
 
-	template, err := templates.NewReaderFromAPI(apiTemplate)
-	if err != nil {
-		log.Error(err, "failed to get cluster template")
-		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
-	}
-
-	labels := r.resourceLabeler(resource)
-
-	// TODO: lift me out of component.go
-	ownerTemplatingContext := NewContextGenerator(r.owner, r.ownerParams, r.blueprintParams)
-
-	stamper := templates.StamperBuilder(r.owner, ownerTemplatingContext.Generate(template, resource, outputs), labels)
-	stampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
-	if err != nil {
-		log.Error(err, "failed to stamp resource")
-		return template, nil, nil, errors.StampError{
-			Err:           err,
-			TemplateName:  templateName,
-			TemplateKind:  resource.TemplateRef.Kind,
-			ResourceName:  resource.Name,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+		template, err := templates.NewReaderFromAPI(apiTemplate)
+		if err != nil {
+			log.Error(err, "failed to get cluster template")
+			return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 		}
-	}
 
-	err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
-	if err != nil {
-		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return template, nil, nil, errors.ApplyStampedObjectError{
-			Err:           err,
-			StampedObject: stampedObject,
-			ResourceName:  resource.Name,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+		labels := r.resourceLabeler(resource)
+
+		// TODO: lift me out of component.go
+		ownerTemplatingContext := NewContextGenerator(r.owner, r.ownerParams, r.blueprintParams)
+
+		stamper := templates.StamperBuilder(r.owner, ownerTemplatingContext.Generate(template, resource, outputs), labels)
+		stampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
+		if err != nil {
+			log.Error(err, "failed to stamp resource")
+			return template, nil, nil, errors.StampError{
+				Err:           err,
+				TemplateName:  templateName,
+				TemplateKind:  resource.TemplateRef.Kind,
+				ResourceName:  resource.Name,
+				BlueprintName: blueprintName,
+				BlueprintType: errors.SupplyChain,
+			}
 		}
+
+		err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+		if err != nil {
+			log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+			return template, nil, nil, errors.ApplyStampedObjectError{
+				Err:           err,
+				StampedObject: stampedObject,
+				ResourceName:  resource.Name,
+				BlueprintName: blueprintName,
+				BlueprintType: errors.SupplyChain,
+			}
+		}
+
+		inputGenerator := NewInputGenerator(resource, outputs)
+		stampReader, _ := stamp.NewReader(apiTemplate, map[string]string{}, inputGenerator)
+		output, err := stampReader.GetOutput(stampedObject)
 	}
-
-	// This is for deployment pass through
-	// TODO we need to lose this input generator
-	inputGenerator := NewInputGenerator(resource, outputs)
-	//template.SetInputs(inputGenerator)
-	// FIXME why?!
-
-	switch kind {
-	case "ClusterDeploymentTemplate":
-		outputReader = NewClusterDeploymentOutputReader(stampedObject, inputGenerator)
-	case "ClusterSourceTemplate":
-		outputReader = NewClusterSourceOutputReader(outputPathGetter, stampedObject)
-	case "ClusterImageTemplate":
-		outputReader = NewClusterImageOutputReader(outputPathGetter, stampedObject)
-	case "ClusterConfigTemplate":
-		outputReader = NewClusterConfigOutputReader(outputPathGetter, stampedObject)
-	case "ClusterTemplate":
-		outputReader = NewNoOutputReader()
-	case "Passthrough":
-		outputReader = NewPassthroughOutputReader(inputType, inputGenerator)
-	}
-
-	output, err := outputReader.Read()
 
 	//output, err := template.GetOutput(stampedObject, inputGenerator)
 	if err != nil {

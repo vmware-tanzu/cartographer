@@ -40,6 +40,11 @@ type Reader interface {
 	// not be fetched here
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
+
+	GetOutputPath()
+
+	// TODO Remove to it's own interface
+	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
 }
 
 // Ephemeral results of stamping shit out
@@ -47,8 +52,6 @@ type StampedResult interface {
 	//SetInputs(inputs Inputs)
 	//GetOutput(stampedObject *unstructured.Unstructured) (*Output, error)
 	GetOutput(stampedObject *unstructured.Unstructured, inputs Inputs) (*Output, error)
-
-	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
 }
 
 func NewReaderFromAPI(template client.Object) (Reader, error) {
