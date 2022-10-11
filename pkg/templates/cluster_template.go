@@ -26,10 +26,6 @@ func NewClusterTemplateModel(template *v1alpha1.ClusterTemplate) *clusterTemplat
 	return &clusterTemplate{template: template}
 }
 
-func (t *clusterTemplate) GenerateResourceOutput(_ *Output) ([]v1alpha1.Output, error) {
-	return nil, nil
-}
-
 func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec
 }

@@ -23,8 +23,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
-const PREVIEW_CHARACTER_LIMIT = 1024
-
 type Inputs interface {
 	GetDeployment() *SourceInput
 }
@@ -39,11 +37,6 @@ type Reader interface {
 	// not be fetched here
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
-
-	//GetOutputPaths() map[string]string
-
-	// TODO Remove to it's own interface
-	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
 }
 
 func NewReaderFromAPI(template client.Object) (Reader, error) {

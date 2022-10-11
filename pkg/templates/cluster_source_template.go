@@ -15,12 +15,6 @@
 package templates
 
 import (
-	"crypto/sha256"
-	"fmt"
-
-	"gopkg.in/yaml.v3"
-	"k8s.io/utils/strings"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
@@ -31,39 +25,6 @@ type clusterSourceTemplate struct {
 
 func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template, evaluator: eval}
-}
-
-func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
-	if output == nil || output.Source == nil {
-		return nil, nil
-	}
-
-	urlBytes, err := yaml.Marshal(output.Source.URL)
-	if err != nil {
-		return nil, err
-	}
-
-	urlSHA := sha256.Sum256(urlBytes)
-
-	revBytes, err := yaml.Marshal(output.Source.Revision)
-	if err != nil {
-		return nil, err
-	}
-
-	revSHA := sha256.Sum256(revBytes)
-
-	return []v1alpha1.Output{
-		{
-			Name:    "url",
-			Preview: strings.ShortenString(string(urlBytes), PREVIEW_CHARACTER_LIMIT),
-			Digest:  fmt.Sprintf("sha256:%x", urlSHA),
-		},
-		{
-			Name:    "revision",
-			Preview: strings.ShortenString(string(revBytes), PREVIEW_CHARACTER_LIMIT),
-			Digest:  fmt.Sprintf("sha256:%x", revSHA),
-		},
-	}, nil
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

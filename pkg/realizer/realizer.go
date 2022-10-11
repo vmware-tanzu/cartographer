@@ -18,6 +18,8 @@ package realizer
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -25,7 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 	"k8s.io/utils/strings/slices"
+	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
@@ -218,7 +222,8 @@ func generateRealizedResource(resource OwnerResource, template templates.Reader,
 }
 
 func getOutputs(template templates.Reader, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
-	outputs, err := template.GenerateResourceOutput(output)
+	//outputs, err := template.GenerateResourceOutput(output)
+	outputs, err := generateResourceOutput(output)
 	if err != nil {
 		outputs = previousRealizedResource.Outputs
 	} else {
@@ -237,4 +242,60 @@ func getOutputs(template templates.Reader, previousRealizedResource *v1alpha1.Re
 	}
 
 	return outputs
+}
+
+func generateResourceOutput(output *templates.Output) ([]v1alpha1.Output, error) {
+	if output == nil {
+		return nil, nil
+	}
+
+	var result []v1alpha1.Output
+
+	if output.Source != nil {
+		urlOut, err := buildOneOutput("image", output.Source.URL)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, urlOut)
+
+		revisionOut, err := buildOneOutput("image", output.Source.Revision)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, revisionOut)
+	} else if output.Image != nil {
+		out, err := buildOneOutput("image", output.Image)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, out)
+	} else if output.Config != nil {
+		out, err := buildOneOutput("config", output.Config)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, out)
+
+	} else {
+		return nil, nil
+	}
+	return result, nil
+}
+
+const PreviewCharacterLimit = 1024
+
+func buildOneOutput(name string, value any) (v1alpha1.Output, error) {
+	bytes, err := yaml.Marshal(value)
+	if err != nil {
+		return v1alpha1.Output{}, err
+	}
+
+	sha := sha256.Sum256(bytes)
+
+	return v1alpha1.Output{
+		Name:    name,
+		Preview: strings.ShortenString(string(bytes), PreviewCharacterLimit),
+		Digest:  fmt.Sprintf("sha256:%x", sha),
+	}, nil
+
 }
