@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,6 +28,7 @@ import (
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -170,9 +170,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
+	// TODO: consider: should we build this only once, and pass it to the contextGenerator also?
 	inputGenerator := NewInputGenerator(resource, outputs)
 	stampReader, _ := stamp.NewReader(apiTemplate, inputGenerator)
 	output, err := stampReader.GetOutput(stampedObject)
+
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		return template, stampedObject, nil, errors.RetrieveOutputError{

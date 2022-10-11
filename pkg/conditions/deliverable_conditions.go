@@ -17,11 +17,11 @@ package conditions
 import (
 	"fmt"
 
-	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 )
 
 // -- Deliverable.Status.Conditions - DeliveryReady
