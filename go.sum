@@ -899,8 +899,8 @@ k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sigs.k8s.io/cluster-api v1.2.2 h1:acx31Eyv5s4xeublsbxWpRFjcQ5h4BmDPI0glm3sEoE=
-sigs.k8s.io/cluster-api v1.2.2/go.mod h1:oiuV+mlCV1QxDnuI+PfElFlAfuXHo9ZGVBojoihVtHY=
+sigs.k8s.io/cluster-api v1.2.3 h1:NWtaadQHhl/H1hWp6Z6jXJwZU8o6SDRgN5stkVqk5L8=
+sigs.k8s.io/cluster-api v1.2.3/go.mod h1:YaLJOC9mSsIOpdbh7BpthGmC8uxIJADzrMMIGpgahfM=
 sigs.k8s.io/controller-runtime v0.13.0 h1:iqa5RNciy7ADWnIc8QxCbOX5FEKVR3uxVxKHRMc2WIQ=
 sigs.k8s.io/controller-runtime v0.13.0/go.mod h1:Zbz+el8Yg31jubvAEyglRZGdLAjplZl+PgtYNI6WNTI=
 sigs.k8s.io/controller-tools v0.10.0 h1:0L5DTDTFB67jm9DkfrONgTGmfc/zYow0ZaHyppizU2U=
