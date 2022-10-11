@@ -7,40 +7,46 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
+
+type DeploymentInput interface {
+	GetDeployment() *templates.SourceInput
+}
 
 type Reader interface {
 	// fixme: output as a one-of is so weird
 	GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error)
 }
 
-func NewReader(template client.Object, outputPaths map[string]string, inputGenerator realizer.Inputs) (Reader, error) {
-	switch _ := template.(type) {
+func NewReader(template client.Object, inputReader DeploymentInput) (Reader, error) {
+	switch v := template.(type) {
 
 	case *v1alpha1.ClusterSourceTemplate:
-		return NewSourceOutputReader(outputPaths), nil
+		return NewSourceOutputReader(v), nil
 	case *v1alpha1.ClusterImageTemplate:
-		return NewImageOutputReader(outputPaths), nil
+		return NewImageOutputReader(v), nil
 	case *v1alpha1.ClusterConfigTemplate:
-		return NewConfigOutputReader(outputPaths), nil
+		return NewConfigOutputReader(v), nil
 	case *v1alpha1.ClusterDeploymentTemplate:
-		return NewDeploymentPassThroughReader(template, inputGenerator), nil
+		return NewDeploymentPassThroughReader(template, inputReader), nil
 	case *v1alpha1.ClusterTemplate:
 		return NewNoOutputReader(), nil
 	}
 	return nil, fmt.Errorf("resource does not match a known template")
 }
 
-type SourceOutputReader struct{}
+type SourceOutputReader struct {
+	template *v1alpha1.ClusterSourceTemplate
+}
 
 func (r *SourceOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	r.template.Spec.URLPath
 	return nil, fmt.Errorf("not implemented yet")
 }
 
-func NewSourceOutputReader(paths map[string]string) Reader {
-	return &SourceOutputReader{}
+func NewSourceOutputReader(template *v1alpha1.ClusterSourceTemplate) Reader {
+	return &SourceOutputReader{template: template}
 }
 
 type ConfigOutputReader struct{}
@@ -69,7 +75,7 @@ func (r *DeploymentPassThroughReader) GetOutput(stampedObject *unstructured.Unst
 	return nil, fmt.Errorf("not implemented yet")
 }
 
-func NewDeploymentPassThroughReader(template client.Object, generator realizer.Inputs) Reader {
+func NewDeploymentPassThroughReader(template client.Object, inputReader DeploymentInput) Reader {
 	return &DeploymentPassThroughReader{}
 }
 

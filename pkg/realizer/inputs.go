@@ -19,13 +19,6 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-type Inputs interface {
-	GetSources() map[string]templates.SourceInput
-	GetImages() map[string]templates.ImageInput
-	GetConfigs() map[string]templates.ConfigInput
-	GetDeployment() *templates.SourceInput
-}
-
 func NewInputGenerator(resource Resource, outputs OutputsGetter) *InputGenerator {
 	return &InputGenerator{
 
