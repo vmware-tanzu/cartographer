@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -207,7 +208,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 					})
 
 					It("returns an error which identifies the failing json path expression", func() {
-						deploymentConditionError, ok := err.(templates.DeploymentConditionError)
+						deploymentConditionError, ok := err.(stamp.DeploymentConditionError)
 						Expect(ok).To(BeTrue())
 						Expect(deploymentConditionError.Error()).To(ContainSubstring("completion.path"))
 					})

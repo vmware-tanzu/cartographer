@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -815,7 +816,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 				Context("which wraps an ObservedGenerationError", func() {
 					BeforeEach(func() {
-						wrappedError = templates.NewObservedGenerationError(errors.New("some error"))
+						wrappedError = stamp.NewObservedGenerationError(errors.New("some error"))
 					})
 
 					It("calls the condition manager to report", func() {
@@ -855,7 +856,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 				Context("which wraps an DeploymentConditionError", func() {
 					BeforeEach(func() {
-						wrappedError = templates.NewDeploymentConditionError(errors.New("some error"))
+						wrappedError = stamp.NewDeploymentConditionError(errors.New("some error"))
 					})
 
 					It("calls the condition manager to report", func() {
@@ -895,7 +896,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 				Context("which wraps an DeploymentFailedConditionMetError", func() {
 					BeforeEach(func() {
-						wrappedError = templates.NewDeploymentFailedConditionMetError(errors.New("some error"))
+						wrappedError = stamp.NewDeploymentFailedConditionMetError(errors.New("some error"))
 					})
 
 					It("calls the condition manager to report", func() {
@@ -935,7 +936,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 				Context("which wraps a json path error", func() {
 					BeforeEach(func() {
-						wrappedError = templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+						wrappedError = stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					})
 
 					It("calls the condition manager to report", func() {
@@ -1017,7 +1018,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			Context("of type ResolveTemplateOptionError", func() {
 				var resolveOptionErr cerrors.ResolveTemplateOptionError
 				BeforeEach(func() {
-					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					jsonPathError := stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					resolveOptionErr = cerrors.ResolveTemplateOptionError{
 						Err:           jsonPathError,
 						BlueprintName: deliveryName,

@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -86,7 +87,7 @@ var _ = Describe("ClusterConfigTemplate", func() {
 				Expect(output).To(BeNil())
 			})
 			It("returns an error which identifies the failing json path expression", func() {
-				jsonPathErr, ok := err.(templates.JsonPathError)
+				jsonPathErr, ok := err.(stamp.JsonPathError)
 				Expect(ok).To(BeTrue())
 				Expect(jsonPathErr.JsonPathExpression()).To(Equal("some.path"))
 			})

@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -30,43 +29,8 @@ type clusterSourceTemplate struct {
 	evaluator evaluator
 }
 
-func (t *clusterSourceTemplate) GetOutputPaths() map[string]string {
-	return map[string]string{
-		"url":      t.template.Spec.URLPath,
-		"revision": t.template.Spec.RevisionPath,
-	}
-}
-
 func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template, evaluator: eval}
-}
-
-func (t *clusterSourceTemplate) SetInputs(_ Inputs) {}
-
-func (t *clusterSourceTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
-	url, err := t.evaluator.EvaluateJsonPath(t.template.Spec.URLPath, stampedObject.UnstructuredContent())
-	if err != nil {
-		return nil, JsonPathError{
-			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
-				t.template.Spec.URLPath, err),
-			expression: t.template.Spec.URLPath,
-		}
-	}
-
-	revision, err := t.evaluator.EvaluateJsonPath(t.template.Spec.RevisionPath, stampedObject.UnstructuredContent())
-	if err != nil {
-		return nil, JsonPathError{
-			Err: fmt.Errorf("failed to evaluate the revision path [%s]: %w",
-				t.template.Spec.RevisionPath, err),
-			expression: t.template.Spec.RevisionPath,
-		}
-	}
-	return &Output{
-		Source: &Source{
-			URL:      url,
-			Revision: revision,
-		},
-	}, nil
 }
 
 func (t *clusterSourceTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {

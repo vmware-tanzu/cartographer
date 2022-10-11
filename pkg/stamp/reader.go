@@ -2,6 +2,7 @@ package stamp
 
 import (
 	"fmt"
+
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -30,8 +31,7 @@ func NewReader(template client.Object, inputReader DeploymentInput) (Reader, err
 	case *v1alpha1.ClusterConfigTemplate:
 		return NewConfigOutputReader(v), nil
 	case *v1alpha1.ClusterDeploymentTemplate:
-		// TODO: we don't need the template, right??
-		return NewDeploymentPassThroughReader(inputReader), nil
+		return NewDeploymentPassThroughReader(inputReader, v), nil
 	case *v1alpha1.ClusterTemplate:
 		return NewNoOutputReader(), nil
 	}
@@ -47,23 +47,20 @@ func (r *SourceOutputReader) GetOutput(stampedObject *unstructured.Unstructured)
 	evaluator := eval.EvaluatorBuilder()
 	url, err := evaluator.EvaluateJsonPath(r.template.Spec.URLPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		// TODO: errors
-		//return nil, JsonPathError{
-		//	Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
-		//		r.template.Spec.URLPath, err),
-		//	expression: r.template.Spec.URLPath,
-		//}
-		return nil, err
+		return nil, JsonPathError{
+			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
+				r.template.Spec.URLPath, err),
+			expression: r.template.Spec.URLPath,
+		}
 	}
 
 	revision, err := evaluator.EvaluateJsonPath(r.template.Spec.RevisionPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		//return nil, JsonPathError{
-		//	Err: fmt.Errorf("failed to evaluate the revision path [%s]: %w",
-		//		r.template.Spec.RevisionPath, err),
-		//	expression: r.template.Spec.RevisionPath,
-		//}
-		return nil, err
+		return nil, JsonPathError{
+			Err: fmt.Errorf("failed to evaluate the revision path [%s]: %w",
+				r.template.Spec.RevisionPath, err),
+			expression: r.template.Spec.RevisionPath,
+		}
 	}
 	return &templates.Output{
 		Source: &templates.Source{
@@ -71,7 +68,6 @@ func (r *SourceOutputReader) GetOutput(stampedObject *unstructured.Unstructured)
 			Revision: revision,
 		},
 	}, nil
-	return nil, fmt.Errorf("not implemented yet")
 }
 
 func NewSourceOutputReader(template *v1alpha1.ClusterSourceTemplate) Reader {
@@ -86,12 +82,11 @@ func (r *ConfigOutputReader) GetOutput(stampedObject *unstructured.Unstructured)
 	evaluator := eval.EvaluatorBuilder()
 	config, err := evaluator.EvaluateJsonPath(r.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
 	if err != nil {
-		//return nil, JsonPathError{
-		//	Err: fmt.Errorf("failed to evaluate spec.configPath [%s]: %w",
-		//		r.template.Spec.ConfigPath, err),
-		//	expression: r.template.Spec.ConfigPath,
-		//}
-		return nil, err
+		return nil, JsonPathError{
+			Err: fmt.Errorf("failed to evaluate spec.configPath [%s]: %w",
+				r.template.Spec.ConfigPath, err),
+			expression: r.template.Spec.ConfigPath,
+		}
 	}
 
 	return &templates.Output{
@@ -133,14 +128,14 @@ func NewImageOutputReader(template *v1alpha1.ClusterImageTemplate) Reader {
 }
 
 type DeploymentPassThroughReader struct {
-	inputs DeploymentInput
+	inputs   DeploymentInput
+	template *v1alpha1.ClusterDeploymentTemplate
 }
 
-func (r *DeploymentPassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
-	// TODO: go get the other private funcs
-	//if err := t.outputReady(stampedObject); err != nil {
-	//	return nil, err
-	//}
+func (r *DeploymentPassThroughReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if err := r.outputReady(stampedObject); err != nil {
+		return nil, err
+	}
 
 	output := &templates.Output{Source: &templates.Source{}}
 
@@ -155,9 +150,109 @@ func (r *DeploymentPassThroughReader) GetOutput(_ *unstructured.Unstructured) (*
 	return output, nil
 }
 
-func NewDeploymentPassThroughReader(inputReader DeploymentInput) Reader {
+func (r *DeploymentPassThroughReader) outputReady(stampedObject *unstructured.Unstructured) error {
+	if r.template.Spec.ObservedCompletion != nil {
+		return r.observedCompletionReady(stampedObject)
+	} else {
+		return r.observedMatchesReady(stampedObject)
+	}
+}
+func (r *DeploymentPassThroughReader) observedMatchesReady(stampedObject *unstructured.Unstructured) error {
+	evaluator := eval.EvaluatorBuilder()
+
+	for _, match := range r.template.Spec.ObservedMatches {
+		input, err := evaluator.EvaluateJsonPath(match.Input, stampedObject.UnstructuredContent())
+		if err != nil {
+			return DeploymentConditionError{
+				Err: fmt.Errorf("could not find value on input [%s]: %w", match.Input, err),
+			}
+		}
+
+		output, err := evaluator.EvaluateJsonPath(match.Output, stampedObject.UnstructuredContent())
+		if err != nil {
+			return DeploymentConditionError{
+				Err: fmt.Errorf("could not find value on output [%s]: %w", match.Output, err),
+			}
+		}
+
+		if input != output {
+			return DeploymentConditionError{
+				Err: fmt.Errorf("input [%s] and output [%s] do not match: %s != %s", match.Input, match.Output, input, output),
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *DeploymentPassThroughReader) observedCompletionReady(stampedObject *unstructured.Unstructured) error {
+	evaluator := eval.EvaluatorBuilder()
+
+	generation, err := evaluator.EvaluateJsonPath("metadata.generation", stampedObject.UnstructuredContent())
+	if err != nil {
+		return JsonPathError{
+			Err:        fmt.Errorf("failed to evaluate metadata.generation: %w", err),
+			expression: "metadata.generation",
+		}
+	}
+
+	observedGeneration, err := evaluator.EvaluateJsonPath("status.observedGeneration",
+		stampedObject.UnstructuredContent())
+	if err != nil {
+		return ObservedGenerationError{
+			Err: fmt.Errorf("failed to evaluate status.observedGeneration: %w", err),
+		}
+	}
+
+	if observedGeneration != generation {
+		return DeploymentConditionError{
+			Err: fmt.Errorf("status.observedGeneration does not equal metadata.generation: %s != %s",
+				observedGeneration, generation),
+		}
+	}
+
+	observedCompletion := r.template.Spec.ObservedCompletion
+	if r.template.Spec.ObservedCompletion.FailedCondition != nil {
+		failedObserved, err := evaluator.EvaluateJsonPath(observedCompletion.FailedCondition.Key, stampedObject.UnstructuredContent())
+		if err != nil {
+			if _, ok := err.(eval.JsonPathDoesNotExistError); !ok {
+				return JsonPathError{
+					Err:        fmt.Errorf("failed to evaluate %s: %w", observedCompletion.FailedCondition.Key, err),
+					expression: observedCompletion.FailedCondition.Key,
+				}
+			}
+		}
+
+		if failedObserved == observedCompletion.FailedCondition.Value {
+			return DeploymentFailedConditionMetError{
+				Err: fmt.Errorf("deployment failure condition [%s] was: %s",
+					observedCompletion.FailedCondition.Key, failedObserved),
+			}
+		}
+	}
+
+	succeededObserved, err := evaluator.EvaluateJsonPath(observedCompletion.SucceededCondition.Key, stampedObject.UnstructuredContent())
+	if err != nil {
+		return DeploymentConditionError{
+			Err: fmt.Errorf("failed to evaluate succeededCondition.Key [%s]: %w",
+				observedCompletion.SucceededCondition.Key, err),
+		}
+	}
+
+	if succeededObserved != observedCompletion.SucceededCondition.Value {
+		return DeploymentConditionError{
+			Err: fmt.Errorf("deployment success condition [%s] was: %s, expected: %s",
+				observedCompletion.SucceededCondition.Key, succeededObserved, observedCompletion.SucceededCondition.Value),
+		}
+	}
+
+	return nil
+}
+
+func NewDeploymentPassThroughReader(inputReader DeploymentInput, template *v1alpha1.ClusterDeploymentTemplate) Reader {
 	return &DeploymentPassThroughReader{
-		inputs: inputReader,
+		inputs:   inputReader,
+		template: template,
 	}
 }
 
@@ -165,7 +260,6 @@ type NoOutputReader struct{}
 
 func (r *NoOutputReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
 	return &templates.Output{}, nil
-
 }
 
 func NewNoOutputReader() Reader {

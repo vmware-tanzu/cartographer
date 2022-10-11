@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -32,31 +31,8 @@ type clusterImageTemplate struct {
 	evaluator evaluator
 }
 
-func (t *clusterImageTemplate) GetOutputPaths() map[string]string {
-	return map[string]string{
-		"image": t.template.Spec.ImagePath,
-	}
-}
-
 func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate, eval evaluator) *clusterImageTemplate {
 	return &clusterImageTemplate{template: template, evaluator: eval}
-}
-
-func (t *clusterImageTemplate) SetInputs(_ Inputs) {}
-
-func (t *clusterImageTemplate) GetOutput(stampedObject *unstructured.Unstructured) (*Output, error) {
-	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, stampedObject.UnstructuredContent())
-	if err != nil {
-		return nil, JsonPathError{
-			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
-				t.template.Spec.ImagePath, err),
-			expression: t.template.Spec.ImagePath,
-		}
-	}
-
-	return &Output{
-		Image: image,
-	}, nil
 }
 
 func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {

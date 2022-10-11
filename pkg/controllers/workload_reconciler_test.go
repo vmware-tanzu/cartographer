@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -819,7 +820,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					})
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
-					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					jsonPathError := stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = cerrors.RetrieveOutputError{
 						Err:           jsonPathError,
 						ResourceName:  "some-resource",
@@ -882,7 +883,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Context("of type ResolveTemplateOptionError", func() {
 				var resolveOptionErr cerrors.ResolveTemplateOptionError
 				BeforeEach(func() {
-					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					jsonPathError := stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					resolveOptionErr = cerrors.ResolveTemplateOptionError{
 						Err:           jsonPathError,
 						BlueprintName: supplyChainName,

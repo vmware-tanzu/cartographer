@@ -17,11 +17,11 @@ package conditions
 import (
 	"fmt"
 
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 // -- Deliverable.Status.Conditions - DeliveryReady
@@ -110,13 +110,13 @@ func AddConditionForResourceSubmittedDeliverable(conditionManager *ConditionMana
 		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(isOwner, typedErr))
 	case cerrors.RetrieveOutputError:
 		switch typedErr.Err.(type) {
-		case templates.ObservedGenerationError:
+		case stamp.ObservedGenerationError:
 			(*conditionManager).AddPositive(TemplateStampFailureByObservedGenerationCondition(typedErr))
-		case templates.DeploymentFailedConditionMetError:
+		case stamp.DeploymentFailedConditionMetError:
 			(*conditionManager).AddPositive(DeploymentFailedConditionMetCondition(typedErr))
-		case templates.DeploymentConditionError:
+		case stamp.DeploymentConditionError:
 			(*conditionManager).AddPositive(DeploymentConditionNotMetCondition(typedErr))
-		case templates.JsonPathError:
+		case stamp.JsonPathError:
 			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression()))
 		default:
 			(*conditionManager).AddPositive(UnknownResourceErrorCondition(isOwner, typedErr))
