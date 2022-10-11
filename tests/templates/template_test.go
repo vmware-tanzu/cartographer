@@ -17,6 +17,7 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -25,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	cartotesting "github.com/vmware-tanzu/cartographer/pkg/testing"
 )
 
