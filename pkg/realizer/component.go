@@ -171,7 +171,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	}
 
 	inputGenerator := NewInputGenerator(resource, outputs)
-	stampReader, _ := stamp.NewReader(apiTemplate, map[string]string{}, inputGenerator)
+	stampReader, _ := stamp.NewReader(apiTemplate, inputGenerator)
 	output, err := stampReader.GetOutput(stampedObject)
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)

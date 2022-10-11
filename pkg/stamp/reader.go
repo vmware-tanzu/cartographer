@@ -2,6 +2,7 @@ package stamp
 
 import (
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/eval"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +30,8 @@ func NewReader(template client.Object, inputReader DeploymentInput) (Reader, err
 	case *v1alpha1.ClusterConfigTemplate:
 		return NewConfigOutputReader(v), nil
 	case *v1alpha1.ClusterDeploymentTemplate:
-		return NewDeploymentPassThroughReader(template, inputReader), nil
+		// TODO: we don't need the template, right??
+		return NewDeploymentPassThroughReader(inputReader), nil
 	case *v1alpha1.ClusterTemplate:
 		return NewNoOutputReader(), nil
 	}
@@ -41,7 +43,34 @@ type SourceOutputReader struct {
 }
 
 func (r *SourceOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
-	r.template.Spec.URLPath
+	// TODO: We don't need a Builder
+	evaluator := eval.EvaluatorBuilder()
+	url, err := evaluator.EvaluateJsonPath(r.template.Spec.URLPath, stampedObject.UnstructuredContent())
+	if err != nil {
+		// TODO: errors
+		//return nil, JsonPathError{
+		//	Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
+		//		r.template.Spec.URLPath, err),
+		//	expression: r.template.Spec.URLPath,
+		//}
+		return nil, err
+	}
+
+	revision, err := evaluator.EvaluateJsonPath(r.template.Spec.RevisionPath, stampedObject.UnstructuredContent())
+	if err != nil {
+		//return nil, JsonPathError{
+		//	Err: fmt.Errorf("failed to evaluate the revision path [%s]: %w",
+		//		r.template.Spec.RevisionPath, err),
+		//	expression: r.template.Spec.RevisionPath,
+		//}
+		return nil, err
+	}
+	return &templates.Output{
+		Source: &templates.Source{
+			URL:      url,
+			Revision: revision,
+		},
+	}, nil
 	return nil, fmt.Errorf("not implemented yet")
 }
 
@@ -49,40 +78,93 @@ func NewSourceOutputReader(template *v1alpha1.ClusterSourceTemplate) Reader {
 	return &SourceOutputReader{template: template}
 }
 
-type ConfigOutputReader struct{}
+type ConfigOutputReader struct {
+	template *v1alpha1.ClusterConfigTemplate
+}
 
 func (r *ConfigOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	evaluator := eval.EvaluatorBuilder()
+	config, err := evaluator.EvaluateJsonPath(r.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
+	if err != nil {
+		//return nil, JsonPathError{
+		//	Err: fmt.Errorf("failed to evaluate spec.configPath [%s]: %w",
+		//		r.template.Spec.ConfigPath, err),
+		//	expression: r.template.Spec.ConfigPath,
+		//}
+		return nil, err
+	}
+
+	return &templates.Output{
+		Config: config,
+	}, nil
 }
 
-func NewConfigOutputReader(paths map[string]string) Reader {
-	return &ConfigOutputReader{}
+func NewConfigOutputReader(template *v1alpha1.ClusterConfigTemplate) Reader {
+	return &ConfigOutputReader{
+		template: template,
+	}
 }
 
-type ImageOutputReader struct{}
+type ImageOutputReader struct {
+	template *v1alpha1.ClusterImageTemplate
+}
 
 func (r *ImageOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	evaluator := eval.EvaluatorBuilder()
+	image, err := evaluator.EvaluateJsonPath(r.template.Spec.ImagePath, stampedObject.UnstructuredContent())
+	if err != nil {
+		//return nil, JsonPathError{
+		//	Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
+		//		r.template.Spec.ImagePath, err),
+		//	expression: r.template.Spec.ImagePath,
+		//}
+		return nil, err
+	}
+
+	return &templates.Output{
+		Image: image,
+	}, nil
 }
 
-func NewImageOutputReader(paths map[string]string) Reader {
-	return &ImageOutputReader{}
+func NewImageOutputReader(template *v1alpha1.ClusterImageTemplate) Reader {
+	return &ImageOutputReader{
+		template: template,
+	}
 }
 
-type DeploymentPassThroughReader struct{}
-
-func (r *DeploymentPassThroughReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
-	return nil, fmt.Errorf("not implemented yet")
+type DeploymentPassThroughReader struct {
+	inputs DeploymentInput
 }
 
-func NewDeploymentPassThroughReader(template client.Object, inputReader DeploymentInput) Reader {
-	return &DeploymentPassThroughReader{}
+func (r *DeploymentPassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
+	// TODO: go get the other private funcs
+	//if err := t.outputReady(stampedObject); err != nil {
+	//	return nil, err
+	//}
+
+	output := &templates.Output{Source: &templates.Source{}}
+
+	deployment := r.inputs.GetDeployment()
+	if deployment == nil {
+		return nil, fmt.Errorf("deployment not found in upstream template")
+	}
+
+	output.Source.URL = deployment.URL
+	output.Source.Revision = deployment.Revision
+
+	return output, nil
+}
+
+func NewDeploymentPassThroughReader(inputReader DeploymentInput) Reader {
+	return &DeploymentPassThroughReader{
+		inputs: inputReader,
+	}
 }
 
 type NoOutputReader struct{}
 
 func (r *NoOutputReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	return &templates.Output{}, nil
 
 }
 
