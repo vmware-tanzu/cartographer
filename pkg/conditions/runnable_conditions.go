@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 // -- Runnable.Status.Conditions - RunTemplateReady
@@ -52,7 +51,7 @@ func StampedObjectRejectedByAPIServerCondition(err error) metav1.Condition {
 	}
 }
 
-func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, errMsg string) metav1.Condition {
+func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, qualifiedResource string, errMsg string) metav1.Condition {
 	var namespaceMsg string
 	if obj.GetNamespace() != "" {
 		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
@@ -68,7 +67,7 @@ func OutputPathNotSatisfiedCondition(obj *unstructured.Unstructured, errMsg stri
 		Status: metav1.ConditionFalse,
 		Reason: v1alpha1.OutputPathNotSatisfiedRunTemplateReason,
 		Message: fmt.Sprintf("waiting to read value from resource [%s/%s]%s: %s",
-			utils.GetFullyQualifiedType(obj), name, namespaceMsg, errMsg),
+			qualifiedResource, name, namespaceMsg, errMsg),
 	}
 }
 
@@ -113,15 +112,6 @@ func UnknownErrorCondition(err error) metav1.Condition {
 		Type:    v1alpha1.RunTemplateReady,
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.UnknownErrorReason,
-		Message: err.Error(),
-	}
-}
-
-func RunnableServiceAccountSecretNotFoundCondition(err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    v1alpha1.RunTemplateReady,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.ServiceAccountErrorResourcesSubmittedReason,
 		Message: err.Error(),
 	}
 }

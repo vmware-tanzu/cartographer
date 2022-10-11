@@ -95,7 +95,7 @@ func (m *Manager) GetServiceAccountToken(serviceAccount *corev1.ServiceAccount) 
 	if err != nil {
 		switch {
 		case !ok:
-			return "", fmt.Errorf("Fetch token: %v", err)
+			return "", fmt.Errorf("fetch token: %v", err)
 		case m.expired(ctr):
 			return "", fmt.Errorf("token %s expired and refresh failed: %v", key, err)
 		default:

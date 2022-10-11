@@ -7,17 +7,19 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type FakeResourceRealizer struct {
-	DoStub        func(context.Context, realizer.OwnerResource, string, realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
+	DoStub        func(context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 context.Context
 		arg2 realizer.OwnerResource
 		arg3 string
 		arg4 realizer.Outputs
+		arg5 meta.RESTMapper
 	}
 	doReturns struct {
 		result1 templates.Template
@@ -35,7 +37,7 @@ type FakeResourceRealizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerResource, arg3 string, arg4 realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerResource, arg3 string, arg4 realizer.Outputs, arg5 meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
@@ -43,13 +45,14 @@ func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerRe
 		arg2 realizer.OwnerResource
 		arg3 string
 		arg4 realizer.Outputs
-	}{arg1, arg2, arg3, arg4})
+		arg5 meta.RESTMapper
+	}{arg1, arg2, arg3, arg4, arg5})
 	stub := fake.DoStub
 	fakeReturns := fake.doReturns
-	fake.recordInvocation("Do", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("Do", []interface{}{arg1, arg2, arg3, arg4, arg5})
 	fake.doMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3, ret.result4
@@ -63,17 +66,17 @@ func (fake *FakeResourceRealizer) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, realizer.OwnerResource, string, realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error)) {
+func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) (templates.Template, *unstructured.Unstructured, *templates.Output, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
 }
 
-func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, realizer.OwnerResource, string, realizer.Outputs) {
+func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) {
 	fake.doMutex.RLock()
 	defer fake.doMutex.RUnlock()
 	argsForCall := fake.doArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
 func (fake *FakeResourceRealizer) DoReturns(result1 templates.Template, result2 *unstructured.Unstructured, result3 *templates.Output, result4 error) {

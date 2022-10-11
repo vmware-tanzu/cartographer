@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 // -- Owner.Status.Resource[x].Conditions - ResourceSubmitted - True
@@ -56,7 +55,7 @@ func TemplateObjectRetrievalFailureCondition(isOwner bool, err error) metav1.Con
 	}
 }
 
-func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string) metav1.Condition {
+func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string, qualifiedResource string) metav1.Condition {
 	var namespaceMsg string
 	if obj.GetNamespace() != "" {
 		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
@@ -66,7 +65,7 @@ func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, e
 		Status: metav1.ConditionUnknown,
 		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
 		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
-			expression, utils.GetFullyQualifiedType(obj), obj.GetName(), namespaceMsg),
+			expression, qualifiedResource, obj.GetName(), namespaceMsg),
 	}
 }
 
