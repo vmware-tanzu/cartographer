@@ -30,6 +30,12 @@ type clusterConfigTemplate struct {
 	evaluator evaluator
 }
 
+func (t *clusterConfigTemplate) GetOutputPaths() map[string]string {
+	return map[string]string{
+		"config": t.template.Spec.ConfigPath,
+	}
+}
+
 func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate, eval evaluator) *clusterConfigTemplate {
 	return &clusterConfigTemplate{template: template, evaluator: eval}
 }

@@ -17,7 +17,6 @@ package templates
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -41,17 +40,10 @@ type Reader interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
 
-	GetOutputPath()
+	//GetOutputPaths() map[string]string
 
 	// TODO Remove to it's own interface
 	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
-}
-
-// Ephemeral results of stamping shit out
-type StampedResult interface {
-	//SetInputs(inputs Inputs)
-	//GetOutput(stampedObject *unstructured.Unstructured) (*Output, error)
-	GetOutput(stampedObject *unstructured.Unstructured, inputs Inputs) (*Output, error)
 }
 
 func NewReaderFromAPI(template client.Object) (Reader, error) {

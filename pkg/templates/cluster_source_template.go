@@ -30,6 +30,13 @@ type clusterSourceTemplate struct {
 	evaluator evaluator
 }
 
+func (t *clusterSourceTemplate) GetOutputPaths() map[string]string {
+	return map[string]string{
+		"url":      t.template.Spec.URLPath,
+		"revision": t.template.Spec.RevisionPath,
+	}
+}
+
 func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template, evaluator: eval}
 }
