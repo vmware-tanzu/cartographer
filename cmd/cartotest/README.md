@@ -5,12 +5,6 @@ Cartotest is a cli tool to test your Cartographer templates.
 ## Installation
 
 Download prebuilt binaries from the Cartographer [Releases page](https://github.com/vmware-tanzu/cartographer/releases)
-or use the Homebrew Cartographer tap:
-
-```shell
-brew tap vmware-tanzu/cartographer
-brew install cartotest
-```
 
 ## Usage
 
@@ -18,6 +12,10 @@ brew install cartotest
 # In the Cartographer repo, run the example tests
 cartotest --directory ./tests/templates
 ```
+
+## Documentation
+
+[Read more about cartotest here](https://cartographer.sh/docs/development/testing-templates/)
 
 ## Contributing
 
