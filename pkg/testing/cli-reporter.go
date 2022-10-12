@@ -130,10 +130,12 @@ func (t *testCaseReporter) reportFailed(verbose bool) string {
 	return returnString
 }
 
+const infoFilename = "info.yaml"
+
 func populateInfo(directory string) (*testInfo, error) {
 	var infoStruct testInfo
 
-	filePath := filepath.Join(directory, "info.yaml")
+	filePath := filepath.Join(directory, infoFilename)
 	infoFile, err := os.ReadFile(filePath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {

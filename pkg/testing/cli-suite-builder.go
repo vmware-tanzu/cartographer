@@ -43,21 +43,28 @@ type testInfo struct {
 	IgnoreMetadataFields []string                  `yaml:"ignoreMetadataFields"`
 }
 
+const (
+	templateDefaultFilename  = "template.yaml"
+	workloadDefaultFilename  = "workload.yaml"
+	expectedDefaultFilename  = "expected.yaml"
+	yttValuesDefaultFilename = "ytt-values.yaml"
+)
+
 func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSuite, error) {
 	info, err := populateInfo(directory)
 	if err != nil {
 		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.TemplateFile, directory, "template.yaml", info.Template)
-	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, "workload.yaml", info.Workload)
-	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, "expected.yaml", info.Expected)
+	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.TemplateFile, directory, templateDefaultFilename, info.Template)
+	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, workloadDefaultFilename, info.Workload)
+	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, expectedDefaultFilename, info.Expected)
 
 	yttFile := ""
 	if testCase.Given.YttFiles != nil {
 		yttFile = testCase.Given.YttFiles[0]
 	}
-	yttFile = replaceIfFound(yttFile, directory, "ytt-values.yaml", info.Ytt)
+	yttFile = replaceIfFound(yttFile, directory, yttValuesDefaultFilename, info.Ytt)
 	if yttFile != "" {
 		testCase.Given.YttFiles = []string{yttFile}
 	}
