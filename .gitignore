@@ -5,7 +5,7 @@
 /site/public/
 /site/resources/
 
-build/*
+build/
 cmd/random
 coverage.*
 
