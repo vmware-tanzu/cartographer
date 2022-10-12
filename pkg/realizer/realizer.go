@@ -24,12 +24,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
 	"k8s.io/utils/strings/slices"
-	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
@@ -244,6 +244,7 @@ func getOutputs(template templates.Reader, previousRealizedResource *v1alpha1.Re
 	return outputs
 }
 
+// Next: Polymorphic
 func generateResourceOutput(output *templates.Output) ([]v1alpha1.Output, error) {
 	if output == nil {
 		return nil, nil
@@ -252,13 +253,13 @@ func generateResourceOutput(output *templates.Output) ([]v1alpha1.Output, error)
 	var result []v1alpha1.Output
 
 	if output.Source != nil {
-		urlOut, err := buildOneOutput("image", output.Source.URL)
+		urlOut, err := buildOneOutput("url", output.Source.URL)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, urlOut)
 
-		revisionOut, err := buildOneOutput("image", output.Source.Revision)
+		revisionOut, err := buildOneOutput("revision", output.Source.Revision)
 		if err != nil {
 			return nil, err
 		}
