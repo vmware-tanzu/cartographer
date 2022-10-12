@@ -21,7 +21,6 @@ import (
 
 func NewInputGenerator(resource Resource, outputs OutputsGetter) *InputGenerator {
 	return &InputGenerator{
-
 		resource: resource,
 		outputs:  outputs,
 	}

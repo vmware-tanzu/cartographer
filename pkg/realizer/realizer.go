@@ -78,6 +78,7 @@ func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResou
 	return resources
 }
 
+//counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
 	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
 }
@@ -107,6 +108,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
+		// TODO: the only reason we return template now is for health rule??
 		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs)
 
 		if stampedObject != nil {

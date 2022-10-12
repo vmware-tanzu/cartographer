@@ -100,7 +100,7 @@ var _ = Describe("Resource", func() {
 		placeholderLabeler := func(resource realizer.OwnerResource) templates.Labels {
 			return templates.Labels{"expected-labels-from-labeler-placeholder": "labeler"}
 		}
-		r, err = resourceRealizerBuilder(theAuthToken, &workload, []v1alpha1.OwnerParam{}, &fakeSystemRepo, supplyChainParams, placeholderLabeler)
+		r, err = resourceRealizerBuilder(theAuthToken, &workload, realizer.NewContextGenerator(&workload, []v1alpha1.OwnerParam{}, supplyChainParams), &fakeSystemRepo, placeholderLabeler)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -169,11 +169,8 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("creates a stamped object and returns the Outputs and stampedObjects", func() {
-				template, returnedStampedObject, out, err := r.Do(ctx, resource, blueprintName, outputs)
+				_, returnedStampedObject, out, err := r.Do(ctx, resource, blueprintName, outputs)
 				Expect(err).ToNot(HaveOccurred())
-
-				Expect(template.GetName()).To(Equal("source-template-1"))
-				Expect(template.GetKind()).To(Equal("ClusterSourceTemplate"))
 
 				_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 
@@ -265,10 +262,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
-
-				Expect(template.GetName()).To(Equal("image-template-1"))
-				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+				_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
@@ -317,10 +311,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
-
-				Expect(template.GetName()).To(Equal("image-template-1"))
-				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+				_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
@@ -380,10 +371,7 @@ var _ = Describe("Resource", func() {
 				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
-
-				Expect(template.GetName()).To(Equal("image-template-1"))
-				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+				_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
@@ -432,10 +420,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
-
-				Expect(template.GetName()).To(Equal("image-template-1"))
-				Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+				_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
@@ -542,11 +527,8 @@ var _ = Describe("Resource", func() {
 
 			When("one option matches", func() {
 				It("finds the correct template", func() {
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
+					_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 					Expect(err).NotTo(HaveOccurred())
-
-					Expect(template.GetName()).To(Equal("template-chosen"))
-					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
 
 					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 					Expect(name).To(Equal("template-chosen"))
@@ -585,10 +567,7 @@ var _ = Describe("Resource", func() {
 				It("does not error", func() {
 					resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
 
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
-
-					Expect(template.GetName()).To(Equal("template-chosen"))
-					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+					_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 
 					Expect(err).NotTo(HaveOccurred())
 					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
@@ -619,10 +598,7 @@ var _ = Describe("Resource", func() {
 						Operator: "Exists",
 					})
 
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
-
-					Expect(template.GetName()).To(Equal("template-chosen"))
-					Expect(template.GetKind()).To(Equal("ClusterImageTemplate"))
+					_, _, _, err := r.Do(ctx, resource, blueprintName, outputs)
 
 					Expect(err).NotTo(HaveOccurred())
 					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)

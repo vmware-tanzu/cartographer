@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -50,7 +51,7 @@ type event struct {
 var _ = Describe("Realize", func() {
 	var (
 		resourceRealizer               *realizerfakes.FakeResourceRealizer
-		rlzr                           realizer.Realizer
+		rlzr                           controllers.Realizer
 		rec                            *eventsfakes.FakeOwnerEventRecorder
 		healthyConditionEvaluator      realizer.HealthyConditionEvaluator
 		evaluatedHealthRules           []*v1alpha1.HealthRule
@@ -96,18 +97,6 @@ var _ = Describe("Realize", func() {
 			resource2             v1alpha1.SupplyChainResource
 		)
 		BeforeEach(func() {
-			resource1 = v1alpha1.SupplyChainResource{
-				Name: "resource1",
-			}
-			resource2 = v1alpha1.SupplyChainResource{
-				Name: "resource2",
-				Images: []v1alpha1.ResourceReference{
-					{
-						Name:     "my-image",
-						Resource: "resource1",
-					},
-				},
-			}
 			template1 = &v1alpha1.ClusterImageTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
@@ -129,6 +118,26 @@ var _ = Describe("Realize", func() {
 				Spec: v1alpha1.TemplateSpec{
 					HealthRule: &v1alpha1.HealthRule{
 						AlwaysHealthy: &runtime.RawExtension{Raw: []byte(`{}`)},
+					},
+				},
+			}
+			resource1 = v1alpha1.SupplyChainResource{
+				Name: "resource1",
+				TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					Kind: template1.Kind,
+					Name: template1.Name,
+				},
+			}
+			resource2 = v1alpha1.SupplyChainResource{
+				Name: "resource2",
+				TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					Kind: template2.Kind,
+					Name: template2.Name,
+				},
+				Images: []v1alpha1.ResourceReference{
+					{
+						Name:     "my-image",
+						Resource: "resource1",
 					},
 				},
 			}
