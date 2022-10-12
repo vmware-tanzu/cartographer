@@ -89,6 +89,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
+	paramGenerator := NewParamGenerator(resource.Params, r.blueprintParams, r.ownerParams)
+
 	var templateName string
 	var err error
 	if len(resource.TemplateOptions) > 0 {
@@ -127,7 +129,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	ownerTemplatingContext := map[string]interface{}{
 		"workload":    r.owner,
 		"deliverable": r.owner,
-		"params":      templates.ParamsBuilder(template.GetDefaultParams(), r.blueprintParams, resource.Params, r.ownerParams),
+		"params":      paramGenerator.GetParams(template),
 		"sources":     inputs.Sources,
 		"images":      inputs.Images,
 		"deployment":  inputs.Deployment,
