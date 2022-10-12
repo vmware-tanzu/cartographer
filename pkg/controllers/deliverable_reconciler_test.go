@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers/controllersfakes"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -64,7 +65,7 @@ var _ = Describe("DeliverableReconciler", func() {
 		repo              *repositoryfakes.FakeRepository
 		tokenManager      *satokenfakes.FakeTokenManager
 		conditionManager  *conditionsfakes.FakeConditionManager
-		rlzr              *realizerfakes.FakeRealizer
+		rlzr              *controllersfakes.FakeRealizer
 		dl                *v1alpha1.Deliverable
 		deliverableLabels map[string]string
 		stampedTracker    *stampedfakes.FakeStampedTracker
@@ -90,7 +91,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &realizerfakes.FakeRealizer{}
+		rlzr = &controllersfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -113,7 +114,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		resourceRealizerBuilderError = nil
 
-		resourceRealizerBuilder := func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+		fakeResourceRealizerBuilder := func(authToken string, owner client.Object, templatingContext realizer.ContextGenerator, systemRepo repository.Repository, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
@@ -126,7 +127,7 @@ var _ = Describe("DeliverableReconciler", func() {
 			Repo:                    repo,
 			TokenManager:            tokenManager,
 			ConditionManagerBuilder: fakeConditionManagerBuilder,
-			ResourceRealizerBuilder: resourceRealizerBuilder,
+			ResourceRealizerBuilder: fakeResourceRealizerBuilder,
 			Realizer:                rlzr,
 			StampedTracker:          stampedTracker,
 			DependencyTracker:       dependencyTracker,

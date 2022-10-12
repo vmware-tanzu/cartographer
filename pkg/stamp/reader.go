@@ -121,12 +121,11 @@ func (r *ImageOutputReader) GetOutput(stampedObject *unstructured.Unstructured) 
 	evaluator := eval.EvaluatorBuilder()
 	image, err := evaluator.EvaluateJsonPath(r.template.Spec.ImagePath, stampedObject.UnstructuredContent())
 	if err != nil {
-		//return nil, JsonPathError{
-		//	Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
-		//		r.template.Spec.ImagePath, err),
-		//	expression: r.template.Spec.ImagePath,
-		//}
-		return nil, err
+		return nil, JsonPathError{
+			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
+				r.template.Spec.ImagePath, err),
+			expression: r.template.Spec.ImagePath,
+		}
 	}
 
 	return &templates.Output{

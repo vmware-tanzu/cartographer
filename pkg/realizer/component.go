@@ -78,11 +78,11 @@ type resourceRealizer struct {
 
 type ResourceLabeler func(resource OwnerResource) templates.Labels
 
-type ResourceRealizerBuilder func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (*resourceRealizer, error)
+type ResourceRealizerBuilder func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (*resourceRealizer, error) {
+	return func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(authToken, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
