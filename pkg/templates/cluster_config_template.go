@@ -96,3 +96,7 @@ func (t *clusterConfigTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 func (t *clusterConfigTemplate) GetHealthRule() *v1alpha1.HealthRule {
 	return t.template.Spec.HealthRule
 }
+
+func (t *clusterConfigTemplate) IsYTTTemplate() bool {
+	return t.template.Spec.Ytt != ""
+}

@@ -16,8 +16,10 @@ package testing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -147,12 +149,14 @@ type TemplateTestCase struct {
 func (c *TemplateTestCase) Run() error {
 	expectedObject, err := c.Expect.getExpectedObject()
 	if err != nil {
-		return fmt.Errorf("failed to get expected object: %v", err)
+		return fmt.Errorf("failed to get expected object: %w", err)
 	}
 
 	actualObject, err := c.Given.getActualObject()
-	if err != nil {
-		return fmt.Errorf("failed to get actual object: %v", err)
+	if errors.Is(err, yttNotFound) {
+		return fmt.Errorf("test requires ytt, but ytt was not found in path")
+	} else if err != nil {
+		return fmt.Errorf("failed to get actual object: %w", err)
 	}
 
 	c.stripIgnoredFields(expectedObject, actualObject)
@@ -285,16 +289,16 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 
 	workload, err := i.getWorkload()
 	if err != nil {
-		return nil, fmt.Errorf("get workload failed: %v", err)
+		return nil, fmt.Errorf("get workload failed: %w", err)
 	}
 
 	apiTemplate, err := i.getPopulatedTemplate(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("get populated template failed: %v", err)
+		return nil, fmt.Errorf("get populated template failed: %w", err)
 	}
 
 	if err = apiTemplate.ValidateCreate(); err != nil {
-		return nil, fmt.Errorf("template validation failed: %v", err)
+		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
 
 	template, err := templates.NewModelFromAPI(apiTemplate)
@@ -302,11 +306,18 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("failed to get cluster template")
 	}
 
+	if template.IsYTTTemplate() {
+		err = ensureYTTAvailable(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("ensure YTT available: %w", err)
+		}
+	}
+
 	i.completeLabels(*workload, template)
 
 	blueprintParams, err := i.getBlueprintParams()
 	if err != nil {
-		return nil, fmt.Errorf("get blueprint params failed: %v", err)
+		return nil, fmt.Errorf("get blueprint params failed: %w", err)
 	}
 
 	paramGenerator := realizer.NewParamGenerator([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
@@ -320,7 +331,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
 	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
-		return nil, fmt.Errorf("could not stamp: %v", err)
+		return nil, fmt.Errorf("could not stamp: %w", err)
 	}
 
 	return actualStampedObject, nil
@@ -366,6 +377,12 @@ func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (template
 	)
 
 	if len(i.YttValues) != 0 || len(i.YttFiles) != 0 {
+		err = ensureYTTAvailable(ctx)
+
+		if err != nil {
+			return nil, fmt.Errorf("ensure ytt available: %w", err)
+		}
+
 		templateFile, err = i.preprocessYtt(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to preprocess ytt: %w", err)
@@ -412,6 +429,20 @@ func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (template
 	}
 
 	return apiTemplate, nil
+}
+
+var yttNotFound = errors.New("ytt must be installed in PATH but was not found")
+
+func ensureYTTAvailable(ctx context.Context) error {
+	yttTestArgs := []string{"ytt", "--version"}
+	_, _, err := Cmd(yttTestArgs...).RunWithOutput(ctx)
+	if errors.Is(err, exec.ErrNotFound) {
+		return yttNotFound
+	} else if err != nil {
+		return fmt.Errorf("run ytt test args: %w", err)
+	}
+
+	return nil
 }
 
 func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) {

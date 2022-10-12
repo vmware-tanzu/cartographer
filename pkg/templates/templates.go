@@ -36,6 +36,7 @@ type Template interface {
 	SetStampedObject(stampedObject *unstructured.Unstructured)
 	GetName() string
 	GetKind() string
+	IsYTTTemplate() bool
 }
 
 func NewModelFromAPI(template client.Object) (Template, error) {

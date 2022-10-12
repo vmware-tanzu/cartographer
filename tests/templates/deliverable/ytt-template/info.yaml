@@ -13,6 +13,8 @@
 # limitations under the License.
 
 template: template-ytt.yaml
+name: YTT Template Test
+description: The template's spec.ytt field exists instead of a spec.template field
 
 blueprintParams:
   - name: "gitops_branch"
