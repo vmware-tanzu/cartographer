@@ -21,22 +21,22 @@ import (
 )
 
 // Todo: Pass an interface for owner and ownerParams that supports getParams and getObject
-func NewContextGenerator(owner client.Object, ownerParams []v1alpha1.OwnerParam, blueprintParams []v1alpha1.BlueprintParam) *ContextGenerator {
-	return &ContextGenerator{
+func NewContextGenerator(owner client.Object, ownerParams []v1alpha1.OwnerParam, blueprintParams []v1alpha1.BlueprintParam) *contextGenerator {
+	return &contextGenerator{
 		blueprintParams: blueprintParams,
 		ownerParams:     ownerParams,
 		owner:           owner,
 	}
 }
 
-type ContextGenerator struct {
+type contextGenerator struct {
 	blueprintParams []v1alpha1.BlueprintParam
 	ownerParams     []v1alpha1.OwnerParam
 	owner           client.Object
 }
 
 // Generate builds a context based on the template, owner and resource
-func (c ContextGenerator) Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter) map[string]interface{} {
+func (c contextGenerator) Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter) map[string]interface{} {
 	inputGenerator := NewInputGenerator(resource, outputs)
 	merger := NewParamMerger(resource.Params, c.blueprintParams, c.ownerParams)
 

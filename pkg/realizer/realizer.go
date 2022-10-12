@@ -78,9 +78,8 @@ func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResou
 	return resources
 }
 
-//counterfeiter:generate . Realizer
-type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprintName string, ownerResources []OwnerResource, resourceStatuses statuses.ResourceStatuses) error
+type ResourceRealizer interface {
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type realizer struct {
@@ -89,7 +88,7 @@ type realizer struct {
 
 type HealthyConditionEvaluator func(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition
 
-func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator) Realizer {
+func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator) *realizer {
 	if healthyConditionEvaluator == nil {
 		healthyConditionEvaluator = healthcheck.DetermineHealthCondition
 	}

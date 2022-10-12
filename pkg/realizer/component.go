@@ -19,9 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
@@ -30,6 +27,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
@@ -65,27 +64,25 @@ func (o OwnerResource) GetSources() []v1alpha1.ResourceReference {
 	return o.Sources
 }
 
-//counterfeiter:generate . ResourceRealizer
-type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
+type ContextGenerator interface {
+	Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter) map[string]interface{}
 }
 
 type resourceRealizer struct {
-	owner           client.Object
-	ownerParams     []v1alpha1.OwnerParam
-	systemRepo      repository.Repository
-	ownerRepo       repository.Repository
-	blueprintParams []v1alpha1.BlueprintParam
-	resourceLabeler ResourceLabeler
+	owner             client.Object
+	systemRepo        repository.Repository
+	ownerRepo         repository.Repository
+	templatingContext ContextGenerator
+	resourceLabeler   ResourceLabeler
 }
 
 type ResourceLabeler func(resource OwnerResource) templates.Labels
 
-type ResourceRealizerBuilder func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
+type ResourceRealizerBuilder func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (*resourceRealizer, error)
 
 //counterfeiter:generate sigs.k8s.io/controller-runtime/pkg/client.Client
 func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, clientBuilder realizerclient.ClientBuilder, cache repository.RepoCache) ResourceRealizerBuilder {
-	return func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, supplyChainParams []v1alpha1.BlueprintParam, resourceLabeler ResourceLabeler) (ResourceRealizer, error) {
+	return func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (*resourceRealizer, error) {
 		ownerClient, _, err := clientBuilder(authToken, false)
 		if err != nil {
 			return nil, fmt.Errorf("can't build client: %w", err)
@@ -94,12 +91,11 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 		ownerRepo := repositoryBuilder(ownerClient, cache)
 
 		return &resourceRealizer{
-			owner:           owner,
-			ownerParams:     ownerParams,
-			systemRepo:      systemRepo,
-			ownerRepo:       ownerRepo,
-			blueprintParams: supplyChainParams,
-			resourceLabeler: resourceLabeler,
+			owner:             owner,
+			systemRepo:        systemRepo,
+			ownerRepo:         ownerRepo,
+			templatingContext: templatingContext,
+			resourceLabeler:   resourceLabeler,
 		}, nil
 	}
 }
@@ -141,10 +137,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 	labels := r.resourceLabeler(resource)
 
-	// TODO: lift me out of component.go
-	ownerTemplatingContext := NewContextGenerator(r.owner, r.ownerParams, r.blueprintParams)
-
-	stamper := templates.StamperBuilder(r.owner, ownerTemplatingContext.Generate(template, resource, outputs), labels)
+	stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
 	stampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
