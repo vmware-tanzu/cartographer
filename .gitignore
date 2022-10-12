@@ -6,6 +6,8 @@
 /site/resources/
 
 build/
+dist/
+
 cmd/random
 coverage.*
 

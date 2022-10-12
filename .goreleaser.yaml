@@ -25,6 +25,10 @@ builds:
 
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+    ldflags:
+      - -s
+      - -X github.com/vmware-tanzu/cartographer/pkg/testing.version={{.Version}}
+
 universal_binaries:
   - replace: true
 

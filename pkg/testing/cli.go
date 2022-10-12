@@ -48,7 +48,7 @@ func Execute() {
 }
 
 var (
-	version   = "0.5.3" // TODO remove hard coding
+	version   = "development"
 	directory string
 	verbose   bool
 )
