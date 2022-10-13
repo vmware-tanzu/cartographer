@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
 type Inputs interface {
@@ -43,13 +42,13 @@ func NewReaderFromAPI(template client.Object) (Reader, error) {
 	switch v := template.(type) {
 
 	case *v1alpha1.ClusterSourceTemplate:
-		return NewClusterSourceTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterSourceTemplateModel(v), nil
 	case *v1alpha1.ClusterImageTemplate:
-		return NewClusterImageTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterImageTemplateModel(v), nil
 	case *v1alpha1.ClusterConfigTemplate:
-		return NewClusterConfigTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterConfigTemplateModel(v), nil
 	case *v1alpha1.ClusterDeploymentTemplate:
-		return NewClusterDeploymentTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterDeploymentTemplateModel(v), nil
 	case *v1alpha1.ClusterTemplate:
 		return NewClusterTemplateModel(v), nil
 	}

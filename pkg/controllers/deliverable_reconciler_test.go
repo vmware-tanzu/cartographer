@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/vmware-tanzu/cartographer/pkg/controllers/controllersfakes"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -42,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers/controllersfakes"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"

@@ -19,12 +19,11 @@ import (
 )
 
 type clusterSourceTemplate struct {
-	template  *v1alpha1.ClusterSourceTemplate
-	evaluator evaluator
+	template *v1alpha1.ClusterSourceTemplate
 }
 
-func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate, eval evaluator) *clusterSourceTemplate {
-	return &clusterSourceTemplate{template: template, evaluator: eval}
+func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate) *clusterSourceTemplate {
+	return &clusterSourceTemplate{template: template}
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

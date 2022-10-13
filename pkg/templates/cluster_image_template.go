@@ -21,12 +21,11 @@ import (
 )
 
 type clusterImageTemplate struct {
-	template  *v1alpha1.ClusterImageTemplate
-	evaluator evaluator
+	template *v1alpha1.ClusterImageTemplate
 }
 
-func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate, eval evaluator) *clusterImageTemplate {
-	return &clusterImageTemplate{template: template, evaluator: eval}
+func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate) *clusterImageTemplate {
+	return &clusterImageTemplate{template: template}
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

@@ -19,13 +19,11 @@ import (
 )
 
 type clusterDeploymentTemplate struct {
-	template  *v1alpha1.ClusterDeploymentTemplate
-	evaluator evaluator
-	inputs    Inputs
+	template *v1alpha1.ClusterDeploymentTemplate
 }
 
-func NewClusterDeploymentTemplateModel(template *v1alpha1.ClusterDeploymentTemplate, eval evaluator) *clusterDeploymentTemplate {
-	return &clusterDeploymentTemplate{template: template, evaluator: eval}
+func NewClusterDeploymentTemplateModel(template *v1alpha1.ClusterDeploymentTemplate) *clusterDeploymentTemplate {
+	return &clusterDeploymentTemplate{template: template}
 }
 
 func (t *clusterDeploymentTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
