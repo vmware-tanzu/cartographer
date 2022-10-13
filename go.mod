@@ -28,7 +28,7 @@ require (
 	github.com/google/gnostic v0.6.9
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/klog/v2 v2.80.1
