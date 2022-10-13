@@ -155,7 +155,7 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: "template-kpack.yaml",
 				WorkloadFile: "workload.yaml",
-				SupplyChainInputs: templates.Inputs{
+				SupplyChainInputs: cartotesting.Inputs{
 					Sources: map[string]templates.SourceInput{
 						"source": {
 							URL: "some-passed-on-url",

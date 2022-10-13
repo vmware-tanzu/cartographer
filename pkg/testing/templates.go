@@ -32,6 +32,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
+type Inputs struct {
+	Sources    map[string]templates.SourceInput
+	Images     map[string]templates.ImageInput
+	Configs    map[string]templates.ConfigInput
+	Deployment *templates.SourceInput
+}
+
 type templateType interface {
 	ValidateCreate() error
 	client.Object
@@ -234,7 +241,7 @@ type TemplateTestGivens struct {
 	YttValues         Values
 	YttFiles          []string
 	labels            map[string]string
-	SupplyChainInputs templates.Inputs
+	SupplyChainInputs Inputs
 }
 
 func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
@@ -259,7 +266,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("failed to get cluster template")
 	}
 
-	i.completeLabels(*workload, template)
+	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	paramGenerator := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, i.BlueprintParams, workload.Spec.Params)
 	params := paramGenerator.Merge(template)
@@ -378,13 +385,13 @@ func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) 
 	return f.Name(), nil
 }
 
-func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template templates.Reader) {
+func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, name string, kind string) {
 	i.labels = map[string]string{}
 
 	i.labels["carto.run/workload-name"] = workload.GetName()
 	i.labels["carto.run/workload-namespace"] = workload.GetNamespace()
-	i.labels["carto.run/template-kind"] = template.GetKind()
-	i.labels["carto.run/cluster-template-name"] = template.GetName()
+	i.labels["carto.run/template-kind"] = kind
+	i.labels["carto.run/cluster-template-name"] = name
 }
 
 func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) map[string]interface{} {
@@ -399,14 +406,22 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 		//"deployment": // not implemented yet,
 	}
 
-	if inputs.OnlyConfig() != nil {
-		templatingContext["config"] = inputs.OnlyConfig()
+	if len(inputs.Sources) == 1 {
+		for _, source := range inputs.Sources {
+			templatingContext["source"] = &source
+		}
 	}
-	if inputs.OnlyImage() != nil {
-		templatingContext["image"] = inputs.OnlyImage()
+
+	if len(inputs.Images) == 1 {
+		for _, image := range inputs.Images {
+			templatingContext["image"] = image.Image
+		}
 	}
-	if inputs.OnlySource() != nil {
-		templatingContext["source"] = inputs.OnlySource()
+
+	if len(inputs.Configs) == 1 {
+		for _, config := range inputs.Configs {
+			templatingContext["config"] = config.Config
+		}
 	}
 	return templatingContext
 }
