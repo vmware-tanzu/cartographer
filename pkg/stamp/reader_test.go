@@ -16,22 +16,81 @@ func (noInputImpl) GetDeployment() *templates.SourceInput {
 	return nil
 }
 
+type deploymentInputImpl struct{}
+
+func (deploymentInputImpl) GetDeployment() *templates.SourceInput {
+	return &templates.SourceInput{
+		URL:      "my-url",
+		Revision: "my-revision",
+		Name:     "my-resource",
+	}
+}
+
 var _ = Describe("Reader", func() {
 
 	Context("using a source reader", func() {
-		Context("where the evaluator can return a value", func() {
-			It("returns the output", func() {
+		var (
+			template *v1alpha1.ClusterSourceTemplate
+			reader   stamp.Reader
+		)
 
+		BeforeEach(func() {
+			template = &v1alpha1.ClusterSourceTemplate{
+				Spec: v1alpha1.SourceTemplateSpec{
+					TemplateSpec: v1alpha1.TemplateSpec{},
+					URLPath:      ".data.url",
+					RevisionPath: ".data.revision",
+				},
+			}
+
+			var err error
+			reader, err = stamp.NewReader(template, noInputImpl{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("where the evaluator can return a value", func() {
+			var stampedObject *unstructured.Unstructured
+
+			BeforeEach(func() {
+				unstructuredContent := map[string]interface{}{
+					"data": map[string]interface{}{
+						"url":      "my-url",
+						"revision": "my-revision",
+					},
+				}
+
+				stampedObject = &unstructured.Unstructured{}
+				stampedObject.SetUnstructuredContent(unstructuredContent)
 			})
 
+			It("returns the output", func() {
+				output, err := reader.GetOutput(stampedObject)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(output.Source.URL).To(Equal("my-url"))
+				Expect(output.Source.Revision).To(Equal("my-revision"))
+			})
 		})
 
 		Context("where the evaluator can not return a value", func() {
-			It("returns a nil output", func() {
+			var stampedObject *unstructured.Unstructured
 
+			BeforeEach(func() {
+				unstructuredContent := map[string]interface{}{}
+
+				stampedObject = &unstructured.Unstructured{}
+				stampedObject.SetUnstructuredContent(unstructuredContent)
 			})
-			It("returns an error", func() {
 
+			It("returns a nil output", func() {
+				output, _ := reader.GetOutput(stampedObject)
+				Expect(output).To(BeNil())
+			})
+
+			It("returns an error", func() {
+				_, err := reader.GetOutput(stampedObject)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+				Expect(err.Error()).To(ContainSubstring(".data.url"))
 			})
 		})
 	})
@@ -165,29 +224,334 @@ var _ = Describe("Reader", func() {
 	})
 
 	Context("using a deployment reader", func() {
-		Context("where the evaluator can return a value", func() {
-			It("returns the output", func() {
+		var (
+			template      *v1alpha1.ClusterDeploymentTemplate
+			reader        stamp.Reader
+			stampedObject *unstructured.Unstructured
+		)
 
-			})
+		//Context("where the deployment is found", func() {
+		//	var stampedObject *unstructured.Unstructured
+		//
+		//	BeforeEach(func() {
+		//		var err error
+		//		reader, err = stamp.NewReader(template, deploymentInputImpl{})
+		//		Expect(err).NotTo(HaveOccurred())
+		//
+		//		stampedObject = &unstructured.Unstructured{}
+		//	})
+		//
+		//	It("returns the output", func() {
+		//		output, err := reader.GetOutput(stampedObject)
+		//		Expect(err).NotTo(HaveOccurred())
+		//		Expect(output.Source.URL).To(Equal("my-url"))
+		//		Expect(output.Source.Revision).To(Equal("my-revision"))
+		//	})
+		//})
+		//
+		//Context("where the deployment is not found", func() {
+		//	var stampedObject *unstructured.Unstructured
+		//
+		//	BeforeEach(func() {
+		//		var err error
+		//		reader, err = stamp.NewReader(template, noInputImpl{})
+		//		Expect(err).NotTo(HaveOccurred())
+		//
+		//		stampedObject = &unstructured.Unstructured{}
+		//	})
+		//
+		//	It("returns a nil output", func() {
+		//		output, _ := reader.GetOutput(stampedObject)
+		//		Expect(output).To(BeNil())
+		//	})
+		//
+		//	It("returns an error", func() {
+		//		_, err := reader.GetOutput(stampedObject)
+		//		Expect(err).To(HaveOccurred())
+		//		Expect(err.Error()).To(ContainSubstring("deployment not found in upstream template"))
+		//	})
+		//})
+
+		BeforeEach(func() {
+			template = &v1alpha1.ClusterDeploymentTemplate{
+				Spec: v1alpha1.DeploymentSpec{},
+			}
 		})
 
-		Context("where the evaluator can not return a value", func() {
-			It("returns a nil output", func() {
+		Context("observedCompletion", func() {
+			var unstructuredContent map[string]interface{}
+
+			BeforeEach(func() {
+				template = &v1alpha1.ClusterDeploymentTemplate{
+					Spec: v1alpha1.DeploymentSpec{
+						ObservedCompletion: &v1alpha1.ObservedCompletion{
+							SucceededCondition: v1alpha1.Condition{
+								Key:   "completion.path",
+								Value: "All Good",
+							},
+						},
+					},
+				}
+			})
+
+			Context("stampedObject has reconciled (generation == observedGeneration)", func() {
+
+				BeforeEach(func() {
+					unstructuredContent = map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"generation": 1,
+						},
+						"status": map[string]interface{}{
+							"observedGeneration": 1,
+						},
+						"completion": map[string]interface{}{
+							"path": "All Good",
+						},
+						"failure": map[string]interface{}{
+							"path": "some sad path value",
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+				})
+
+				Context("success criterion is met", func() {
+
+					Context("where the deployment is found", func() {
+						BeforeEach(func() {
+							var err error
+							reader, err = stamp.NewReader(template, deploymentInputImpl{})
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						It("returns the output", func() {
+							output, err := reader.GetOutput(stampedObject)
+							Expect(err).NotTo(HaveOccurred())
+							Expect(output.Source.URL).To(Equal("my-url"))
+							Expect(output.Source.Revision).To(Equal("my-revision"))
+						})
+
+						Context("failure criterion is set", func() {
+							BeforeEach(func() {
+								template.Spec.ObservedCompletion.FailedCondition = &v1alpha1.Condition{
+									Key:   "failure.path",
+									Value: "some sad path value",
+								}
+							})
+
+							Context("failure criterion is met", func() {
+								It("returns an error", func() {
+									_, err := reader.GetOutput(stampedObject)
+									Expect(err).To(HaveOccurred())
+									Expect(err.Error()).To(ContainSubstring("deployment failure condition [failure.path] was: some sad path value"))
+								})
+							})
+
+							Context("failure criterion path exists but is not met", func() {
+								BeforeEach(func() {
+									template.Spec.ObservedCompletion.FailedCondition = &v1alpha1.Condition{
+										Key:   "failure.path",
+										Value: "some other sad path value",
+									}
+								})
+								It("returns the output", func() {
+									output, err := reader.GetOutput(stampedObject)
+									Expect(err).NotTo(HaveOccurred())
+
+									Expect(output.Source.URL).To(Equal("my-url"))
+									Expect(output.Source.Revision).To(Equal("my-revision"))
+								})
+							})
+
+							Context("failure criterion path does not exist", func() {
+								BeforeEach(func() {
+									template.Spec.ObservedCompletion.FailedCondition = &v1alpha1.Condition{
+										Key:   "failure.path-does-not-exist",
+										Value: "some sad path value",
+									}
+								})
+								It("returns the output", func() {
+									output, err := reader.GetOutput(stampedObject)
+									Expect(err).NotTo(HaveOccurred())
+
+									Expect(output.Source.URL).To(Equal("my-url"))
+									Expect(output.Source.Revision).To(Equal("my-revision"))
+								})
+							})
+
+							Context("evaluating failure criterion path errors", func() {
+								XIt("returns an error", func() {
+									// TODO: I'm not sure how to force a non JsonPathDoesNotExistError error
+									_, err := reader.GetOutput(stampedObject)
+									Expect(err).To(HaveOccurred())
+									Expect(err.Error()).To(ContainSubstring("failed to evaluate"))
+								})
+							})
+						})
+					})
+
+					Context("where the deployment is not found", func() {
+						BeforeEach(func() {
+							var err error
+							reader, err = stamp.NewReader(template, noInputImpl{})
+							Expect(err).NotTo(HaveOccurred())
+						})
+
+						It("returns an error", func() {
+							_, err := reader.GetOutput(stampedObject)
+							Expect(err).To(HaveOccurred())
+							Expect(err.Error()).To(ContainSubstring("deployment not found in upstream template"))
+						})
+					})
+				})
+
+				Context("success criterion is not met", func() {
+
+					BeforeEach(func() {
+						unstructuredContent["completion"].(map[string]interface{})["path"] = "some sad path value"
+						stampedObject = &unstructured.Unstructured{}
+						stampedObject.SetUnstructuredContent(unstructuredContent)
+
+						var err error
+						reader, err = stamp.NewReader(template, deploymentInputImpl{})
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("returns an error", func() {
+						_, err := reader.GetOutput(stampedObject)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("deployment success condition [completion.path] was: some sad path value, expected: All Good"))
+					})
+
+					Context("success criterion path does not exist", func() {
+						BeforeEach(func() {
+							unstructuredContent["completion"] = "some sad path value"
+							stampedObject = &unstructured.Unstructured{}
+							stampedObject.SetUnstructuredContent(unstructuredContent)
+
+						})
+
+						It("returns an error", func() {
+							_, err := reader.GetOutput(stampedObject)
+							Expect(err).To(HaveOccurred())
+							Expect(err.Error()).To(ContainSubstring("failed to evaluate succeededCondition.Key [completion.path]: jsonpath returned empty list: completion.path"))
+
+						})
+					})
+				})
+			})
+
+			Context("stampedObject has not reconciled (generation != observedGeneration)", func() {
+
+				BeforeEach(func() {
+					unstructuredContent = map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"generation": 1,
+						},
+						"status": map[string]interface{}{
+							"observedGeneration": 2,
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+
+					var err error
+					reader, err = stamp.NewReader(template, deploymentInputImpl{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.GetOutput(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("status.observedGeneration does not equal metadata.generation"))
+				})
+			})
+
+			Context("stampedObject does not have a generation", func() {
+				BeforeEach(func() {
+					unstructuredContent = map[string]interface{}{
+						"metadata": map[string]interface{}{},
+						"status": map[string]interface{}{
+							"observedGeneration": 2,
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+
+					var err error
+					reader, err = stamp.NewReader(template, deploymentInputImpl{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.GetOutput(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path 'metadata.generation'"))
+				})
+			})
+
+			Context("stampedObject does not have an observedGeneration", func() {
+				BeforeEach(func() {
+					unstructuredContent = map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"generation": 1,
+						},
+						"status": map[string]interface{}{},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+
+					var err error
+					reader, err = stamp.NewReader(template, deploymentInputImpl{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.GetOutput(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate status.observedGeneration"))
+				})
 
 			})
-			It("returns an error", func() {
 
-			})
+		})
+
+		Context("observedMatches set", func() {
+
 		})
 	})
 
 	Context("using a no output reader", func() {
-		It("returns an empty output", func() {
+		var (
+			template      *v1alpha1.ClusterTemplate
+			reader        stamp.Reader
+			stampedObject *unstructured.Unstructured
+		)
 
+		BeforeEach(func() {
+			template = &v1alpha1.ClusterTemplate{}
+
+			var err error
+			reader, err = stamp.NewReader(template, noInputImpl{})
+			Expect(err).NotTo(HaveOccurred())
+
+			stampedObject = &unstructured.Unstructured{}
 		})
 
-		It("does not error", func() {
+		It("returns an empty output", func() {
+			output, _ := reader.GetOutput(stampedObject)
+			Expect(output.Source).To(BeNil())
+			Expect(output.Image).To(BeNil())
+			Expect(output.Config).To(BeNil())
+		})
 
+		It("does not return an error", func() {
+			_, err := reader.GetOutput(stampedObject)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

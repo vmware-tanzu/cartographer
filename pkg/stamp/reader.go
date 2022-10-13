@@ -169,6 +169,7 @@ func (r *DeploymentPassThroughReader) outputReady(stampedObject *unstructured.Un
 		return r.observedMatchesReady(stampedObject)
 	}
 }
+
 func (r *DeploymentPassThroughReader) observedMatchesReady(stampedObject *unstructured.Unstructured) error {
 	evaluator := eval.EvaluatorBuilder()
 
