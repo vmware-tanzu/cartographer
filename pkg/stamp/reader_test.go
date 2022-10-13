@@ -230,48 +230,6 @@ var _ = Describe("Reader", func() {
 			stampedObject *unstructured.Unstructured
 		)
 
-		//Context("where the deployment is found", func() {
-		//	var stampedObject *unstructured.Unstructured
-		//
-		//	BeforeEach(func() {
-		//		var err error
-		//		reader, err = stamp.NewReader(template, deploymentInputImpl{})
-		//		Expect(err).NotTo(HaveOccurred())
-		//
-		//		stampedObject = &unstructured.Unstructured{}
-		//	})
-		//
-		//	It("returns the output", func() {
-		//		output, err := reader.GetOutput(stampedObject)
-		//		Expect(err).NotTo(HaveOccurred())
-		//		Expect(output.Source.URL).To(Equal("my-url"))
-		//		Expect(output.Source.Revision).To(Equal("my-revision"))
-		//	})
-		//})
-		//
-		//Context("where the deployment is not found", func() {
-		//	var stampedObject *unstructured.Unstructured
-		//
-		//	BeforeEach(func() {
-		//		var err error
-		//		reader, err = stamp.NewReader(template, noInputImpl{})
-		//		Expect(err).NotTo(HaveOccurred())
-		//
-		//		stampedObject = &unstructured.Unstructured{}
-		//	})
-		//
-		//	It("returns a nil output", func() {
-		//		output, _ := reader.GetOutput(stampedObject)
-		//		Expect(output).To(BeNil())
-		//	})
-		//
-		//	It("returns an error", func() {
-		//		_, err := reader.GetOutput(stampedObject)
-		//		Expect(err).To(HaveOccurred())
-		//		Expect(err.Error()).To(ContainSubstring("deployment not found in upstream template"))
-		//	})
-		//})
-
 		BeforeEach(func() {
 			template = &v1alpha1.ClusterDeploymentTemplate{
 				Spec: v1alpha1.DeploymentSpec{},
@@ -521,7 +479,135 @@ var _ = Describe("Reader", func() {
 		})
 
 		Context("observedMatches set", func() {
+			BeforeEach(func() {
+				template = &v1alpha1.ClusterDeploymentTemplate{
+					Spec: v1alpha1.DeploymentSpec{
+						ObservedMatches: []v1alpha1.ObservedMatch{
+							{
+								Input:  "input.path",
+								Output: "output.path",
+							},
+						},
+					},
+				}
+			})
 
+			Context("when inputs and outputs do not match", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{
+						"input": map[string]interface{}{
+							"path": "happy",
+						},
+						"output": map[string]interface{}{
+							"path": "happy",
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+				})
+
+				Context("where the deployment is found", func() {
+					BeforeEach(func() {
+						var err error
+						reader, err = stamp.NewReader(template, deploymentInputImpl{})
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("returns an output", func() {
+						output, err := reader.GetOutput(stampedObject)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(output.Source.URL).To(Equal("my-url"))
+						Expect(output.Source.Revision).To(Equal("my-revision"))
+					})
+				})
+
+				Context("where the deployment is not found", func() {
+					BeforeEach(func() {
+						var err error
+						reader, err = stamp.NewReader(template, noInputImpl{})
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("returns an error", func() {
+						_, err := reader.GetOutput(stampedObject)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("deployment not found in upstream template"))
+					})
+				})
+			})
+
+			Context("input cannot be found", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{
+						"output": map[string]interface{}{
+							"path": "happy",
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+
+					var err error
+					reader, err = stamp.NewReader(template, deploymentInputImpl{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.GetOutput(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("could not find value on input [input.path]:"))
+				})
+			})
+
+			Context("input but not output can be found", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{
+						"input": map[string]interface{}{
+							"path": "happy",
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+
+					var err error
+					reader, err = stamp.NewReader(template, deploymentInputImpl{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.GetOutput(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("could not find value on output [output.path]:"))
+				})
+			})
+
+			Context("values at input and output do not match", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{
+						"input": map[string]interface{}{
+							"path": "happy",
+						},
+						"output": map[string]interface{}{
+							"path": "not happy",
+						},
+					}
+
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+
+					var err error
+					reader, err = stamp.NewReader(template, deploymentInputImpl{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.GetOutput(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("input [input.path] and output [output.path] do not match: happy != not happy"))
+				})
+			})
 		})
 	})
 
