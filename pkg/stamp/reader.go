@@ -322,7 +322,7 @@ func NewSourcePassThroughReader(name string, inputReader PassThroughInput) Reade
 func (r *SourcePassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
 	sources := r.inputs.GetSources()
 	if _, ok := sources[r.name]; !ok {
-		panic("need an error")
+		return nil, fmt.Errorf("input [%s] not found in sources", r.name)
 	}
 
 	return &templates.Output{
@@ -348,11 +348,11 @@ func NewImagePassThroughReader(name string, inputReader PassThroughInput) Reader
 func (r *ImagePassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
 	images := r.inputs.GetImages()
 	if _, ok := images[r.name]; !ok {
-		panic("need an error")
+		return nil, fmt.Errorf("input [%s] not found in images", r.name)
 	}
 
 	return &templates.Output{
-		Image: images[r.name],
+		Image: images[r.name].Image,
 	}, nil
 }
 
@@ -371,10 +371,10 @@ func NewConfigPassThroughReader(name string, inputReader PassThroughInput) Reade
 func (r *ConfigPassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
 	config := r.inputs.GetConfigs()
 	if _, ok := config[r.name]; !ok {
-		panic("need an error")
+		return nil, fmt.Errorf("input [%s] not found in configs", r.name)
 	}
 
 	return &templates.Output{
-		Config: config[r.name],
+		Config: config[r.name].Config,
 	}, nil
 }
