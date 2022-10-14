@@ -44,7 +44,15 @@ func NewPassThroughReader(kind string, name string, inputReader PassThroughInput
 	switch {
 
 	case kind == "ClusterSourceTemplate":
-		return NewPassThroughSourceReader(name, inputReader), nil
+		return NewSourcePassThroughReader(name, inputReader), nil
+	case kind == "ClusterImageTemplate":
+		return NewImagePassThroughReader(name, inputReader), nil
+	case kind == "ClusterConfigTemplate":
+		return NewConfigPassThroughReader(name, inputReader), nil
+	case kind == "ClusterTemplate":
+		return NewNoOutputReader(), nil
+	case kind == "ClusterDeploymentTemplate":
+		return NewDeploymentPassThroughReader(inputReader, nil), nil
 	}
 
 	return nil, fmt.Errorf("kind does not match a known template")
@@ -179,6 +187,9 @@ func (r *DeploymentPassThroughReader) GetOutput(stampedObject *unstructured.Unst
 }
 
 func (r *DeploymentPassThroughReader) outputReady(stampedObject *unstructured.Unstructured) error {
+	if r.template == nil {
+		return nil
+	}
 	if r.template.Spec.ObservedCompletion != nil {
 		return r.observedCompletionReady(stampedObject)
 	} else {
@@ -295,12 +306,19 @@ func NewNoOutputReader() Reader {
 	return &NoOutputReader{}
 }
 
-type PassThroughSourceReader struct {
+type SourcePassThroughReader struct {
 	inputs PassThroughInput
 	name   string
 }
 
-func (r *PassThroughSourceReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
+func NewSourcePassThroughReader(name string, inputReader PassThroughInput) Reader {
+	return &SourcePassThroughReader{
+		name:   name,
+		inputs: inputReader,
+	}
+}
+
+func (r *SourcePassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
 	sources := r.inputs.GetSources()
 	if _, ok := sources[r.name]; !ok {
 		panic("need an error")
@@ -314,9 +332,48 @@ func (r *PassThroughSourceReader) GetOutput(_ *unstructured.Unstructured) (*temp
 	}, nil
 }
 
-func NewPassThroughSourceReader(name string, inputReader PassThroughInput) Reader {
-	return &PassThroughSourceReader{
+type ImagePassThroughReader struct {
+	inputs PassThroughInput
+	name   string
+}
+
+func NewImagePassThroughReader(name string, inputReader PassThroughInput) Reader {
+	return &ImagePassThroughReader{
 		name:   name,
 		inputs: inputReader,
 	}
+}
+
+func (r *ImagePassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
+	images := r.inputs.GetImages()
+	if _, ok := images[r.name]; !ok {
+		panic("need an error")
+	}
+
+	return &templates.Output{
+		Image: images[r.name],
+	}, nil
+}
+
+type ConfigPassThroughReader struct {
+	inputs PassThroughInput
+	name   string
+}
+
+func NewConfigPassThroughReader(name string, inputReader PassThroughInput) Reader {
+	return &ConfigPassThroughReader{
+		name:   name,
+		inputs: inputReader,
+	}
+}
+
+func (r *ConfigPassThroughReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
+	config := r.inputs.GetConfigs()
+	if _, ok := config[r.name]; !ok {
+		panic("need an error")
+	}
+
+	return &templates.Output{
+		Config: config[r.name],
+	}, nil
 }

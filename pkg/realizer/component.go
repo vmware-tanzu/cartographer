@@ -102,7 +102,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	}
 
 	if passThrough {
-		log.V(logger.DEBUG).Info("pass through template")
+		log.V(logger.DEBUG).Info("pass through template", "passThrough", fmt.Sprintf("[%s]", templateOption.PassThrough))
 
 		var err error
 		stampReader, err = stamp.NewPassThroughReader(resource.TemplateRef.Kind, templateOption.PassThrough, inputGenerator)
