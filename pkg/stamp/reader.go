@@ -29,8 +29,25 @@ type DeploymentInput interface {
 	GetDeployment() *templates.SourceInput
 }
 
+type PassThroughInput interface {
+	GetSources() map[string]templates.SourceInput
+	GetImages() map[string]templates.ImageInput
+	GetConfigs() map[string]templates.ConfigInput
+	GetDeployment() *templates.SourceInput
+}
+
 type Reader interface {
 	GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error)
+}
+
+func NewPassThroughReader(kind string, name string, inputReader PassThroughInput) (Reader, error) {
+	switch {
+
+	case kind == "ClusterSourceTemplate":
+		return NewPassThroughSourceReader(name, inputReader), nil
+	}
+
+	return nil, fmt.Errorf("kind does not match a known template")
 }
 
 func NewReader(template client.Object, inputReader DeploymentInput) (Reader, error) {
@@ -47,7 +64,7 @@ func NewReader(template client.Object, inputReader DeploymentInput) (Reader, err
 	case *v1alpha1.ClusterTemplate:
 		return NewNoOutputReader(), nil
 	}
-	return nil, fmt.Errorf("resource does not match a known template")
+	return nil, fmt.Errorf("template does not match a known template")
 }
 
 type SourceOutputReader struct {
@@ -276,4 +293,30 @@ func (r *NoOutputReader) GetOutput(_ *unstructured.Unstructured) (*templates.Out
 
 func NewNoOutputReader() Reader {
 	return &NoOutputReader{}
+}
+
+type PassThroughSourceReader struct {
+	inputs PassThroughInput
+	name   string
+}
+
+func (r *PassThroughSourceReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
+	sources := r.inputs.GetSources()
+	if _, ok := sources[r.name]; !ok {
+		panic("need an error")
+	}
+
+	return &templates.Output{
+		Source: &templates.Source{
+			URL:      sources[r.name].URL,
+			Revision: sources[r.name].Revision,
+		},
+	}, nil
+}
+
+func NewPassThroughSourceReader(name string, inputReader PassThroughInput) Reader {
+	return &PassThroughSourceReader{
+		name:   name,
+		inputs: inputReader,
+	}
 }

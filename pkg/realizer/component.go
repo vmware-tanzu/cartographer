@@ -77,69 +77,92 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	ctx = logr.NewContext(ctx, log)
 
 	var templateName string
-	var err error
+	var templateOption v1alpha1.TemplateOption
+	var stampReader stamp.Reader
+	var stampedObject *unstructured.Unstructured
+	var template templates.Reader
+	passThrough := false
+
+	// TODO: consider: should we build this only once, and pass it to the contextGenerator also?
+	inputGenerator := NewInputGenerator(resource, outputs)
+
 	if len(resource.TemplateOptions) > 0 {
-		templateName, err = r.findMatchingTemplateName(resource, blueprintName)
+		var err error
+		templateOption, err = r.findMatchingTemplateOption(resource, blueprintName)
 		if err != nil {
 			return nil, nil, nil, err
+		}
+		if templateOption.PassThrough != "" {
+			passThrough = true
+		} else {
+			templateName = templateOption.Name
 		}
 	} else {
 		templateName = resource.TemplateRef.Name
 	}
 
-	log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
+	if passThrough {
+		log.V(logger.DEBUG).Info("pass through template")
 
-	apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
-	if err != nil {
-		log.Error(err, "failed to get cluster template")
-		return nil, nil, nil, errors.GetTemplateError{
-			Err:           err,
-			ResourceName:  resource.Name,
-			TemplateName:  templateName,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+		var err error
+		stampReader, err = stamp.NewPassThroughReader(resource.TemplateRef.Kind, templateOption.PassThrough, inputGenerator)
+		if err != nil {
+			panic("whoops")
 		}
-	}
+	} else {
+		log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
-	template, err := templates.NewReaderFromAPI(apiTemplate)
-	if err != nil {
-		log.Error(err, "failed to get cluster template")
-		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
-	}
-
-	labels := r.resourceLabeler(resource)
-
-	stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
-	stampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
-	if err != nil {
-		log.Error(err, "failed to stamp resource")
-		return template, nil, nil, errors.StampError{
-			Err:           err,
-			TemplateName:  templateName,
-			TemplateKind:  resource.TemplateRef.Kind,
-			ResourceName:  resource.Name,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+		apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
+		if err != nil {
+			log.Error(err, "failed to get cluster template")
+			return nil, nil, nil, errors.GetTemplateError{
+				Err:           err,
+				ResourceName:  resource.Name,
+				TemplateName:  templateName,
+				BlueprintName: blueprintName,
+				BlueprintType: errors.SupplyChain,
+			}
 		}
-	}
 
-	err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
-	if err != nil {
-		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return template, nil, nil, errors.ApplyStampedObjectError{
-			Err:           err,
-			StampedObject: stampedObject,
-			ResourceName:  resource.Name,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
+		template, err = templates.NewReaderFromAPI(apiTemplate)
+		if err != nil {
+			log.Error(err, "failed to get cluster template")
+			return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 		}
-	}
 
-	inputGenerator := NewInputGenerator(resource, outputs)
-	stampReader, err := stamp.NewReader(apiTemplate, inputGenerator)
-	if err != nil {
-		log.Error(err, "failed to create new stamp reader")
-		return nil, nil, nil, fmt.Errorf("failed to create new stamp reader: %w", err)
+		labels := r.resourceLabeler(resource)
+
+		stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
+		stampedObject, err = stamper.Stamp(ctx, template.GetResourceTemplate())
+		if err != nil {
+			log.Error(err, "failed to stamp resource")
+			return template, nil, nil, errors.StampError{
+				Err:           err,
+				TemplateName:  templateName,
+				TemplateKind:  resource.TemplateRef.Kind,
+				ResourceName:  resource.Name,
+				BlueprintName: blueprintName,
+				BlueprintType: errors.SupplyChain,
+			}
+		}
+
+		err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+		if err != nil {
+			log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+			return template, nil, nil, errors.ApplyStampedObjectError{
+				Err:           err,
+				StampedObject: stampedObject,
+				ResourceName:  resource.Name,
+				BlueprintName: blueprintName,
+				BlueprintType: errors.SupplyChain,
+			}
+		}
+
+		stampReader, err = stamp.NewReader(apiTemplate, inputGenerator)
+		if err != nil {
+			log.Error(err, "failed to create new stamp reader")
+			return nil, nil, nil, fmt.Errorf("failed to create new stamp reader: %w", err)
+		}
 	}
 
 	output, err := stampReader.GetOutput(stampedObject)
@@ -164,11 +187,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	return template, stampedObject, output, nil
 }
 
-func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supplyChainName string) (string, error) {
+func (r *resourceRealizer) findMatchingTemplateOption(resource OwnerResource, supplyChainName string) (v1alpha1.TemplateOption, error) {
 	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateOptions))
 
 	if err != nil {
-		return "", errors.ResolveTemplateOptionError{
+		return v1alpha1.TemplateOption{}, errors.ResolveTemplateOptionError{
 			Err:           err,
 			ResourceName:  resource.Name,
 			OptionName:    resource.TemplateOptions[err.SelectorIndex()].Name,
@@ -183,7 +206,7 @@ func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supp
 			optionNames = append(optionNames, resource.TemplateOptions[optionIndex].Name)
 		}
 
-		return "", errors.TemplateOptionsMatchError{
+		return v1alpha1.TemplateOption{}, errors.TemplateOptionsMatchError{
 			ResourceName:  resource.Name,
 			OptionNames:   optionNames,
 			BlueprintName: supplyChainName,
@@ -191,5 +214,5 @@ func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supp
 		}
 	}
 
-	return resource.TemplateOptions[bestMatchingTemplateOptionsIndices[0]].Name, nil
+	return resource.TemplateOptions[bestMatchingTemplateOptionsIndices[0]], nil
 }
