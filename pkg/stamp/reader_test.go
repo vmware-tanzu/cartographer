@@ -41,11 +41,11 @@ func (deploymentInputFake) GetDeployment() *templates.SourceInput {
 	}
 }
 
-type allInputImpl struct {
-	deploymentInputImpl
+type allInputFake struct {
+	deploymentInputFake
 }
 
-func (a allInputImpl) GetSources() map[string]templates.SourceInput {
+func (a allInputFake) GetSources() map[string]templates.SourceInput {
 	return map[string]templates.SourceInput{
 		"my-name": {
 			URL:      "my-url",
@@ -55,7 +55,7 @@ func (a allInputImpl) GetSources() map[string]templates.SourceInput {
 	}
 }
 
-func (a allInputImpl) GetImages() map[string]templates.ImageInput {
+func (a allInputFake) GetImages() map[string]templates.ImageInput {
 	return map[string]templates.ImageInput{
 		"my-name": {
 			Image: "my-image",
@@ -64,7 +64,7 @@ func (a allInputImpl) GetImages() map[string]templates.ImageInput {
 	}
 }
 
-func (a allInputImpl) GetConfigs() map[string]templates.ConfigInput {
+func (a allInputFake) GetConfigs() map[string]templates.ConfigInput {
 	return map[string]templates.ConfigInput{
 		"my-name": {
 			Config: "my-config",
@@ -287,7 +287,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterDeploymentTemplate", "my-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterDeploymentTemplate", "my-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -302,7 +302,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can not be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-bad-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-bad-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -731,7 +731,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -746,7 +746,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can not be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-bad-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-bad-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -763,7 +763,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterImageTemplate", "my-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterImageTemplate", "my-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -777,7 +777,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can not be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterImageTemplate", "my-bad-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterImageTemplate", "my-bad-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -794,7 +794,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterConfigTemplate", "my-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterConfigTemplate", "my-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -809,7 +809,7 @@ var _ = Describe("Reader", func() {
 			Context("where the input can not be found", func() {
 				BeforeEach(func() {
 					var err error
-					reader, err = stamp.NewPassThroughReader("ClusterConfigTemplate", "my-bad-name", allInputImpl{})
+					reader, err = stamp.NewPassThroughReader("ClusterConfigTemplate", "my-bad-name", allInputFake{})
 					Expect(err).NotTo(HaveOccurred())
 				})
 
