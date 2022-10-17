@@ -320,14 +320,14 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		}
 	}
 
-	i.completeLabels(*workload, template)
+	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	blueprintParams, err := i.getBlueprintParams()
 	if err != nil {
 		return nil, fmt.Errorf("get blueprint params failed: %w", err)
 	}
 
-	paramGenerator := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, i.BlueprintParams, workload.Spec.Params)
+	paramGenerator := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
 	params := paramGenerator.Merge(template)
 
 	templatingContext, err := i.createTemplatingContext(*workload, params)
@@ -541,13 +541,13 @@ func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, er
 	return paramsData, nil // TODO: document
 }
 
-func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
+func (i *TemplateTestGivens) getSupplyChainInputs() (*Inputs, error) {
 	if i.SupplyChainInputsFile != "" && i.SupplyChainInputs != nil {
 		return nil, fmt.Errorf("only one of supplyChainInputs or supplyChainInputsFile may be set")
 	}
 
 	if i.SupplyChainInputsFile == "" && i.SupplyChainInputs == nil {
-		return &templates.Inputs{}, nil
+		return &Inputs{}, nil
 	}
 
 	if i.SupplyChainInputs != nil {
@@ -559,7 +559,7 @@ func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
 		return nil, fmt.Errorf("could not read supplyChainInputsFile: %w", err)
 	}
 
-	var inputs templates.Inputs
+	var inputs Inputs
 
 	err = yaml.Unmarshal(inputsFile, &inputs)
 	if err != nil {

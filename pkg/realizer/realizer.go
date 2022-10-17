@@ -81,7 +81,7 @@ func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResou
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type realizer struct {

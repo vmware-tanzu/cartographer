@@ -68,7 +68,7 @@ var _ = Describe("Params", func() {
 	}
 
 	DescribeTable("ParamsMerger",
-		func(templateParam *v1alpha1.TemplateParam,
+		func(templateParams realizer.TemplateParams,
 			blueprintParam *v1alpha1.BlueprintParam,
 			resourceParam *v1alpha1.BlueprintParam,
 			ownerParam *v1alpha1.OwnerParam,
