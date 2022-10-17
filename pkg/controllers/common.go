@@ -12,28 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package controllers
 
 import (
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"context"
+
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
 )
 
-type clusterTemplate struct {
-	template *v1alpha1.ClusterTemplate
-}
+//go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
-func NewClusterTemplateModel(template *v1alpha1.ClusterTemplate) *clusterTemplate {
-	return &clusterTemplate{template: template}
-}
-
-func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
-	return t.template.Spec
-}
-
-func (t *clusterTemplate) GetDefaultParams() v1alpha1.TemplateParams {
-	return t.template.Spec.Params
-}
-
-func (t *clusterTemplate) GetHealthRule() *v1alpha1.HealthRule {
-	return t.template.Spec.HealthRule
+//counterfeiter:generate . Realizer
+type Realizer interface {
+	Realize(ctx context.Context, resourceRealizer realizer.ResourceRealizer, blueprintName string, ownerResources []realizer.OwnerResource, resourceStatuses statuses.ResourceStatuses) error
 }

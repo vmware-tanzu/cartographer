@@ -31,6 +31,7 @@ import (
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
@@ -50,7 +51,7 @@ type event struct {
 var _ = Describe("Realize", func() {
 	var (
 		resourceRealizer               *realizerfakes.FakeResourceRealizer
-		rlzr                           realizer.Realizer
+		rlzr                           controllers.Realizer
 		rec                            *eventsfakes.FakeOwnerEventRecorder
 		healthyConditionEvaluator      realizer.HealthyConditionEvaluator
 		evaluatedHealthRules           []*v1alpha1.HealthRule
@@ -96,18 +97,6 @@ var _ = Describe("Realize", func() {
 			resource2             v1alpha1.SupplyChainResource
 		)
 		BeforeEach(func() {
-			resource1 = v1alpha1.SupplyChainResource{
-				Name: "resource1",
-			}
-			resource2 = v1alpha1.SupplyChainResource{
-				Name: "resource2",
-				Images: []v1alpha1.ResourceReference{
-					{
-						Name:     "my-image",
-						Resource: "resource1",
-					},
-				},
-			}
 			template1 = &v1alpha1.ClusterImageTemplate{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
@@ -132,6 +121,26 @@ var _ = Describe("Realize", func() {
 					},
 				},
 			}
+			resource1 = v1alpha1.SupplyChainResource{
+				Name: "resource1",
+				TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					Kind: template1.Kind,
+					Name: template1.Name,
+				},
+			}
+			resource2 = v1alpha1.SupplyChainResource{
+				Name: "resource2",
+				TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					Kind: template2.Kind,
+					Name: template2.Name,
+				},
+				Images: []v1alpha1.ResourceReference{
+					{
+						Name:     "my-image",
+						Resource: "resource1",
+					},
+				},
+			}
 			supplyChain = &v1alpha1.ClusterSupplyChain{
 				ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
 				Spec: v1alpha1.SupplyChainSpec{
@@ -141,12 +150,12 @@ var _ = Describe("Realize", func() {
 
 			outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs) (templates.Template, *unstructured.Unstructured, *templates.Output, error) {
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs) (templates.Reader, *unstructured.Unstructured, *templates.Output, error) {
 				executedResourceOrder = append(executedResourceOrder, resource.Name)
 				Expect(blueprintName).To(Equal("greatest-supply-chain"))
 				if resource.Name == "resource1" {
 					Expect(outputs).To(Equal(realizer.NewOutputs()))
-					template, err := templates.NewModelFromAPI(template1)
+					template, err := templates.NewReaderFromAPI(template1)
 					Expect(err).NotTo(HaveOccurred())
 					stampedObj := &unstructured.Unstructured{}
 					stampedObj.SetName("obj1")
@@ -158,7 +167,7 @@ var _ = Describe("Realize", func() {
 					expectedSecondResourceOutputs.AddOutput("resource1", outputFromFirstResource)
 					Expect(outputs).To(Equal(expectedSecondResourceOutputs))
 				}
-				template, err := templates.NewModelFromAPI(template2)
+				template, err := templates.NewReaderFromAPI(template2)
 				Expect(err).NotTo(HaveOccurred())
 				stampedObj := &unstructured.Unstructured{}
 				stampedObj.SetName("obj2")
@@ -267,7 +276,7 @@ var _ = Describe("Realize", func() {
 		})
 
 		It("returns the first error encountered realizing a resource and continues to realize", func() {
-			template, err := templates.NewModelFromAPI(template2)
+			template, err := templates.NewReaderFromAPI(template2)
 			Expect(err).NotTo(HaveOccurred())
 			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
 			resourceRealizer.DoReturnsOnCall(1, template, &unstructured.Unstructured{}, nil, nil)
@@ -288,9 +297,9 @@ var _ = Describe("Realize", func() {
 
 	Context("there are previous resources", func() {
 		var (
-			templateModel1    templates.Template
-			templateModel2    templates.Template
-			templateModel3    templates.Template
+			templateModel1    templates.Reader
+			templateModel2    templates.Reader
+			templateModel3    templates.Reader
 			obj               *unstructured.Unstructured
 			previousResources []v1alpha1.ResourceStatus
 			previousTime      metav1.Time
@@ -392,7 +401,7 @@ var _ = Describe("Realize", func() {
 					Name: "my-source-2-template",
 				},
 			}
-			templateModel1, err = templates.NewModelFromAPI(template1)
+			templateModel1, err = templates.NewReaderFromAPI(template1)
 			Expect(err).NotTo(HaveOccurred())
 
 			template2 := &v1alpha1.ClusterImageTemplate{
@@ -401,7 +410,7 @@ var _ = Describe("Realize", func() {
 					Name: "my-image-template",
 				},
 			}
-			templateModel2, err = templates.NewModelFromAPI(template2)
+			templateModel2, err = templates.NewReaderFromAPI(template2)
 			Expect(err).NotTo(HaveOccurred())
 
 			template3 := &v1alpha1.ClusterConfigTemplate{
@@ -410,7 +419,7 @@ var _ = Describe("Realize", func() {
 					Name: "my-config-template",
 				},
 			}
-			templateModel3, err = templates.NewModelFromAPI(template3)
+			templateModel3, err = templates.NewReaderFromAPI(template3)
 			Expect(err).NotTo(HaveOccurred())
 
 			resourceRealizer.DoReturnsOnCall(0, templateModel1, &unstructured.Unstructured{}, nil, nil)

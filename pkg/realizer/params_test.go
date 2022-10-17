@@ -89,7 +89,7 @@ var _ = Describe("Params", func() {
 				ownerParams = append(ownerParams, *ownerParam)
 			}
 
-			actual := realizer.NewParamGenerator(resourceParams, blueprintParams, ownerParams).GetParams(templateParams)
+			actual := realizer.NewParamMerger(resourceParams, blueprintParams, ownerParams).Merge(templateParams)
 
 			if expected == "" {
 				Expect(actual).To(BeEmpty())

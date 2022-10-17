@@ -17,38 +17,32 @@ package templates
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 )
 
-const PREVIEW_CHARACTER_LIMIT = 1024
-
-type Template interface {
-	GetResourceTemplate() v1alpha1.TemplateSpec
+type Reader interface {
 	GetDefaultParams() v1alpha1.TemplateParams
+
+	// GetResourceTemplate returns the actual representation of a resource to stamp, and how to handle it
+	// TODO: we should be expecting something with a [ytt|template] interface, the health rules and params should
+	// not be fetched here
+	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
-	GetOutput() (*Output, error)
-	GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error)
-	SetInputs(*Inputs)
-	SetStampedObject(stampedObject *unstructured.Unstructured)
-	GetName() string
-	GetKind() string
 }
 
-func NewModelFromAPI(template client.Object) (Template, error) {
+func NewReaderFromAPI(template client.Object) (Reader, error) {
 	switch v := template.(type) {
 
 	case *v1alpha1.ClusterSourceTemplate:
-		return NewClusterSourceTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterSourceTemplateModel(v), nil
 	case *v1alpha1.ClusterImageTemplate:
-		return NewClusterImageTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterImageTemplateModel(v), nil
 	case *v1alpha1.ClusterConfigTemplate:
-		return NewClusterConfigTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterConfigTemplateModel(v), nil
 	case *v1alpha1.ClusterDeploymentTemplate:
-		return NewClusterDeploymentTemplateModel(v, eval.EvaluatorBuilder()), nil
+		return NewClusterDeploymentTemplateModel(v), nil
 	case *v1alpha1.ClusterTemplate:
 		return NewClusterTemplateModel(v), nil
 	}

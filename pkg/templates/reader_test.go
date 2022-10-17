@@ -27,7 +27,7 @@ var _ = Describe("Templates", func() {
 	var (
 		err           error
 		apiTemplate   client.Object
-		templateModel templates.Template
+		templateModel templates.Reader
 	)
 
 	ItReturnsAHelpfulError := func(expectedErrorSubstring string) {
@@ -44,10 +44,10 @@ var _ = Describe("Templates", func() {
 	}
 
 	JustBeforeEach(func() {
-		templateModel, err = templates.NewModelFromAPI(apiTemplate)
+		templateModel, err = templates.NewReaderFromAPI(apiTemplate)
 	})
 
-	Describe("NewModelFromAPI", func() {
+	Describe("NewReaderFromAPI", func() {
 		Context("when passed a ClusterSourceTemplate", func() {
 			BeforeEach(func() {
 				apiTemplate = &v1alpha1.ClusterSourceTemplate{}

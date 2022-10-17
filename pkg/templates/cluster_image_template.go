@@ -17,74 +17,15 @@ package templates
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
-	"crypto/sha256"
-	"fmt"
-
-	"gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/strings"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
 type clusterImageTemplate struct {
-	template      *v1alpha1.ClusterImageTemplate
-	evaluator     evaluator
-	stampedObject *unstructured.Unstructured
+	template *v1alpha1.ClusterImageTemplate
 }
 
-func (t *clusterImageTemplate) GetKind() string {
-	return t.template.Kind
-}
-
-func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate, eval evaluator) *clusterImageTemplate {
-	return &clusterImageTemplate{template: template, evaluator: eval}
-}
-
-func (t *clusterImageTemplate) GetName() string {
-	return t.template.Name
-}
-
-func (t *clusterImageTemplate) SetInputs(_ *Inputs) {}
-
-func (t *clusterImageTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
-	t.stampedObject = stampedObject
-}
-
-func (t *clusterImageTemplate) GetOutput() (*Output, error) {
-	image, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ImagePath, t.stampedObject.UnstructuredContent())
-	if err != nil {
-		return nil, JsonPathError{
-			Err: fmt.Errorf("failed to evaluate the url path [%s]: %w",
-				t.template.Spec.ImagePath, err),
-			expression: t.template.Spec.ImagePath,
-		}
-	}
-
-	return &Output{
-		Image: image,
-	}, nil
-}
-
-func (t *clusterImageTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
-	if output == nil || output.Image == nil {
-		return nil, nil
-	}
-
-	imageBytes, err := yaml.Marshal(output.Image)
-	if err != nil {
-		return nil, err
-	}
-
-	imageSHA := sha256.Sum256(imageBytes)
-
-	return []v1alpha1.Output{
-		{
-			Name:    "image",
-			Preview: strings.ShortenString(string(imageBytes), PREVIEW_CHARACTER_LIMIT),
-			Digest:  fmt.Sprintf("sha256:%x", imageSHA),
-		},
-	}, nil
+func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate) *clusterImageTemplate {
+	return &clusterImageTemplate{template: template}
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

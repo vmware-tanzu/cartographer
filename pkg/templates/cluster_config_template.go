@@ -15,74 +15,15 @@
 package templates
 
 import (
-	"crypto/sha256"
-	"fmt"
-
-	"gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/strings"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
 type clusterConfigTemplate struct {
-	template      *v1alpha1.ClusterConfigTemplate
-	evaluator     evaluator
-	stampedObject *unstructured.Unstructured
+	template *v1alpha1.ClusterConfigTemplate
 }
 
-func (t *clusterConfigTemplate) GetKind() string {
-	return t.template.Kind
-}
-
-func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate, eval evaluator) *clusterConfigTemplate {
-	return &clusterConfigTemplate{template: template, evaluator: eval}
-}
-
-func (t *clusterConfigTemplate) GetName() string {
-	return t.template.Name
-}
-
-func (t *clusterConfigTemplate) SetInputs(_ *Inputs) {}
-
-func (t *clusterConfigTemplate) SetStampedObject(stampedObject *unstructured.Unstructured) {
-	t.stampedObject = stampedObject
-}
-
-func (t *clusterConfigTemplate) GetOutput() (*Output, error) {
-	config, err := t.evaluator.EvaluateJsonPath(t.template.Spec.ConfigPath, t.stampedObject.UnstructuredContent())
-	if err != nil {
-		return nil, JsonPathError{
-			Err: fmt.Errorf("failed to evaluate spec.configPath [%s]: %w",
-				t.template.Spec.ConfigPath, err),
-			expression: t.template.Spec.ConfigPath,
-		}
-	}
-
-	return &Output{
-		Config: config,
-	}, nil
-}
-
-func (t *clusterConfigTemplate) GenerateResourceOutput(output *Output) ([]v1alpha1.Output, error) {
-	if output == nil || output.Config == nil {
-		return nil, nil
-	}
-
-	configBytes, err := yaml.Marshal(output.Config)
-	if err != nil {
-		return nil, err
-	}
-
-	configSHA := sha256.Sum256(configBytes)
-
-	return []v1alpha1.Output{
-		{
-			Name:    "config",
-			Preview: strings.ShortenString(string(configBytes), PREVIEW_CHARACTER_LIMIT),
-			Digest:  fmt.Sprintf("sha256:%x", configSHA),
-		},
-	}, nil
+func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate) *clusterConfigTemplate {
+	return &clusterConfigTemplate{template: template}
 }
 
 func (t *clusterConfigTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

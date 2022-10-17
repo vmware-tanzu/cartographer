@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package stamp_test
 
 import (
-	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-type clusterTemplate struct {
-	template *v1alpha1.ClusterTemplate
-}
-
-func NewClusterTemplateModel(template *v1alpha1.ClusterTemplate) *clusterTemplate {
-	return &clusterTemplate{template: template}
-}
-
-func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
-	return t.template.Spec
-}
-
-func (t *clusterTemplate) GetDefaultParams() v1alpha1.TemplateParams {
-	return t.template.Spec.Params
-}
-
-func (t *clusterTemplate) GetHealthRule() *v1alpha1.HealthRule {
-	return t.template.Spec.HealthRule
+func TestStamp(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Stamp Suite")
 }
