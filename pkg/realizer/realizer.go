@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/strings"
@@ -85,16 +86,19 @@ type ResourceRealizer interface {
 
 type realizer struct {
 	healthyConditionEvaluator HealthyConditionEvaluator
+	mapper                    meta.RESTMapper
 }
 
 type HealthyConditionEvaluator func(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition
 
-func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator) *realizer {
+//counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
+func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator, mapper meta.RESTMapper) *realizer {
 	if healthyConditionEvaluator == nil {
 		healthyConditionEvaluator = healthcheck.DetermineHealthCondition
 	}
 	return &realizer{
 		healthyConditionEvaluator: healthyConditionEvaluator,
+		mapper:                    mapper,
 	}
 }
 
@@ -108,7 +112,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs)
+		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
@@ -140,7 +144,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			if previousResourceStatus != nil {
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
-			realizedResource = generateRealizedResource(resource, template, stampedObject, out, previousRealizedResource)
+			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource)
 			var previousOutputs []v1alpha1.Output
 			if previousRealizedResource != nil {
 				previousOutputs = previousRealizedResource.Outputs
@@ -167,7 +171,9 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func generateRealizedResource(resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+	log := logr.FromContextOrDiscard(ctx)
+
 	if previousRealizedResource == nil {
 		previousRealizedResource = &v1alpha1.RealizedResource{}
 	}
@@ -202,13 +208,22 @@ func generateRealizedResource(resource OwnerResource, template templates.Reader,
 		outputs = getOutputs(previousRealizedResource, output)
 	}
 
-	var stampedRef *corev1.ObjectReference
+	var stampedRef *v1alpha1.StampedRef
 	if stampedObject != nil {
-		stampedRef = &corev1.ObjectReference{
-			Kind:       stampedObject.GetKind(),
-			Namespace:  stampedObject.GetNamespace(),
-			Name:       stampedObject.GetName(),
-			APIVersion: stampedObject.GetAPIVersion(),
+		qualifiedResource, err := utils.GetQualifiedResource(r.mapper, stampedObject)
+		if err != nil {
+			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
+			qualifiedResource = "could not fetch - see logs for 'failed to retrieve qualified resource name'"
+		}
+
+		stampedRef = &v1alpha1.StampedRef{
+			ObjectReference: &corev1.ObjectReference{
+				Kind:       stampedObject.GetKind(),
+				Namespace:  stampedObject.GetNamespace(),
+				Name:       stampedObject.GetName(),
+				APIVersion: stampedObject.GetAPIVersion(),
+			},
+			Resource: qualifiedResource,
 		}
 	}
 

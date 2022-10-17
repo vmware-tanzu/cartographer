@@ -20,8 +20,6 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 const NoJsonpathContext = "<no jsonpath context>"
@@ -126,11 +124,12 @@ func (e StampError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err           error
-	ResourceName  string
-	StampedObject *unstructured.Unstructured
-	BlueprintName string
-	BlueprintType string
+	Err               error
+	ResourceName      string
+	StampedObject     *unstructured.Unstructured
+	BlueprintName     string
+	BlueprintType     string
+	QualifiedResource string
 }
 
 func (e RetrieveOutputError) Error() string {
@@ -138,7 +137,7 @@ func (e RetrieveOutputError) Error() string {
 		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in %s [%s]: %w",
 			e.StampedObject.GetNamespace(),
 			e.StampedObject.GetName(),
-			utils.GetFullyQualifiedType(e.StampedObject),
+			e.QualifiedResource,
 			e.ResourceName,
 			e.BlueprintType,
 			e.BlueprintName,
@@ -149,7 +148,7 @@ func (e RetrieveOutputError) Error() string {
 		e.JsonPathExpression(),
 		e.StampedObject.GetNamespace(),
 		e.StampedObject.GetName(),
-		utils.GetFullyQualifiedType(e.StampedObject),
+		e.QualifiedResource,
 		e.ResourceName,
 		e.BlueprintType,
 		e.BlueprintName,
@@ -171,6 +170,10 @@ type JsonPathErrorContext interface {
 
 func (e RetrieveOutputError) GetResourceName() string {
 	return e.ResourceName
+}
+
+func (e RetrieveOutputError) GetQualifiedResource() string {
+	return e.QualifiedResource
 }
 
 func WrapUnhandledError(err error) error {

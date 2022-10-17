@@ -37,3 +37,7 @@ func (t *clusterDeploymentTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 func (t *clusterDeploymentTemplate) GetHealthRule() *v1alpha1.HealthRule {
 	return t.template.Spec.HealthRule
 }
+
+func (t *clusterDeploymentTemplate) IsYTTTemplate() bool {
+	return t.template.Spec.Ytt != ""
+}

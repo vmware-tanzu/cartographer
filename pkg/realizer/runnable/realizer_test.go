@@ -27,14 +27,17 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	realizer "github.com/vmware-tanzu/cartographer/pkg/realizer/runnable"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
@@ -53,6 +56,7 @@ var _ = Describe("Realizer", func() {
 		runnable            *v1alpha1.Runnable
 		createdUnstructured *unstructured.Unstructured
 		discoveryClient     *runnablefakes.FakeDiscoveryInterface
+		fakeMapper          *realizerfakes.FakeRESTMapper
 	)
 
 	BeforeEach(func() {
@@ -63,7 +67,8 @@ var _ = Describe("Realizer", func() {
 		systemRepo = &repositoryfakes.FakeRepository{}
 		runnableRepo = &repositoryfakes.FakeRepository{}
 		discoveryClient = &runnablefakes.FakeDiscoveryInterface{}
-		rlzr = realizer.NewRealizer()
+		fakeMapper = &realizerfakes.FakeRESTMapper{}
+		rlzr = realizer.NewRealizer(fakeMapper)
 
 		runnable = &v1alpha1.Runnable{
 			ObjectMeta: metav1.ObjectMeta{
@@ -511,12 +516,26 @@ var _ = Describe("Realizer", func() {
 			}
 
 			runnableRepo.ListUnstructuredReturns([]*unstructured.Unstructured{createdUnstructured}, nil)
+
+			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "EXAMPLE.COM",
+					Version:  "v1",
+					Resource: "athing",
+				},
+				GroupVersionKind: schema.GroupVersionKind{
+					Group:   "",
+					Version: "",
+					Kind:    "",
+				},
+				Scope: nil,
+			}, nil)
 		})
 
 		It("returns RetrieveOutputError", func() {
 			_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [athing] for run template [my-template]: failed to evaluate path [data.hasnot]: jsonpath returned empty list: data.hasnot`))
+			Expect(err.Error()).To(ContainSubstring(`unable to retrieve outputs from stamped object [my-important-ns/my-stamped-resource-] of type [athing.EXAMPLE.COM] for run template [my-template]: failed to evaluate path [data.hasnot]: jsonpath returned empty list: data.hasnot`))
 			Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableRetrieveOutputError"))
 		})
 	})

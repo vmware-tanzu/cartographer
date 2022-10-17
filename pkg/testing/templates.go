@@ -16,8 +16,10 @@ package testing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -47,6 +49,39 @@ type templateType interface {
 // TemplateTestSuite is a collection of named template tests which may be run together
 type TemplateTestSuite map[string]*TemplateTestCase
 
+type FailedTest struct {
+	name string
+	err  error
+}
+
+// Assert allows testing a TemplateTestSuite when a *testing.T is not available,
+// e.g. when tests are not run from 'go test'
+// It returns a list of the named tests that passed and a list of the named tests that failed with their errors
+func (s *TemplateTestSuite) Assert() ([]string, []*FailedTest) {
+	var (
+		passedTests []string
+		failedTests []*FailedTest
+	)
+
+	testsToRun, _ := s.getTestsToRun()
+
+	for name, testCase := range testsToRun {
+		err := testCase.Run()
+		if err != nil {
+			failedTests = append(failedTests, &FailedTest{name: name, err: err})
+		} else {
+			passedTests = append(passedTests, name)
+		}
+	}
+
+	return passedTests, failedTests
+}
+
+func (s *TemplateTestSuite) HasFocusedTests() bool {
+	_, focused := s.getTestsToRun()
+	return focused
+}
+
 func (s *TemplateTestSuite) Run(t *testing.T) {
 	testsToRun, focused := s.getTestsToRun()
 
@@ -57,7 +92,10 @@ func (s *TemplateTestSuite) Run(t *testing.T) {
 	for name, testCase := range testsToRun {
 		tc := testCase
 		t.Run(name, func(t *testing.T) {
-			tc.Run(t)
+			err := tc.Run()
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -73,7 +111,10 @@ func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
 		tc := testCase
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			tc.Run(t)
+			err := tc.Run()
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -112,22 +153,26 @@ type TemplateTestCase struct {
 	Focus                bool
 }
 
-func (c *TemplateTestCase) Run(t *testing.T) {
+func (c *TemplateTestCase) Run() error {
 	expectedObject, err := c.Expect.getExpectedObject()
 	if err != nil {
-		t.Fatalf("failed to get expected object: %v", err)
+		return fmt.Errorf("failed to get expected object: %w", err)
 	}
 
 	actualObject, err := c.Given.getActualObject()
-	if err != nil {
-		t.Fatalf("failed to get actual object: %v", err)
+	if errors.Is(err, yttNotFound) {
+		return fmt.Errorf("test requires ytt, but ytt was not found in path")
+	} else if err != nil {
+		return fmt.Errorf("failed to get actual object: %w", err)
 	}
 
 	c.stripIgnoredFields(expectedObject, actualObject)
 
 	if diff := cmp.Diff(expectedObject.Object, actualObject.Object); diff != "" {
-		t.Fatalf("expected does not equal actual: (-expected +actual):\n%s", diff)
+		return fmt.Errorf("expected does not equal actual: (-expected +actual):\n%s", diff)
 	}
+
+	return nil
 }
 
 func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
@@ -233,15 +278,17 @@ func (e *TemplateTestExpectation) getExpectedObjectFromFile() (*unstructured.Uns
 // Any outputs expected from earlier templates in a supply chain may be provided in SupplyChainInputs.
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
-	TemplateFile      string
-	Template          templateType
-	WorkloadFile      string
-	Workload          *v1alpha1.Workload
-	BlueprintParams   []v1alpha1.BlueprintParam
-	YttValues         Values
-	YttFiles          []string
-	labels            map[string]string
-	SupplyChainInputs Inputs
+	TemplateFile          string
+	Template              templateType
+	WorkloadFile          string
+	Workload              *v1alpha1.Workload
+	BlueprintParams       []v1alpha1.BlueprintParam
+	BlueprintParamsFile   string
+	YttValues             Values
+	YttFiles              []string
+	labels                map[string]string
+	SupplyChainInputs     *Inputs
+	SupplyChainInputsFile string
 }
 
 func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
@@ -249,16 +296,16 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 
 	workload, err := i.getWorkload()
 	if err != nil {
-		return nil, fmt.Errorf("get workload failed: %v", err)
+		return nil, fmt.Errorf("get workload failed: %w", err)
 	}
 
 	apiTemplate, err := i.getPopulatedTemplate(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("get populated template failed: %v", err)
+		return nil, fmt.Errorf("get populated template failed: %w", err)
 	}
 
 	if err = apiTemplate.ValidateCreate(); err != nil {
-		return nil, fmt.Errorf("template validation failed: %v", err)
+		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
 
 	template, err := templates.NewReaderFromAPI(apiTemplate)
@@ -266,17 +313,32 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("failed to get cluster template")
 	}
 
-	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
+	if template.IsYTTTemplate() {
+		err = ensureYTTAvailable(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("ensure YTT available: %w", err)
+		}
+	}
+
+	i.completeLabels(*workload, template)
+
+	blueprintParams, err := i.getBlueprintParams()
+	if err != nil {
+		return nil, fmt.Errorf("get blueprint params failed: %w", err)
+	}
 
 	paramGenerator := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, i.BlueprintParams, workload.Spec.Params)
 	params := paramGenerator.Merge(template)
 
-	templatingContext := i.createTemplatingContext(*workload, params)
+	templatingContext, err := i.createTemplatingContext(*workload, params)
+	if err != nil {
+		return nil, fmt.Errorf("create templating context: %w", err)
+	}
 
 	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
 	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
-		return nil, fmt.Errorf("could not stamp: %v", err)
+		return nil, fmt.Errorf("could not stamp: %w", err)
 	}
 
 	return actualStampedObject, nil
@@ -322,6 +384,12 @@ func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (template
 	)
 
 	if len(i.YttValues) != 0 || len(i.YttFiles) != 0 {
+		err = ensureYTTAvailable(ctx)
+
+		if err != nil {
+			return nil, fmt.Errorf("ensure ytt available: %w", err)
+		}
+
 		templateFile, err = i.preprocessYtt(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to preprocess ytt: %w", err)
@@ -370,6 +438,20 @@ func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (template
 	return apiTemplate, nil
 }
 
+var yttNotFound = errors.New("ytt must be installed in PATH but was not found")
+
+func ensureYTTAvailable(ctx context.Context) error {
+	yttTestArgs := []string{"ytt", "--version"}
+	_, _, err := Cmd(yttTestArgs...).RunWithOutput(ctx)
+	if errors.Is(err, exec.ErrNotFound) {
+		return yttNotFound
+	} else if err != nil {
+		return fmt.Errorf("run ytt test args: %w", err)
+	}
+
+	return nil
+}
+
 func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) {
 	yt := YTT()
 	yt.Values(i.YttValues)
@@ -394,8 +476,13 @@ func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, name str
 	i.labels["carto.run/cluster-template-name"] = name
 }
 
-func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) map[string]interface{} {
-	inputs := i.SupplyChainInputs
+func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
+	var inputs *Inputs
+
+	inputs, err := i.getSupplyChainInputs()
+	if err != nil {
+		return nil, fmt.Errorf("get supply chain inputs: %w", err)
+	}
 
 	templatingContext := map[string]interface{}{
 		"workload": workload,
@@ -423,7 +510,63 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 			templatingContext["config"] = config.Config
 		}
 	}
-	return templatingContext
+	return templatingContext, nil
+}
+
+func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, error) {
+	if i.BlueprintParamsFile != "" && i.BlueprintParams != nil {
+		return nil, fmt.Errorf("only one of blueprintParams or blueprintParamsFile may be set")
+	}
+
+	if i.BlueprintParamsFile == "" && i.BlueprintParams == nil {
+		return []v1alpha1.BlueprintParam{}, nil
+	}
+
+	if i.BlueprintParams != nil {
+		return i.BlueprintParams, nil
+	}
+
+	paramsFile, err := os.ReadFile(i.BlueprintParamsFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
+	}
+
+	var paramsData []v1alpha1.BlueprintParam
+
+	err = yaml.Unmarshal(paramsFile, &paramsData)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshall params: %w", err)
+	}
+
+	return paramsData, nil // TODO: document
+}
+
+func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
+	if i.SupplyChainInputsFile != "" && i.SupplyChainInputs != nil {
+		return nil, fmt.Errorf("only one of supplyChainInputs or supplyChainInputsFile may be set")
+	}
+
+	if i.SupplyChainInputsFile == "" && i.SupplyChainInputs == nil {
+		return &templates.Inputs{}, nil
+	}
+
+	if i.SupplyChainInputs != nil {
+		return i.SupplyChainInputs, nil
+	}
+
+	inputsFile, err := os.ReadFile(i.SupplyChainInputsFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read supplyChainInputsFile: %w", err)
+	}
+
+	var inputs templates.Inputs
+
+	err = yaml.Unmarshal(inputsFile, &inputs)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshall params: %w", err)
+	}
+
+	return &inputs, nil
 }
 
 // StringParam is a helper struct for use with the BuildBlueprintStringParams method

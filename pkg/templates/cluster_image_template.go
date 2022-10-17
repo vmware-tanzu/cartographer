@@ -39,3 +39,7 @@ func (t *clusterImageTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 func (t *clusterImageTemplate) GetHealthRule() *v1alpha1.HealthRule {
 	return t.template.Spec.HealthRule
 }
+
+func (t *clusterImageTemplate) IsYTTTemplate() bool {
+	return t.template.Spec.Ytt != ""
+}

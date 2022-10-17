@@ -30,6 +30,7 @@ type Reader interface {
 	// not be fetched here
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
+	IsYTTTemplate() bool
 }
 
 func NewReaderFromAPI(template client.Object) (Reader, error) {

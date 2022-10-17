@@ -67,8 +67,8 @@ var _ = Describe("Params", func() {
 		Value: apiextensionsv1.JSON{Raw: []byte("from the owner")},
 	}
 
-	DescribeTable("ParamsBuilder",
-		func(templateParams realizer.TemplateParams,
+	DescribeTable("ParamsMerger",
+		func(templateParam *v1alpha1.TemplateParam,
 			blueprintParam *v1alpha1.BlueprintParam,
 			resourceParam *v1alpha1.BlueprintParam,
 			ownerParam *v1alpha1.OwnerParam,
