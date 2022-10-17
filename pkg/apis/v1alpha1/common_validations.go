@@ -27,19 +27,31 @@ import (
 
 func validateResourceOptions(options []TemplateOption, validPaths map[string]bool, validPrefixes []string) error {
 	for _, option := range options {
+		if option.Name != "" && option.PassThrough != "" {
+			return fmt.Errorf("exactly one of option.Name or option.PassThrough must be specified, found both")
+		}
+
+		if option.Name == "" && option.PassThrough == "" {
+			return fmt.Errorf("exactly one of option.Name or option.PassThrough must be specified, found neither")
+		}
+
 		if err := validateSelector(option.Selector, validPaths, validPrefixes); err != nil {
 			return fmt.Errorf("error validating option [%s] selector: %w", option.Name, err)
 		}
 	}
 
 	for _, option1 := range options {
+		name1 := option1.Name
+		if name1 == "" {
+			name1 = "passThrough"
+		}
 		for _, option2 := range options {
+			name2 := option2.Name
+			if name2 == "" {
+				name2 = "passThrough"
+			}
 			if option1.Name != option2.Name && reflect.DeepEqual(option1.Selector, option2.Selector) {
-				return fmt.Errorf(
-					"duplicate selector found in options [%s, %s]",
-					option1.Name,
-					option2.Name,
-				)
+				return fmt.Errorf("duplicate selector found in options [%s, %s]", name1, name2)
 			}
 		}
 	}
