@@ -57,8 +57,8 @@ var rootCmd = &cobra.Command{
 	Use:     "cartotest",
 	Version: version,
 	Short:   "cartotest - test Cartographer files",
-	Long: `cartotest is a CLI to verify the output of your Cartographer files,
-   
+	Long: `cartotest is a CLI to verify the output of your Cartographer files
+This version tests only templates with the 'templates' command
 Read more at cartographer.sh`,
 	Args: cobra.NoArgs,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -67,6 +67,16 @@ Read more at cartographer.sh`,
 			log.SetLevel(log.DebugLevel)
 		}
 	},
+}
+
+var templateCmd = &cobra.Command{
+	Use:     "templates",
+	Version: version,
+	Short:   "templates tests directories of templates",
+	Long: `the templates command allows assertion that a given template will create an expected object.
+Users can mock the templating context that would be available from the supply chain.
+Read more at cartographer.sh`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		cmd.SilenceErrors = true
@@ -84,8 +94,10 @@ Read more at cartographer.sh`,
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&directory, "directory", "d", "", "directory to test")
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "output logs and increase test failure verbosity")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "output logs and increase test failure verbosity")
 
-	_ = rootCmd.MarkFlagRequired("directory")
+	rootCmd.AddCommand(templateCmd)
+	templateCmd.Flags().StringVarP(&directory, "directory", "d", "", "directory to test")
+
+	_ = templateCmd.MarkFlagRequired("directory")
 }
