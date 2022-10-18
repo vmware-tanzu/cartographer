@@ -534,6 +534,80 @@ var _ = Describe("Delivery Validation", func() {
 				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("option name and option pass through both not specified", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("options with pass through", func() {
+
+			Context("option name and option pass through both specified", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("2 options with identical requirements", func() {
+				Context("selectors are identical", func() {
+					BeforeEach(func() {
+						delivery.Spec.Resources[0].TemplateRef.Options[0].Selector = delivery.Spec.Resources[0].TemplateRef.Options[1].Selector
+						delivery.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty"
+						delivery.Spec.Resources[0].TemplateRef.Options[1].Name = ""
+					})
+
+					It("on create, it rejects the Resource", func() {
+						Expect(delivery.ValidateCreate()).To(MatchError(
+							"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+							"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					})
+				})
+			})
+
+		})
 	})
 
 	Describe("OneOf Selector, SelectorMatchExpressions, or SelectorMatchFields", func() {
