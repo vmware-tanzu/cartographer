@@ -42,3 +42,79 @@ status:
   supplyChainRef:
     name: responsible-ops---options-passthrough
     kind: ClusterSupplyChain
+  resources:
+    - name: source-provider
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: source---options-passthrough
+      stampedRef:
+        apiVersion: test.run/v1alpha1
+        kind: Test
+        name: test-source
+        resource: tests.test.run
+      conditions:
+      - type: ResourceSubmitted
+        reason: ResourceSubmissionComplete
+        status: "True"
+      - type: Healthy
+        reason: OutputsAvailable
+        status: "True"
+      - type: Ready
+        reason: Ready
+        status: "True"
+      outputs:
+        - digest: sha256:87d44d7049a641ab2a679409d36a87450c5197849e2b0515b8838c53f4db541b
+          name: url
+          preview: |  
+            not-tested
+        - digest: sha256:656fa43debed6cd70291f014c9a2847ee4d39cf6b1f031530b844596a5c88ebe
+          name: revision
+          preview: |
+            test-source
+    - name: source-tester
+      inputs:
+        - name: source-provider
+      conditions:
+        - type: ResourceSubmitted
+          reason: PassThrough
+          status: "True"
+        - type: Ready
+          reason: Ready
+          status: "True"
+      outputs:
+        - digest: sha256:87d44d7049a641ab2a679409d36a87450c5197849e2b0515b8838c53f4db541b
+          name: url
+          preview: |
+            not-tested
+        - digest: sha256:656fa43debed6cd70291f014c9a2847ee4d39cf6b1f031530b844596a5c88ebe
+          name: revision
+          preview: |
+            test-source
+    - name: image-provider
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterImageTemplate
+        name: image---options-passthrough
+      stampedRef:
+        apiVersion: test.run/v1alpha1
+        kind: Test
+        name: test-image
+        resource: tests.test.run
+      conditions:
+        - type: ResourceSubmitted
+          reason: ResourceSubmissionComplete
+          status: "True"
+        - type: Healthy
+          reason: OutputsAvailable
+          status: "True"
+        - type: Ready
+          reason: Ready
+          status: "True"
+      outputs:
+        - digest: sha256:87d44d7049a641ab2a679409d36a87450c5197849e2b0515b8838c53f4db541b
+          name: image
+          preview: |
+            not-tested
+      inputs:
+        - name: source-tester

@@ -135,7 +135,12 @@ type RetrieveOutputError struct {
 
 func (e RetrieveOutputError) Error() string {
 	if e.PassThroughInput != "" {
-		return fmt.Errorf("unable to retrieve outputs from pass through [%s]: %w", e.PassThroughInput, e.Err).Error()
+		return fmt.Errorf("unable to retrieve outputs from pass through [%s] for resource [%s] in %s [%s]: %w",
+			e.PassThroughInput,
+			e.ResourceName,
+			e.BlueprintType,
+			e.BlueprintName,
+			e.Err).Error()
 	}
 
 	if e.JsonPathExpression() == NoJsonpathContext {
