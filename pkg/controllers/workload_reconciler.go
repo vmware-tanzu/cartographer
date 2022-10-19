@@ -58,7 +58,7 @@ type WorkloadReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
-	Realizer                realizer.Realizer
+	Realizer                Realizer
 	conditionManager        conditions.ConditionManager
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
@@ -134,7 +134,8 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
-	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, workload.Spec.Params, r.Repo, supplyChain.Spec.Params, buildWorkloadResourceLabeler(workload, supplyChain))
+	contextGenerator := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
+	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, contextGenerator, r.Repo, buildWorkloadResourceLabeler(workload, supplyChain))
 	if err != nil {
 		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")

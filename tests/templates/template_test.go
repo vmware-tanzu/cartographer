@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	cartotesting "github.com/vmware-tanzu/cartographer/pkg/testing"
 )
 
@@ -167,7 +167,7 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: filepath.Join("kpack", "template.yaml"),
 				WorkloadFile: filepath.Join("kpack", "workload.yaml"),
-				SupplyChainInputs: &templates.Inputs{
+				SupplyChainInputs: &cartotesting.Inputs{
 					Sources: map[string]templates.SourceInput{
 						"source": {
 							URL: "some-passed-on-url",

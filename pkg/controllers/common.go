@@ -12,22 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package controllers
 
-// TODO: This does not belong here, not sure where?
+import (
+	"context"
 
-type SourceInput struct {
-	URL      interface{} `json:"url"`
-	Revision interface{} `json:"revision"`
-	Name     string      `json:"name"`
-}
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/statuses"
+)
 
-type ImageInput struct {
-	Image interface{} `json:"image"`
-	Name  string      `json:"name"`
-}
+//go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
-type ConfigInput struct {
-	Config interface{} `json:"config"`
-	Name   string      `json:"name"`
+//counterfeiter:generate . Realizer
+type Realizer interface {
+	Realize(ctx context.Context, resourceRealizer realizer.ResourceRealizer, blueprintName string, ownerResources []realizer.OwnerResource, resourceStatuses statuses.ResourceStatuses) error
 }

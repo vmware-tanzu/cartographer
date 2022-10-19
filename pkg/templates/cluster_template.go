@@ -15,8 +15,6 @@
 package templates
 
 import (
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
@@ -24,35 +22,12 @@ type clusterTemplate struct {
 	template *v1alpha1.ClusterTemplate
 }
 
-func (t *clusterTemplate) GetKind() string {
-	return t.template.Kind
-}
-
-func NewClusterTemplateModel(template *v1alpha1.ClusterTemplate) *clusterTemplate {
+func NewClusterTemplateReader(template *v1alpha1.ClusterTemplate) *clusterTemplate {
 	return &clusterTemplate{template: template}
 }
 
-func (t *clusterTemplate) GetName() string {
-	return t.template.Name
-}
-
-func (t *clusterTemplate) SetInputs(_ *Inputs) {}
-
-func (t *clusterTemplate) SetStampedObject(_ *unstructured.Unstructured) {}
-
-func (t *clusterTemplate) GetOutput() (*Output, error) {
-	return &Output{}, nil
-}
-
-func (t *clusterTemplate) GenerateResourceOutput(_ *Output) ([]v1alpha1.Output, error) {
-	return nil, nil
-}
-
 func (t *clusterTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
-	return v1alpha1.TemplateSpec{
-		Template: t.template.Spec.Template,
-		Ytt:      t.template.Spec.Ytt,
-	}
+	return t.template.Spec
 }
 
 func (t *clusterTemplate) GetDefaultParams() v1alpha1.TemplateParams {

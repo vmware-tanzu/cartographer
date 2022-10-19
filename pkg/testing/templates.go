@@ -34,6 +34,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
+type Inputs struct {
+	Sources    map[string]templates.SourceInput
+	Images     map[string]templates.ImageInput
+	Configs    map[string]templates.ConfigInput
+	Deployment *templates.SourceInput
+}
+
 type templateType interface {
 	ValidateCreate() error
 	client.Object
@@ -280,7 +287,7 @@ type TemplateTestGivens struct {
 	YttValues             Values
 	YttFiles              []string
 	labels                map[string]string
-	SupplyChainInputs     *templates.Inputs
+	SupplyChainInputs     *Inputs
 	SupplyChainInputsFile string
 }
 
@@ -301,7 +308,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
 
-	template, err := templates.NewModelFromAPI(apiTemplate)
+	template, err := templates.NewReaderFromAPI(apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cluster template")
 	}
@@ -313,15 +320,15 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		}
 	}
 
-	i.completeLabels(*workload, template)
+	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	blueprintParams, err := i.getBlueprintParams()
 	if err != nil {
 		return nil, fmt.Errorf("get blueprint params failed: %w", err)
 	}
 
-	paramGenerator := realizer.NewParamGenerator([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
-	params := paramGenerator.GetParams(template)
+	paramMerger := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
+	params := paramMerger.Merge(template)
 
 	templatingContext, err := i.createTemplatingContext(*workload, params)
 	if err != nil {
@@ -460,17 +467,17 @@ func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) 
 	return f.Name(), nil
 }
 
-func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, template templates.Template) {
+func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, name string, kind string) {
 	i.labels = map[string]string{}
 
 	i.labels["carto.run/workload-name"] = workload.GetName()
 	i.labels["carto.run/workload-namespace"] = workload.GetNamespace()
-	i.labels["carto.run/template-kind"] = template.GetKind()
-	i.labels["carto.run/cluster-template-name"] = template.GetName()
+	i.labels["carto.run/template-kind"] = kind
+	i.labels["carto.run/cluster-template-name"] = name
 }
 
 func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
-	var inputs *templates.Inputs
+	var inputs *Inputs
 
 	inputs, err := i.getSupplyChainInputs()
 	if err != nil {
@@ -486,14 +493,22 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 		//"deployment": // not implemented yet,
 	}
 
-	if inputs.OnlyConfig() != nil {
-		templatingContext["config"] = inputs.OnlyConfig()
+	if len(inputs.Sources) == 1 {
+		for _, source := range inputs.Sources {
+			templatingContext["source"] = &source
+		}
 	}
-	if inputs.OnlyImage() != nil {
-		templatingContext["image"] = inputs.OnlyImage()
+
+	if len(inputs.Images) == 1 {
+		for _, image := range inputs.Images {
+			templatingContext["image"] = image.Image
+		}
 	}
-	if inputs.OnlySource() != nil {
-		templatingContext["source"] = inputs.OnlySource()
+
+	if len(inputs.Configs) == 1 {
+		for _, config := range inputs.Configs {
+			templatingContext["config"] = config.Config
+		}
 	}
 	return templatingContext, nil
 }
@@ -526,13 +541,13 @@ func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, er
 	return paramsData, nil // TODO: document
 }
 
-func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
+func (i *TemplateTestGivens) getSupplyChainInputs() (*Inputs, error) {
 	if i.SupplyChainInputsFile != "" && i.SupplyChainInputs != nil {
 		return nil, fmt.Errorf("only one of supplyChainInputs or supplyChainInputsFile may be set")
 	}
 
 	if i.SupplyChainInputsFile == "" && i.SupplyChainInputs == nil {
-		return &templates.Inputs{}, nil
+		return &Inputs{}, nil
 	}
 
 	if i.SupplyChainInputs != nil {
@@ -544,7 +559,7 @@ func (i *TemplateTestGivens) getSupplyChainInputs() (*templates.Inputs, error) {
 		return nil, fmt.Errorf("could not read supplyChainInputsFile: %w", err)
 	}
 
-	var inputs templates.Inputs
+	var inputs Inputs
 
 	err = yaml.Unmarshal(inputsFile, &inputs)
 	if err != nil {
