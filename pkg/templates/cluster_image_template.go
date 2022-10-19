@@ -24,7 +24,7 @@ type clusterImageTemplate struct {
 	template *v1alpha1.ClusterImageTemplate
 }
 
-func NewClusterImageTemplateModel(template *v1alpha1.ClusterImageTemplate) *clusterImageTemplate {
+func NewClusterImageTemplateReader(template *v1alpha1.ClusterImageTemplate) *clusterImageTemplate {
 	return &clusterImageTemplate{template: template}
 }
 

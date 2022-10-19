@@ -55,13 +55,13 @@ runs:
         ./hack/docker-login.sh
         ./hack/release.sh
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: cartographer.yaml
         path: ./release/cartographer.yaml
         retention-days: 1
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: CHANGELOG.md
         path: ./release/CHANGELOG.md

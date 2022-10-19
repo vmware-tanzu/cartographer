@@ -73,12 +73,12 @@ func (a allInputFake) GetConfigs() map[string]templates.ConfigInput {
 	}
 }
 
-var _ = Describe("Reader", func() {
+var _ = Describe("Outputter", func() {
 
-	Context("using a source reader", func() {
+	Context("using a source outputter", func() {
 		var (
 			template *v1alpha1.ClusterSourceTemplate
-			reader   stamp.Reader
+			reader   stamp.Outputter
 		)
 
 		BeforeEach(func() {
@@ -111,7 +111,7 @@ var _ = Describe("Reader", func() {
 			})
 
 			It("returns the output", func() {
-				output, err := reader.GetOutput(stampedObject)
+				output, err := reader.Output(stampedObject)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(output.Source.URL).To(Equal("my-url"))
 				Expect(output.Source.Revision).To(Equal("my-revision"))
@@ -129,12 +129,12 @@ var _ = Describe("Reader", func() {
 			})
 
 			It("returns a nil output", func() {
-				output, _ := reader.GetOutput(stampedObject)
+				output, _ := reader.Output(stampedObject)
 				Expect(output).To(BeNil())
 			})
 
 			It("returns an error", func() {
-				_, err := reader.GetOutput(stampedObject)
+				_, err := reader.Output(stampedObject)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
 				Expect(err.Error()).To(ContainSubstring(".data.url"))
@@ -142,10 +142,10 @@ var _ = Describe("Reader", func() {
 		})
 	})
 
-	Context("using an image reader", func() {
+	Context("using an image outputter", func() {
 		var (
 			template *v1alpha1.ClusterImageTemplate
-			reader   stamp.Reader
+			reader   stamp.Outputter
 		)
 
 		BeforeEach(func() {
@@ -176,7 +176,7 @@ var _ = Describe("Reader", func() {
 			})
 
 			It("returns the output", func() {
-				output, err := reader.GetOutput(stampedObject)
+				output, err := reader.Output(stampedObject)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(output.Image).To(Equal("my-image"))
 			})
@@ -193,12 +193,12 @@ var _ = Describe("Reader", func() {
 			})
 
 			It("returns a nil output", func() {
-				output, _ := reader.GetOutput(stampedObject)
+				output, _ := reader.Output(stampedObject)
 				Expect(output).To(BeNil())
 			})
 
 			It("returns an error", func() {
-				_, err := reader.GetOutput(stampedObject)
+				_, err := reader.Output(stampedObject)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
 				Expect(err.Error()).To(ContainSubstring(".data.image"))
@@ -206,10 +206,10 @@ var _ = Describe("Reader", func() {
 		})
 	})
 
-	Context("using a config reader", func() {
+	Context("using a config outputter", func() {
 		var (
 			template *v1alpha1.ClusterConfigTemplate
-			reader   stamp.Reader
+			reader   stamp.Outputter
 		)
 
 		BeforeEach(func() {
@@ -240,7 +240,7 @@ var _ = Describe("Reader", func() {
 			})
 
 			It("returns the output", func() {
-				output, err := reader.GetOutput(stampedObject)
+				output, err := reader.Output(stampedObject)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(output.Config).To(Equal("my-config"))
 			})
@@ -257,12 +257,12 @@ var _ = Describe("Reader", func() {
 			})
 
 			It("returns a nil output", func() {
-				output, _ := reader.GetOutput(stampedObject)
+				output, _ := reader.Output(stampedObject)
 				Expect(output).To(BeNil())
 			})
 
 			It("returns an error", func() {
-				_, err := reader.GetOutput(stampedObject)
+				_, err := reader.Output(stampedObject)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
 				Expect(err.Error()).To(ContainSubstring(".data.config"))
@@ -270,10 +270,10 @@ var _ = Describe("Reader", func() {
 		})
 	})
 
-	Context("using a deployment reader", func() {
+	Context("using a deployment outputter", func() {
 		var (
 			template      *v1alpha1.ClusterDeploymentTemplate
-			reader        stamp.Reader
+			reader        stamp.Outputter
 			stampedObject *unstructured.Unstructured
 		)
 
@@ -292,7 +292,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns the output", func() {
-					output, err := reader.GetOutput(&unstructured.Unstructured{})
+					output, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(output.Source.URL).To(Equal("my-url"))
 					Expect(output.Source.Revision).To(Equal("my-revision"))
@@ -307,7 +307,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(&unstructured.Unstructured{})
+					_, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in sources"))
 				})
@@ -362,7 +362,7 @@ var _ = Describe("Reader", func() {
 						})
 
 						It("returns the output", func() {
-							output, err := reader.GetOutput(stampedObject)
+							output, err := reader.Output(stampedObject)
 							Expect(err).NotTo(HaveOccurred())
 							Expect(output.Source.URL).To(Equal("my-url"))
 							Expect(output.Source.Revision).To(Equal("my-revision"))
@@ -378,7 +378,7 @@ var _ = Describe("Reader", func() {
 
 							Context("failure criterion is met", func() {
 								It("returns an error", func() {
-									_, err := reader.GetOutput(stampedObject)
+									_, err := reader.Output(stampedObject)
 									Expect(err).To(HaveOccurred())
 									Expect(err.Error()).To(ContainSubstring("deployment failure condition [failure.path] was: some sad path value"))
 								})
@@ -392,7 +392,7 @@ var _ = Describe("Reader", func() {
 									}
 								})
 								It("returns the output", func() {
-									output, err := reader.GetOutput(stampedObject)
+									output, err := reader.Output(stampedObject)
 									Expect(err).NotTo(HaveOccurred())
 
 									Expect(output.Source.URL).To(Equal("my-url"))
@@ -408,7 +408,7 @@ var _ = Describe("Reader", func() {
 									}
 								})
 								It("returns the output", func() {
-									output, err := reader.GetOutput(stampedObject)
+									output, err := reader.Output(stampedObject)
 									Expect(err).NotTo(HaveOccurred())
 
 									Expect(output.Source.URL).To(Equal("my-url"))
@@ -424,7 +424,7 @@ var _ = Describe("Reader", func() {
 								})
 
 								It("returns an error", func() {
-									_, err := reader.GetOutput(stampedObject)
+									_, err := reader.Output(stampedObject)
 									Expect(err).To(HaveOccurred())
 									Expect(err.Error()).To(ContainSubstring("failed to evaluate"))
 								})
@@ -440,7 +440,7 @@ var _ = Describe("Reader", func() {
 						})
 
 						It("returns an error", func() {
-							_, err := reader.GetOutput(stampedObject)
+							_, err := reader.Output(stampedObject)
 							Expect(err).To(HaveOccurred())
 							Expect(err.Error()).To(ContainSubstring("deployment not found in upstream template"))
 						})
@@ -460,7 +460,7 @@ var _ = Describe("Reader", func() {
 					})
 
 					It("returns an error", func() {
-						_, err := reader.GetOutput(stampedObject)
+						_, err := reader.Output(stampedObject)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("deployment success condition [completion.path] was: some sad path value, expected: All Good"))
 					})
@@ -474,7 +474,7 @@ var _ = Describe("Reader", func() {
 						})
 
 						It("returns an error", func() {
-							_, err := reader.GetOutput(stampedObject)
+							_, err := reader.Output(stampedObject)
 							Expect(err).To(HaveOccurred())
 							Expect(err.Error()).To(ContainSubstring("failed to evaluate succeededCondition.Key [completion.path]: jsonpath returned empty list: completion.path"))
 
@@ -504,7 +504,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(stampedObject)
+					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("status.observedGeneration does not equal metadata.generation"))
 				})
@@ -528,7 +528,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(stampedObject)
+					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path 'metadata.generation'"))
 				})
@@ -552,7 +552,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(stampedObject)
+					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("failed to evaluate status.observedGeneration"))
 				})
@@ -598,7 +598,7 @@ var _ = Describe("Reader", func() {
 					})
 
 					It("returns an output", func() {
-						output, err := reader.GetOutput(stampedObject)
+						output, err := reader.Output(stampedObject)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(output.Source.URL).To(Equal("my-url"))
 						Expect(output.Source.Revision).To(Equal("my-revision"))
@@ -613,7 +613,7 @@ var _ = Describe("Reader", func() {
 					})
 
 					It("returns an error", func() {
-						_, err := reader.GetOutput(stampedObject)
+						_, err := reader.Output(stampedObject)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("deployment not found in upstream template"))
 					})
@@ -637,7 +637,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(stampedObject)
+					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("could not find value on input [input.path]:"))
 				})
@@ -660,7 +660,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(stampedObject)
+					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("could not find value on output [output.path]:"))
 				})
@@ -686,7 +686,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(stampedObject)
+					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("input [input.path] and output [output.path] do not match: happy != not happy"))
 				})
@@ -694,10 +694,10 @@ var _ = Describe("Reader", func() {
 		})
 	})
 
-	Context("using a no output reader", func() {
+	Context("using a no output outputter", func() {
 		var (
 			template      *v1alpha1.ClusterTemplate
-			reader        stamp.Reader
+			reader        stamp.Outputter
 			stampedObject *unstructured.Unstructured
 		)
 
@@ -712,20 +712,20 @@ var _ = Describe("Reader", func() {
 		})
 
 		It("returns an empty output", func() {
-			output, _ := reader.GetOutput(stampedObject)
+			output, _ := reader.Output(stampedObject)
 			Expect(output.Source).To(BeNil())
 			Expect(output.Image).To(BeNil())
 			Expect(output.Config).To(BeNil())
 		})
 
 		It("does not return an error", func() {
-			_, err := reader.GetOutput(stampedObject)
+			_, err := reader.Output(stampedObject)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("pass through readers", func() {
-		var reader stamp.Reader
+		var reader stamp.Outputter
 		Context("using a source pass through reader", func() {
 
 			Context("where the input can be found", func() {
@@ -736,7 +736,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns the output", func() {
-					output, err := reader.GetOutput(&unstructured.Unstructured{})
+					output, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(output.Source.URL).To(Equal("my-url"))
 					Expect(output.Source.Revision).To(Equal("my-revision"))
@@ -751,7 +751,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(&unstructured.Unstructured{})
+					_, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in sources"))
 				})
@@ -768,7 +768,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns the output", func() {
-					output, err := reader.GetOutput(&unstructured.Unstructured{})
+					output, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(output.Image).To(Equal("my-image"))
 				})
@@ -782,7 +782,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(&unstructured.Unstructured{})
+					_, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in images"))
 				})
@@ -799,7 +799,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns the output", func() {
-					output, err := reader.GetOutput(&unstructured.Unstructured{})
+					output, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).NotTo(HaveOccurred())
 					fmt.Printf("%+v", output.Config)
 					Expect(output.Config).To(Equal("my-config"))
@@ -814,7 +814,7 @@ var _ = Describe("Reader", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := reader.GetOutput(&unstructured.Unstructured{})
+					_, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in configs"))
 				})

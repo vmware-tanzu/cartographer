@@ -22,7 +22,7 @@ type clusterSourceTemplate struct {
 	template *v1alpha1.ClusterSourceTemplate
 }
 
-func NewClusterSourceTemplateModel(template *v1alpha1.ClusterSourceTemplate) *clusterSourceTemplate {
+func NewClusterSourceTemplateReader(template *v1alpha1.ClusterSourceTemplate) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template}
 }
 

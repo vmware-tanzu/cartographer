@@ -22,7 +22,7 @@ type clusterConfigTemplate struct {
 	template *v1alpha1.ClusterConfigTemplate
 }
 
-func NewClusterConfigTemplateModel(template *v1alpha1.ClusterConfigTemplate) *clusterConfigTemplate {
+func NewClusterConfigTemplateReader(template *v1alpha1.ClusterConfigTemplate) *clusterConfigTemplate {
 	return &clusterConfigTemplate{template: template}
 }
 

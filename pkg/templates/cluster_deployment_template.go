@@ -22,7 +22,7 @@ type clusterDeploymentTemplate struct {
 	template *v1alpha1.ClusterDeploymentTemplate
 }
 
-func NewClusterDeploymentTemplateModel(template *v1alpha1.ClusterDeploymentTemplate) *clusterDeploymentTemplate {
+func NewClusterDeploymentTemplateReader(template *v1alpha1.ClusterDeploymentTemplate) *clusterDeploymentTemplate {
 	return &clusterDeploymentTemplate{template: template}
 }
 
