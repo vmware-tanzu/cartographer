@@ -78,3 +78,32 @@ runs:
         DOCKER_CONFIG: "~/.docker"
       run: |
         grype $(cat ./release/cartographer.yaml | grep ' image: ' | awk '{print $NF}')
+
+    - name: build cartotest
+      shell: bash
+      run: |
+        make build-cartotest
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: cartotest_darwin_amd64
+        path: ./build/cartotest_darwin_amd64
+        retention-days: 1
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: cartotest_darwin_arm64
+        path: ./build/cartotest_darwin_arm64
+        retention-days: 1
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: cartotest_linux_amd64
+        path: ./build/cartotest_linux_amd64
+        retention-days: 1
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: cartotest_windows_amd64
+        path: ./build/cartotest_windows_amd64
+        retention-days: 1
