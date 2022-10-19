@@ -99,11 +99,8 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      # More assembly might be required: Docker logins, GPG, etc. It all depends
-      # on your needs.
       - uses: goreleaser/goreleaser-action@v3
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
           version: latest
           args: release --rm-dist
