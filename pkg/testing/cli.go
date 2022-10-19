@@ -100,4 +100,5 @@ func init() {
 	templateCmd.Flags().StringVarP(&directory, "directory", "d", "", "directory to test")
 
 	_ = templateCmd.MarkFlagRequired("directory")
+	_ = templateCmd.MarkFlagDirname("directory")
 }
