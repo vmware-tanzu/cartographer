@@ -101,7 +101,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
-	template, err := templates.NewReaderFromAPI(apiTemplate)
+	reader, err := templates.NewReaderFromAPI(apiTemplate)
 	if err != nil {
 		log.Error(err, "failed to get cluster template")
 		return nil, nil, nil, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
@@ -109,11 +109,11 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 	labels := r.resourceLabeler(resource)
 
-	stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
-	stampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
+	stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(reader, resource, outputs), labels)
+	stampedObject, err := stamper.Stamp(ctx, reader.GetResourceTemplate())
 	if err != nil {
 		log.Error(err, "failed to stamp resource")
-		return template, nil, nil, errors.StampError{
+		return reader, nil, nil, errors.StampError{
 			Err:           err,
 			TemplateName:  templateName,
 			TemplateKind:  resource.TemplateRef.Kind,
@@ -126,7 +126,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 	if err != nil {
 		log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-		return template, nil, nil, errors.ApplyStampedObjectError{
+		return reader, nil, nil, errors.ApplyStampedObjectError{
 			Err:           err,
 			StampedObject: stampedObject,
 			ResourceName:  resource.Name,
@@ -151,7 +151,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
 		}
 
-		return template, stampedObject, nil, errors.RetrieveOutputError{
+		return reader, stampedObject, nil, errors.RetrieveOutputError{
 			Err:               err,
 			ResourceName:      resource.Name,
 			StampedObject:     stampedObject,
@@ -161,7 +161,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
-	return template, stampedObject, output, nil
+	return reader, stampedObject, output, nil
 }
 
 func (r *resourceRealizer) findMatchingTemplateName(resource OwnerResource, supplyChainName string) (string, error) {

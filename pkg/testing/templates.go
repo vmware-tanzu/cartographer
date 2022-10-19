@@ -327,7 +327,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("get blueprint params failed: %w", err)
 	}
 
-paramMerger := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
+	paramMerger := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
 	params := paramMerger.Merge(template)
 
 	templatingContext, err := i.createTemplatingContext(*workload, params)

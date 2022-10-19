@@ -37,15 +37,15 @@ func NewReaderFromAPI(template client.Object) (Reader, error) {
 	switch v := template.(type) {
 
 	case *v1alpha1.ClusterSourceTemplate:
-		return NewClusterSourceTemplateModel(v), nil
+		return NewClusterSourceTemplateReader(v), nil
 	case *v1alpha1.ClusterImageTemplate:
-		return NewClusterImageTemplateModel(v), nil
+		return NewClusterImageTemplateReader(v), nil
 	case *v1alpha1.ClusterConfigTemplate:
-		return NewClusterConfigTemplateModel(v), nil
+		return NewClusterConfigTemplateReader(v), nil
 	case *v1alpha1.ClusterDeploymentTemplate:
-		return NewClusterDeploymentTemplateModel(v), nil
+		return NewClusterDeploymentTemplateReader(v), nil
 	case *v1alpha1.ClusterTemplate:
-		return NewClusterTemplateModel(v), nil
+		return NewClusterTemplateReader(v), nil
 	}
 	return nil, fmt.Errorf("resource does not match a known template")
 }
