@@ -29,11 +29,11 @@ type DeploymentInput interface {
 	GetDeployment() *templates.SourceInput
 }
 
-type Reader interface {
-	GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error)
+type Outputter interface {
+	Output(stampedObject *unstructured.Unstructured) (*templates.Output, error)
 }
 
-func NewReader(template client.Object, inputReader DeploymentInput) (Reader, error) {
+func NewReader(template client.Object, inputReader DeploymentInput) (Outputter, error) {
 	switch v := template.(type) {
 
 	case *v1alpha1.ClusterSourceTemplate:
@@ -54,7 +54,7 @@ type SourceOutputReader struct {
 	template *v1alpha1.ClusterSourceTemplate
 }
 
-func (r *SourceOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+func (r *SourceOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
 	// TODO: We don't need a Builder
 	evaluator := eval.EvaluatorBuilder()
 	url, err := evaluator.EvaluateJsonPath(r.template.Spec.URLPath, stampedObject.UnstructuredContent())
@@ -82,7 +82,7 @@ func (r *SourceOutputReader) GetOutput(stampedObject *unstructured.Unstructured)
 	}, nil
 }
 
-func NewSourceOutputReader(template *v1alpha1.ClusterSourceTemplate) Reader {
+func NewSourceOutputReader(template *v1alpha1.ClusterSourceTemplate) Outputter {
 	return &SourceOutputReader{template: template}
 }
 
@@ -90,7 +90,7 @@ type ConfigOutputReader struct {
 	template *v1alpha1.ClusterConfigTemplate
 }
 
-func (r *ConfigOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+func (r *ConfigOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
 	evaluator := eval.EvaluatorBuilder()
 	config, err := evaluator.EvaluateJsonPath(r.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
 	if err != nil {
@@ -106,7 +106,7 @@ func (r *ConfigOutputReader) GetOutput(stampedObject *unstructured.Unstructured)
 	}, nil
 }
 
-func NewConfigOutputReader(template *v1alpha1.ClusterConfigTemplate) Reader {
+func NewConfigOutputReader(template *v1alpha1.ClusterConfigTemplate) Outputter {
 	return &ConfigOutputReader{
 		template: template,
 	}
@@ -116,7 +116,7 @@ type ImageOutputReader struct {
 	template *v1alpha1.ClusterImageTemplate
 }
 
-func (r *ImageOutputReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+func (r *ImageOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
 	evaluator := eval.EvaluatorBuilder()
 	image, err := evaluator.EvaluateJsonPath(r.template.Spec.ImagePath, stampedObject.UnstructuredContent())
 	if err != nil {
@@ -132,7 +132,7 @@ func (r *ImageOutputReader) GetOutput(stampedObject *unstructured.Unstructured) 
 	}, nil
 }
 
-func NewImageOutputReader(template *v1alpha1.ClusterImageTemplate) Reader {
+func NewImageOutputReader(template *v1alpha1.ClusterImageTemplate) Outputter {
 	return &ImageOutputReader{
 		template: template,
 	}
@@ -143,7 +143,7 @@ type DeploymentPassThroughReader struct {
 	template *v1alpha1.ClusterDeploymentTemplate
 }
 
-func (r *DeploymentPassThroughReader) GetOutput(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+func (r *DeploymentPassThroughReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
 	if err := r.outputReady(stampedObject); err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (r *DeploymentPassThroughReader) observedCompletionReady(stampedObject *uns
 	return nil
 }
 
-func NewDeploymentPassThroughReader(inputReader DeploymentInput, template *v1alpha1.ClusterDeploymentTemplate) Reader {
+func NewDeploymentPassThroughReader(inputReader DeploymentInput, template *v1alpha1.ClusterDeploymentTemplate) Outputter {
 	return &DeploymentPassThroughReader{
 		inputs:   inputReader,
 		template: template,
@@ -270,10 +270,10 @@ func NewDeploymentPassThroughReader(inputReader DeploymentInput, template *v1alp
 
 type NoOutputReader struct{}
 
-func (r *NoOutputReader) GetOutput(_ *unstructured.Unstructured) (*templates.Output, error) {
+func (r *NoOutputReader) Output(_ *unstructured.Unstructured) (*templates.Output, error) {
 	return &templates.Output{}, nil
 }
 
-func NewNoOutputReader() Reader {
+func NewNoOutputReader() Outputter {
 	return &NoOutputReader{}
 }

@@ -142,7 +142,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		return nil, nil, nil, fmt.Errorf("failed to create new stamp reader: %w", err)
 	}
 
-	output, err := stampReader.GetOutput(stampedObject)
+	output, err := stampReader.Output(stampedObject)
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		qualifiedResource, rErr := utils.GetQualifiedResource(mapper, stampedObject)
