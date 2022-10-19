@@ -67,7 +67,7 @@ var _ = Describe("Params", func() {
 		Value: apiextensionsv1.JSON{Raw: []byte("from the owner")},
 	}
 
-	DescribeTable("ParamGenerator",
+	DescribeTable("ParamsMerger",
 		func(templateParams realizer.TemplateParams,
 			blueprintParam *v1alpha1.BlueprintParam,
 			resourceParam *v1alpha1.BlueprintParam,
@@ -89,7 +89,7 @@ var _ = Describe("Params", func() {
 				ownerParams = append(ownerParams, *ownerParam)
 			}
 
-			actual := realizer.NewParamGenerator(resourceParams, blueprintParams, ownerParams).GetParams(templateParams)
+			actual := realizer.NewParamMerger(resourceParams, blueprintParams, ownerParams).Merge(templateParams)
 
 			if expected == "" {
 				Expect(actual).To(BeEmpty())

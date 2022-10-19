@@ -25,9 +25,9 @@ import (
 
 var _ = Describe("Templates", func() {
 	var (
-		err           error
-		apiTemplate   client.Object
-		templateModel templates.Template
+		err         error
+		apiTemplate client.Object
+		reader      templates.Reader
 	)
 
 	ItReturnsAHelpfulError := func(expectedErrorSubstring string) {
@@ -44,10 +44,10 @@ var _ = Describe("Templates", func() {
 	}
 
 	JustBeforeEach(func() {
-		templateModel, err = templates.NewModelFromAPI(apiTemplate)
+		reader, err = templates.NewReaderFromAPI(apiTemplate)
 	})
 
-	Describe("NewModelFromAPI", func() {
+	Describe("NewReaderFromAPI", func() {
 		Context("when passed a ClusterSourceTemplate", func() {
 			BeforeEach(func() {
 				apiTemplate = &v1alpha1.ClusterSourceTemplate{}
@@ -56,7 +56,7 @@ var _ = Describe("Templates", func() {
 			ItDoesNotReturnAnError()
 
 			It("returns a template", func() {
-				Expect(templateModel).NotTo(BeNil())
+				Expect(reader).NotTo(BeNil())
 			})
 		})
 		Context("when passed a ClusterImageTemplate", func() {
@@ -67,7 +67,7 @@ var _ = Describe("Templates", func() {
 			ItDoesNotReturnAnError()
 
 			It("returns a template", func() {
-				Expect(templateModel).NotTo(BeNil())
+				Expect(reader).NotTo(BeNil())
 			})
 		})
 		Context("when passed a ClusterConfigTemplate", func() {
@@ -78,7 +78,7 @@ var _ = Describe("Templates", func() {
 			ItDoesNotReturnAnError()
 
 			It("returns a template", func() {
-				Expect(templateModel).NotTo(BeNil())
+				Expect(reader).NotTo(BeNil())
 			})
 		})
 
@@ -90,7 +90,7 @@ var _ = Describe("Templates", func() {
 			ItDoesNotReturnAnError()
 
 			It("returns a template", func() {
-				Expect(templateModel).NotTo(BeNil())
+				Expect(reader).NotTo(BeNil())
 			})
 		})
 

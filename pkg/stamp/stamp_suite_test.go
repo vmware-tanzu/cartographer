@@ -12,22 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package stamp_test
 
-// TODO: This does not belong here, not sure where?
+import (
+	"testing"
 
-type SourceInput struct {
-	URL      interface{} `json:"url"`
-	Revision interface{} `json:"revision"`
-	Name     string      `json:"name"`
-}
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
 
-type ImageInput struct {
-	Image interface{} `json:"image"`
-	Name  string      `json:"name"`
-}
-
-type ConfigInput struct {
-	Config interface{} `json:"config"`
-	Name   string      `json:"name"`
+func TestStamp(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Stamp Suite")
 }

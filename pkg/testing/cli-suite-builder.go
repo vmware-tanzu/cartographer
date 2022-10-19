@@ -24,7 +24,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 type testInfo struct {
@@ -34,7 +33,7 @@ type testInfo struct {
 	Workload             *string                   `yaml:"workload"`
 	Expected             *string                   `yaml:"expected"`
 	Ytt                  *string                   `yaml:"ytt"`
-	SupplyChainInputs    *templates.Inputs         `yaml:"supplyChainInputs"`
+	SupplyChainInputs    *Inputs                   `yaml:"supplyChainInputs"`
 	BlueprintParams      []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
 	Focus                *bool                     `yaml:"focus"`
 	IgnoreMetadata       *bool                     `yaml:"ignoreMetadata"`

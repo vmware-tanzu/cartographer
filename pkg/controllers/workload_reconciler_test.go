@@ -41,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers/controllersfakes"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
@@ -48,6 +49,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/satoken/satokenfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
@@ -63,7 +65,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		repo                            *repositoryfakes.FakeRepository
 		tokenManager                    *satokenfakes.FakeTokenManager
 		conditionManager                *conditionsfakes.FakeConditionManager
-		rlzr                            *realizerfakes.FakeRealizer
+		rlzr                            *controllersfakes.FakeRealizer
 		wl                              *v1alpha1.Workload
 		workloadLabels                  map[string]string
 		stampedTracker                  *stampedfakes.FakeStampedTracker
@@ -88,7 +90,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			return conditionManager
 		}
 
-		rlzr = &realizerfakes.FakeRealizer{}
+		rlzr = &controllersfakes.FakeRealizer{}
 		rlzr.RealizeReturns(nil)
 
 		stampedTracker = &stampedfakes.FakeStampedTracker{}
@@ -113,7 +115,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 		resourceRealizerBuilderError = nil
 
-		resourceRealizerBuilder := func(authToken string, owner client.Object, ownerParams []v1alpha1.OwnerParam, systemRepo repository.Repository, blueprintParams []v1alpha1.BlueprintParam, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
+		resourceRealizerBuilder := func(authToken string, owner client.Object, templatingContext realizer.ContextGenerator, systemRepo repository.Repository, resourceLabeler realizer.ResourceLabeler) (realizer.ResourceRealizer, error) {
 			labelerForBuiltResourceRealizer = resourceLabeler
 			if resourceRealizerBuilderError != nil {
 				return nil, resourceRealizerBuilderError
@@ -825,7 +827,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					})
 					stampedObject.SetName("my-obj")
 					stampedObject.SetNamespace("my-ns")
-					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					jsonPathError := stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					retrieveError = cerrors.RetrieveOutputError{
 						Err:               jsonPathError,
 						ResourceName:      "some-resource",
@@ -889,7 +891,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Context("of type ResolveTemplateOptionError", func() {
 				var resolveOptionErr cerrors.ResolveTemplateOptionError
 				BeforeEach(func() {
-					jsonPathError := templates.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					jsonPathError := stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					resolveOptionErr = cerrors.ResolveTemplateOptionError{
 						Err:           jsonPathError,
 						BlueprintName: supplyChainName,

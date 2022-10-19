@@ -18,14 +18,18 @@ package realizer
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/strings"
 	"k8s.io/utils/strings/slices"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -75,9 +79,9 @@ func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResou
 	return resources
 }
 
-//counterfeiter:generate . Realizer
-type Realizer interface {
-	Realize(ctx context.Context, resourceRealizer ResourceRealizer, blueprintName string, ownerResources []OwnerResource, resourceStatuses statuses.ResourceStatuses) error
+//counterfeiter:generate . ResourceRealizer
+type ResourceRealizer interface {
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
 }
 
 type realizer struct {
@@ -88,7 +92,7 @@ type realizer struct {
 type HealthyConditionEvaluator func(rule *v1alpha1.HealthRule, realizedResource *v1alpha1.RealizedResource, stampedObject *unstructured.Unstructured) metav1.Condition
 
 //counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
-func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator, mapper meta.RESTMapper) Realizer {
+func NewRealizer(healthyConditionEvaluator HealthyConditionEvaluator, mapper meta.RESTMapper) *realizer {
 	if healthyConditionEvaluator == nil {
 		healthyConditionEvaluator = healthcheck.DetermineHealthCondition
 	}
@@ -167,7 +171,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Template, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
 	log := logr.FromContextOrDiscard(ctx)
 
 	if previousRealizedResource == nil {
@@ -193,14 +197,15 @@ func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerR
 
 	var templateRef *corev1.ObjectReference
 	var outputs []v1alpha1.Output
+
 	if template != nil {
 		templateRef = &corev1.ObjectReference{
-			Kind:       template.GetKind(),
-			Name:       template.GetName(),
+			Kind:       resource.TemplateRef.Kind,
+			Name:       resource.TemplateRef.Name,
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 
-		outputs = getOutputs(template, previousRealizedResource, output)
+		outputs = getOutputs(previousRealizedResource, output)
 	}
 
 	var stampedRef *v1alpha1.StampedRef
@@ -231,8 +236,8 @@ func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerR
 	}
 }
 
-func getOutputs(template templates.Template, previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
-	outputs, err := template.GenerateResourceOutput(output)
+func getOutputs(previousRealizedResource *v1alpha1.RealizedResource, output *templates.Output) []v1alpha1.Output {
+	outputs, err := generateResourceOutput(output)
 	if err != nil {
 		outputs = previousRealizedResource.Outputs
 	} else {
@@ -251,4 +256,62 @@ func getOutputs(template templates.Template, previousRealizedResource *v1alpha1.
 	}
 
 	return outputs
+}
+
+// TODO: This should be polymorphic
+
+func generateResourceOutput(output *templates.Output) ([]v1alpha1.Output, error) {
+	if output == nil {
+		return nil, nil
+	}
+
+	var result []v1alpha1.Output
+
+	if output.Source != nil {
+		urlOut, err := buildOneOutput("url", output.Source.URL)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, urlOut)
+
+		revisionOut, err := buildOneOutput("revision", output.Source.Revision)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, revisionOut)
+	} else if output.Image != nil {
+		out, err := buildOneOutput("image", output.Image)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, out)
+	} else if output.Config != nil {
+		out, err := buildOneOutput("config", output.Config)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, out)
+
+	} else {
+		return nil, nil
+	}
+	return result, nil
+}
+
+const PreviewCharacterLimit = 1024
+
+func buildOneOutput(name string, value any) (v1alpha1.Output, error) {
+	bytes, err := yaml.Marshal(value)
+	if err != nil {
+		return v1alpha1.Output{}, err
+	}
+
+	sha := sha256.Sum256(bytes)
+
+	return v1alpha1.Output{
+		Name:    name,
+		Preview: strings.ShortenString(string(bytes), PreviewCharacterLimit),
+		Digest:  fmt.Sprintf("sha256:%x", sha),
+	}, nil
+
 }

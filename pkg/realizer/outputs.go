@@ -18,26 +18,17 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-type Outputs map[string]*templates.Output
-
 func NewOutputs() Outputs {
 	return make(Outputs)
 }
 
-func (o Outputs) AddOutput(name string, output *templates.Output) {
-	o[name] = output
+type Outputs map[string]*templates.Output
+
+func (o Outputs) AddOutput(resourceName string, output *templates.Output) {
+	o[resourceName] = output
 }
 
-func (o Outputs) getResourceSource(resourceName string) *templates.Source {
-	output := o[resourceName]
-	if output == nil {
-		return nil
-	}
-
-	return output.Source
-}
-
-func (o Outputs) getResourceImage(resourceName string) templates.Image {
+func (o Outputs) GetImage(resourceName string) templates.Image {
 	output := o[resourceName]
 	if output == nil {
 		return nil
@@ -45,7 +36,7 @@ func (o Outputs) getResourceImage(resourceName string) templates.Image {
 	return output.Image
 }
 
-func (o Outputs) getResourceConfig(resourceName string) templates.Config {
+func (o Outputs) GetConfig(resourceName string) templates.Config {
 	output := o[resourceName]
 	if output == nil {
 		return nil
@@ -53,54 +44,11 @@ func (o Outputs) getResourceConfig(resourceName string) templates.Config {
 	return output.Config
 }
 
-func (o Outputs) GenerateInputs(resource OwnerResource) *templates.Inputs {
-	inputs := &templates.Inputs{
-		Sources:    map[string]templates.SourceInput{},
-		Images:     map[string]templates.ImageInput{},
-		Configs:    map[string]templates.ConfigInput{},
-		Deployment: &templates.SourceInput{},
+func (o Outputs) GetSource(resourceName string) *templates.Source {
+	output := o[resourceName]
+	if output == nil {
+		return nil
 	}
 
-	for _, referenceSource := range resource.Sources {
-		source := o.getResourceSource(referenceSource.Resource)
-		if source != nil {
-			inputs.Sources[referenceSource.Name] = templates.SourceInput{
-				URL:      source.URL,
-				Revision: source.Revision,
-				Name:     referenceSource.Name,
-			}
-		}
-	}
-
-	for _, referenceImage := range resource.Images {
-		image := o.getResourceImage(referenceImage.Resource)
-		if image != nil {
-			inputs.Images[referenceImage.Name] = templates.ImageInput{
-				Image: image,
-				Name:  referenceImage.Name,
-			}
-		}
-	}
-
-	for _, referenceConfig := range resource.Configs {
-		config := o.getResourceConfig(referenceConfig.Resource)
-		if config != nil {
-			inputs.Configs[referenceConfig.Name] = templates.ConfigInput{
-				Config: config,
-				Name:   referenceConfig.Name,
-			}
-		}
-	}
-
-	if resource.Deployment != nil {
-		deployment := o.getResourceSource(resource.Deployment.Resource)
-		if deployment != nil {
-			inputs.Deployment = &templates.SourceInput{
-				URL:      deployment.URL,
-				Revision: deployment.Revision,
-			}
-		}
-	}
-
-	return inputs
+	return output.Source
 }
