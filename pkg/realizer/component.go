@@ -107,7 +107,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		var err error
 		stampReader, err = stamp.NewPassThroughReader(resource.TemplateRef.Kind, templateOption.PassThrough, inputGenerator)
 		if err != nil {
-			panic("whoops")
+			log.Error(err, "failed to create new stamp pass through reader")
+			return nil, nil, nil, fmt.Errorf("failed to create new stamp pass through reader: %w", err)
 		}
 	} else {
 		log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
@@ -167,11 +168,17 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 	output, err := stampReader.Output(stampedObject)
 	if err != nil {
-		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
-		qualifiedResource, rErr := utils.GetQualifiedResource(mapper, stampedObject)
-		if rErr != nil {
-			log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
-			qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
+		var qualifiedResource string
+		if passThrough {
+			log.Error(err, "failed to retrieve output from pass through", "passThrough", templateOption.PassThrough)
+		} else {
+			log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+			var rErr error
+			qualifiedResource, rErr = utils.GetQualifiedResource(mapper, stampedObject)
+			if rErr != nil {
+				log.Error(err, "failed to retrieve qualified resource name", "object", stampedObject)
+				qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
+			}
 		}
 
 		return template, stampedObject, nil, errors.RetrieveOutputError{
@@ -181,6 +188,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			BlueprintName:     blueprintName,
 			BlueprintType:     errors.SupplyChain,
 			QualifiedResource: qualifiedResource,
+			PassThroughInput:  templateOption.PassThrough,
 		}
 	}
 

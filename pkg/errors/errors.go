@@ -130,9 +130,14 @@ type RetrieveOutputError struct {
 	BlueprintName     string
 	BlueprintType     string
 	QualifiedResource string
+	PassThroughInput  string
 }
 
 func (e RetrieveOutputError) Error() string {
+	if e.PassThroughInput != "" {
+		return fmt.Errorf("unable to retrieve outputs from pass through [%s]: %w", e.PassThroughInput, e.Err).Error()
+	}
+
 	if e.JsonPathExpression() == NoJsonpathContext {
 		return fmt.Errorf("unable to retrieve outputs from stamped object [%s/%s] of type [%s] for resource [%s] in %s [%s]: %w",
 			e.StampedObject.GetNamespace(),
