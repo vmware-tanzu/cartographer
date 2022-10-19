@@ -78,7 +78,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 	var templateName string
 	var templateOption v1alpha1.TemplateOption
-	var stampReader stamp.Reader
+	var stampReader stamp.Outputter
 	var stampedObject *unstructured.Unstructured
 	var template templates.Reader
 	passThrough := false
@@ -165,7 +165,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
-	output, err := stampReader.GetOutput(stampedObject)
+	output, err := stampReader.Output(stampedObject)
 	if err != nil {
 		log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 		qualifiedResource, rErr := utils.GetQualifiedResource(mapper, stampedObject)
