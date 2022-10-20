@@ -71,7 +71,7 @@ type TemplateSpec struct {
 
 	// Lifecycle specifies whether template modifications should result in originally
 	// created objects being updated (default) or in new objects created alongside
-	// original objects (tekton).
+	// original objects (immutable).
 	// +optional
 	Lifecycle *string `json:"lifecycle,omitempty"`
 }

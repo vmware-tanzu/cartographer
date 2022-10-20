@@ -403,7 +403,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				  name: my-config-template
 				spec:
 				  configPath: spec.fork
-			      lifecycle: tekton
+			      lifecycle: immutable
 			      template:
 					apiVersion: test.run/v1alpha1
 					kind: TestObj

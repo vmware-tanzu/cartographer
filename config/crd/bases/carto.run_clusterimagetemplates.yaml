@@ -209,7 +209,7 @@ spec:
               lifecycle:
                 description: Lifecycle specifies whether template modifications should
                   result in originally created objects being updated (default) or
-                  in new objects created alongside original objects (tekton).
+                  in new objects created alongside original objects (immutable).
                 type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'

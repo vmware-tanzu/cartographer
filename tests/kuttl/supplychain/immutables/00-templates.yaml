@@ -38,7 +38,7 @@ kind: ClusterSourceTemplate
 metadata:
   name: source-immutable---immutables
 spec:
-  lifecycle: tekton
+  lifecycle: immutable
 
   urlPath: .spec.value.url
   revisionPath: .spec.value.revision

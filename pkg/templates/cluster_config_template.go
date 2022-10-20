@@ -18,7 +18,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-const immutable = "tekton"
+const immutable = "immutable"
 
 type clusterConfigTemplate struct {
 	template *v1alpha1.ClusterConfigTemplate
