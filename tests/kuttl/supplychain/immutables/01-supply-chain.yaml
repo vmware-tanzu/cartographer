@@ -29,10 +29,18 @@ spec:
     - name: immutable-provider
       templateRef:
         kind: ClusterSourceTemplate
-        name: runnable---immutables
+        name: source-immutable---immutables
       sources:
         - resource: source-provider
           name: source-provider
       params:
         - name: a-config-map
           default: ""
+
+    - name: another-provider
+      templateRef:
+        kind: ClusterTemplate
+        name: final---immutables
+      sources:
+        - resource: immutable-provider
+          name: immutable-provider

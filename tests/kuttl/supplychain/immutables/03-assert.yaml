@@ -13,6 +13,15 @@
 # limitations under the License.
 
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-first-configmap
+data:
+  url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git
+  branch: "dev"
+
+---
 apiVersion: test.run/v1alpha1
 kind: Test
 spec:
@@ -33,8 +42,8 @@ apiVersion: test.run/v1alpha1
 kind: Test
 spec:
   value:
-    url: https://github.com/runnable-will-create-a-new-object/while-template-will-modify-an-object.git
-    revision: main
+    url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git
+    revision: dev
     some-object-def:
       apiVersion: v1
       kind: ConfigMap
@@ -48,7 +57,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: example-first-configmap
+  name: final-configmap
 data:
-  url: https://github.com/runnable-will-create-a-new-object/while-template-will-modify-an-object.git
-  branch: "main"
+  url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git
+  rev: dev

@@ -30,6 +30,8 @@ spec:
           name: some-configmap
         data:
           an-ice-cream-flavor: cookies-and-cream
+    - name: revision
+      value: dev
   source:
     git:
-      url: https://github.com/runnable-will-create-a-new-object/while-template-will-modify-an-object.git
+      url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git

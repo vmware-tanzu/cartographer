@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: final-configmap
+data:
+  url: https://github.com/spring-projects/spring-petclinic.git
+  rev: main
