@@ -12,7 +12,7 @@ import (
 )
 
 type FakeResourceRealizer struct {
-	DoStub        func(context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
+	DoStub        func(context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 context.Context
@@ -25,19 +25,21 @@ type FakeResourceRealizer struct {
 		result1 templates.Reader
 		result2 *unstructured.Unstructured
 		result3 *templates.Output
-		result4 error
+		result4 bool
+		result5 error
 	}
 	doReturnsOnCall map[int]struct {
 		result1 templates.Reader
 		result2 *unstructured.Unstructured
 		result3 *templates.Output
-		result4 error
+		result4 bool
+		result5 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerResource, arg3 string, arg4 realizer.Outputs, arg5 meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error) {
+func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerResource, arg3 string, arg4 realizer.Outputs, arg5 meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
@@ -55,9 +57,9 @@ func (fake *FakeResourceRealizer) Do(arg1 context.Context, arg2 realizer.OwnerRe
 		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3, ret.result4
+		return ret.result1, ret.result2, ret.result3, ret.result4, ret.result5
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3, fakeReturns.result4, fakeReturns.result5
 }
 
 func (fake *FakeResourceRealizer) DoCallCount() int {
@@ -66,7 +68,7 @@ func (fake *FakeResourceRealizer) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)) {
+func (fake *FakeResourceRealizer) DoCalls(stub func(context.Context, realizer.OwnerResource, string, realizer.Outputs, meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
@@ -79,7 +81,7 @@ func (fake *FakeResourceRealizer) DoArgsForCall(i int) (context.Context, realize
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
-func (fake *FakeResourceRealizer) DoReturns(result1 templates.Reader, result2 *unstructured.Unstructured, result3 *templates.Output, result4 error) {
+func (fake *FakeResourceRealizer) DoReturns(result1 templates.Reader, result2 *unstructured.Unstructured, result3 *templates.Output, result4 bool, result5 error) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = nil
@@ -87,11 +89,12 @@ func (fake *FakeResourceRealizer) DoReturns(result1 templates.Reader, result2 *u
 		result1 templates.Reader
 		result2 *unstructured.Unstructured
 		result3 *templates.Output
-		result4 error
-	}{result1, result2, result3, result4}
+		result4 bool
+		result5 error
+	}{result1, result2, result3, result4, result5}
 }
 
-func (fake *FakeResourceRealizer) DoReturnsOnCall(i int, result1 templates.Reader, result2 *unstructured.Unstructured, result3 *templates.Output, result4 error) {
+func (fake *FakeResourceRealizer) DoReturnsOnCall(i int, result1 templates.Reader, result2 *unstructured.Unstructured, result3 *templates.Output, result4 bool, result5 error) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = nil
@@ -100,15 +103,17 @@ func (fake *FakeResourceRealizer) DoReturnsOnCall(i int, result1 templates.Reade
 			result1 templates.Reader
 			result2 *unstructured.Unstructured
 			result3 *templates.Output
-			result4 error
+			result4 bool
+			result5 error
 		})
 	}
 	fake.doReturnsOnCall[i] = struct {
 		result1 templates.Reader
 		result2 *unstructured.Unstructured
 		result3 *templates.Output
-		result4 error
-	}{result1, result2, result3, result4}
+		result4 bool
+		result5 error
+	}{result1, result2, result3, result4, result5}
 }
 
 func (fake *FakeResourceRealizer) Invocations() map[string][][]interface{} {

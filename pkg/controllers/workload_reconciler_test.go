@@ -267,7 +267,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						Name:       "my-image-template",
 						APIVersion: "carto.run/v1alpha1",
 					},
-				}, nil,
+				}, nil, false,
 			)
 			resourceStatuses.Add(
 				&v1alpha1.RealizedResource{
@@ -284,7 +284,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						Name:       "my-config-template",
 						APIVersion: "carto.run/v1alpha1",
 					},
-				}, nil,
+				}, nil, false,
 			)
 
 			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
@@ -625,7 +625,7 @@ var _ = Describe("WorkloadReconciler", func() {
 								Name:       "my-image-template",
 								APIVersion: "carto.run/v1alpha1",
 							},
-						}, nil,
+						}, nil, false,
 					)
 					resourceStatuses.Add(
 						&v1alpha1.RealizedResource{
@@ -636,7 +636,7 @@ var _ = Describe("WorkloadReconciler", func() {
 								Name:       "my-config-template",
 								APIVersion: "carto.run/v1alpha1",
 							},
-						}, nil,
+						}, nil, false,
 					)
 
 					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
@@ -1279,7 +1279,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						},
 						Resource: "some-kind",
 					},
-				}, nil,
+				}, nil, false,
 			)
 			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
 				statusesVal := reflect.ValueOf(statuses)

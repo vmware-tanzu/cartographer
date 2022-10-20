@@ -154,7 +154,7 @@ var _ = Describe("Realize", func() {
 
 			outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error) {
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error) {
 				executedResourceOrder = append(executedResourceOrder, resource.Name)
 				Expect(blueprintName).To(Equal("greatest-supply-chain"))
 				if resource.Name == "resource1" {
@@ -163,7 +163,7 @@ var _ = Describe("Realize", func() {
 					Expect(err).NotTo(HaveOccurred())
 					stampedObj := &unstructured.Unstructured{}
 					stampedObj.SetName("obj1")
-					return reader, stampedObj, outputFromFirstResource, nil
+					return reader, stampedObj, outputFromFirstResource, false, nil
 				}
 
 				if resource.Name == "resource2" {
@@ -175,7 +175,7 @@ var _ = Describe("Realize", func() {
 				Expect(err).NotTo(HaveOccurred())
 				stampedObj := &unstructured.Unstructured{}
 				stampedObj.SetName("obj2")
-				return reader, stampedObj, &templates.Output{}, nil
+				return reader, stampedObj, &templates.Output{}, false, nil
 			})
 
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
@@ -298,8 +298,8 @@ var _ = Describe("Realize", func() {
 		It("returns the first error encountered realizing a resource and continues to realize", func() {
 			reader, err := templates.NewReaderFromAPI(template2)
 			Expect(err).NotTo(HaveOccurred())
-			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("realizing is hard"))
-			resourceRealizer.DoReturnsOnCall(1, reader, &unstructured.Unstructured{}, nil, nil)
+			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, false, errors.New("realizing is hard"))
+			resourceRealizer.DoReturnsOnCall(1, reader, &unstructured.Unstructured{}, nil, false, nil)
 
 			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
 			err = rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
@@ -448,9 +448,9 @@ var _ = Describe("Realize", func() {
 			reader3, err = templates.NewReaderFromAPI(template3)
 			Expect(err).NotTo(HaveOccurred())
 
-			resourceRealizer.DoReturnsOnCall(0, reader1, &unstructured.Unstructured{}, nil, nil)
-			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, nil, nil)
-			resourceRealizer.DoReturnsOnCall(2, reader3, &unstructured.Unstructured{}, nil, nil)
+			resourceRealizer.DoReturnsOnCall(0, reader1, &unstructured.Unstructured{}, nil, false, nil)
+			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, nil, false, nil)
+			resourceRealizer.DoReturnsOnCall(2, reader3, &unstructured.Unstructured{}, nil, false, nil)
 
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
 				Resource: schema.GroupVersionResource{
@@ -476,17 +476,17 @@ var _ = Describe("Realize", func() {
 			}
 			stampedObj1 := &unstructured.Unstructured{}
 			stampedObj1.SetName("obj1")
-			resourceRealizer.DoReturnsOnCall(0, reader1, stampedObj1, newOutput, nil)
+			resourceRealizer.DoReturnsOnCall(0, reader1, stampedObj1, newOutput, false, nil)
 
 			oldOutput := &templates.Output{
 				Image: "whatever",
 			}
-			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, oldOutput, nil)
+			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, oldOutput, false, nil)
 
 			oldOutput2 := &templates.Output{
 				Config: "whatever",
 			}
-			resourceRealizer.DoReturnsOnCall(2, reader3, obj, oldOutput2, nil)
+			resourceRealizer.DoReturnsOnCall(2, reader3, obj, oldOutput2, false, nil)
 
 			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 			err := rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
@@ -551,13 +551,13 @@ var _ = Describe("Realize", func() {
 
 		Context("there is an error realizing resource 1 and resource 2", func() {
 			BeforeEach(func() {
-				resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, errors.New("im in a bad state"))
-				resourceRealizer.DoReturnsOnCall(1, nil, nil, nil, errors.New("im missing inputs"))
+				resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, false, errors.New("im in a bad state"))
+				resourceRealizer.DoReturnsOnCall(1, nil, nil, nil, false, errors.New("im missing inputs"))
 
 				obj = &unstructured.Unstructured{}
 				obj.SetName("StampedObj")
 
-				resourceRealizer.DoReturnsOnCall(2, reader3, obj, nil, nil)
+				resourceRealizer.DoReturnsOnCall(2, reader3, obj, nil, false, nil)
 			})
 
 			It("the status uses the previous resource for resource 2", func() {

@@ -77,7 +77,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil)
+				}, nil, false)
 			})
 
 			It("the resourceStatuses reports IsChanged is false", func() {
@@ -97,7 +97,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil)
+				}, nil, false)
 				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 
@@ -108,7 +108,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil)
+				}, nil, false)
 				Expect(resourceStatuses.ChangedConditionTypes("resource2")).To(ConsistOf(v1alpha1.ResourceSubmitted, v1alpha1.ResourceReady))
 			})
 
@@ -119,7 +119,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil, metav1.Condition{
+				}, nil, false, metav1.Condition{
 					Type:   v1alpha1.ResourceHealthy,
 					Status: "Unknown",
 				})
@@ -133,7 +133,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil, metav1.Condition{
+				}, nil, false, metav1.Condition{
 					Type:   v1alpha1.ResourceHealthy,
 					Status: "False",
 				})
@@ -147,7 +147,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil, metav1.Condition{
+				}, nil, false, metav1.Condition{
 					Type:   v1alpha1.ResourceHealthy,
 					Status: "True",
 				})
@@ -168,7 +168,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil)
+				}, nil, false)
 				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
@@ -181,7 +181,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, errors.New("has an error"))
+				}, errors.New("has an error"), false)
 				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 
@@ -192,7 +192,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, errors.New("has an error"))
+				}, errors.New("has an error"), false)
 				Expect(resourceStatuses.ChangedConditionTypes("resource1")).To(ConsistOf("Ready", "ResourceSubmitted"))
 			})
 		})
@@ -217,7 +217,7 @@ var _ = Describe("ResourceStatuses", func() {
 					TemplateRef: nil,
 					Inputs:      nil,
 					Outputs:     nil,
-				}, nil)
+				}, nil, false)
 				Expect(resourceStatuses.IsChanged()).To(BeTrue())
 			})
 		})
