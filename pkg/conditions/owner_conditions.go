@@ -25,11 +25,17 @@ import (
 
 // -- Owner.Status.Resource[x].Conditions - ResourceSubmitted - True
 
-func ResourceSubmittedCondition() metav1.Condition {
+func ResourceSubmittedCondition(isPassThrough bool) metav1.Condition {
+	var reason string
+	if isPassThrough {
+		reason = v1alpha1.PassThroughReason
+	} else {
+		reason = v1alpha1.CompleteResourcesSubmittedReason
+	}
 	return metav1.Condition{
 		Type:   v1alpha1.ResourceSubmitted,
 		Status: metav1.ConditionTrue,
-		Reason: v1alpha1.CompleteResourcesSubmittedReason,
+		Reason: reason,
 	}
 }
 
