@@ -16,13 +16,17 @@ package stamp
 
 import (
 	"fmt"
+	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/eval"
+	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type DeploymentInput interface {
@@ -77,6 +81,14 @@ func NewReader(template client.Object, inputReader DeploymentInput) (Outputter, 
 
 type SourceOutputReader struct {
 	template *v1alpha1.ClusterSourceTemplate
+}
+
+func LatestOutput(stampedObjects []*unstructured.Unstructured, outputter Outputter, healthRule *v1alpha1.HealthRule) (*templates.Output, error) {
+	latestMatchingObject := getLatestSuccessfulObjectByHealthRule(stampedObjects, healthRule)
+	if latestMatchingObject == nil {
+		return nil, fmt.Errorf("some error about object not found") // TODO
+	}
+	return outputter.Output(latestMatchingObject)
 }
 
 func (r *SourceOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
@@ -304,6 +316,106 @@ func (r *NoOutputReader) Output(_ *unstructured.Unstructured) (*templates.Output
 
 func NewNoOutputReader() Outputter {
 	return &NoOutputReader{}
+}
+
+func getLatestSuccessfulObjectByHealthRule(stampedObjects []*unstructured.Unstructured, rule *v1alpha1.HealthRule) *unstructured.Unstructured {
+	var (
+		latestTime           time.Time // zero value is used for comparison
+		latestMatchingObject *unstructured.Unstructured
+	)
+
+	for _, stampedObject := range stampedObjects {
+		isHealthy := determineObjectHealth(stampedObject, rule)
+		if !isHealthy {
+			continue
+		}
+
+		currentTime := stampedObject.GetCreationTimestamp().Time
+		if currentTime.After(latestTime) {
+			latestMatchingObject = stampedObject
+			latestTime = currentTime
+		}
+
+	}
+	return latestMatchingObject
+}
+
+func determineObjectHealth(stampedObject *unstructured.Unstructured, rule *v1alpha1.HealthRule) bool {
+	if rule == nil {
+		return true
+	} else {
+		if rule.AlwaysHealthy != nil {
+			return true
+		}
+		if stampedObject != nil {
+			if rule.SingleConditionType != "" {
+				return singleConditionTypeCondition(rule.SingleConditionType, stampedObject)
+			}
+			if rule.MultiMatch != nil {
+				return multiMatchCondition(rule.MultiMatch, stampedObject)
+			}
+		}
+	}
+	return false
+}
+
+func singleConditionTypeCondition(singleConditionType string, stampedObject *unstructured.Unstructured) bool {
+	singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(singleConditionType)
+	if singleCondition != nil {
+		if singleCondition.Status == metav1.ConditionTrue {
+			return true
+		} else {
+			return false
+		}
+	}
+	return false
+}
+
+func multiMatchCondition(multiMatchRule *v1alpha1.MultiMatchHealthRule, stampedObject *unstructured.Unstructured) bool {
+	condition := anyUnhealthyMatchCondition(multiMatchRule.Unhealthy, stampedObject)
+	if condition != nil {
+		return *condition
+	}
+	condition = allHealthyMatchCondition(multiMatchRule.Healthy, stampedObject)
+	if condition != nil {
+		return *condition
+	}
+	return false
+}
+
+func anyUnhealthyMatchCondition(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) *bool {
+	for _, conditionRule := range rule.MatchConditions {
+		singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(conditionRule.Type)
+		if singleCondition != nil && singleCondition.Status == conditionRule.Status {
+			healthy := false
+			return &healthy
+		}
+	}
+	for _, matchFieldRule := range rule.MatchFields {
+		matches, _ := selector.Matches(matchFieldRule.FieldSelectorRequirement, stampedObject.UnstructuredContent())
+		if matches {
+			healthy := false
+			return &healthy
+		}
+	}
+	return nil
+}
+
+func allHealthyMatchCondition(rule v1alpha1.HealthMatchRule, stampedObject *unstructured.Unstructured) *bool {
+	for _, conditionRule := range rule.MatchConditions {
+		resourceCondition := utils.ExtractConditions(stampedObject).ConditionWithType(conditionRule.Type)
+		if resourceCondition == nil || resourceCondition.Status != conditionRule.Status {
+			return nil
+		}
+	}
+	for _, matchFieldRule := range rule.MatchFields {
+		matches, err := selector.Matches(matchFieldRule.FieldSelectorRequirement, stampedObject.UnstructuredContent())
+		if err != nil || !matches {
+			return nil
+		}
+	}
+	healthy := true
+	return &healthy
 }
 
 type SourcePassThroughReader struct {

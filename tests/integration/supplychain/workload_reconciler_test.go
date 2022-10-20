@@ -392,4 +392,189 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 		})
 	})
+
+	Context("a supply chain with an immutable template", func() {
+		BeforeEach(func() {
+			templateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: spec.fork
+			      lifecycle: tekton
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(workload.spec.source.image)$
+			`)
+
+			template := &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(templateYaml), template)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, template, &client.CreateOptions{})
+			cleanups = append(cleanups, template)
+			Expect(err).NotTo(HaveOccurred())
+
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			`)
+
+			supplyChain := &unstructured.Unstructured{}
+			err = yaml.Unmarshal([]byte(supplyChainYaml), supplyChain)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = c.Create(ctx, supplyChain, &client.CreateOptions{})
+			cleanups = append(cleanups, supplyChain)
+			Expect(err).NotTo(HaveOccurred())
+
+			image := "some-address"
+
+			workload := &v1alpha1.Workload{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Workload",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{
+					ServiceAccountName: "my-service-account",
+					Source: &v1alpha1.Source{
+						Image: &image,
+					},
+				},
+			}
+
+			cleanups = append(cleanups, workload)
+			err = c.Create(ctx, workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("SupplyChainReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Reason": Equal("MissingValueAtPath"),
+					"Status": Equal(metav1.ConditionStatus("Unknown")),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Reason": Equal("MissingValueAtPath"),
+					"Status": Equal(metav1.ConditionStatus("Unknown")),
+				}),
+			))
+		})
+
+		It("stamps the templated object once", func() {
+			testList := &resources.TestObjList{}
+
+			Eventually(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}).Should(Equal(1))
+
+			Consistently(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}, "2s").Should(BeNumerically("<=", 1))
+
+			Expect(testList.Items[0].Name).To(ContainSubstring("test-resource-"))
+			Expect(testList.Items[0].Spec.Foo).To(Equal("some-address"))
+		})
+
+		Context("and the workload is updated", func() {
+			BeforeEach(func() {
+				// ensure first object has been created
+				testList := &resources.TestObjList{}
+
+				Eventually(func() (int, error) {
+					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+					return len(testList.Items), err
+				}, "2s").Should(Equal(1))
+
+				obj := &v1alpha1.Workload{}
+
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				image := "a-different-image"
+
+				newWorkload := &v1alpha1.Workload{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "workload-joe",
+						Namespace: testNS,
+						Labels: map[string]string{
+							"some-key": "some-value",
+						},
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Workload",
+						APIVersion: "carto.run/v1alpha1",
+					},
+					Spec: v1alpha1.WorkloadSpec{
+						Source:             &v1alpha1.Source{Image: &image},
+						ServiceAccountName: "my-service-account",
+					},
+				}
+
+				Expect(c.Patch(ctx, newWorkload, client.MergeFromWithOptions(obj, client.MergeFromWithOptimisticLock{}))).To(Succeed())
+
+				Eventually(func() (int, error) {
+					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+					return len(testList.Items), err
+				}).Should(Equal(2))
+			})
+
+			It("creates a second object alongside the first", func() {
+				testList := &resources.TestObjList{}
+
+				Consistently(func() (int, error) {
+					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+					return len(testList.Items), err
+				}, "2s").Should(Equal(2))
+
+				Expect(testList.Items[0].Name).To(ContainSubstring("test-resource-"))
+				Expect(testList.Items[1].Name).To(ContainSubstring("test-resource-"))
+
+				id := func(element interface{}) string {
+					return element.(resources.TestObj).Spec.Foo
+				}
+				Expect(testList.Items).To(MatchAllElements(id, Elements{
+					"a-different-image": Not(BeNil()),
+					"some-address":      Not(BeNil()),
+				}))
+			})
+		})
+	})
 })

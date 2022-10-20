@@ -206,6 +206,11 @@ spec:
                   field may change as we implement RFC-0016 https://github.com/vmware-tanzu/cartographer/blob/main/rfc/rfc-0016-validate-template-outputs.md
                   ImagePath is specified in jsonpath format, eg: .status.artifact.image_digest'
                 type: string
+              lifecycle:
+                description: Lifecycle specifies whether template modifications should
+                  result in originally created objects being updated (default) or
+                  in new objects created alongside original objects (tekton).
+                type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:

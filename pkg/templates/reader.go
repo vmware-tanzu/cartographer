@@ -31,6 +31,7 @@ type Reader interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
 	IsYTTTemplate() bool
+	IsImmutable() bool
 }
 
 func NewReaderFromAPI(template client.Object) (Reader, error) {

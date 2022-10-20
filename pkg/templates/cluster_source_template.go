@@ -22,6 +22,13 @@ type clusterSourceTemplate struct {
 	template *v1alpha1.ClusterSourceTemplate
 }
 
+func (t *clusterSourceTemplate) IsImmutable() bool {
+	if t.template.Spec.Lifecycle == nil {
+		return false
+	}
+	return *t.template.Spec.Lifecycle == immutable
+}
+
 func NewClusterSourceTemplateReader(template *v1alpha1.ClusterSourceTemplate) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template}
 }

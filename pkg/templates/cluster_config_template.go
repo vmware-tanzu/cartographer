@@ -18,8 +18,17 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
+const immutable = "tekton"
+
 type clusterConfigTemplate struct {
 	template *v1alpha1.ClusterConfigTemplate
+}
+
+func (t *clusterConfigTemplate) IsImmutable() bool {
+	if t.template.Spec.Lifecycle == nil {
+		return false
+	}
+	return *t.template.Spec.Lifecycle == immutable
 }
 
 func NewClusterConfigTemplateReader(template *v1alpha1.ClusterConfigTemplate) *clusterConfigTemplate {

@@ -68,6 +68,12 @@ type TemplateSpec struct {
 	// stamped by this template
 	// +optional
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
+
+	// Lifecycle specifies whether template modifications should result in originally
+	// created objects being updated (default) or in new objects created alongside
+	// original objects (tekton).
+	// +optional
+	Lifecycle *string `json:"lifecycle,omitempty"`
 }
 
 // HealthRule specifies rubric for determining the health of a resource.

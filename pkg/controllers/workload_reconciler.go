@@ -340,11 +340,30 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 			if realizedResource.StampedRef == nil {
 				continue
 			}
-			if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
-				realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
-				realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
-				orphaned = false
-				break
+			apiTemplate, err := r.Repo.GetTemplate(ctx, realizedResource.TemplateRef.Name, realizedResource.TemplateRef.Kind)
+			if err != nil {
+				log.Error(err, "unable to get api template")
+				return fmt.Errorf("unable to get api template [%s/%s]: %w", realizedResource.TemplateRef.Kind, realizedResource.TemplateRef.Name, err)
+			}
+			reader, err := templates.NewReaderFromAPI(apiTemplate)
+			if err != nil {
+				log.Error(err, "failed to get reader for apiTemplate")
+				return fmt.Errorf("failed to get reader for apiTemplate [%s/%s]: %w", realizedResource.TemplateRef.Kind, realizedResource.TemplateRef.Name, err)
+			}
+			if reader.IsImmutable() {
+				if realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
+					realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind { // TODO this is not a sufficient check
+					orphaned = false
+					break
+				}
+
+			} else {
+				if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
+					realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
+					realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
+					orphaned = false
+					break
+				}
 			}
 		}
 		if orphaned {

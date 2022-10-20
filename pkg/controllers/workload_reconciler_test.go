@@ -1279,6 +1279,10 @@ var _ = Describe("WorkloadReconciler", func() {
 						},
 						Resource: "some-kind",
 					},
+					TemplateRef: &corev1.ObjectReference{
+						Kind: "some-template-kind",
+						Name: "some-template-name",
+					},
 				}, nil, false,
 			)
 			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
@@ -1288,6 +1292,8 @@ var _ = Describe("WorkloadReconciler", func() {
 				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
 				return nil
 			}
+			someTemplate := v1alpha1.ClusterTemplate{}
+			repo.GetTemplateReturns(&someTemplate, nil)
 		})
 		Context("template does not change so there are no orphaned objects", func() {
 			BeforeEach(func() {

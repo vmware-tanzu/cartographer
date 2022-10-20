@@ -27,6 +27,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/stamp"
@@ -81,6 +82,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	var stampReader stamp.Outputter
 	var stampedObject *unstructured.Unstructured
 	var template templates.Reader
+	var output *templates.Output
+	var apiTemplate client.Object
+	var err error
 	passThrough := false
 
 	// TODO: consider: should we build this only once, and pass it to the contextGenerator also?
@@ -104,16 +108,17 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	if passThrough {
 		log.V(logger.DEBUG).Info("pass through template", "passThrough", fmt.Sprintf("[%s]", templateOption.PassThrough))
 
-		var err error
 		stampReader, err = stamp.NewPassThroughReader(resource.TemplateRef.Kind, templateOption.PassThrough, inputGenerator)
 		if err != nil {
 			log.Error(err, "failed to create new stamp pass through reader")
 			return nil, nil, nil, passThrough, fmt.Errorf("failed to create new stamp pass through reader: %w", err)
 		}
+
+		output, err = stampReader.Output(stampedObject)
 	} else {
 		log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
-		apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
+		apiTemplate, err = r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
 		if err != nil {
 			log.Error(err, "failed to get cluster template")
 			return nil, nil, nil, passThrough, errors.GetTemplateError{
@@ -147,26 +152,67 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			}
 		}
 
-		err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
-		if err != nil {
-			log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-			return template, nil, nil, passThrough, errors.ApplyStampedObjectError{
-				Err:           err,
-				StampedObject: stampedObject,
-				ResourceName:  resource.Name,
-				BlueprintName: blueprintName,
-				BlueprintType: errors.SupplyChain,
-			}
-		}
-
 		stampReader, err = stamp.NewReader(apiTemplate, inputGenerator)
 		if err != nil {
 			log.Error(err, "failed to create new stamp reader")
 			return nil, nil, nil, passThrough, fmt.Errorf("failed to create new stamp reader: %w", err)
 		}
+
+		if template.IsImmutable() {
+			err = r.ownerRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labels)
+			if err != nil {
+				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+				return template, nil, nil, passThrough, errors.ApplyStampedObjectError{ // TODO validate that this is a reasonable return error
+					Err:           err,
+					StampedObject: stampedObject,
+					ResourceName:  resource.Name,
+					BlueprintName: blueprintName,
+					BlueprintType: errors.SupplyChain,
+				}
+			}
+
+			var allRunnableStampedObjects []*unstructured.Unstructured
+
+			allRunnableStampedObjects, err = r.ownerRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
+			if err != nil {
+				log.Error(err, "failed to list objects")
+				return template, nil, nil, passThrough, errors.ApplyStampedObjectError{ // TODO validate that this is a reasonable return error
+					Err:           err,
+					StampedObject: stampedObject,
+					ResourceName:  resource.Name,
+					BlueprintName: blueprintName,
+					BlueprintType: errors.SupplyChain,
+				}
+			}
+
+			defaultRetentionPolicyToReplace := v1alpha1.RetentionPolicy{ // TODO make this configurable
+				MaxFailedRuns:     10,
+				MaxSuccessfulRuns: 10,
+			}
+
+			err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, defaultRetentionPolicyToReplace, r.ownerRepo)
+			if err != nil {
+				log.Error(err, "failed to cleanup runnable stamped objects")
+			}
+
+			output, err = stamp.LatestOutput(allRunnableStampedObjects, stampReader, template.GetHealthRule())
+		} else {
+			err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+			if err != nil {
+				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+				return template, nil, nil, passThrough, errors.ApplyStampedObjectError{
+					Err:           err,
+					StampedObject: stampedObject,
+					ResourceName:  resource.Name,
+					BlueprintName: blueprintName,
+					BlueprintType: errors.SupplyChain,
+				}
+			}
+
+			output, err = stampReader.Output(stampedObject)
+		}
 	}
 
-	output, err := stampReader.Output(stampedObject)
 	if err != nil {
 		var qualifiedResource string
 		if passThrough {

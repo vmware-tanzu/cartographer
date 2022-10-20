@@ -44,20 +44,6 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 		serviceAccountName    string
 	)
 
-	var createNamespacedObject = func(ctx context.Context, objYaml, namespace string) *unstructured.Unstructured {
-		obj := &unstructured.Unstructured{}
-		err := yaml.Unmarshal([]byte(objYaml), obj)
-		Expect(err).NotTo(HaveOccurred())
-		if namespace != "" {
-			obj.SetNamespace(namespace)
-		}
-
-		err = c.Create(ctx, obj, &client.CreateOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		return obj
-	}
-
 	BeforeEach(func() {
 		ctx = context.Background()
 
@@ -74,7 +60,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			`,
 			testNS, serviceAccountName)
 
-		_ = createNamespacedObject(ctx, serviceAccountYaml, testNS)
+		_ = CreateNamespacedObject(ctx, c, serviceAccountYaml, testNS)
 	})
 
 	getRunnableTestStatus := func() (metav1.Condition, error) {
@@ -120,7 +106,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				testNS,
 			)
 
-			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
+			runTemplateDefinition = CreateNamespacedObject(ctx, c, runTemplateYaml, testNS)
 		})
 
 		AfterEach(func() {
@@ -147,7 +133,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					`,
 					testNS, serviceAccountName, testNS)
 
-				runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+				runnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
 			})
 
 			AfterEach(func() {
@@ -267,7 +253,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					`,
 						testNS, serviceAccountName, testNS)
 
-					secondRunnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+					secondRunnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
 				})
 
 				AfterEach(func() {
@@ -365,7 +351,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  values: [$(selected.spec.value.answer)$]
 				`)
 
-			runTemplateDefinition = createNamespacedObject(ctx, runTemplateYaml, testNS)
+			runTemplateDefinition = CreateNamespacedObject(ctx, c, runTemplateYaml, testNS)
 		})
 
 		AfterEach(func() {
@@ -399,7 +385,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  runnables.carto.run/stage: production
 					`, serviceAccountName, testNS)
 
-				runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+				runnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
 			})
 
 			AfterEach(func() {
@@ -425,7 +411,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  value:
 							answer: polo-production-stage
 					`)
-					selectedDefinition = createNamespacedObject(ctx, selectedYaml, testNS)
+					selectedDefinition = CreateNamespacedObject(ctx, c, selectedYaml, testNS)
 				})
 
 				AfterEach(func() {
@@ -475,10 +461,10 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 							answer: %s`
 
 					selectedYaml1 := HereYamlF(selectedYamlTemplate, "polo-production-stage")
-					selectedDefinition1 = createNamespacedObject(ctx, selectedYaml1, testNS)
+					selectedDefinition1 = CreateNamespacedObject(ctx, c, selectedYaml1, testNS)
 
 					selectedYaml2 := HereYamlF(selectedYamlTemplate, "a-value-not-to-be-propagated")
-					selectedDefinition2 = createNamespacedObject(ctx, selectedYaml2, otherNamespace)
+					selectedDefinition2 = CreateNamespacedObject(ctx, c, selectedYaml2, otherNamespace)
 				})
 
 				AfterEach(func() {
@@ -537,7 +523,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  runnables.carto.run/stage: production
 					`, serviceAccountName, testNS)
 
-				runnableDefinition = createNamespacedObject(ctx, runnableYaml, testNS)
+				runnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
 			})
 
 			AfterEach(func() {
@@ -563,7 +549,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  value:
 							answer: polo-production-stage
 					`)
-					selectedDefinition = createNamespacedObject(ctx, selectedYaml, "")
+					selectedDefinition = CreateNamespacedObject(ctx, c, selectedYaml, "")
 				})
 
 				AfterEach(func() {
