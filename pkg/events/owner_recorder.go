@@ -76,10 +76,14 @@ func (o ownerEventRecorder) Eventf(eventtype, reason, messageFmt string, args ..
 }
 
 func (o ownerEventRecorder) ResourceEventf(eventtype, reason, messageFmt string, resource *unstructured.Unstructured, args ...interface{}) {
-	qualifiedResourceWithName, err := utils.GetQualifiedResourceWithName(o.mapper, resource)
-	if err != nil {
-		o.log.V(logger.DEBUG).Error(err, "cannot find rest mapping for resource", "resource", resource)
-		return
+	qualifiedResourceWithName := "<nil>"
+	if resource != nil {
+		var mappingErr error
+		qualifiedResourceWithName, mappingErr = utils.GetQualifiedResourceWithName(o.mapper, resource)
+		if mappingErr != nil {
+			o.log.V(logger.DEBUG).Error(mappingErr, "cannot find rest mapping for resource", "resource", resource)
+			return
+		}
 	}
 	messageFmt = strings.ReplaceAll(messageFmt, QualifiedResourceNameToken, qualifiedResourceWithName)
 	o.rec.Eventf(o.obj, eventtype, reason, messageFmt, args...)
