@@ -145,16 +145,21 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
 			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource, isPassThrough)
-			if !isPassThrough {
-				var previousOutputs []v1alpha1.Output
-				if previousRealizedResource != nil {
-					previousOutputs = previousRealizedResource.Outputs
-				}
-				if !reflect.DeepEqual(previousOutputs, realizedResource.Outputs) {
-					rec := events.FromContextOrDie(ctx)
+
+			var previousOutputs []v1alpha1.Output
+			if previousRealizedResource != nil {
+				previousOutputs = previousRealizedResource.Outputs
+			}
+
+			if !reflect.DeepEqual(previousOutputs, realizedResource.Outputs) {
+				rec := events.FromContextOrDie(ctx)
+				if isPassThrough {
+					rec.Eventf(events.NormalType, events.ResourceOutputChangedReason, "[%s] passed through a new output", realizedResource.Name)
+				} else {
 					rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", stampedObject, realizedResource.Name)
 				}
 			}
+
 			if template != nil {
 				additionalConditions = []metav1.Condition{r.healthyConditionEvaluator(template.GetHealthRule(), realizedResource, stampedObject)}
 			}
