@@ -73,6 +73,9 @@ var _ = Describe("Realize", func() {
 		rec.ResourceEventfCalls(func(eventtype, reason, messageFmt string, resource *unstructured.Unstructured, i ...interface{}) {
 			recordedEvents = append(recordedEvents, event{eventtype, reason, messageFmt, resource.GetName(), i})
 		})
+		rec.EventfCalls(func(eventtype, reason, messageFmt string, i ...interface{}) {
+			recordedEvents = append(recordedEvents, event{eventtype, reason, messageFmt, "", i})
+		})
 		evaluatedHealthRules = []*v1alpha1.HealthRule{}
 		evaluatedRealizedResourceNames = []string{}
 		evaluatedStampedObjectNames = []string{}
@@ -245,7 +248,7 @@ var _ = Describe("Realize", func() {
 			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
 			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
 			Expect(currentResourceStatuses[1].Outputs).To(BeNil())
-			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(3))
+			Expect(len(currentResourceStatuses[1].Conditions)).To(Equal(3))
 
 			Expect(currentResourceStatuses[1].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal("ResourceSubmitted"),
@@ -312,6 +315,188 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses[0].TemplateRef).To(BeNil())
 			Expect(currentResourceStatuses[0].StampedRef).To(BeNil())
 			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+		})
+	})
+
+	Context("one of the resources is passed through", func() {
+		var (
+			template1             *v1alpha1.ClusterImageTemplate
+			executedResourceOrder []string
+			supplyChain           *v1alpha1.ClusterSupplyChain
+			resource1             v1alpha1.SupplyChainResource
+			resource2             v1alpha1.SupplyChainResource
+		)
+		BeforeEach(func() {
+			template1 = &v1alpha1.ClusterImageTemplate{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-image-template",
+				},
+				Spec: v1alpha1.ImageTemplateSpec{
+					TemplateSpec: v1alpha1.TemplateSpec{
+						HealthRule: &v1alpha1.HealthRule{
+							SingleConditionType: "Happy",
+						},
+					},
+				},
+			}
+			resource1 = v1alpha1.SupplyChainResource{
+				Name: "resource1",
+				TemplateRef: v1alpha1.SupplyChainTemplateReference{
+					Kind: template1.Kind,
+					Name: template1.Name,
+				},
+			}
+			resource2 = v1alpha1.SupplyChainResource{
+				Name: "resource2",
+				Images: []v1alpha1.ResourceReference{
+					{
+						Name:     "my-image",
+						Resource: "resource1",
+					},
+				},
+			}
+			supplyChain = &v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
+				Spec: v1alpha1.SupplyChainSpec{
+					Resources: []v1alpha1.SupplyChainResource{resource1, resource2},
+				},
+			}
+
+			outputFromFirstResource := &templates.Output{Image: "whatever"}
+
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error) {
+				executedResourceOrder = append(executedResourceOrder, resource.Name)
+				Expect(blueprintName).To(Equal("greatest-supply-chain"))
+				if resource.Name == "resource1" {
+					Expect(outputs).To(Equal(realizer.NewOutputs()))
+					reader, err := templates.NewReaderFromAPI(template1)
+					Expect(err).NotTo(HaveOccurred())
+					stampedObj := &unstructured.Unstructured{}
+					stampedObj.SetName("obj1")
+					return reader, stampedObj, outputFromFirstResource, false, nil
+				}
+
+				if resource.Name == "resource2" {
+					expectedSecondResourceOutputs := realizer.NewOutputs()
+					expectedSecondResourceOutputs.AddOutput("resource1", outputFromFirstResource)
+					Expect(outputs).To(Equal(expectedSecondResourceOutputs))
+				}
+
+				return nil, nil, outputFromFirstResource, true, nil
+			})
+
+			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+				Resource: schema.GroupVersionResource{
+					Group:    "EXAMPLE.COM",
+					Version:  "v1",
+					Resource: "FOO",
+				},
+				GroupVersionKind: schema.GroupVersionKind{
+					Group:   "",
+					Version: "",
+					Kind:    "",
+				},
+				Scope: nil,
+			}, nil)
+
+		})
+
+		It("records an event for resource output changes", func() {
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			Expect(rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)).To(Succeed())
+
+			Expect(recordedEvents).To(ConsistOf(
+				event{"Normal", events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", "obj1", []interface{}{"resource1"}},
+				event{"Normal", events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", "obj1", []interface{}{"resource1", metav1.ConditionTrue}},
+				event{"Normal", events.ResourceOutputChangedReason, "[%s] passed through a new output", "", []interface{}{"resource2"}},
+			))
+		})
+
+		It("does not record an event if there was no resource output change", func() {
+			previousResources := []v1alpha1.ResourceStatus{
+				{
+					RealizedResource: v1alpha1.RealizedResource{
+						Name: "resource2",
+						Outputs: []v1alpha1.Output{
+							{
+								Name:               "image",
+								Preview:            "whatever\n",
+								Digest:             fmt.Sprintf("sha256:%x", sha256.Sum256([]byte("whatever\n"))),
+								LastTransitionTime: metav1.Now(),
+							},
+						},
+					},
+				},
+			}
+
+			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
+			Expect(rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)).To(Succeed())
+
+			Expect(recordedEvents).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Message": ContainSubstring("passed through")})))
+		})
+
+		It("generates the correct realized resource", func() {
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			err := rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+			Expect(err).ToNot(HaveOccurred())
+
+			currentResourceStatuses := resourceStatuses.GetCurrent()
+
+			Expect(currentResourceStatuses).To(HaveLen(2))
+
+			Expect(currentResourceStatuses[0].Name).To(Equal(resource1.Name))
+			Expect(currentResourceStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
+			Expect(currentResourceStatuses[0].StampedRef.Name).To(Equal("obj1"))
+			Expect(currentResourceStatuses[0].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
+			Expect(currentResourceStatuses[0].Inputs).To(BeNil())
+			Expect(len(currentResourceStatuses[0].Outputs)).To(Equal(1))
+			Expect(currentResourceStatuses[0].Outputs[0]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Name":    Equal("image"),
+					"Preview": Equal("whatever\n"),
+					"Digest":  HavePrefix("sha256"),
+				},
+			))
+			Expect(time.Since(currentResourceStatuses[0].Outputs[0].LastTransitionTime.Time)).To(BeNumerically("<", time.Second))
+			Expect(len(currentResourceStatuses[0].Conditions)).To(Equal(3))
+
+			Expect(currentResourceStatuses[0].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("ResourceSubmitted"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+			Expect(currentResourceStatuses[0].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+			Expect(currentResourceStatuses[0].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+
+			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
+			Expect(currentResourceStatuses[1].TemplateRef).To(BeNil())
+			Expect(currentResourceStatuses[1].StampedRef).To(BeNil())
+			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
+			Expect(currentResourceStatuses[1].Inputs).To(Equal([]v1alpha1.Input{{Name: "resource1"}}))
+			Expect(currentResourceStatuses[1].Outputs[0]).To(MatchFields(IgnoreExtras,
+				Fields{
+					"Name":    Equal("image"),
+					"Preview": Equal("whatever\n"),
+					"Digest":  HavePrefix("sha256"),
+				},
+			))
+			Expect(len(currentResourceStatuses[1].Conditions)).To(Equal(2))
+
+			Expect(currentResourceStatuses[1].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("ResourceSubmitted"),
+				"Status": Equal(metav1.ConditionTrue),
+				"Reason": Equal("PassThrough"),
+			})))
+			Expect(currentResourceStatuses[1].Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
 		})
 	})
 
