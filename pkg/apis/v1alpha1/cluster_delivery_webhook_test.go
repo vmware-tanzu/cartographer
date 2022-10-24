@@ -559,6 +559,29 @@ var _ = Describe("Delivery Validation", func() {
 
 		Context("options with pass through", func() {
 
+			Context("more than one pass through specified", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+					delivery.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty-also"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
 			Context("option name and option pass through both specified", func() {
 				BeforeEach(func() {
 					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
@@ -607,6 +630,24 @@ var _ = Describe("Delivery Validation", func() {
 				})
 			})
 
+			Context("well formed", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+				It("updates without error", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
 		})
 	})
 

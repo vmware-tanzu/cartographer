@@ -1001,6 +1001,29 @@ var _ = Describe("Webhook Validation", func() {
 
 		Context("options with pass through", func() {
 
+			Context("more than one pass through specified", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+					supplyChain.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty-also"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
 			Context("option name and option pass through both specified", func() {
 				BeforeEach(func() {
 					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
@@ -1049,6 +1072,24 @@ var _ = Describe("Webhook Validation", func() {
 				})
 			})
 
+			Context("well formed", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+				It("updates without error", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
 		})
 	})
 })

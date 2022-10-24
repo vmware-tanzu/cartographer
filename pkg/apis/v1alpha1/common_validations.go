@@ -26,6 +26,16 @@ import (
 )
 
 func validateResourceOptions(options []TemplateOption, validPaths map[string]bool, validPrefixes []string) error {
+	passThroughCount := 0
+	for _, option := range options {
+		if option.PassThrough != "" {
+			passThroughCount += 1
+		}
+	}
+	if passThroughCount > 1 {
+		return fmt.Errorf("cannot have more than one pass through option, found %d", passThroughCount)
+	}
+
 	for _, option := range options {
 		if option.Name != "" && option.PassThrough != "" {
 			return fmt.Errorf("exactly one of option.Name or option.PassThrough must be specified, found both")
@@ -35,8 +45,13 @@ func validateResourceOptions(options []TemplateOption, validPaths map[string]boo
 			return fmt.Errorf("exactly one of option.Name or option.PassThrough must be specified, found neither")
 		}
 
+		optionName := option.Name
+		if optionName == "" {
+			optionName = "passThrough"
+		}
+
 		if err := validateSelector(option.Selector, validPaths, validPrefixes); err != nil {
-			return fmt.Errorf("error validating option [%s] selector: %w", option.Name, err)
+			return fmt.Errorf("error validating option [%s] selector: %w", optionName, err)
 		}
 	}
 
