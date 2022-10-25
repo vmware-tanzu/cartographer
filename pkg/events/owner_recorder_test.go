@@ -101,5 +101,17 @@ var _ = Describe("OwnerRecorder", func() {
 				Expect(out).To(Say(`cannot find rest mapping for resource.*"apiVersion":"example.com/v1".*"kind":"foo".*"name":"the-resource"`))
 			})
 		})
+
+		It("handles nil stamped object gracefully", func() {
+			rec.ResourceEventf("Normal", "EggsNil", "Resource [%Q] might panic without a nil check!", nil)
+
+			Expect(fakeRecorder.EventfCallCount()).To(Equal(1))
+			eventObject, eventType, reason, messageFormat, eventMessageArgs := fakeRecorder.EventfArgsForCall(0)
+			Expect(eventObject).To(Equal(ownerObject))
+			Expect(eventType).To(Equal("Normal"))
+			Expect(reason).To(Equal("EggsNil"))
+			Expect(messageFormat).To(Equal(`Resource [<nil>] might panic without a nil check!`))
+			Expect(eventMessageArgs).To(BeEmpty())
+		})
 	})
 })
