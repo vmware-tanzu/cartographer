@@ -60,17 +60,32 @@ func HereYamlF(y string, args ...interface{}) string {
 	return heredoc.Docf(y, args...)
 }
 
-func CreateNamespacedObject(ctx context.Context, c client.Client, objYaml, namespace string) *unstructured.Unstructured {
-	obj := &unstructured.Unstructured{}
-	err := yaml.Unmarshal([]byte(objYaml), obj)
-	Expect(err).NotTo(HaveOccurred())
+func CreateNamespacedObjectOnClusterFromYamlDefinition(ctx context.Context, c client.Client, objYaml, namespace string) *unstructured.Unstructured {
+	obj := createUnstructuredObject(objYaml)
+
 	if namespace != "" {
 		obj.SetNamespace(namespace)
 	}
 
-	err = c.Create(ctx, obj, &client.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	createObjectOnClusterFromUnstructured(ctx, c, obj)
+	return obj
+}
 
+func CreateObjectOnClusterFromYamlDefinition(ctx context.Context, c client.Client, objYaml string) *unstructured.Unstructured {
+	obj := createUnstructuredObject(objYaml)
+	createObjectOnClusterFromUnstructured(ctx, c, obj)
+	return obj
+}
+
+func createObjectOnClusterFromUnstructured(ctx context.Context, c client.Client, obj *unstructured.Unstructured) {
+	err := c.Create(ctx, obj, &client.CreateOptions{})
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func createUnstructuredObject(objYaml string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	err := yaml.Unmarshal([]byte(objYaml), obj)
+	Expect(err).NotTo(HaveOccurred())
 	return obj
 }
 

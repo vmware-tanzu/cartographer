@@ -27,10 +27,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
@@ -245,13 +243,8 @@ var _ = Describe("WorkloadReconciler", func() {
 					  foo: "bar"
 			`)
 
-			template := &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(templateYaml), template)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, template, &client.CreateOptions{})
+			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 			cleanups = append(cleanups, template)
-			Expect(err).NotTo(HaveOccurred())
 
 			supplyChainYaml := utils.HereYaml(`
 				---
@@ -269,13 +262,8 @@ var _ = Describe("WorkloadReconciler", func() {
 				        name: my-config-template
 			`)
 
-			supplyChain := &unstructured.Unstructured{}
-			err = yaml.Unmarshal([]byte(supplyChainYaml), supplyChain)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, supplyChain, &client.CreateOptions{})
+			supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
 			cleanups = append(cleanups, supplyChain)
-			Expect(err).NotTo(HaveOccurred())
 
 			workload := &v1alpha1.Workload{
 				TypeMeta: metav1.TypeMeta{},
@@ -290,7 +278,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 
 			cleanups = append(cleanups, workload)
-			err = c.Create(ctx, workload, &client.CreateOptions{})
+			err := c.Create(ctx, workload, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			test = &resources.TestObj{}
@@ -327,7 +315,6 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 
 		Context("a stamped object has changed", func() {
-
 			BeforeEach(func() {
 				test.Status.Conditions = []metav1.Condition{
 					{
@@ -413,13 +400,8 @@ var _ = Describe("WorkloadReconciler", func() {
 					  foo: $(workload.spec.source.image)$
 			`)
 
-			template := &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(templateYaml), template)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, template, &client.CreateOptions{})
+			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 			cleanups = append(cleanups, template)
-			Expect(err).NotTo(HaveOccurred())
 
 			supplyChainYaml := utils.HereYaml(`
 				---
@@ -437,13 +419,8 @@ var _ = Describe("WorkloadReconciler", func() {
 				        name: my-config-template
 			`)
 
-			supplyChain := &unstructured.Unstructured{}
-			err = yaml.Unmarshal([]byte(supplyChainYaml), supplyChain)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = c.Create(ctx, supplyChain, &client.CreateOptions{})
+			supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
 			cleanups = append(cleanups, supplyChain)
-			Expect(err).NotTo(HaveOccurred())
 
 			image := "some-address"
 
@@ -468,7 +445,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			}
 
 			cleanups = append(cleanups, workload)
-			err = c.Create(ctx, workload, &client.CreateOptions{})
+			err := c.Create(ctx, workload, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() []metav1.Condition {

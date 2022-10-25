@@ -60,7 +60,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 			`,
 			testNS, serviceAccountName)
 
-		_ = CreateNamespacedObject(ctx, c, serviceAccountYaml, testNS)
+		_ = CreateObjectOnClusterFromYamlDefinition(ctx, c, serviceAccountYaml)
 	})
 
 	getRunnableTestStatus := func() (metav1.Condition, error) {
@@ -106,7 +106,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				testNS,
 			)
 
-			runTemplateDefinition = CreateNamespacedObject(ctx, c, runTemplateYaml, testNS)
+			runTemplateDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, runTemplateYaml)
 		})
 
 		AfterEach(func() {
@@ -133,7 +133,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					`,
 					testNS, serviceAccountName, testNS)
 
-				runnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
+				runnableDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, runnableYaml)
 			})
 
 			AfterEach(func() {
@@ -253,7 +253,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					`,
 						testNS, serviceAccountName, testNS)
 
-					secondRunnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
+					secondRunnableDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, runnableYaml)
 				})
 
 				AfterEach(func() {
@@ -351,7 +351,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  values: [$(selected.spec.value.answer)$]
 				`)
 
-			runTemplateDefinition = CreateNamespacedObject(ctx, c, runTemplateYaml, testNS)
+			runTemplateDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, runTemplateYaml)
 		})
 
 		AfterEach(func() {
@@ -367,6 +367,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					kind: Runnable
 					metadata:
 					  name: runnable---multi-label-selector
+					  namespace: %s
 					  labels:
 						my-label: this-is-it
 					spec:
@@ -383,9 +384,9 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						matchingLabels:
 						  runnables.carto.run/group: dev---multi-label-selector
 						  runnables.carto.run/stage: production
-					`, serviceAccountName, testNS)
+					`, testNS, serviceAccountName, testNS)
 
-				runnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
+				runnableDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, runnableYaml)
 			})
 
 			AfterEach(func() {
@@ -397,12 +398,13 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 				var selectedDefinition *unstructured.Unstructured
 
 				BeforeEach(func() {
-					selectedYaml := HereYaml(`
+					selectedYaml := HereYamlF(`
 						---
 						apiVersion: test.run/v1alpha1
 						kind: TestObj
 						metadata:
 						  name: dummy-selected-2---multi-label-selector
+						  namespace: %s
 						  labels:
 							runnables.carto.run/group: dev---multi-label-selector
 							runnables.carto.run/stage: production
@@ -410,8 +412,8 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						spec:
 						  value:
 							answer: polo-production-stage
-					`)
-					selectedDefinition = CreateNamespacedObject(ctx, c, selectedYaml, testNS)
+					`, testNS)
+					selectedDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, selectedYaml)
 				})
 
 				AfterEach(func() {
@@ -461,10 +463,10 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 							answer: %s`
 
 					selectedYaml1 := HereYamlF(selectedYamlTemplate, "polo-production-stage")
-					selectedDefinition1 = CreateNamespacedObject(ctx, c, selectedYaml1, testNS)
+					selectedDefinition1 = CreateNamespacedObjectOnClusterFromYamlDefinition(ctx, c, selectedYaml1, testNS)
 
 					selectedYaml2 := HereYamlF(selectedYamlTemplate, "a-value-not-to-be-propagated")
-					selectedDefinition2 = CreateNamespacedObject(ctx, c, selectedYaml2, otherNamespace)
+					selectedDefinition2 = CreateNamespacedObjectOnClusterFromYamlDefinition(ctx, c, selectedYaml2, otherNamespace)
 				})
 
 				AfterEach(func() {
@@ -505,6 +507,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 					kind: Runnable
 					metadata:
 					  name: runnable---multi-label-selector
+					  namespace: %s
 					  labels:
 						my-label: this-is-it
 					spec:
@@ -521,9 +524,9 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						matchingLabels:
 						  runnables.carto.run/group: dev---multi-label-selector
 						  runnables.carto.run/stage: production
-					`, serviceAccountName, testNS)
+					`, testNS, serviceAccountName, testNS)
 
-				runnableDefinition = CreateNamespacedObject(ctx, c, runnableYaml, testNS)
+				runnableDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, runnableYaml)
 			})
 
 			AfterEach(func() {
@@ -549,7 +552,7 @@ var _ = Describe("Stamping a resource on Runnable Creation", func() {
 						  value:
 							answer: polo-production-stage
 					`)
-					selectedDefinition = CreateNamespacedObject(ctx, c, selectedYaml, "")
+					selectedDefinition = CreateObjectOnClusterFromYamlDefinition(ctx, c, selectedYaml)
 				})
 
 				AfterEach(func() {
