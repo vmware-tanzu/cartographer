@@ -18,17 +18,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-const immutable = "immutable"
-
 type clusterConfigTemplate struct {
 	template *v1alpha1.ClusterConfigTemplate
 }
 
-func (t *clusterConfigTemplate) IsImmutable() bool {
-	if t.template.Spec.Lifecycle == nil {
-		return false
-	}
-	return *t.template.Spec.Lifecycle == immutable
+func (t *clusterConfigTemplate) GetLifecycle() *Lifecycle {
+	lifecycle := convertLifecycle(t.template.Spec.Lifecycle)
+	return &lifecycle
 }
 
 func NewClusterConfigTemplateReader(template *v1alpha1.ClusterConfigTemplate) *clusterConfigTemplate {

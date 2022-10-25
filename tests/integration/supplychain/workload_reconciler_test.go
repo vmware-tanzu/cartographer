@@ -554,4 +554,333 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 		})
 	})
+
+	Context("supply chain with immutable template", func() {
+		var (
+			expectedValue           string
+			healthRuleSpecification string
+			lifecycleSpecification  string
+			immutableTemplateBase   string
+		)
+
+		BeforeEach(func() {
+			immutableTemplateBase = `
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: spec.foo
+			      lifecycle: %s
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(workload.spec.source.image)$
+				  %s
+			`
+
+			followOnTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: follow-on-template
+				spec:
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  name: follow-object
+					spec:
+					  foo: $(config)$
+			`)
+
+			followOnTemplate := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, followOnTemplateYaml)
+			cleanups = append(cleanups, followOnTemplate)
+
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			        - name: follow-on-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: follow-on-template
+					  configs:
+			            - resource: my-first-resource
+			              name: config
+			`)
+
+			supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+			cleanups = append(cleanups, supplyChain)
+
+			expectedValue = "some-address"
+
+			workload := &v1alpha1.Workload{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Workload",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{
+					ServiceAccountName: "my-service-account",
+					Source: &v1alpha1.Source{
+						Image: &expectedValue,
+					},
+				},
+			}
+
+			cleanups = append(cleanups, workload)
+			err := c.Create(ctx, workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		var itResultsInAHealthyWorkload = func() {
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("SupplyChainReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Reason": Equal("ResourceSubmissionComplete"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+			))
+
+			Consistently(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Reason": Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+		}
+
+		Context("generic immutable template", func() {
+			BeforeEach(func() {
+				lifecycleSpecification = "immutable"
+			})
+			Context("without a healthRule", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = ""
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				It("results in a healthy workload", func() {
+					itResultsInAHealthyWorkload()
+				})
+			})
+
+			Context("with an alwaysHealthy healthRule", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = "healthRule:\n    alwaysHealthy: {}"
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				It("results in a healthy workload", func() {
+					itResultsInAHealthyWorkload()
+				})
+			})
+
+			Context("with a healthRule that must be satisfied", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = "healthRule:\n    singleConditionType: Ready"
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				Context("which is not satisfied", func() {
+					It("results in an unhealthy workload", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesHealthy"),
+								"Reason": Equal("HealthyConditionRule"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+
+					It("prevents reading fields of the stamped object", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesSubmitted"),
+								"Reason": Equal("MissingValueAtPath"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+
+					When("the healthRule is subsequently satisfied", func() {
+						It("results in a healthy workload", func() {
+							// update the object
+							opts := []client.ListOption{
+								client.InNamespace(testNS),
+							}
+
+							testsList := &resources.TestObjList{}
+
+							Eventually(func() ([]resources.TestObj, error) {
+								err := c.List(ctx, testsList, opts...)
+								return testsList.Items, err
+							}).Should(HaveLen(1))
+
+							testToUpdate := &testsList.Items[0]
+							testToUpdate.Status.Conditions = []metav1.Condition{
+								{
+									Type:               "Ready",
+									Status:             "True",
+									Reason:             "Ready",
+									LastTransitionTime: metav1.Now(),
+								},
+							}
+
+							err := c.Status().Update(ctx, testToUpdate)
+							Expect(err).NotTo(HaveOccurred())
+
+							// assert expected state
+							itResultsInAHealthyWorkload()
+						})
+					})
+				})
+			})
+		})
+
+		Context("tekton template", func() {
+			BeforeEach(func() {
+				lifecycleSpecification = "tekton"
+			})
+			Context("without a healthRule", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = ""
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				When("the stamped object's succeeded condition has status == true", func() {
+					It("results in a healthy workload", func() {
+						// update the object
+						opts := []client.ListOption{
+							client.InNamespace(testNS),
+						}
+
+						testsList := &resources.TestObjList{}
+
+						Eventually(func() ([]resources.TestObj, error) {
+							err := c.List(ctx, testsList, opts...)
+							return testsList.Items, err
+						}).Should(HaveLen(1))
+
+						testToUpdate := &testsList.Items[0]
+						testToUpdate.Status.Conditions = []metav1.Condition{
+							{
+								Type:               "Succeeded",
+								Status:             "True",
+								Reason:             "SomeGoodReason",
+								LastTransitionTime: metav1.Now(),
+							},
+						}
+
+						err := c.Status().Update(ctx, testToUpdate)
+						Expect(err).NotTo(HaveOccurred())
+
+						// assert expected state
+						itResultsInAHealthyWorkload()
+					})
+				})
+
+				When("the stamped object's succeeded condition is not yet true", func() {
+					It("results in a resource with an unknown healthy status workload", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesHealthy"),
+								"Reason": Equal("HealthyConditionRule"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+
+					It("prevents reading fields of the stamped object", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesSubmitted"),
+								"Reason": Equal("MissingValueAtPath"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+				})
+			})
+		})
+	})
+
+	Context("a supply chain with a tekton template with no healthRule specified", func() {
+
+	})
 })

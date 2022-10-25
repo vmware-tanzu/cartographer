@@ -24,11 +24,9 @@ type clusterImageTemplate struct {
 	template *v1alpha1.ClusterImageTemplate
 }
 
-func (t *clusterImageTemplate) IsImmutable() bool {
-	if t.template.Spec.Lifecycle == nil {
-		return false
-	}
-	return *t.template.Spec.Lifecycle == immutable
+func (t *clusterImageTemplate) GetLifecycle() *Lifecycle {
+	lifecycle := convertLifecycle(t.template.Spec.Lifecycle)
+	return &lifecycle
 }
 
 func NewClusterImageTemplateReader(template *v1alpha1.ClusterImageTemplate) *clusterImageTemplate {

@@ -158,7 +158,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			return nil, nil, nil, passThrough, fmt.Errorf("failed to create new stamp reader: %w", err)
 		}
 
-		if template.IsImmutable() {
+		if template.GetLifecycle().IsImmutable() {
 			err = r.ownerRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labels)
 			if err != nil {
 				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
@@ -195,7 +195,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				log.Error(err, "failed to cleanup runnable stamped objects")
 			}
 
-			output, err = stamp.LatestOutput(allRunnableStampedObjects, stampReader, template.GetHealthRule())
+			healthRule := template.GetHealthRule()
+			if healthRule == nil && *template.GetLifecycle() == templates.Tekton {
+				healthRule = &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
+			}
+
+			output, err = stamp.LatestOutput(allRunnableStampedObjects, stampReader, healthRule)
 		} else {
 			err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 			if err != nil {

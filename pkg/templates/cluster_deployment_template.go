@@ -22,11 +22,9 @@ type clusterDeploymentTemplate struct {
 	template *v1alpha1.ClusterDeploymentTemplate
 }
 
-func (t *clusterDeploymentTemplate) IsImmutable() bool {
-	if t.template.Spec.Lifecycle == nil {
-		return false
-	}
-	return *t.template.Spec.Lifecycle == immutable
+func (t *clusterDeploymentTemplate) GetLifecycle() *Lifecycle {
+	lifecycle := convertLifecycle(t.template.Spec.Lifecycle)
+	return &lifecycle
 }
 
 func NewClusterDeploymentTemplateReader(template *v1alpha1.ClusterDeploymentTemplate) *clusterDeploymentTemplate {

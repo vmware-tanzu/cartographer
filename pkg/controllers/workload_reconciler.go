@@ -350,7 +350,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 				log.Error(err, "failed to get reader for apiTemplate")
 				return fmt.Errorf("failed to get reader for apiTemplate [%s/%s]: %w", realizedResource.TemplateRef.Kind, realizedResource.TemplateRef.Name, err)
 			}
-			if reader.IsImmutable() {
+			if reader.GetLifecycle().IsImmutable() {
 				if realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
 					realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind { // TODO this is not a sufficient check
 					orphaned = false
