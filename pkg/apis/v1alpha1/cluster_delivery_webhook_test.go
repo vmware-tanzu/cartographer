@@ -557,7 +557,7 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 
-		FContext("options with pass through", func() {
+		Context("options with pass through", func() {
 			BeforeEach(func() {
 				delivery.Spec.Resources[0].Sources = []v1alpha1.ResourceReference{
 					{
