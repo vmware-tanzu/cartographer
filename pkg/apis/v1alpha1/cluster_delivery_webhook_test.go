@@ -557,7 +557,46 @@ var _ = Describe("Delivery Validation", func() {
 			})
 		})
 
-		Context("options with pass through", func() {
+		FContext("options with pass through", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].Sources = []v1alpha1.ResourceReference{
+					{
+						Name:     "not-empty",
+						Resource: "another-resource",
+					},
+				}
+
+				delivery.Spec.Resources = append(delivery.Spec.Resources, v1alpha1.DeliveryResource{
+					Name: "another-resource",
+					TemplateRef: v1alpha1.DeliveryTemplateReference{
+						Name: "my-name",
+						Kind: "ClusterSourceTemplate",
+					},
+				})
+			})
+
+			Context("pass through refers to an input that does not exist", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "wrong-input"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
 
 			Context("more than one pass through specified", func() {
 				BeforeEach(func() {

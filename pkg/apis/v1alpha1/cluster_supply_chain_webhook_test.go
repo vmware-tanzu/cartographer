@@ -1000,6 +1000,45 @@ var _ = Describe("Webhook Validation", func() {
 		})
 
 		Context("options with pass through", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources[0].Sources = []v1alpha1.ResourceReference{
+					{
+						Name:     "not-empty",
+						Resource: "another-resource",
+					},
+				}
+
+				supplyChain.Spec.Resources = append(supplyChain.Spec.Resources, v1alpha1.SupplyChainResource{
+					Name: "another-resource",
+					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						Name: "my-name",
+						Kind: "ClusterSourceTemplate",
+					},
+				})
+			})
+
+			Context("pass through refers to an input that does not exist", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "wrong-input"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
 
 			Context("more than one pass through specified", func() {
 				BeforeEach(func() {

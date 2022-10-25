@@ -89,6 +89,27 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	}
 
 	for _, resource := range c.Spec.Resources {
+		for _, option := range resource.TemplateRef.Options {
+			if option.PassThrough != "" {
+				var found bool
+				if resource.TemplateRef.Kind == "ClusterSourceTemplate" {
+					found = isPassThroughInputFound(resource.Sources, option.PassThrough)
+				} else if resource.TemplateRef.Kind == "ClusterImageTemplate" {
+					found = isPassThroughInputFound(resource.Images, option.PassThrough)
+				} else if resource.TemplateRef.Kind == "ClusterConfigTemplate" {
+					found = isPassThroughInputFound(resource.Configs, option.PassThrough)
+				} else {
+					return fmt.Errorf("error validating resource [%s]: TemplateRef.Kind [%s] is not a known type", resource.Name, resource.TemplateRef.Kind)
+				}
+
+				if !found {
+					return fmt.Errorf("error validating resource [%s]: pass through [%s] does not refer to a known input", resource.Name, option.PassThrough)
+				}
+			}
+		}
+	}
+
+	for _, resource := range c.Spec.Resources {
 		if err := c.validateResourceRefs(resource.Sources, "ClusterSourceTemplate"); err != nil {
 			return fmt.Errorf(
 				"invalid sources for resource [%s]: %w",
@@ -115,6 +136,15 @@ func (c *ClusterSupplyChain) validateNewState() error {
 	}
 
 	return nil
+}
+
+func isPassThroughInputFound(refs []ResourceReference, passThrough string) bool {
+	for _, ref := range refs {
+		if ref.Name == passThrough {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *ClusterSupplyChain) validateParams() error {

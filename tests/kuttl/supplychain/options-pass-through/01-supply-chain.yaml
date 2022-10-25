@@ -27,7 +27,7 @@ spec:
     - name: source-tester
       sources:
         - resource: source-provider
-          name: source
+          name: my-source
       templateRef:
         kind: ClusterSourceTemplate
         options:
@@ -35,7 +35,7 @@ spec:
             selector:
               matchExpressions:
                 - { key: has-tests, operator: Exists }
-          - passThrough: source
+          - passThrough: my-source
             selector:
               matchExpressions:
                 - { key: has-tests, operator: DoesNotExist }
@@ -45,4 +45,4 @@ spec:
         name: image---options-passthrough
       sources:
         - resource: source-tester
-          name: source
+          name: my-pt-source

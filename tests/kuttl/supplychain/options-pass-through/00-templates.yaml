@@ -59,4 +59,4 @@ spec:
       name: test-image
     spec:
       value:
-        env: $(source.url)$
+        env: $(sources.my-pt-source.url)$
