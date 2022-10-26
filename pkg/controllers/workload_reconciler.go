@@ -352,7 +352,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 			}
 			if reader.GetLifecycle().IsImmutable() {
 				if realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
-					realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind { // TODO this is not a sufficient check
+					realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind {
 					orphaned = false
 					break
 				}
