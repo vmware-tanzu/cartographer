@@ -27,7 +27,7 @@ import (
 type ResourceStatuses interface {
 	ChangedConditionTypes(realizedResourceName string) []string
 	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
-	Add(status *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition)
+	Add(status *v1alpha1.RealizedResource, err error, isPassThrough bool, furtherConditions ...metav1.Condition)
 	GetCurrent() ResourceStatusList
 	IsChanged() bool
 }
@@ -114,7 +114,7 @@ func (r *resourceStatuses) GetPreviousResourceStatus(realizedResourceName string
 	return nil
 }
 
-func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err error, furtherConditions ...metav1.Condition) {
+func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err error, isPassThrough bool, furtherConditions ...metav1.Condition) {
 	name := realizedResource.Name
 
 	var existingStatus *resourceStatus
@@ -134,7 +134,7 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 
 	existingStatus.current = &v1alpha1.ResourceStatus{
 		RealizedResource: *realizedResource,
-		Conditions:       r.createConditions(name, err, furtherConditions...),
+		Conditions:       r.createConditions(name, err, isPassThrough, furtherConditions...),
 	}
 }
 
@@ -165,7 +165,7 @@ func conditionChanged(previousResourceStatus *v1alpha1.ResourceStatus, newCondit
 	return newCondition.Status != "Unknown"
 }
 
-func (r *resourceStatuses) createConditions(name string, err error, furtherConditions ...metav1.Condition) []metav1.Condition {
+func (r *resourceStatuses) createConditions(name string, err error, isPassThrough bool, furtherConditions ...metav1.Condition) []metav1.Condition {
 	var existingStatus *resourceStatus
 	for _, status := range r.statuses {
 		if status.name == name {
@@ -184,7 +184,7 @@ func (r *resourceStatuses) createConditions(name string, err error, furtherCondi
 	if err != nil {
 		r.addConditionsFunc(&conditionManager, false, err)
 	} else {
-		conditionManager.AddPositive(conditions.ResourceSubmittedCondition())
+		conditionManager.AddPositive(conditions.ResourceSubmittedCondition(isPassThrough))
 	}
 	for _, condition := range furtherConditions {
 		conditionManager.AddPositive(condition)

@@ -976,5 +976,159 @@ var _ = Describe("Webhook Validation", func() {
 				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("option name and option pass through both not specified", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateCreate()).To(MatchError(
+					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("options with pass through", func() {
+			BeforeEach(func() {
+				supplyChain.Spec.Resources[0].Sources = []v1alpha1.ResourceReference{
+					{
+						Name:     "not-empty",
+						Resource: "another-resource",
+					},
+				}
+
+				supplyChain.Spec.Resources = append(supplyChain.Spec.Resources, v1alpha1.SupplyChainResource{
+					Name: "another-resource",
+					TemplateRef: v1alpha1.SupplyChainTemplateReference{
+						Name: "my-name",
+						Kind: "ClusterSourceTemplate",
+					},
+				})
+			})
+
+			Context("pass through refers to an input that does not exist", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "wrong-input"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("more than one pass through specified", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+					supplyChain.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty-also"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("option name and option pass through both specified", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateCreate()).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("2 options with identical requirements", func() {
+				Context("selectors are identical", func() {
+					BeforeEach(func() {
+						supplyChain.Spec.Resources[0].TemplateRef.Options[0].Selector = supplyChain.Spec.Resources[0].TemplateRef.Options[1].Selector
+						supplyChain.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty"
+						supplyChain.Spec.Resources[0].TemplateRef.Options[1].Name = ""
+					})
+
+					It("on create, it rejects the Resource", func() {
+						Expect(supplyChain.ValidateCreate()).To(MatchError(
+							"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+							"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					})
+				})
+			})
+
+			Context("well formed", func() {
+				BeforeEach(func() {
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					supplyChain.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("creates without error", func() {
+					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+				It("updates without error", func() {
+					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+				})
+
+				It("deletes without error", func() {
+					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+		})
 	})
 })

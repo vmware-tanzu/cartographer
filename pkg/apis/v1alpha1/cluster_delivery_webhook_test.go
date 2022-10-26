@@ -534,6 +534,160 @@ var _ = Describe("Delivery Validation", func() {
 				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("option name and option pass through both not specified", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+			})
+
+			It("on create, it rejects the Resource", func() {
+				Expect(delivery.ValidateCreate()).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
+				))
+			})
+
+			It("on update, it rejects the Resource", func() {
+				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
+				))
+			})
+
+			It("deletes without error", func() {
+				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("options with pass through", func() {
+			BeforeEach(func() {
+				delivery.Spec.Resources[0].Sources = []v1alpha1.ResourceReference{
+					{
+						Name:     "not-empty",
+						Resource: "another-resource",
+					},
+				}
+
+				delivery.Spec.Resources = append(delivery.Spec.Resources, v1alpha1.DeliveryResource{
+					Name: "another-resource",
+					TemplateRef: v1alpha1.DeliveryTemplateReference{
+						Name: "my-name",
+						Kind: "ClusterSourceTemplate",
+					},
+				})
+			})
+
+			Context("pass through refers to an input that does not exist", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "wrong-input"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("more than one pass through specified", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+					delivery.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty-also"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("option name and option pass through both specified", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("on create, it rejects the Resource", func() {
+					Expect(delivery.ValidateCreate()).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
+					))
+				})
+
+				It("on update, it rejects the Resource", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
+					))
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("2 options with identical requirements", func() {
+				Context("selectors are identical", func() {
+					BeforeEach(func() {
+						delivery.Spec.Resources[0].TemplateRef.Options[0].Selector = delivery.Spec.Resources[0].TemplateRef.Options[1].Selector
+						delivery.Spec.Resources[0].TemplateRef.Options[1].PassThrough = "not-empty"
+						delivery.Spec.Resources[0].TemplateRef.Options[1].Name = ""
+					})
+
+					It("on create, it rejects the Resource", func() {
+						Expect(delivery.ValidateCreate()).To(MatchError(
+							"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
+						))
+					})
+
+					It("on update, it rejects the Resource", func() {
+						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+							"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
+						))
+					})
+
+					It("deletes without error", func() {
+						Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					})
+				})
+			})
+
+			Context("well formed", func() {
+				BeforeEach(func() {
+					delivery.Spec.Resources[0].TemplateRef.Options[0].Name = ""
+					delivery.Spec.Resources[0].TemplateRef.Options[0].PassThrough = "not-empty"
+				})
+
+				It("creates without error", func() {
+					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				})
+
+				It("updates without error", func() {
+					Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+				})
+
+				It("deletes without error", func() {
+					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				})
+			})
+		})
 	})
 
 	Describe("OneOf Selector, SelectorMatchExpressions, or SelectorMatchFields", func() {

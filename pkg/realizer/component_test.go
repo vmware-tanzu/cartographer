@@ -175,9 +175,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("creates a stamped object and returns the outputs and stampedObjects", func() {
-				template, returnedStampedObject, out, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(template).ToNot(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 
@@ -211,9 +212,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns GetTemplateError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(err).To(HaveOccurred())
 				Expect(template).To(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				Expect(err.Error()).To(ContainSubstring("unable to get template [image-template-1]"))
 				Expect(err.Error()).To(ContainSubstring("bad template"))
@@ -237,9 +239,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns a helpful error", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 
 				Expect(template).To(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1}]: resource does not match a known template"))
@@ -268,8 +271,9 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
@@ -332,8 +336,9 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
@@ -394,8 +399,9 @@ var _ = Describe("Resource", func() {
 				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
@@ -444,8 +450,9 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
+				Expect(isPassThrough).To(BeFalse())
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
@@ -485,7 +492,103 @@ var _ = Describe("Resource", func() {
 
 				resource = realizer.OwnerResource{
 					Name: "resource-1",
-					TemplateOptions: []v1alpha1.TemplateOption{
+					TemplateRef: v1alpha1.TemplateReference{
+						Kind: "ClusterImageTemplate",
+					},
+				}
+			})
+
+			When("the option that matches is pass through", func() {
+				BeforeEach(func() {
+					resource.TemplateOptions = []v1alpha1.TemplateOption{
+						{
+							Name: "template-not-chosen",
+							Selector: v1alpha1.Selector{
+								MatchFields: []v1alpha1.FieldSelectorRequirement{
+									{
+										Key:      "spec.source.image",
+										Operator: "Exists",
+									},
+								},
+							},
+						},
+						{
+							PassThrough: "my-input",
+							Selector: v1alpha1.Selector{
+								MatchFields: []v1alpha1.FieldSelectorRequirement{
+									{
+										Key:      "spec.source.git.url",
+										Operator: "Exists",
+									},
+								},
+							},
+						},
+					}
+
+					resource.Images = []v1alpha1.ResourceReference{
+						{
+							Name:     "my-input",
+							Resource: "my-input",
+						},
+					}
+
+					outputs.AddOutput("my-input", &templates.Output{Image: "my-image"})
+				})
+
+				It("returns the input as an output", func() {
+					template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					Expect(template).To(BeNil())
+					Expect(stamped).To(BeNil())
+					Expect(isPassThrough).To(BeTrue())
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(output.Image).To(Equal("my-image"))
+				})
+
+				It("does not call to the repo", func() {
+					_, _, _, _, _ = r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					Expect(fakeSystemRepo.GetTemplateCallCount()).To(Equal(0))
+					Expect(fakeOwnerRepo.EnsureMutableObjectExistsOnClusterCallCount()).To(Equal(0))
+				})
+
+				When("output cannot be retrieved", func() {
+					BeforeEach(func() {
+						resource.Images = []v1alpha1.ResourceReference{}
+					})
+
+					It("returns an error", func() {
+						template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).To(BeNil())
+						Expect(stamped).To(BeNil())
+						Expect(output).To(BeNil())
+						Expect(isPassThrough).To(BeTrue())
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs from pass through [my-input] for resource [resource-1] in supply chain [supply-chain-name]: input [my-input] not found in images"))
+					})
+				})
+
+				When("pass through reader cannot be created", func() {
+					BeforeEach(func() {
+						resource.TemplateRef.Kind = "something-bad"
+					})
+
+					It("returns an error", func() {
+						template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).To(BeNil())
+						Expect(stamped).To(BeNil())
+						Expect(output).To(BeNil())
+						Expect(isPassThrough).To(BeTrue())
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("failed to create new stamp pass through reader: kind does not match a known template"))
+					})
+				})
+			})
+
+			When("the option that matches is a template", func() {
+				BeforeEach(func() {
+					resource.TemplateOptions = []v1alpha1.TemplateOption{
 						{
 							Name: "template-not-chosen",
 							Selector: v1alpha1.Selector{
@@ -508,131 +611,134 @@ var _ = Describe("Resource", func() {
 								},
 							},
 						},
-					},
-					TemplateRef: v1alpha1.TemplateReference{
-						Kind: "ClusterImageTemplate",
-					},
-				}
+					}
 
-				configMap := &corev1.ConfigMap{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ConfigMap",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "example-config-map",
-					},
-					Data: map[string]string{
-						"some_other_info": "hello",
-					},
-				}
-
-				dbytes, err := json.Marshal(configMap)
-				Expect(err).ToNot(HaveOccurred())
-
-				templateAPI := &v1alpha1.ClusterImageTemplate{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ClusterImageTemplate",
-						APIVersion: "carto.run/v1alpha1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "template-chosen",
-					},
-					Spec: v1alpha1.ImageTemplateSpec{
-						TemplateSpec: v1alpha1.TemplateSpec{
-							Template: &runtime.RawExtension{Raw: dbytes},
+					configMap := &corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ConfigMap",
+							APIVersion: "v1",
 						},
-						ImagePath: "data.some_other_info",
-					},
-				}
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "example-config-map",
+						},
+						Data: map[string]string{
+							"some_other_info": "hello",
+						},
+					}
 
-				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
-				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
-			})
+					dbytes, err := json.Marshal(configMap)
+					Expect(err).ToNot(HaveOccurred())
 
-			When("one option matches", func() {
-				It("finds the correct template", func() {
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-					Expect(template).ToNot(BeNil())
-					Expect(err).NotTo(HaveOccurred())
+					templateAPI := &v1alpha1.ClusterImageTemplate{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "ClusterImageTemplate",
+							APIVersion: "carto.run/v1alpha1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "template-chosen",
+						},
+						Spec: v1alpha1.ImageTemplateSpec{
+							TemplateSpec: v1alpha1.TemplateSpec{
+								Template: &runtime.RawExtension{Raw: dbytes},
+							},
+							ImagePath: "data.some_other_info",
+						},
+					}
 
-					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
-					Expect(name).To(Equal("template-chosen"))
-					Expect(kind).To(Equal("ClusterImageTemplate"))
+					fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
+					fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
 				})
-			})
 
-			When("more than one option matches", func() {
-				It("returns a TemplateOptionsMatchError", func() {
-					resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.git.ref.branch"
+				When("one option matches", func() {
+					It("finds the correct template", func() {
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).ToNot(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+						Expect(err).NotTo(HaveOccurred())
 
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-					Expect(template).To(BeNil())
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("expected exactly 1 option to match, found [2] matching options [template-not-chosen, template-chosen] for resource [resource-1] in supply chain [supply-chain-name]"))
+						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
+						Expect(name).To(Equal("template-chosen"))
+						Expect(kind).To(Equal("ClusterImageTemplate"))
+					})
 				})
 
-			})
+				When("more than one option matches", func() {
+					It("returns a TemplateOptionsMatchError", func() {
+						resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.git.ref.branch"
 
-			When("zero options match", func() {
-				It("returns a TemplateOptionsMatchError", func() {
-					resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.image"
-					resource.TemplateOptions[1].Selector.MatchFields[0].Key = "spec.source.subPath"
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).To(BeNil())
+						Expect(isPassThrough).To(BeFalse())
 
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-
-					Expect(template).To(BeNil())
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("expected exactly 1 option to match, found [0] matching options for resource [resource-1] in supply chain [supply-chain-name]"))
-				})
-			})
-
-			When("one option has key that does not exist in the spec", func() {
-				It("does not error", func() {
-					resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
-
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-					Expect(template).ToNot(BeNil())
-
-					Expect(err).NotTo(HaveOccurred())
-					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
-					Expect(name).To(Equal("template-chosen"))
-					Expect(kind).To(Equal("ClusterImageTemplate"))
-				})
-			})
-
-			When("key is malformed", func() {
-				It("returns a ResolveTemplateOptionError", func() {
-					resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[`
-
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-					Expect(template).To(BeNil())
-
-					Expect(err).To(HaveOccurred())
-					Expect(reflect.TypeOf(err).String()).To(Equal("errors.ResolveTemplateOptionError"))
-					Expect(err.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
-					Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[] operator [Exists] values [[]]: evaluate: failed to parse jsonpath '{.spec.env[}': unterminated array`))
-				})
-			})
-
-			When("one option matches with multiple fields", func() {
-				It("finds the correct template", func() {
-					resource.TemplateOptions[0].Selector.MatchFields = append(resource.TemplateOptions[0].Selector.MatchFields, v1alpha1.FieldSelectorRequirement{
-						Key:      "spec.source.git.ref.branch",
-						Operator: "Exists",
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("expected exactly 1 option to match, found [2] matching options [template-not-chosen, template-chosen] for resource [resource-1] in supply chain [supply-chain-name]"))
 					})
 
-					template, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-					Expect(template).ToNot(BeNil())
-
-					Expect(err).NotTo(HaveOccurred())
-					_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
-					Expect(name).To(Equal("template-chosen"))
-					Expect(kind).To(Equal("ClusterImageTemplate"))
 				})
 
+				When("zero options match", func() {
+					It("returns a TemplateOptionsMatchError", func() {
+						resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.image"
+						resource.TemplateOptions[1].Selector.MatchFields[0].Key = "spec.source.subPath"
+
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+
+						Expect(template).To(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("expected exactly 1 option to match, found [0] matching options for resource [resource-1] in supply chain [supply-chain-name]"))
+					})
+				})
+
+				When("one option has key that does not exist in the spec", func() {
+					It("does not error", func() {
+						resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
+
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).ToNot(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+
+						Expect(err).NotTo(HaveOccurred())
+						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
+						Expect(name).To(Equal("template-chosen"))
+						Expect(kind).To(Equal("ClusterImageTemplate"))
+					})
+				})
+
+				When("key is malformed", func() {
+					It("returns a ResolveTemplateOptionError", func() {
+						resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[`
+
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).To(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+
+						Expect(err).To(HaveOccurred())
+						Expect(reflect.TypeOf(err).String()).To(Equal("errors.ResolveTemplateOptionError"))
+						Expect(err.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
+						Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[] operator [Exists] values [[]]: evaluate: failed to parse jsonpath '{.spec.env[}': unterminated array`))
+					})
+				})
+
+				When("one option matches with multiple fields", func() {
+					It("finds the correct template", func() {
+						resource.TemplateOptions[0].Selector.MatchFields = append(resource.TemplateOptions[0].Selector.MatchFields, v1alpha1.FieldSelectorRequirement{
+							Key:      "spec.source.git.ref.branch",
+							Operator: "Exists",
+						})
+
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).ToNot(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+
+						Expect(err).NotTo(HaveOccurred())
+						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
+						Expect(name).To(Equal("template-chosen"))
+						Expect(kind).To(Equal("ClusterImageTemplate"))
+					})
+
+				})
 			})
 		})
 	})

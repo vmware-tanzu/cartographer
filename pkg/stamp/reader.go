@@ -29,8 +29,33 @@ type DeploymentInput interface {
 	GetDeployment() *templates.SourceInput
 }
 
+type PassThroughInput interface {
+	GetSources() map[string]templates.SourceInput
+	GetImages() map[string]templates.ImageInput
+	GetConfigs() map[string]templates.ConfigInput
+	GetDeployment() *templates.SourceInput
+}
+
 type Outputter interface {
 	Output(stampedObject *unstructured.Unstructured) (*templates.Output, error)
+}
+
+func NewPassThroughReader(kind string, name string, inputReader PassThroughInput) (Outputter, error) {
+	switch {
+
+	case kind == "ClusterSourceTemplate":
+		return NewSourcePassThroughReader(name, inputReader), nil
+	case kind == "ClusterImageTemplate":
+		return NewImagePassThroughReader(name, inputReader), nil
+	case kind == "ClusterConfigTemplate":
+		return NewConfigPassThroughReader(name, inputReader), nil
+	case kind == "ClusterTemplate":
+		return NewNoOutputReader(), nil
+	case kind == "ClusterDeploymentTemplate":
+		return NewDeploymentPassThroughReader(inputReader, nil), nil
+	}
+
+	return nil, fmt.Errorf("kind does not match a known template")
 }
 
 func NewReader(template client.Object, inputReader DeploymentInput) (Outputter, error) {
@@ -47,7 +72,7 @@ func NewReader(template client.Object, inputReader DeploymentInput) (Outputter, 
 	case *v1alpha1.ClusterTemplate:
 		return NewNoOutputReader(), nil
 	}
-	return nil, fmt.Errorf("resource does not match a known template")
+	return nil, fmt.Errorf("template does not match a known template")
 }
 
 type SourceOutputReader struct {
@@ -162,6 +187,9 @@ func (r *DeploymentPassThroughReader) Output(stampedObject *unstructured.Unstruc
 }
 
 func (r *DeploymentPassThroughReader) outputReady(stampedObject *unstructured.Unstructured) error {
+	if r.template == nil {
+		return nil
+	}
 	if r.template.Spec.ObservedCompletion != nil {
 		return r.observedCompletionReady(stampedObject)
 	} else {
@@ -276,4 +304,76 @@ func (r *NoOutputReader) Output(_ *unstructured.Unstructured) (*templates.Output
 
 func NewNoOutputReader() Outputter {
 	return &NoOutputReader{}
+}
+
+type SourcePassThroughReader struct {
+	inputs PassThroughInput
+	name   string
+}
+
+func NewSourcePassThroughReader(name string, inputReader PassThroughInput) Outputter {
+	return &SourcePassThroughReader{
+		name:   name,
+		inputs: inputReader,
+	}
+}
+
+func (r *SourcePassThroughReader) Output(_ *unstructured.Unstructured) (*templates.Output, error) {
+	sources := r.inputs.GetSources()
+	if _, ok := sources[r.name]; !ok {
+		return nil, fmt.Errorf("input [%s] not found in sources", r.name)
+	}
+
+	return &templates.Output{
+		Source: &templates.Source{
+			URL:      sources[r.name].URL,
+			Revision: sources[r.name].Revision,
+		},
+	}, nil
+}
+
+type ImagePassThroughReader struct {
+	inputs PassThroughInput
+	name   string
+}
+
+func NewImagePassThroughReader(name string, inputReader PassThroughInput) Outputter {
+	return &ImagePassThroughReader{
+		name:   name,
+		inputs: inputReader,
+	}
+}
+
+func (r *ImagePassThroughReader) Output(_ *unstructured.Unstructured) (*templates.Output, error) {
+	images := r.inputs.GetImages()
+	if _, ok := images[r.name]; !ok {
+		return nil, fmt.Errorf("input [%s] not found in images", r.name)
+	}
+
+	return &templates.Output{
+		Image: images[r.name].Image,
+	}, nil
+}
+
+type ConfigPassThroughReader struct {
+	inputs PassThroughInput
+	name   string
+}
+
+func NewConfigPassThroughReader(name string, inputReader PassThroughInput) Outputter {
+	return &ConfigPassThroughReader{
+		name:   name,
+		inputs: inputReader,
+	}
+}
+
+func (r *ConfigPassThroughReader) Output(_ *unstructured.Unstructured) (*templates.Output, error) {
+	config := r.inputs.GetConfigs()
+	if _, ok := config[r.name]; !ok {
+		return nil, fmt.Errorf("input [%s] not found in configs", r.name)
+	}
+
+	return &templates.Output{
+		Config: config[r.name].Config,
+	}, nil
 }

@@ -15,6 +15,8 @@
 package stamp_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,6 +39,38 @@ func (deploymentInputFake) GetDeployment() *templates.SourceInput {
 		URL:      "my-url",
 		Revision: "my-revision",
 		Name:     "my-resource",
+	}
+}
+
+type allInputFake struct {
+	deploymentInputFake
+}
+
+func (a allInputFake) GetSources() map[string]templates.SourceInput {
+	return map[string]templates.SourceInput{
+		"my-name": {
+			URL:      "my-url",
+			Revision: "my-revision",
+			Name:     "my-resource",
+		},
+	}
+}
+
+func (a allInputFake) GetImages() map[string]templates.ImageInput {
+	return map[string]templates.ImageInput{
+		"my-name": {
+			Image: "my-image",
+			Name:  "my-resource",
+		},
+	}
+}
+
+func (a allInputFake) GetConfigs() map[string]templates.ConfigInput {
+	return map[string]templates.ConfigInput{
+		"my-name": {
+			Config: "my-config",
+			Name:   "my-resource",
+		},
 	}
 }
 
@@ -248,6 +282,37 @@ var _ = Describe("Outputter", func() {
 			template = &v1alpha1.ClusterDeploymentTemplate{
 				Spec: v1alpha1.DeploymentSpec{},
 			}
+		})
+
+		Context("no template", func() {
+			Context("where the input can be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterDeploymentTemplate", "my-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns the output", func() {
+					output, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(output.Source.URL).To(Equal("my-url"))
+					Expect(output.Source.Revision).To(Equal("my-revision"))
+				})
+			})
+
+			Context("where the input can not be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-bad-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in sources"))
+				})
+			})
 		})
 
 		Context("observedCompletion", func() {
@@ -659,4 +724,103 @@ var _ = Describe("Outputter", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
+
+	Context("pass through readers", func() {
+		var reader stamp.Outputter
+		Context("using a source pass through reader", func() {
+
+			Context("where the input can be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns the output", func() {
+					output, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(output.Source.URL).To(Equal("my-url"))
+					Expect(output.Source.Revision).To(Equal("my-revision"))
+				})
+			})
+
+			Context("where the input can not be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterSourceTemplate", "my-bad-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in sources"))
+				})
+			})
+		})
+
+		Context("using an image pass through reader", func() {
+
+			Context("where the input can be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterImageTemplate", "my-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns the output", func() {
+					output, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(output.Image).To(Equal("my-image"))
+				})
+			})
+
+			Context("where the input can not be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterImageTemplate", "my-bad-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in images"))
+				})
+			})
+		})
+
+		Context("using a config pass through reader", func() {
+
+			Context("where the input can be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterConfigTemplate", "my-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns the output", func() {
+					output, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).NotTo(HaveOccurred())
+					fmt.Printf("%+v", output.Config)
+					Expect(output.Config).To(Equal("my-config"))
+				})
+			})
+
+			Context("where the input can not be found", func() {
+				BeforeEach(func() {
+					var err error
+					reader, err = stamp.NewPassThroughReader("ClusterConfigTemplate", "my-bad-name", allInputFake{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(&unstructured.Unstructured{})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("input [my-bad-name] not found in configs"))
+				})
+			})
+		})
+	})
+
 })

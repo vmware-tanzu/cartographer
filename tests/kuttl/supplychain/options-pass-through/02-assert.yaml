@@ -1,0 +1,120 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: test.run/v1alpha1
+kind: Test
+metadata:
+  name: test-image
+spec:
+  value:
+    env: "not-tested"
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: SupplyChainReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: ResourcesHealthy
+      status: "True"
+      reason: HealthyConditionRule
+    - type: Ready
+      status: "True"
+      reason: Ready
+  supplyChainRef:
+    name: responsible-ops---options-passthrough
+    kind: ClusterSupplyChain
+  resources:
+    - name: source-provider
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: source---options-passthrough
+      stampedRef:
+        apiVersion: test.run/v1alpha1
+        kind: Test
+        name: test-source
+        resource: tests.test.run
+      conditions:
+      - type: ResourceSubmitted
+        reason: ResourceSubmissionComplete
+        status: "True"
+      - type: Healthy
+        reason: OutputsAvailable
+        status: "True"
+      - type: Ready
+        reason: Ready
+        status: "True"
+      outputs:
+        - digest: sha256:87d44d7049a641ab2a679409d36a87450c5197849e2b0515b8838c53f4db541b
+          name: url
+          preview: |  
+            not-tested
+        - digest: sha256:656fa43debed6cd70291f014c9a2847ee4d39cf6b1f031530b844596a5c88ebe
+          name: revision
+          preview: |
+            test-source
+    - name: source-tester
+      inputs:
+        - name: source-provider
+      conditions:
+        - type: ResourceSubmitted
+          reason: PassThrough
+          status: "True"
+        - type: Ready
+          reason: Ready
+          status: "True"
+      outputs:
+        - digest: sha256:87d44d7049a641ab2a679409d36a87450c5197849e2b0515b8838c53f4db541b
+          name: url
+          preview: |
+            not-tested
+        - digest: sha256:656fa43debed6cd70291f014c9a2847ee4d39cf6b1f031530b844596a5c88ebe
+          name: revision
+          preview: |
+            test-source
+    - name: image-provider
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterImageTemplate
+        name: image---options-passthrough
+      stampedRef:
+        apiVersion: test.run/v1alpha1
+        kind: Test
+        name: test-image
+        resource: tests.test.run
+      conditions:
+        - type: ResourceSubmitted
+          reason: ResourceSubmissionComplete
+          status: "True"
+        - type: Healthy
+          reason: OutputsAvailable
+          status: "True"
+        - type: Ready
+          reason: Ready
+          status: "True"
+      outputs:
+        - digest: sha256:87d44d7049a641ab2a679409d36a87450c5197849e2b0515b8838c53f4db541b
+          name: image
+          preview: |
+            not-tested
+      inputs:
+        - name: source-tester

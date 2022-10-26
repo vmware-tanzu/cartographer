@@ -84,15 +84,17 @@ func (r *DeliveryReconiler) reconcileDelivery(ctx context.Context, delivery *v1a
 			}
 		} else {
 			for _, option := range resource.TemplateRef.Options {
-				found, err := r.validateResource(ctx, delivery, option.Name, resource.TemplateRef.Kind)
-				if err != nil {
-					log.Error(err, "failed to get delivery cluster template", "template",
-						fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
-					return cerrors.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
-				}
+				if option.Name != "" {
+					found, err := r.validateResource(ctx, delivery, option.Name, resource.TemplateRef.Kind)
+					if err != nil {
+						log.Error(err, "failed to get delivery cluster template", "template",
+							fmt.Sprintf("%s/%s", resource.TemplateRef.Kind, resource.TemplateRef.Name))
+						return cerrors.NewUnhandledError(fmt.Errorf("failed to get delivery cluster template: %w", err))
+					}
 
-				if !found {
-					resourcesNotFound = append(resourcesNotFound, resource.Name)
+					if !found {
+						resourcesNotFound = append(resourcesNotFound, resource.Name)
+					}
 				}
 			}
 		}

@@ -62,6 +62,7 @@ const (
 	UnknownErrorResourcesSubmittedReason                   = "UnknownError"
 	ResolveTemplateOptionsErrorResourcesSubmittedReason    = "ResolveTemplateOptionsError"
 	TemplateOptionsMatchErrorResourcesSubmittedReason      = "TemplateOptionsMatchError"
+	PassThroughReason                                      = "PassThrough"
 )
 
 // -- RESOURCE (OWNER DELIVERABLE) ConditionType - ResourceSubmitted ConditionReasons &&

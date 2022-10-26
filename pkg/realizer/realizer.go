@@ -81,7 +81,7 @@ func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResou
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error)
 }
 
 type realizer struct {
@@ -112,7 +112,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		template, stampedObject, out, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
+		template, stampedObject, out, isPassThrough, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
@@ -144,20 +144,27 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			if previousResourceStatus != nil {
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
-			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource)
+			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource, isPassThrough)
+
 			var previousOutputs []v1alpha1.Output
 			if previousRealizedResource != nil {
 				previousOutputs = previousRealizedResource.Outputs
 			}
+
 			if !reflect.DeepEqual(previousOutputs, realizedResource.Outputs) {
 				rec := events.FromContextOrDie(ctx)
-				rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", stampedObject, realizedResource.Name)
+				if isPassThrough {
+					rec.Eventf(events.NormalType, events.ResourceOutputChangedReason, "[%s] passed through a new output", realizedResource.Name)
+				} else {
+					rec.ResourceEventf(events.NormalType, events.ResourceOutputChangedReason, "[%s] found a new output in [%Q]", stampedObject, realizedResource.Name)
+				}
 			}
+
 			if template != nil {
 				additionalConditions = []metav1.Condition{r.healthyConditionEvaluator(template.GetHealthRule(), realizedResource, stampedObject)}
 			}
 		}
-		resourceStatuses.Add(realizedResource, err, additionalConditions...)
+		resourceStatuses.Add(realizedResource, err, isPassThrough, additionalConditions...)
 		if slices.Contains(resourceStatuses.ChangedConditionTypes(realizedResource.Name), v1alpha1.ResourceHealthy) {
 			newStatus := metav1.ConditionUnknown
 			newHealthyCondition := resourceStatuses.GetCurrent().ConditionsForResourceNamed(realizedResource.Name).ConditionWithType(v1alpha1.ResourceHealthy)
@@ -171,7 +178,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource) *v1alpha1.RealizedResource {
+func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource, isPassThrough bool) *v1alpha1.RealizedResource {
 	log := logr.FromContextOrDiscard(ctx)
 
 	if previousRealizedResource == nil {
@@ -204,7 +211,10 @@ func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerR
 			Name:       resource.TemplateRef.Name,
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
+		outputs = getOutputs(previousRealizedResource, output)
+	}
 
+	if isPassThrough {
 		outputs = getOutputs(previousRealizedResource, output)
 	}
 
