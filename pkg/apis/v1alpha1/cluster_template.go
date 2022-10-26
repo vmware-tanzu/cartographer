@@ -70,9 +70,9 @@ type TemplateSpec struct {
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
 
 	// Lifecycle specifies whether template modifications should result in originally
-	// created objects being updated (default) or in new objects created alongside
-	// original objects (immutable).
-	// +optional
+	// created objects being updated (`default`) or in new objects created alongside
+	// original objects (`immutable` or `tekton`).
+	// +kubebuilder:default="default"
 	Lifecycle *string `json:"lifecycle,omitempty"`
 }
 

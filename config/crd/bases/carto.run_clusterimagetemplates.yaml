@@ -207,9 +207,11 @@ spec:
                   ImagePath is specified in jsonpath format, eg: .status.artifact.image_digest'
                 type: string
               lifecycle:
+                default: default
                 description: Lifecycle specifies whether template modifications should
-                  result in originally created objects being updated (default) or
-                  in new objects created alongside original objects (immutable).
+                  result in originally created objects being updated (`default`) or
+                  in new objects created alongside original objects (`immutable` or
+                  `tekton`).
                 type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
