@@ -34,12 +34,12 @@ type Reader interface {
 	GetLifecycle() *Lifecycle
 }
 
-type Lifecycle int
+type Lifecycle string
 
 const (
-	Default Lifecycle = iota
-	Immutable
-	Tekton
+	Default   Lifecycle = "default"
+	Immutable Lifecycle = "immutable"
+	Tekton    Lifecycle = "tekton"
 )
 
 func (l *Lifecycle) IsImmutable() bool {
