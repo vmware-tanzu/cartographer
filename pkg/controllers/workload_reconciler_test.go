@@ -1246,53 +1246,55 @@ var _ = Describe("WorkloadReconciler", func() {
 	})
 
 	Describe("cleaning up orphaned objects", func() {
-		Context("when template has default lifecycle", func() {
+		BeforeEach(func() {
+			supplyChain := v1alpha1.ClusterSupplyChain{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-supply-chain",
+				},
+				Status: v1alpha1.SupplyChainStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Ready",
+							Status:             "True",
+							LastTransitionTime: metav1.Time{},
+							Reason:             "Ready",
+							Message:            "Ready",
+						},
+					},
+				},
+			}
+			repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
+
+			rlzr.RealizeReturns(nil)
+
+			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+			resourceStatuses.Add(
+				&v1alpha1.RealizedResource{
+					Name: "some-resource",
+					StampedRef: &v1alpha1.StampedRef{
+						ObjectReference: &corev1.ObjectReference{
+							APIVersion: "some-api-version",
+							Kind:       "some-kind",
+							Name:       "some-new-stamped-obj-name",
+						},
+						Resource: "some-kind",
+					},
+					TemplateRef: &corev1.ObjectReference{
+						Kind: "some-template-kind",
+						Name: "some-template-name",
+					},
+				}, nil, false,
+			)
+			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
+				statusesVal := reflect.ValueOf(statuses)
+				existingVal := reflect.ValueOf(resourceStatuses)
+
+				reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+				return nil
+			}
+		})
+		Context("when previous resource stamped from template with default lifecycle", func() {
 			BeforeEach(func() {
-				supplyChain := v1alpha1.ClusterSupplyChain{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "some-supply-chain",
-					},
-					Status: v1alpha1.SupplyChainStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Ready",
-								Status:             "True",
-								LastTransitionTime: metav1.Time{},
-								Reason:             "Ready",
-								Message:            "Ready",
-							},
-						},
-					},
-				}
-				repo.GetSupplyChainsForWorkloadReturns([]*v1alpha1.ClusterSupplyChain{&supplyChain}, nil)
-
-				rlzr.RealizeReturns(nil)
-
-				resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
-				resourceStatuses.Add(
-					&v1alpha1.RealizedResource{
-						Name: "some-resource",
-						StampedRef: &v1alpha1.StampedRef{
-							ObjectReference: &corev1.ObjectReference{
-								APIVersion: "some-api-version",
-								Kind:       "some-kind",
-								Name:       "some-new-stamped-obj-name",
-							},
-							Resource: "some-kind",
-						},
-						TemplateRef: &corev1.ObjectReference{
-							Kind: "some-template-kind",
-							Name: "some-template-name",
-						},
-					}, nil, false,
-				)
-				rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
-					statusesVal := reflect.ValueOf(statuses)
-					existingVal := reflect.ValueOf(resourceStatuses)
-
-					reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
-					return nil
-				}
 				someTemplate := v1alpha1.ClusterTemplate{}
 				repo.GetTemplateReturns(&someTemplate, nil)
 			})
@@ -1309,6 +1311,10 @@ var _ = Describe("WorkloadReconciler", func() {
 										Name:       "some-new-stamped-obj-name",
 									},
 									Resource: "some-kind",
+								},
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-template-name",
+									Kind: "some-template-kind",
 								},
 							},
 						},
@@ -1337,6 +1343,10 @@ var _ = Describe("WorkloadReconciler", func() {
 										Name:       "some-old-stamped-obj-name",
 									},
 									Resource: "some-kind",
+								},
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-template-name",
+									Kind: "some-template-kind",
 								},
 							},
 						},
@@ -1367,6 +1377,156 @@ var _ = Describe("WorkloadReconciler", func() {
 						Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":"my-namespace/my-workload-name"`))
 					})
 				})
+			})
+		})
+
+		Context("when previous resource stamped from immutable template", func() {
+			BeforeEach(func() {
+				lifecycle := "immutable"
+				someTemplate := v1alpha1.ClusterTemplate{Spec: v1alpha1.TemplateSpec{Lifecycle: &lifecycle}}
+				repo.GetTemplateReturns(&someTemplate, nil)
+			})
+
+			Context("and the previous resource and a newly created resource are from the same step and template", func() {
+				BeforeEach(func() {
+					wl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: v1alpha1.RealizedResource{
+								Name: "some-resource",
+								StampedRef: &v1alpha1.StampedRef{
+									ObjectReference: &corev1.ObjectReference{
+										APIVersion: "some-api-version",
+										Kind:       "some-kind",
+										Name:       "some-obj-name",
+									},
+									Resource: "some-kind",
+								},
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-template-name",
+									Kind: "some-template-kind",
+								},
+							},
+						},
+					}
+					repo.GetWorkloadReturns(wl, nil)
+				})
+
+				It("does not attempt to delete any objects", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("and the previous resource shares a template with a newly created resource but shares no step", func() {
+				BeforeEach(func() {
+					wl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: v1alpha1.RealizedResource{
+								Name: "some-other-resource",
+								StampedRef: &v1alpha1.StampedRef{
+									ObjectReference: &corev1.ObjectReference{
+										APIVersion: "some-api-version",
+										Kind:       "some-kind",
+										Name:       "some-obj-name",
+									},
+									Resource: "some-kind",
+								},
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-template-name",
+									Kind: "some-template-kind",
+								},
+							},
+						},
+					}
+					repo.GetWorkloadReturns(wl, nil)
+				})
+
+				It("deletes the orphaned objects", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(1))
+
+					_, obj := repo.DeleteArgsForCall(0)
+					Expect(obj.GetName()).To(Equal("some-obj-name"))
+					Expect(obj.GetKind()).To(Equal("some-kind"))
+				})
+			})
+
+			Context("and the previous resource shares a step with a newly created resource but is from a different template", func() {
+				BeforeEach(func() {
+					wl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: v1alpha1.RealizedResource{
+								Name: "some-resource",
+								StampedRef: &v1alpha1.StampedRef{
+									ObjectReference: &corev1.ObjectReference{
+										APIVersion: "some-api-version",
+										Kind:       "some-kind",
+										Name:       "some-obj-name",
+									},
+									Resource: "some-kind",
+								},
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-other-template-name",
+									Kind: "some-template-kind",
+								},
+							},
+						},
+					}
+					repo.GetWorkloadReturns(wl, nil)
+				})
+
+				It("deletes the orphaned objects", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(1))
+
+					_, obj := repo.DeleteArgsForCall(0)
+					Expect(obj.GetName()).To(Equal("some-obj-name"))
+					Expect(obj.GetKind()).To(Equal("some-kind"))
+				})
+			})
+		})
+
+		Context("when previous resource was stamped from a template that is no longer on cluster", func() {
+			BeforeEach(func() {
+				repo.GetTemplateReturns(nil, kerrors.NewNotFound(schema.GroupResource{}, "somename"))
+
+				wl.Status.Resources = []v1alpha1.ResourceStatus{
+					{
+						RealizedResource: v1alpha1.RealizedResource{
+							Name: "some-resource",
+							StampedRef: &v1alpha1.StampedRef{
+								ObjectReference: &corev1.ObjectReference{
+									APIVersion: "some-api-version",
+									Kind:       "some-kind",
+									Name:       "some-obj-name",
+								},
+								Resource: "some-kind",
+							},
+							TemplateRef: &corev1.ObjectReference{
+								Name: "some-template-name",
+								Kind: "some-template-kind",
+							},
+						},
+					},
+				}
+				repo.GetWorkloadReturns(wl, nil)
+			})
+
+			It("deletes the orphaned objects", func() {
+				_, err := reconciler.Reconcile(ctx, req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(repo.DeleteCallCount()).To(Equal(1))
+
+				_, obj := repo.DeleteArgsForCall(0)
+				Expect(obj.GetName()).To(Equal("some-obj-name"))
+				Expect(obj.GetKind()).To(Equal("some-kind"))
 			})
 		})
 	})

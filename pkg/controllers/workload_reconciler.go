@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -331,39 +332,42 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
+	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus) bool
 	for _, prevResource := range previousResources {
 		if prevResource.StampedRef == nil {
 			continue
 		}
 		orphaned := true
+
+		apiTemplate, err := r.Repo.GetTemplate(ctx, prevResource.TemplateRef.Name, prevResource.TemplateRef.Kind)
+		if err != nil {
+			log.Error(err, "unable to get api template")
+			if kerrors.IsNotFound(err) {
+				orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
+				continue
+			}
+			return fmt.Errorf("unable to get api template [%s/%s]: %w", prevResource.TemplateRef.Kind, prevResource.TemplateRef.Name, err)
+		}
+		reader, err := templates.NewReaderFromAPI(apiTemplate)
+		if err != nil {
+			log.Error(err, "failed to get reader for apiTemplate")
+			return fmt.Errorf("failed to get reader for apiTemplate [%s/%s]: %w", prevResource.TemplateRef.Kind, prevResource.TemplateRef.Name, err)
+		}
+
+		if reader.GetLifecycle().IsImmutable() {
+			equivalenceTest = immutableEquivalenceTest
+		} else {
+			equivalenceTest = mutableEquivalenceTest
+		}
+
 		for _, realizedResource := range realizedResources {
 			if realizedResource.StampedRef == nil {
 				continue
 			}
-			apiTemplate, err := r.Repo.GetTemplate(ctx, realizedResource.TemplateRef.Name, realizedResource.TemplateRef.Kind)
-			if err != nil {
-				log.Error(err, "unable to get api template")
-				return fmt.Errorf("unable to get api template [%s/%s]: %w", realizedResource.TemplateRef.Kind, realizedResource.TemplateRef.Name, err)
-			}
-			reader, err := templates.NewReaderFromAPI(apiTemplate)
-			if err != nil {
-				log.Error(err, "failed to get reader for apiTemplate")
-				return fmt.Errorf("failed to get reader for apiTemplate [%s/%s]: %w", realizedResource.TemplateRef.Kind, realizedResource.TemplateRef.Name, err)
-			}
-			if reader.GetLifecycle().IsImmutable() {
-				if realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
-					realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind {
-					orphaned = false
-					break
-				}
 
-			} else {
-				if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
-					realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
-					realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
-					orphaned = false
-					break
-				}
+			if equivalenceTest(realizedResource, prevResource) {
+				orphaned = false
+				break
 			}
 		}
 		if orphaned {
@@ -385,6 +389,18 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	}
 
 	return nil
+}
+
+func mutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus) bool {
+	return realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
+		realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
+		realizedResource.StampedRef.Name == prevResource.StampedRef.Name
+}
+
+func immutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus) bool {
+	return realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
+		realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind &&
+		realizedResource.Name == prevResource.Name
 }
 
 func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
