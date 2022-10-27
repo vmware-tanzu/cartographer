@@ -79,13 +79,13 @@ func (e RunnableApplyStampedObjectError) Error() string {
 	).Error()
 }
 
-type RunnableListCreatedObjectsError struct {
+type ListCreatedObjectsError struct {
 	Err       error
 	Namespace string
 	Labels    map[string]string
 }
 
-func (e RunnableListCreatedObjectsError) Error() string {
+func (e ListCreatedObjectsError) Error() string {
 	return fmt.Errorf("unable to list objects in namespace [%s] with labels [%v]: %w",
 		e.Namespace,
 		e.Labels,

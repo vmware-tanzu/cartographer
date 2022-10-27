@@ -121,7 +121,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	allRunnableStampedObjects, err := runnableRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
 	if err != nil {
 		log.Error(err, "failed to list objects")
-		return stampedObject, nil, errors.RunnableListCreatedObjectsError{
+		return stampedObject, nil, errors.ListCreatedObjectsError{
 			Err:       err,
 			Namespace: stampedObject.GetNamespace(),
 			Labels:    labels,

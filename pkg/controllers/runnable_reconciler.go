@@ -135,7 +135,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if !kerrors.IsForbidden(typedErr.Err) {
 				err = cerrors.NewUnhandledError(err)
 			}
-		case cerrors.RunnableListCreatedObjectsError:
+		case cerrors.ListCreatedObjectsError:
 			r.conditionManager.AddPositive(conditions.FailedToListCreatedObjectsCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		case cerrors.RunnableRetrieveOutputError:

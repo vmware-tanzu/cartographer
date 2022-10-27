@@ -39,7 +39,7 @@ func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObject
 	log := logr.FromContextOrDiscard(ctx).WithName("runnable-stamped-object-cleanup")
 	ctx = logr.NewContext(ctx, log)
 
-	succeededConditionStatusPath := `status.conditions[?(@.type=="Succeeded")].status`
+	succeededConditionStatusPath := `status.conditions[?(@.type=="Succeeded")].status` // TODO undo this hardcoding
 	evaluator := eval.EvaluatorBuilder()
 
 	sort.Sort(ByCreationTimestamp(allRunnableStampedObjects))

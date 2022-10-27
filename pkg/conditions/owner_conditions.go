@@ -93,6 +93,15 @@ func TemplateRejectedByAPIServerCondition(isOwner bool, err error) metav1.Condit
 	}
 }
 
+func BlueprintsFailedToListCreatedObjectsCondition(isOwner bool, err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    getConditionType(isOwner),
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.FailedToListCreatedObjectsReason,
+		Message: err.Error(),
+	}
+}
+
 func UnknownResourceErrorCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    getConditionType(isOwner),

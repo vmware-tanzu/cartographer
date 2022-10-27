@@ -176,12 +176,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			allRunnableStampedObjects, err = r.ownerRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
 			if err != nil {
 				log.Error(err, "failed to list objects")
-				return template, nil, nil, passThrough, errors.ApplyStampedObjectError{ // TODO validate that this is a reasonable return error
-					Err:           err,
-					StampedObject: stampedObject,
-					ResourceName:  resource.Name,
-					BlueprintName: blueprintName,
-					BlueprintType: errors.SupplyChain,
+				return template, nil, nil, passThrough, errors.ListCreatedObjectsError{
+					Err:       err,
+					Namespace: stampedObject.GetNamespace(),
+					Labels:    labels,
 				}
 			}
 

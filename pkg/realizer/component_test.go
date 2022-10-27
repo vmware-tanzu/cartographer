@@ -18,7 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -121,7 +124,9 @@ var _ = Describe("Resource", func() {
 	})
 
 	Describe("Do", func() {
-		When("passed a owner with outputs", func() {
+		When("passed outputs that are populated", func() {
+			var templateAPI *v1alpha1.ClusterSourceTemplate
+			var expectedObject unstructured.Unstructured
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
@@ -152,7 +157,7 @@ var _ = Describe("Resource", func() {
 				dbytes, err := json.Marshal(configMap)
 				Expect(err).ToNot(HaveOccurred())
 
-				templateAPI := &v1alpha1.ClusterSourceTemplate{
+				templateAPI = &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ClusterSourceTemplate",
 						APIVersion: "carto.run/v1alpha1",
@@ -170,39 +175,169 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
-				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
+				expectedObject = unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "ConfigMap",
+						"metadata": map[string]interface{}{
+							"name": "example-config-map",
+							"ownerReferences": []interface{}{
+								map[string]interface{}{
+									"apiVersion":         "",
+									"kind":               "",
+									"name":               "",
+									"uid":                "",
+									"controller":         true,
+									"blockOwnerDeletion": true,
+								},
+							},
+							"creationTimestamp": nil,
+							"labels": map[string]interface{}{
+								"expected-labels-from-labeler-placeholder": "labeler",
+							},
+						},
+						"data": map[string]interface{}{
+							"player_current_lives": "some-url",
+							"some_other_info":      "some-revision",
+						},
+					},
+				}
 			})
 
-			It("creates a stamped object and returns the outputs and stampedObjects", func() {
-				template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(template).ToNot(BeNil())
-				Expect(isPassThrough).To(BeFalse())
+			When("template is mutable", func() {
+				BeforeEach(func() {
+					fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
+					fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
+				})
 
-				_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
+				It("creates a stamped object and returns the outputs and stampedObjects", func() {
+					template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(template).ToNot(BeNil())
+					Expect(isPassThrough).To(BeFalse())
+					Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
 
-				Expect(returnedStampedObject).To(Equal(stampedObject))
+					Expect(fakeOwnerRepo.EnsureMutableObjectExistsOnClusterCallCount()).To(Equal(1))
 
-				metadata := stampedObject.Object["metadata"]
-				metadataValues, ok := metadata.(map[string]interface{})
-				Expect(ok).To(BeTrue())
-				Expect(metadataValues["name"]).To(Equal("example-config-map"))
-				Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-					map[string]interface{}{
-						"apiVersion":         "",
-						"kind":               "",
-						"name":               "",
-						"uid":                "",
-						"controller":         true,
-						"blockOwnerDeletion": true,
-					},
-				}))
-				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+					_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 
-				Expect(out.Source.Revision).To(Equal("some-revision"))
-				Expect(out.Source.URL).To(Equal("some-url"))
+					Expect(returnedStampedObject).To(Equal(stampedObject))
+
+					metadata := stampedObject.Object["metadata"]
+					metadataValues, ok := metadata.(map[string]interface{})
+					Expect(ok).To(BeTrue())
+					Expect(metadataValues["name"]).To(Equal("example-config-map"))
+					Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+						map[string]interface{}{
+							"apiVersion":         "",
+							"kind":               "",
+							"name":               "",
+							"uid":                "",
+							"controller":         true,
+							"blockOwnerDeletion": true,
+						},
+					}))
+					Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+					Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+					Expect(out.Source.Revision).To(Equal("some-revision"))
+					Expect(out.Source.URL).To(Equal("some-url"))
+				})
+			})
+
+			When("template is immutable", func() {
+				BeforeEach(func() {
+					lifecycle := "immutable"
+					templateAPI.Spec.TemplateSpec.Lifecycle = &lifecycle
+					fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
+				})
+
+				When("call to ensure immutable object succeeds", func() {
+					BeforeEach(func() {
+						fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterReturns(nil)
+					})
+
+					When("call to list objects succeeds", func() {
+						When("garbage collection succeeds", func() {
+							BeforeEach(func() {
+								stampedObjectWithTime := expectedObject.DeepCopy()
+
+								stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
+
+								fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
+							})
+
+							It("creates a stamped object and returns the outputs and stampedObjects", func() {
+								template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+								Expect(err).ToNot(HaveOccurred())
+								Expect(template).ToNot(BeNil())
+								Expect(isPassThrough).To(BeFalse())
+								Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+
+								Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+
+								_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+
+								Expect(returnedStampedObject).To(Equal(stampedObject))
+
+								metadata := stampedObject.Object["metadata"]
+								metadataValues, ok := metadata.(map[string]interface{})
+								Expect(ok).To(BeTrue())
+								Expect(metadataValues["name"]).To(Equal("example-config-map"))
+								Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+									map[string]interface{}{
+										"apiVersion":         "",
+										"kind":               "",
+										"name":               "",
+										"uid":                "",
+										"controller":         true,
+										"blockOwnerDeletion": true,
+									},
+								}))
+								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+								Expect(out.Source.Revision).To(Equal("some-revision"))
+								Expect(out.Source.URL).To(Equal("some-url"))
+							})
+						})
+
+						When("the call to garbage collection returns an error", func() {
+							// TODO
+						})
+					})
+
+					When("the call to list objects fails", func() {
+						BeforeEach(func() {
+							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{}, fmt.Errorf("some error"))
+						})
+
+						It("returns ListCreatedObjectsError", func() {
+							template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+							Expect(template).ToNot(BeNil())
+							Expect(isPassThrough).To(BeFalse())
+
+							Expect(err).To(HaveOccurred())
+							Expect(err.Error()).To(ContainSubstring("some error"))
+							Expect(reflect.TypeOf(err).String()).To(Equal("errors.ListCreatedObjectsError"))
+						})
+					})
+				})
+				When("call to ensure immutable object fails", func() {
+					BeforeEach(func() {
+						fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterReturns(fmt.Errorf("bad object"))
+					})
+
+					It("returns ApplyStampedObjectError", func() {
+						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).ToNot(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("bad object"))
+						Expect(reflect.TypeOf(err).String()).To(Equal("errors.ApplyStampedObjectError"))
+					})
+				})
 			})
 		})
 
@@ -347,7 +482,7 @@ var _ = Describe("Resource", func() {
 			})
 		})
 
-		When("unable to EnsureImmutableObjectExistsOnCluster the stamped object", func() {
+		When("unable to EnsureMutableObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
