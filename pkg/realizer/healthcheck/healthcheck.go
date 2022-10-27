@@ -74,16 +74,18 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 		}
 		return conditions.OutputNotAvailableResourcesHealthyCondition()
 	} else {
-		if rule.AlwaysHealthy != nil {
-			return conditions.AlwaysHealthyResourcesHealthyCondition()
-		}
 		if stampedObject != nil {
+			if rule.AlwaysHealthy != nil {
+				return conditions.AlwaysHealthyResourcesHealthyCondition()
+			}
 			if rule.SingleConditionType != "" {
 				return singleConditionTypeCondition(rule.SingleConditionType, stampedObject)
 			}
 			if rule.MultiMatch != nil {
 				return multiMatchCondition(rule.MultiMatch, stampedObject)
 			}
+		} else if rule.AlwaysHealthy != nil {
+			return conditions.NoStampedObjectResourcesHealthyCondition()
 		}
 	}
 	return conditions.UnknownResourcesHealthyCondition()
