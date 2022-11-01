@@ -85,6 +85,8 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	var output *templates.Output
 	var apiTemplate client.Object
 	var err error
+	var allRunnableStampedObjects []*unstructured.Unstructured
+
 	passThrough := false
 
 	// TODO: consider: should we build this only once, and pass it to the contextGenerator also?
@@ -171,8 +173,6 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				}
 			}
 
-			var allRunnableStampedObjects []*unstructured.Unstructured
-
 			allRunnableStampedObjects, err = r.ownerRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
 			if err != nil {
 				log.Error(err, "failed to list objects")
@@ -213,6 +213,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		if passThrough {
 			log.Error(err, "failed to retrieve output from pass through", "passThrough", templateOption.PassThrough)
 		} else {
+			if template.GetLifecycle().IsImmutable() {
+				for _, obj := range allRunnableStampedObjects {
+					log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
+				}
+			}
+
 			log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 			var rErr error
 			qualifiedResource, rErr = utils.GetQualifiedResource(mapper, stampedObject)
