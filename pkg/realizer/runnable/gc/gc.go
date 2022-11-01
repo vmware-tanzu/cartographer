@@ -35,7 +35,7 @@ func (a ByCreationTimestamp) Less(i, j int) bool {
 }
 func (a ByCreationTimestamp) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
-func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObjects []*unstructured.Unstructured, retentionPolicy v1alpha1.RetentionPolicy, repo repository.Repository) error {
+func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObjects []*unstructured.Unstructured, retentionPolicy v1alpha1.RetentionPolicy, repo repository.Repository) {
 	log := logr.FromContextOrDiscard(ctx).WithName("runnable-stamped-object-cleanup")
 	ctx = logr.NewContext(ctx, log)
 
@@ -67,6 +67,4 @@ func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObject
 			}
 		}
 	}
-
-	return nil
 }

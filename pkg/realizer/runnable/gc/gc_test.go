@@ -94,8 +94,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 		successfulRunnableStampedObjectToBeDeleted := MakeRunnableStampedObject("True", "RecentSuccessToBeDeleted1", "2022-01-09T17:00:07Z")
 		allRunnableStampedObjects = append([]*unstructured.Unstructured{objectWithoutSucceededStatus, successfulRunnableStampedObjectToBeDeleted}, allRunnableStampedObjects...)
 
-		err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
-		Expect(err).NotTo(HaveOccurred())
+		gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
 
 		Expect(repo.DeleteCallCount()).To(Equal(1))
 		_, deletedObject1 := repo.DeleteArgsForCall(0)
@@ -125,8 +124,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 
 		It("continues processing all elements and logs an error if deleting a runnable stamped object fails", func() {
 			repo.DeleteReturns(errors.New("deleting is hard"))
-			err := gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
-			Expect(err).NotTo(HaveOccurred())
+			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
 
 			Expect(repo.DeleteCallCount()).To(Equal(4))
 			Expect(out).To(Say("failed to delete runnable stamped object.*RecentFailureToBeDeleted1.*deleting is hard"))
@@ -136,8 +134,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 		})
 
 		It("deletes successful and failed runnable stamped objects according to retention policy", func() {
-			err := gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
-			Expect(err).NotTo(HaveOccurred())
+			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
 
 			Expect(repo.DeleteCallCount()).To(Equal(4))
 			_, deletedObject1 := repo.DeleteArgsForCall(0)
@@ -164,8 +161,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 			allRunnableStampedObjects = append(allRunnableStampedObjects, failedRunnableStampedObjectToBeIgnored1)
 			allRunnableStampedObjects = append([]*unstructured.Unstructured{failedRunnableStampedObjectToBeIgnored2}, allRunnableStampedObjects...)
 
-			err := gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
-			Expect(err).NotTo(HaveOccurred())
+			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
 
 			Expect(repo.DeleteCallCount()).To(Equal(4))
 			_, deletedObject1 := repo.DeleteArgsForCall(0)

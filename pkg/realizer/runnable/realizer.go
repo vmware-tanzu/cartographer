@@ -128,10 +128,7 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
-	if err != nil {
-		log.Error(err, "failed to cleanup runnable stamped objects")
-	}
+	gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
 
 	outputs, outputSource, err := template.GetLatestSuccessfulOutput(allRunnableStampedObjects)
 	if err != nil {

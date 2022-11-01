@@ -188,10 +188,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				MaxSuccessfulRuns: 10,
 			}
 
-			err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, defaultRetentionPolicyToReplace, r.ownerRepo)
-			if err != nil {
-				log.Error(err, "failed to cleanup runnable stamped objects")
-			}
+			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, defaultRetentionPolicyToReplace, r.ownerRepo)
 
 			healthRule := template.GetHealthRule()
 			if healthRule == nil && *template.GetLifecycle() == templates.Tekton {
