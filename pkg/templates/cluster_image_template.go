@@ -33,6 +33,10 @@ func NewClusterImageTemplateReader(template *v1alpha1.ClusterImageTemplate) *clu
 	return &clusterImageTemplate{template: template}
 }
 
+func (t *clusterImageTemplate) GetRetentionPolicy() v1alpha1.RetentionPolicy {
+	return *t.template.Spec.RetentionPolicy
+}
+
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }

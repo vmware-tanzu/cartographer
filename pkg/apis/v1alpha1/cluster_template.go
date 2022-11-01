@@ -72,8 +72,15 @@ type TemplateSpec struct {
 	// Lifecycle specifies whether template modifications should result in originally
 	// created objects being updated (`default`) or in new objects created alongside
 	// original objects (`immutable` or `tekton`).
+	// +kubebuilder:validation:Enum=default;immutable;tekton
 	// +kubebuilder:default="default"
-	Lifecycle *string `json:"lifecycle,omitempty"`
+	Lifecycle string `json:"lifecycle,omitempty"`
+
+	// RetentionPolicy specifies how many successful and failed runs should be retained
+	// if the template lifecycle is immutable/tekton.
+	// Runs older than this (ordered by creation time) will be deleted. Setting higher
+	// values will increase memory footprint.
+	RetentionPolicy *RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
 
 // HealthRule specifies rubric for determining the health of a resource.

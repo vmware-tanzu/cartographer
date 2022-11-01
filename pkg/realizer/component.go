@@ -183,12 +183,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				}
 			}
 
-			defaultRetentionPolicyToReplace := v1alpha1.RetentionPolicy{ // TODO make this configurable
-				MaxFailedRuns:     10,
-				MaxSuccessfulRuns: 10,
-			}
-
-			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, defaultRetentionPolicyToReplace, r.ownerRepo)
+			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, template.GetRetentionPolicy(), r.ownerRepo)
 
 			healthRule := template.GetHealthRule()
 			if healthRule == nil && *template.GetLifecycle() == templates.Tekton {

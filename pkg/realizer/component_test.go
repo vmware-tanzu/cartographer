@@ -247,8 +247,12 @@ var _ = Describe("Resource", func() {
 
 			When("template is immutable", func() {
 				BeforeEach(func() {
-					lifecycle := "immutable"
-					templateAPI.Spec.TemplateSpec.Lifecycle = &lifecycle
+					templateAPI.Spec.TemplateSpec.Lifecycle = "immutable"
+					templateAPI.Spec.TemplateSpec.RetentionPolicy = &v1alpha1.RetentionPolicy{
+						MaxFailedRuns:     10,
+						MaxSuccessfulRuns: 10,
+					}
+
 					fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
 				})
 
@@ -258,52 +262,46 @@ var _ = Describe("Resource", func() {
 					})
 
 					When("call to list objects succeeds", func() {
-						When("garbage collection succeeds", func() {
-							BeforeEach(func() {
-								stampedObjectWithTime := expectedObject.DeepCopy()
+						BeforeEach(func() {
+							stampedObjectWithTime := expectedObject.DeepCopy()
 
-								stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
+							stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
 
-								fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
-							})
-
-							It("creates a stamped object and returns the outputs and stampedObjects", func() {
-								template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-								Expect(err).ToNot(HaveOccurred())
-								Expect(template).ToNot(BeNil())
-								Expect(isPassThrough).To(BeFalse())
-								Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
-
-								Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
-
-								_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
-
-								Expect(returnedStampedObject).To(Equal(stampedObject))
-
-								metadata := stampedObject.Object["metadata"]
-								metadataValues, ok := metadata.(map[string]interface{})
-								Expect(ok).To(BeTrue())
-								Expect(metadataValues["name"]).To(Equal("example-config-map"))
-								Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-									map[string]interface{}{
-										"apiVersion":         "",
-										"kind":               "",
-										"name":               "",
-										"uid":                "",
-										"controller":         true,
-										"blockOwnerDeletion": true,
-									},
-								}))
-								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
-
-								Expect(out.Source.Revision).To(Equal("some-revision"))
-								Expect(out.Source.URL).To(Equal("some-url"))
-							})
+							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
 						})
 
-						When("the call to garbage collection returns an error", func() {
-							// TODO
+						It("creates a stamped object and returns the outputs and stampedObjects", func() {
+							template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+							Expect(err).ToNot(HaveOccurred())
+							Expect(template).ToNot(BeNil())
+							Expect(isPassThrough).To(BeFalse())
+							Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+
+							Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+
+							_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+
+							Expect(returnedStampedObject).To(Equal(stampedObject))
+
+							metadata := stampedObject.Object["metadata"]
+							metadataValues, ok := metadata.(map[string]interface{})
+							Expect(ok).To(BeTrue())
+							Expect(metadataValues["name"]).To(Equal("example-config-map"))
+							Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+								map[string]interface{}{
+									"apiVersion":         "",
+									"kind":               "",
+									"name":               "",
+									"uid":                "",
+									"controller":         true,
+									"blockOwnerDeletion": true,
+								},
+							}))
+							Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+							Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+							Expect(out.Source.Revision).To(Equal("some-revision"))
+							Expect(out.Source.URL).To(Equal("some-url"))
 						})
 					})
 

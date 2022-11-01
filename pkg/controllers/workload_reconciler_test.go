@@ -1382,8 +1382,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 		Context("when previous resource stamped from immutable template", func() {
 			BeforeEach(func() {
-				lifecycle := "immutable"
-				someTemplate := v1alpha1.ClusterTemplate{Spec: v1alpha1.TemplateSpec{Lifecycle: &lifecycle}}
+				someTemplate := v1alpha1.ClusterTemplate{Spec: v1alpha1.TemplateSpec{Lifecycle: "immutable"}}
 				repo.GetTemplateReturns(&someTemplate, nil)
 			})
 

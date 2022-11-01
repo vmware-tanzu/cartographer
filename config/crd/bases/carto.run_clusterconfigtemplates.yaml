@@ -211,6 +211,10 @@ spec:
                   result in originally created objects being updated (`default`) or
                   in new objects created alongside original objects (`immutable` or
                   `tekton`).
+                enum:
+                - default
+                - immutable
+                - tekton
                 type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
@@ -230,6 +234,27 @@ spec:
                   - name
                   type: object
                 type: array
+              retentionPolicy:
+                description: RetentionPolicy specifies how many successful and failed
+                  runs should be retained if the template lifecycle is immutable/tekton.
+                  Runs older than this (ordered by creation time) will be deleted.
+                  Setting higher values will increase memory footprint.
+                properties:
+                  maxFailedRuns:
+                    description: MaxFailedRuns is the number of failed runs to retain.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  maxSuccessfulRuns:
+                    description: MaxSuccessfulRuns is the number of successful runs
+                      to retain.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                required:
+                - maxFailedRuns
+                - maxSuccessfulRuns
+                type: object
               template:
                 description: 'Template defines a resource template for a Kubernetes
                   Resource or Custom Resource which is applied to the server each

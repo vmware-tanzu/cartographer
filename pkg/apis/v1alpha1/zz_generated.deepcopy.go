@@ -1718,9 +1718,9 @@ func (in *TemplateSpec) DeepCopyInto(out *TemplateSpec) {
 		*out = new(HealthRule)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Lifecycle != nil {
-		in, out := &in.Lifecycle, &out.Lifecycle
-		*out = new(string)
+	if in.RetentionPolicy != nil {
+		in, out := &in.RetentionPolicy, &out.RetentionPolicy
+		*out = new(RetentionPolicy)
 		**out = **in
 	}
 }

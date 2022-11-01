@@ -31,6 +31,10 @@ func NewClusterSourceTemplateReader(template *v1alpha1.ClusterSourceTemplate) *c
 	return &clusterSourceTemplate{template: template}
 }
 
+func (t *clusterSourceTemplate) GetRetentionPolicy() v1alpha1.RetentionPolicy {
+	return *t.template.Spec.RetentionPolicy
+}
+
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {
 	return t.template.Spec.TemplateSpec
 }

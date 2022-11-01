@@ -32,6 +32,7 @@ type Reader interface {
 	GetHealthRule() *v1alpha1.HealthRule
 	IsYTTTemplate() bool
 	GetLifecycle() *Lifecycle
+	GetRetentionPolicy() v1alpha1.RetentionPolicy
 }
 
 type Lifecycle string
@@ -49,11 +50,8 @@ func (l *Lifecycle) IsImmutable() bool {
 	return false
 }
 
-func convertLifecycle(lifecycleString *string) Lifecycle {
-	if lifecycleString == nil {
-		return Default
-	}
-	switch *lifecycleString {
+func convertLifecycle(lifecycleString string) Lifecycle {
+	switch lifecycleString {
 	case "immutable":
 		return Immutable
 	case "tekton":
