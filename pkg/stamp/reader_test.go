@@ -15,15 +15,18 @@
 package stamp_test
 
 import (
-	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 type noInputFake struct{}
@@ -122,23 +125,39 @@ var _ = Describe("Outputter", func() {
 		Context("where the evaluator can not return a value", func() {
 			var stampedObject *unstructured.Unstructured
 
-			BeforeEach(func() {
-				unstructuredContent := map[string]interface{}{}
+			Context("when stampedObject exists", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{}
 
-				stampedObject = &unstructured.Unstructured{}
-				stampedObject.SetUnstructuredContent(unstructuredContent)
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+				})
+
+				It("returns a nil output", func() {
+					output, _ := reader.Output(stampedObject)
+					Expect(output).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+					Expect(err.Error()).To(ContainSubstring(".data.url"))
+				})
 			})
 
-			It("returns a nil output", func() {
-				output, _ := reader.Output(stampedObject)
-				Expect(output).To(BeNil())
-			})
+			Context("when stampedObject is nil", func() {
+				It("returns a nil output", func() {
+					output, _ := reader.Output(stampedObject)
+					Expect(output).To(BeNil())
+				})
 
-			It("returns an error", func() {
-				_, err := reader.Output(stampedObject)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
-				Expect(err.Error()).To(ContainSubstring(".data.url"))
+				It("returns an error", func() {
+					_, err := reader.Output(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+					Expect(err.Error()).To(ContainSubstring(".data.url"))
+				})
 			})
 		})
 	})
@@ -186,23 +205,39 @@ var _ = Describe("Outputter", func() {
 		Context("where the evaluator can not return a value", func() {
 			var stampedObject *unstructured.Unstructured
 
-			BeforeEach(func() {
-				unstructuredContent := map[string]interface{}{}
+			Context("when stampedObject exists", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{}
 
-				stampedObject = &unstructured.Unstructured{}
-				stampedObject.SetUnstructuredContent(unstructuredContent)
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+				})
+
+				It("returns a nil output", func() {
+					output, _ := reader.Output(stampedObject)
+					Expect(output).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+					Expect(err.Error()).To(ContainSubstring(".data.image"))
+				})
 			})
 
-			It("returns a nil output", func() {
-				output, _ := reader.Output(stampedObject)
-				Expect(output).To(BeNil())
-			})
+			Context("when stampedObject is nil", func() {
+				It("returns a nil output", func() {
+					output, _ := reader.Output(stampedObject)
+					Expect(output).To(BeNil())
+				})
 
-			It("returns an error", func() {
-				_, err := reader.Output(stampedObject)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
-				Expect(err.Error()).To(ContainSubstring(".data.image"))
+				It("returns an error", func() {
+					_, err := reader.Output(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+					Expect(err.Error()).To(ContainSubstring(".data.image"))
+				})
 			})
 		})
 	})
@@ -250,23 +285,39 @@ var _ = Describe("Outputter", func() {
 		Context("where the evaluator can not return a value", func() {
 			var stampedObject *unstructured.Unstructured
 
-			BeforeEach(func() {
-				unstructuredContent := map[string]interface{}{}
+			Context("when stampedObject exists", func() {
+				BeforeEach(func() {
+					unstructuredContent := map[string]interface{}{}
 
-				stampedObject = &unstructured.Unstructured{}
-				stampedObject.SetUnstructuredContent(unstructuredContent)
+					stampedObject = &unstructured.Unstructured{}
+					stampedObject.SetUnstructuredContent(unstructuredContent)
+				})
+
+				It("returns a nil output", func() {
+					output, _ := reader.Output(stampedObject)
+					Expect(output).To(BeNil())
+				})
+
+				It("returns an error", func() {
+					_, err := reader.Output(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+					Expect(err.Error()).To(ContainSubstring(".data.config"))
+				})
 			})
 
-			It("returns a nil output", func() {
-				output, _ := reader.Output(stampedObject)
-				Expect(output).To(BeNil())
-			})
+			Context("when stampedObject is nil", func() {
+				It("returns a nil output", func() {
+					output, _ := reader.Output(stampedObject)
+					Expect(output).To(BeNil())
+				})
 
-			It("returns an error", func() {
-				_, err := reader.Output(stampedObject)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
-				Expect(err.Error()).To(ContainSubstring(".data.config"))
+				It("returns an error", func() {
+					_, err := reader.Output(stampedObject)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
+					Expect(err.Error()).To(ContainSubstring(".data.config"))
+				})
 			})
 		})
 	})
@@ -802,7 +853,6 @@ var _ = Describe("Outputter", func() {
 				It("returns the output", func() {
 					output, err := reader.Output(&unstructured.Unstructured{})
 					Expect(err).NotTo(HaveOccurred())
-					fmt.Printf("%+v", output.Config)
 					Expect(output.Config).To(Equal("my-config"))
 				})
 			})
@@ -823,4 +873,111 @@ var _ = Describe("Outputter", func() {
 		})
 	})
 
+})
+
+func MakeExaminedObject(name string, creationTime int64, status metav1.ConditionStatus) *stamp.ExaminedObject {
+	yamlString := utils.HereYamlF(`
+		---
+		apiVersion: test.run/v1alpha1
+		kind: TestObj
+		metadata:
+		  name: %s
+	`, name)
+	obj := &unstructured.Unstructured{}
+	err := yaml.Unmarshal([]byte(yamlString), obj)
+	Expect(err).NotTo(HaveOccurred())
+
+	obj.SetCreationTimestamp(metav1.NewTime(time.Unix(creationTime, 0)))
+
+	examinedObj := &stamp.ExaminedObject{
+		StampedObject: obj,
+		Health:        status,
+	}
+
+	return examinedObj
+}
+
+var _ = Describe("GetLatestSuccessfulObjFromExaminedObject", func() {
+	var (
+		successObj1, failedObj2, unknownObj3,
+		successObj4, failedObj5, unknownObj6,
+		successObj7, failedObj8, unknownObj9 *stamp.ExaminedObject
+		examinedObjects []*stamp.ExaminedObject
+		returnedObj     *unstructured.Unstructured
+	)
+
+	BeforeEach(func() {
+		successObj1 = MakeExaminedObject("successObj1", 1, metav1.ConditionTrue)
+		failedObj2 = MakeExaminedObject("failedObj2", 2, metav1.ConditionFalse)
+		unknownObj3 = MakeExaminedObject("unknownObj3", 3, metav1.ConditionUnknown)
+		successObj4 = MakeExaminedObject("successObj4", 4, metav1.ConditionTrue)
+		failedObj5 = MakeExaminedObject("failedObj5", 5, metav1.ConditionFalse)
+		unknownObj6 = MakeExaminedObject("unknownObj6", 6, metav1.ConditionUnknown)
+		successObj7 = MakeExaminedObject("successObj7", 7, metav1.ConditionTrue)
+		failedObj8 = MakeExaminedObject("failedObj8", 8, metav1.ConditionFalse)
+		unknownObj9 = MakeExaminedObject("unknownObj9", 9, metav1.ConditionUnknown)
+	})
+
+	JustBeforeEach(func() {
+		returnedObj = stamp.GetLatestSuccessfulObjFromExaminedObject(examinedObjects)
+	})
+
+	Context("unknown obj is most recent", func() {
+		BeforeEach(func() {
+			examinedObjects = []*stamp.ExaminedObject{
+				successObj1, failedObj2, unknownObj3,
+				successObj4, failedObj5, unknownObj6,
+				successObj7, failedObj8, unknownObj9,
+			}
+		})
+
+		It("returns the most recent successful object", func() {
+			Expect(returnedObj).To(Equal(successObj7.StampedObject))
+		})
+	})
+
+	Context("success obj is most recent", func() {
+		BeforeEach(func() {
+			examinedObjects = []*stamp.ExaminedObject{
+				successObj1, failedObj2, unknownObj3,
+				successObj4,
+			}
+		})
+
+		It("returns the most recent successful object", func() {
+			Expect(returnedObj).To(Equal(successObj4.StampedObject))
+		})
+	})
+
+	Context("failed obj is most recent", func() {
+		BeforeEach(func() {
+			examinedObjects = []*stamp.ExaminedObject{
+				successObj1, failedObj2,
+			}
+		})
+
+		It("returns the most recent successful object", func() {
+			Expect(returnedObj).To(Equal(successObj1.StampedObject))
+		})
+	})
+
+	Context("no successful obj in set", func() {
+		BeforeEach(func() {
+			examinedObjects = []*stamp.ExaminedObject{
+				failedObj2, unknownObj3,
+				failedObj5, unknownObj6,
+				failedObj8, unknownObj9,
+			}
+		})
+
+		It("returns a nil object", func() {
+			Expect(returnedObj).To(BeNil())
+		})
+	})
+
+	Context("input set is empty", func() {
+		It("returns a nil object", func() {
+			Expect(returnedObj).To(BeNil())
+		})
+	})
 })

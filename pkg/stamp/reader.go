@@ -81,19 +81,6 @@ type SourceOutputReader struct {
 	template *v1alpha1.ClusterSourceTemplate
 }
 
-type ExaminedObject struct {
-	StampedObject *unstructured.Unstructured
-	Health        metav1.ConditionStatus
-}
-
-func LatestOutput(examinedObjects []*ExaminedObject, outputter Outputter) (*templates.Output, error) {
-	latestMatchingObject := getLatestSuccessfulExaminedObject(examinedObjects)
-	if latestMatchingObject == nil {
-		return nil, fmt.Errorf("no successful object found")
-	}
-	return outputter.Output(latestMatchingObject)
-}
-
 func (r *SourceOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
 	// TODO: We don't need a Builder
 	evaluator := eval.EvaluatorBuilder()
@@ -321,29 +308,6 @@ func NewNoOutputReader() Outputter {
 	return &NoOutputReader{}
 }
 
-func getLatestSuccessfulExaminedObject(examinedObjects []*ExaminedObject) *unstructured.Unstructured {
-	var (
-		latestTime           time.Time // zero value is used for comparison
-		latestMatchingObject *unstructured.Unstructured
-	)
-
-	for _, examinedObject := range examinedObjects {
-		if examinedObject.Health != metav1.ConditionTrue {
-			continue
-		}
-
-		stampedObject := examinedObject.StampedObject
-
-		currentTime := stampedObject.GetCreationTimestamp().Time
-		if currentTime.After(latestTime) {
-			latestMatchingObject = stampedObject
-			latestTime = currentTime
-		}
-
-	}
-	return latestMatchingObject
-}
-
 type SourcePassThroughReader struct {
 	inputs PassThroughInput
 	name   string
@@ -414,4 +378,32 @@ func (r *ConfigPassThroughReader) Output(_ *unstructured.Unstructured) (*templat
 	return &templates.Output{
 		Config: config[r.name].Config,
 	}, nil
+}
+
+type ExaminedObject struct {
+	StampedObject *unstructured.Unstructured
+	Health        metav1.ConditionStatus
+}
+
+func GetLatestSuccessfulObjFromExaminedObject(examinedObjects []*ExaminedObject) *unstructured.Unstructured {
+	var (
+		latestTime           time.Time // zero value is used for comparison
+		latestMatchingObject *unstructured.Unstructured
+	)
+
+	for _, examinedObject := range examinedObjects {
+		if examinedObject.Health != metav1.ConditionTrue {
+			continue
+		}
+
+		stampedObject := examinedObject.StampedObject
+
+		currentTime := stampedObject.GetCreationTimestamp().Time
+		if currentTime.After(latestTime) {
+			latestMatchingObject = stampedObject
+			latestTime = currentTime
+		}
+
+	}
+	return latestMatchingObject
 }

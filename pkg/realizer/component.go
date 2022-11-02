@@ -87,6 +87,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	var apiTemplate client.Object
 	var err error
 	var allRunnableStampedObjects []*unstructured.Unstructured
+	var qualifiedResource string
 
 	passThrough := false
 
@@ -118,6 +119,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 
 		output, err = stampReader.Output(stampedObject)
+		if err != nil {
+			log.Error(err, "failed to retrieve output from pass through", "passThrough", templateOption.PassThrough)
+		}
 	} else {
 		log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
@@ -202,7 +206,14 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 			gc.CleanupRunnableStampedObjects(ctx, examinedObjects, template.GetRetentionPolicy(), r.ownerRepo)
 
-			output, err = stamp.LatestOutput(examinedObjects, stampReader)
+			latestSuccessfulObject := stamp.GetLatestSuccessfulObjFromExaminedObject(examinedObjects)
+			if latestSuccessfulObject == nil {
+				for _, obj := range allRunnableStampedObjects {
+					log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
+				}
+			}
+
+			output, err = stampReader.Output(latestSuccessfulObject)
 		} else {
 			err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 			if err != nil {
@@ -217,21 +228,13 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			}
 
 			output, err = stampReader.Output(stampedObject)
-		}
-	}
 
-	if err != nil {
-		var qualifiedResource string
-		if passThrough {
-			log.Error(err, "failed to retrieve output from pass through", "passThrough", templateOption.PassThrough)
-		} else {
-			if template.GetLifecycle().IsImmutable() {
-				for _, obj := range allRunnableStampedObjects {
-					log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
-				}
+			if err != nil {
+				log.Error(err, "failed to retrieve output from object", "object", stampedObject)
 			}
+		}
 
-			log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+		if err != nil {
 			var rErr error
 			qualifiedResource, rErr = utils.GetQualifiedResource(mapper, stampedObject)
 			if rErr != nil {
@@ -239,7 +242,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
 			}
 		}
+	}
 
+	if err != nil {
 		return template, stampedObject, nil, passThrough, errors.RetrieveOutputError{
 			Err:               err,
 			ResourceName:      resource.Name,
