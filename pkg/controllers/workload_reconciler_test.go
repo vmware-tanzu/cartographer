@@ -991,6 +991,32 @@ var _ = Describe("WorkloadReconciler", func() {
 				})
 			})
 
+			Context("of type ListCreatedObjectsError", func() {
+				var (
+					listCreatedObjectsError cerrors.ListCreatedObjectsError
+					err                     error
+				)
+
+				BeforeEach(func() {
+					listCreatedObjectsError = cerrors.ListCreatedObjectsError{
+						Err:       fmt.Errorf("some-error"),
+						Namespace: "some-namespace",
+						Labels:    map[string]string{"label?": "label!"},
+					}
+					rlzr.RealizeReturns(listCreatedObjectsError)
+					_, err = reconciler.Reconcile(ctx, req)
+				})
+
+				It("calls the condition manager to report", func() {
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
+						Equal(conditions.BlueprintsFailedToListCreatedObjectsCondition(true, listCreatedObjectsError)))
+				})
+
+				It("returns an error", func() {
+					Expect(err).To(HaveOccurred())
+				})
+			})
+
 			Context("of unknown type", func() {
 				var realizerError error
 				BeforeEach(func() {
