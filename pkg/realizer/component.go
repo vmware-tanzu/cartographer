@@ -27,6 +27,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
@@ -164,7 +165,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			err = r.ownerRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labels)
 			if err != nil {
 				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-				return template, nil, nil, passThrough, errors.ApplyStampedObjectError{ // TODO validate that this is a reasonable return error
+				return template, nil, nil, passThrough, errors.ApplyStampedObjectError{
 					Err:           err,
 					StampedObject: stampedObject,
 					ResourceName:  resource.Name,
@@ -183,14 +184,25 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				}
 			}
 
-			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, template.GetRetentionPolicy(), r.ownerRepo)
-
 			healthRule := template.GetHealthRule()
 			if healthRule == nil && *template.GetLifecycle() == templates.Tekton {
 				healthRule = &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
 			}
 
-			output, err = stamp.LatestOutput(allRunnableStampedObjects, stampReader, healthRule)
+			var examinedObjects []*stamp.ExaminedObject
+
+			for _, someStampedObject := range allRunnableStampedObjects {
+				health := healthcheck.DetermineStampedObjectHealth(healthRule, someStampedObject)
+
+				examinedObjects = append(examinedObjects, &stamp.ExaminedObject{
+					StampedObject: someStampedObject,
+					Health:        health,
+				})
+			}
+
+			gc.CleanupRunnableStampedObjects(ctx, examinedObjects, template.GetRetentionPolicy(), r.ownerRepo)
+
+			output, err = stamp.LatestOutput(examinedObjects, stampReader)
 		} else {
 			err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
 			if err != nil {

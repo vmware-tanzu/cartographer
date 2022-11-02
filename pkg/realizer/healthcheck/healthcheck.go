@@ -89,6 +89,24 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 	return conditions.UnknownResourcesHealthyCondition()
 }
 
+func DetermineStampedObjectHealth(rule *v1alpha1.HealthRule, stampedObject *unstructured.Unstructured) metav1.ConditionStatus {
+	if rule == nil {
+		return metav1.ConditionTrue
+	}
+
+	if rule.AlwaysHealthy != nil {
+		return metav1.ConditionTrue
+	}
+
+	if rule.SingleConditionType != "" {
+		condition := singleConditionTypeCondition(rule.SingleConditionType, stampedObject)
+		return condition.Status
+	}
+
+	condition := multiMatchCondition(rule.MultiMatch, stampedObject)
+	return condition.Status
+}
+
 func singleConditionTypeCondition(singleConditionType string, stampedObject *unstructured.Unstructured) metav1.Condition {
 	singleCondition := utils.ExtractConditions(stampedObject).ConditionWithType(singleConditionType)
 	if singleCondition != nil {

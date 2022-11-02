@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
@@ -29,6 +30,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
@@ -53,11 +55,11 @@ func MakeRunnableStampedObject(status, name, creationTimeStamp string) *unstruct
 
 var _ = Describe("CleanupRunnableStampedObjects", func() {
 	var (
-		repo                      *repositoryfakes.FakeRepository
-		allRunnableStampedObjects []*unstructured.Unstructured
-		retentionPolicy           v1alpha1.RetentionPolicy
-		ctx                       context.Context
-		out                       *Buffer
+		repo               *repositoryfakes.FakeRepository
+		allExaminedObjects []*stamp.ExaminedObject
+		retentionPolicy    v1alpha1.RetentionPolicy
+		ctx                context.Context
+		out                *Buffer
 	)
 
 	BeforeEach(func() {
@@ -65,12 +67,27 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 		logger := zap.New(zap.WriteTo(out))
 		ctx = logr.NewContext(context.Background(), logger)
 
-		allRunnableStampedObjects = []*unstructured.Unstructured{
-			MakeRunnableStampedObject("True", "RecentSuccessRetainedByPolicy1", "2022-01-11T17:00:07Z"),
-			MakeRunnableStampedObject("True", "MostRecentSuccess", "2022-01-12T17:00:07Z"),
-			MakeRunnableStampedObject("False", "MostRecentFailure", "2022-01-12T17:00:07Z"),
-			MakeRunnableStampedObject("False", "RecentFailureRetainedByPolicy2", "2022-01-11T17:00:07Z"),
-			MakeRunnableStampedObject("True", "RecentSuccessRetainedByPolicy2", "2022-01-10T17:00:07Z"),
+		allExaminedObjects = []*stamp.ExaminedObject{
+			{
+				StampedObject: MakeRunnableStampedObject("True", "RecentSuccessRetainedByPolicy1", "2022-01-11T17:00:07Z"),
+				Health:        metav1.ConditionTrue,
+			},
+			{
+				StampedObject: MakeRunnableStampedObject("True", "MostRecentSuccess", "2022-01-12T17:00:07Z"),
+				Health:        metav1.ConditionTrue,
+			},
+			{
+				StampedObject: MakeRunnableStampedObject("False", "MostRecentFailure", "2022-01-12T17:00:07Z"),
+				Health:        metav1.ConditionFalse,
+			},
+			{
+				StampedObject: MakeRunnableStampedObject("False", "RecentFailureRetainedByPolicy2", "2022-01-11T17:00:07Z"),
+				Health:        metav1.ConditionFalse,
+			},
+			{
+				StampedObject: MakeRunnableStampedObject("True", "RecentSuccessRetainedByPolicy2", "2022-01-10T17:00:07Z"),
+				Health:        metav1.ConditionTrue,
+			},
 		}
 
 		repo = &repositoryfakes.FakeRepository{}
@@ -91,16 +108,25 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 		err := yaml.Unmarshal([]byte(yamlString), objectWithoutSucceededStatus)
 		Expect(err).NotTo(HaveOccurred())
 
-		successfulRunnableStampedObjectToBeDeleted := MakeRunnableStampedObject("True", "RecentSuccessToBeDeleted1", "2022-01-09T17:00:07Z")
-		allRunnableStampedObjects = append([]*unstructured.Unstructured{objectWithoutSucceededStatus, successfulRunnableStampedObjectToBeDeleted}, allRunnableStampedObjects...)
+		examinedObjToStillExist := stamp.ExaminedObject{
+			StampedObject: objectWithoutSucceededStatus,
+			Health:        metav1.ConditionUnknown,
+		}
 
-		gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
+		successfulRunnableStampedObjectToBeDeleted := MakeRunnableStampedObject("True", "RecentSuccessToBeDeleted1", "2022-01-09T17:00:07Z")
+
+		examinedObjToBeDeleted := stamp.ExaminedObject{
+			StampedObject: successfulRunnableStampedObjectToBeDeleted,
+			Health:        metav1.ConditionTrue,
+		}
+
+		allExaminedObjects = append([]*stamp.ExaminedObject{&examinedObjToStillExist, &examinedObjToBeDeleted}, allExaminedObjects...)
+
+		gc.CleanupRunnableStampedObjects(ctx, allExaminedObjects, retentionPolicy, repo)
 
 		Expect(repo.DeleteCallCount()).To(Equal(1))
 		_, deletedObject1 := repo.DeleteArgsForCall(0)
 		Expect(deletedObject1).To(Equal(successfulRunnableStampedObjectToBeDeleted))
-
-		Expect(out).To(Say(`"error":"jsonpath returned empty list: status.conditions\[\?\(\@.type==\\"Succeeded\\"\)\].status"`))
 	})
 
 	Context("when runnable stamped objects outside the retention policy are processed", func() {
@@ -118,13 +144,33 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 			failedRunnableStampedObjectToBeDeleted2 = MakeRunnableStampedObject("False", "RecentFailureToBeDeleted2", "2022-01-09T17:00:07Z")
 
 			//ensure dates are out of order for the items to be deleted
-			allRunnableStampedObjects = append(allRunnableStampedObjects, successfulRunnableStampedObjectToBeDeleted1, failedRunnableStampedObjectToBeDeleted1)
-			allRunnableStampedObjects = append([]*unstructured.Unstructured{successfulRunnableStampedObjectToBeDeleted2, failedRunnableStampedObjectToBeDeleted2}, allRunnableStampedObjects...)
+			allExaminedObjects = append(allExaminedObjects,
+				&stamp.ExaminedObject{
+					StampedObject: successfulRunnableStampedObjectToBeDeleted1,
+					Health:        metav1.ConditionTrue,
+				},
+				&stamp.ExaminedObject{
+					StampedObject: failedRunnableStampedObjectToBeDeleted1,
+					Health:        metav1.ConditionFalse,
+				},
+			)
+			allExaminedObjects = append([]*stamp.ExaminedObject{
+				{
+					StampedObject: successfulRunnableStampedObjectToBeDeleted2,
+					Health:        metav1.ConditionTrue,
+				},
+				{
+					StampedObject: failedRunnableStampedObjectToBeDeleted2,
+					Health:        metav1.ConditionFalse,
+				},
+			},
+				allExaminedObjects...,
+			)
 		})
 
 		It("continues processing all elements and logs an error if deleting a runnable stamped object fails", func() {
 			repo.DeleteReturns(errors.New("deleting is hard"))
-			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
+			gc.CleanupRunnableStampedObjects(ctx, allExaminedObjects, retentionPolicy, repo)
 
 			Expect(repo.DeleteCallCount()).To(Equal(4))
 			Expect(out).To(Say("failed to delete runnable stamped object.*RecentFailureToBeDeleted1.*deleting is hard"))
@@ -134,7 +180,7 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 		})
 
 		It("deletes successful and failed runnable stamped objects according to retention policy", func() {
-			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
+			gc.CleanupRunnableStampedObjects(ctx, allExaminedObjects, retentionPolicy, repo)
 
 			Expect(repo.DeleteCallCount()).To(Equal(4))
 			_, deletedObject1 := repo.DeleteArgsForCall(0)
@@ -158,10 +204,17 @@ var _ = Describe("CleanupRunnableStampedObjects", func() {
 			failedRunnableStampedObjectToBeIgnored2 := MakeRunnableStampedObject("Unknown", "RecentFailureToBeDeleted2", "2022-01-09T17:00:07Z")
 
 			//ensure dates are out of order for the items to be deleted
-			allRunnableStampedObjects = append(allRunnableStampedObjects, failedRunnableStampedObjectToBeIgnored1)
-			allRunnableStampedObjects = append([]*unstructured.Unstructured{failedRunnableStampedObjectToBeIgnored2}, allRunnableStampedObjects...)
+			allExaminedObjects = append(allExaminedObjects, &stamp.ExaminedObject{
+				StampedObject: failedRunnableStampedObjectToBeIgnored1,
+				Health:        metav1.ConditionUnknown,
+			})
+			allExaminedObjects = append([]*stamp.ExaminedObject{
+				{
+					StampedObject: failedRunnableStampedObjectToBeIgnored2,
+					Health:        metav1.ConditionUnknown,
+				}}, allExaminedObjects...)
 
-			gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, retentionPolicy, repo)
+			gc.CleanupRunnableStampedObjects(ctx, allExaminedObjects, retentionPolicy, repo)
 
 			Expect(repo.DeleteCallCount()).To(Equal(4))
 			_, deletedObject1 := repo.DeleteArgsForCall(0)

@@ -32,8 +32,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
@@ -128,7 +130,20 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 		}
 	}
 
-	gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
+	healthRule := &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
+
+	var examinedObjects []*stamp.ExaminedObject
+
+	for _, someStampedObject := range allRunnableStampedObjects {
+		health := healthcheck.DetermineStampedObjectHealth(healthRule, someStampedObject)
+
+		examinedObjects = append(examinedObjects, &stamp.ExaminedObject{
+			StampedObject: someStampedObject,
+			Health:        health,
+		})
+	}
+
+	gc.CleanupRunnableStampedObjects(ctx, examinedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
 
 	outputs, outputSource, err := template.GetLatestSuccessfulOutput(allRunnableStampedObjects)
 	if err != nil {

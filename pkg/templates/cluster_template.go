@@ -32,6 +32,12 @@ func NewClusterTemplateReader(template *v1alpha1.ClusterTemplate) *clusterTempla
 }
 
 func (t *clusterTemplate) GetRetentionPolicy() v1alpha1.RetentionPolicy {
+	if t.template.Spec.RetentionPolicy == nil {
+		return v1alpha1.RetentionPolicy{
+			MaxFailedRuns:     10,
+			MaxSuccessfulRuns: 10,
+		}
+	}
 	return *t.template.Spec.RetentionPolicy
 }
 

@@ -80,6 +80,7 @@ type TemplateSpec struct {
 	// if the template lifecycle is immutable/tekton.
 	// Runs older than this (ordered by creation time) will be deleted. Setting higher
 	// values will increase memory footprint.
+	// If unspecified on immutable/tekton, default behavior will == {maxFailedRuns: 10, maxSuccessfulRuns: 10}
 	RetentionPolicy *RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
 
