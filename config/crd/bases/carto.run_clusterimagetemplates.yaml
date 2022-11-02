@@ -236,10 +236,12 @@ spec:
                   type: object
                 type: array
               retentionPolicy:
-                description: RetentionPolicy specifies how many successful and failed
+                description: 'RetentionPolicy specifies how many successful and failed
                   runs should be retained if the template lifecycle is immutable/tekton.
                   Runs older than this (ordered by creation time) will be deleted.
-                  Setting higher values will increase memory footprint.
+                  Setting higher values will increase memory footprint. If unspecified
+                  on immutable/tekton, default behavior will == {maxFailedRuns: 10,
+                  maxSuccessfulRuns: 10}'
                 properties:
                   maxFailedRuns:
                     description: MaxFailedRuns is the number of failed runs to retain.

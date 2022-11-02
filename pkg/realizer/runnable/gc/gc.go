@@ -16,15 +16,15 @@ package gc
 
 import (
 	"context"
-	"github.com/vmware-tanzu/cartographer/pkg/stamp"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 )
 
 type ByCreationTimestamp []*stamp.ExaminedObject

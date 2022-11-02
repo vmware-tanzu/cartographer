@@ -90,11 +90,11 @@ func DetermineHealthCondition(rule *v1alpha1.HealthRule, realizedResource *v1alp
 }
 
 func DetermineStampedObjectHealth(rule *v1alpha1.HealthRule, stampedObject *unstructured.Unstructured) metav1.ConditionStatus {
-	if rule == nil {
-		return metav1.ConditionTrue
+	if stampedObject == nil {
+		return metav1.ConditionUnknown
 	}
 
-	if rule.AlwaysHealthy != nil {
+	if rule == nil || rule.AlwaysHealthy != nil {
 		return metav1.ConditionTrue
 	}
 
