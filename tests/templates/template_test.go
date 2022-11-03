@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"testing"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -27,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	cartotesting "github.com/vmware-tanzu/cartographer/pkg/testing"
 )
 
@@ -167,7 +167,7 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: filepath.Join("kpack", "template.yaml"),
 				WorkloadFile: filepath.Join("kpack", "workload.yaml"),
-				SupplyChainInputs: &cartotesting.Inputs{
+				BlueprintInputs: &cartotesting.Inputs{
 					Sources: map[string]templates.SourceInput{
 						"source": {
 							URL: "some-passed-on-url",
@@ -183,9 +183,9 @@ func TestTemplateExample(t *testing.T) {
 
 		"providing a supply chain input file": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:          filepath.Join("kpack", "template.yaml"),
-				WorkloadFile:          filepath.Join("kpack", "workload.yaml"),
-				SupplyChainInputsFile: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
+				TemplateFile:        filepath.Join("kpack", "template.yaml"),
+				WorkloadFile:        filepath.Join("kpack", "workload.yaml"),
+				BlueprintInputsFile: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
 			},
 			Expect: cartotesting.TemplateTestExpectation{
 				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
