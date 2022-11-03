@@ -82,6 +82,9 @@ type SourceOutputReader struct {
 }
 
 func (r *SourceOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
 	// TODO: We don't need a Builder
 	evaluator := eval.EvaluatorBuilder()
 	url, err := evaluator.EvaluateJsonPath(r.template.Spec.URLPath, stampedObject.UnstructuredContent())
@@ -118,6 +121,9 @@ type ConfigOutputReader struct {
 }
 
 func (r *ConfigOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
 	evaluator := eval.EvaluatorBuilder()
 	config, err := evaluator.EvaluateJsonPath(r.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
 	if err != nil {
@@ -144,6 +150,9 @@ type ImageOutputReader struct {
 }
 
 func (r *ImageOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
 	evaluator := eval.EvaluatorBuilder()
 	image, err := evaluator.EvaluateJsonPath(r.template.Spec.ImagePath, stampedObject.UnstructuredContent())
 	if err != nil {
@@ -171,6 +180,10 @@ type DeploymentPassThroughReader struct {
 }
 
 func (r *DeploymentPassThroughReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
+
 	if err := r.outputReady(stampedObject); err != nil {
 		return nil, err
 	}

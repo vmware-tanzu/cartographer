@@ -147,6 +147,9 @@ var _ = Describe("Outputter", func() {
 			})
 
 			Context("when stampedObject is nil", func() {
+				BeforeEach(func() {
+					stampedObject = nil
+				})
 				It("returns a nil output", func() {
 					output, _ := reader.Output(stampedObject)
 					Expect(output).To(BeNil())
@@ -155,8 +158,7 @@ var _ = Describe("Outputter", func() {
 				It("returns an error", func() {
 					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
-					Expect(err.Error()).To(ContainSubstring(".data.url"))
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate path of empty object"))
 				})
 			})
 		})
@@ -227,6 +229,10 @@ var _ = Describe("Outputter", func() {
 			})
 
 			Context("when stampedObject is nil", func() {
+				BeforeEach(func() {
+					stampedObject = nil
+				})
+
 				It("returns a nil output", func() {
 					output, _ := reader.Output(stampedObject)
 					Expect(output).To(BeNil())
@@ -235,8 +241,7 @@ var _ = Describe("Outputter", func() {
 				It("returns an error", func() {
 					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
-					Expect(err.Error()).To(ContainSubstring(".data.image"))
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate path of empty object"))
 				})
 			})
 		})
@@ -307,6 +312,9 @@ var _ = Describe("Outputter", func() {
 			})
 
 			Context("when stampedObject is nil", func() {
+				BeforeEach(func() {
+					stampedObject = nil
+				})
 				It("returns a nil output", func() {
 					output, _ := reader.Output(stampedObject)
 					Expect(output).To(BeNil())
@@ -315,8 +323,7 @@ var _ = Describe("Outputter", func() {
 				It("returns an error", func() {
 					_, err := reader.Output(stampedObject)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("failed to evaluate json path"))
-					Expect(err.Error()).To(ContainSubstring(".data.config"))
+					Expect(err.Error()).To(ContainSubstring("failed to evaluate path of empty object"))
 				})
 			})
 		})
