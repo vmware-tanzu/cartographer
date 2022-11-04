@@ -81,7 +81,7 @@ func MakeDeliveryOwnerResources(delivery *v1alpha1.ClusterDelivery) []OwnerResou
 
 //counterfeiter:generate . ResourceRealizer
 type ResourceRealizer interface {
-	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error)
+	Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, string, error)
 }
 
 type realizer struct {
@@ -112,7 +112,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	for _, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
-		template, stampedObject, out, isPassThrough, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
+		template, stampedObject, out, isPassThrough, templateName, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
 
 		if stampedObject != nil {
 			log.V(logger.DEBUG).Info("realized resource as object",
@@ -144,7 +144,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			if previousResourceStatus != nil {
 				previousRealizedResource = &previousResourceStatus.RealizedResource
 			}
-			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource, isPassThrough)
+			realizedResource = r.generateRealizedResource(ctx, resource, template, stampedObject, out, previousRealizedResource, isPassThrough, templateName)
 
 			var previousOutputs []v1alpha1.Output
 			if previousRealizedResource != nil {
@@ -178,7 +178,9 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	return firstError
 }
 
-func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Reader, stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource, isPassThrough bool) *v1alpha1.RealizedResource {
+func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerResource, template templates.Reader,
+	stampedObject *unstructured.Unstructured, output *templates.Output, previousRealizedResource *v1alpha1.RealizedResource,
+	isPassThrough bool, templateName string) *v1alpha1.RealizedResource {
 	log := logr.FromContextOrDiscard(ctx)
 
 	if previousRealizedResource == nil {
@@ -208,7 +210,7 @@ func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerR
 	if template != nil {
 		templateRef = &corev1.ObjectReference{
 			Kind:       resource.TemplateRef.Kind,
-			Name:       resource.TemplateRef.Name,
+			Name:       templateName,
 			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		}
 		outputs = getOutputs(previousRealizedResource, output)

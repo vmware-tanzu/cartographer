@@ -211,10 +211,11 @@ var _ = Describe("Resource", func() {
 				})
 
 				It("creates a stamped object and returns the outputs and stampedObjects", func() {
-					template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(template).ToNot(BeNil())
 					Expect(isPassThrough).To(BeFalse())
+					Expect(templateRefName).To(Equal("image-template-1"))
 					Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
 
 					Expect(fakeOwnerRepo.EnsureMutableObjectExistsOnClusterCallCount()).To(Equal(1))
@@ -271,10 +272,11 @@ var _ = Describe("Resource", func() {
 						})
 
 						It("creates a stamped object and returns the outputs and stampedObjects", func() {
-							template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+							template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 							Expect(err).ToNot(HaveOccurred())
 							Expect(template).ToNot(BeNil())
 							Expect(isPassThrough).To(BeFalse())
+							Expect(templateRefName).To(Equal("image-template-1"))
 							Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
 
 							Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
@@ -311,9 +313,10 @@ var _ = Describe("Resource", func() {
 						})
 
 						It("returns ListCreatedObjectsError", func() {
-							template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+							template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 							Expect(template).ToNot(BeNil())
 							Expect(isPassThrough).To(BeFalse())
+							Expect(templateRefName).To(Equal("image-template-1"))
 
 							Expect(err).To(HaveOccurred())
 							Expect(err.Error()).To(ContainSubstring("some error"))
@@ -327,9 +330,10 @@ var _ = Describe("Resource", func() {
 					})
 
 					It("returns ApplyStampedObjectError", func() {
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
+						Expect(templateRefName).To(Equal("image-template-1"))
 
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("bad object"))
@@ -345,7 +349,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns GetTemplateError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(err).To(HaveOccurred())
 				Expect(template).To(BeNil())
 				Expect(isPassThrough).To(BeFalse())
@@ -372,10 +376,11 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns a helpful error", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 
 				Expect(template).To(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1}]: resource does not match a known template"))
@@ -404,9 +409,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
@@ -469,9 +475,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
@@ -532,9 +539,10 @@ var _ = Describe("Resource", func() {
 				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
@@ -583,9 +591,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
@@ -669,7 +678,7 @@ var _ = Describe("Resource", func() {
 				})
 
 				It("returns the input as an output", func() {
-					template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					template, stamped, output, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 					Expect(template).To(BeNil())
 					Expect(stamped).To(BeNil())
 					Expect(isPassThrough).To(BeTrue())
@@ -679,7 +688,7 @@ var _ = Describe("Resource", func() {
 				})
 
 				It("does not call to the repo", func() {
-					_, _, _, _, _ = r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					_, _, _, _, _, _ = r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 					Expect(fakeSystemRepo.GetTemplateCallCount()).To(Equal(0))
 					Expect(fakeOwnerRepo.EnsureMutableObjectExistsOnClusterCallCount()).To(Equal(0))
 				})
@@ -690,7 +699,7 @@ var _ = Describe("Resource", func() {
 					})
 
 					It("returns an error", func() {
-						template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, stamped, output, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(stamped).To(BeNil())
 						Expect(output).To(BeNil())
@@ -707,7 +716,7 @@ var _ = Describe("Resource", func() {
 					})
 
 					It("returns an error", func() {
-						template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, stamped, output, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(stamped).To(BeNil())
 						Expect(output).To(BeNil())
@@ -784,10 +793,11 @@ var _ = Describe("Resource", func() {
 
 				When("one option matches", func() {
 					It("finds the correct template", func() {
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
 						Expect(err).NotTo(HaveOccurred())
+						Expect(templateRefName).To(Equal("template-chosen"))
 
 						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 						Expect(name).To(Equal("template-chosen"))
@@ -799,7 +809,7 @@ var _ = Describe("Resource", func() {
 					It("returns a TemplateOptionsMatchError", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.git.ref.branch"
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(isPassThrough).To(BeFalse())
 
@@ -814,7 +824,7 @@ var _ = Describe("Resource", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.image"
 						resource.TemplateOptions[1].Selector.MatchFields[0].Key = "spec.source.subPath"
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 
 						Expect(template).To(BeNil())
 						Expect(isPassThrough).To(BeFalse())
@@ -828,9 +838,10 @@ var _ = Describe("Resource", func() {
 					It("does not error", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
+						Expect(templateRefName).To(Equal("template-chosen"))
 
 						Expect(err).NotTo(HaveOccurred())
 						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
@@ -843,7 +854,7 @@ var _ = Describe("Resource", func() {
 					It("returns a ResolveTemplateOptionError", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[`
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(isPassThrough).To(BeFalse())
 
@@ -861,16 +872,16 @@ var _ = Describe("Resource", func() {
 							Operator: "Exists",
 						})
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
+						Expect(templateRefName).To(Equal("template-chosen"))
 
 						Expect(err).NotTo(HaveOccurred())
 						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 						Expect(name).To(Equal("template-chosen"))
 						Expect(kind).To(Equal("ClusterImageTemplate"))
 					})
-
 				})
 			})
 		})

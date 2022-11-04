@@ -105,6 +105,24 @@ status:
   supplyChainRef:
     name: responsible-ops---workload-supply-chain-hardcoded-templates
     kind: ClusterSupplyChain
+  resources:
+    - templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: git-template---workload-supply-chain-hardcoded-templates
+    - templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterImageTemplate
+        name: kpack-template---workload-supply-chain-hardcoded-templates
+    - templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterConfigTemplate
+        name: config-template---workload-supply-chain-hardcoded-templates
+    - templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterTemplate
+        name: sink-template---workload-supply-chain-hardcoded-templates
+
 
 ---
 
