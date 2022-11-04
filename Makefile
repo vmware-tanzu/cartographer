@@ -19,7 +19,7 @@ build: gen-objects gen-manifests
 
 .PHONY: run
 run: build
-	build/cartographer --pprof-port 9999 --metrics-port 9998
+	build/cartographer --pprof-port 9999 --metrics-port 9998 -dev -log-level debug
 
 crd_non_sources := pkg/apis/v1alpha1/zz_generated.deepcopy.go $(wildcard pkg/apis/v1alpha1/*_test.go)
 crd_sources := $(filter-out $(crd_non_sources),$(wildcard pkg/apis/v1alpha1/*.go))
