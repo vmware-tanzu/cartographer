@@ -33,7 +33,7 @@ type testInfo struct {
 	Workload             *string                   `yaml:"workload"`
 	Expected             *string                   `yaml:"expected"`
 	Ytt                  *string                   `yaml:"ytt"`
-	SupplyChainInputs    *Inputs                   `yaml:"supplyChainInputs"`
+	BlueprintInputs      *Inputs                   `yaml:"blueprintInputs"`
 	BlueprintParams      []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
 	Focus                *bool                     `yaml:"focus"`
 	IgnoreMetadata       *bool                     `yaml:"ignoreMetadata"`
@@ -84,8 +84,8 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		testCase.IgnoreMetadataFields = info.IgnoreMetadataFields
 	}
 
-	if info.SupplyChainInputs != nil {
-		testCase.Given.SupplyChainInputs = info.SupplyChainInputs
+	if info.BlueprintInputs != nil {
+		testCase.Given.BlueprintInputs = info.BlueprintInputs
 	}
 
 	if info.BlueprintParams != nil {

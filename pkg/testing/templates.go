@@ -275,20 +275,20 @@ func (e *TemplateTestExpectation) getExpectedObjectFromFile() (*unstructured.Uns
 // These can be specified as yaml files or as objects.
 // If the template is a yaml file, it may be pre-processed with ytt and values provided
 // as objects or in a values yaml file.
-// Any outputs expected from earlier templates in a supply chain may be provided in SupplyChainInputs.
+// Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
-	TemplateFile          string
-	Template              templateType
-	WorkloadFile          string
-	Workload              *v1alpha1.Workload
-	BlueprintParams       []v1alpha1.BlueprintParam
-	BlueprintParamsFile   string
-	YttValues             Values
-	YttFiles              []string
-	labels                map[string]string
-	SupplyChainInputs     *Inputs
-	SupplyChainInputsFile string
+	TemplateFile        string
+	Template            templateType
+	WorkloadFile        string
+	Workload            *v1alpha1.Workload
+	BlueprintParams     []v1alpha1.BlueprintParam
+	BlueprintParamsFile string
+	YttValues           Values
+	YttFiles            []string
+	labels              map[string]string
+	BlueprintInputs     *Inputs
+	BlueprintInputsFile string
 }
 
 func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
@@ -479,7 +479,7 @@ func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, name str
 func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
 	var inputs *Inputs
 
-	inputs, err := i.getSupplyChainInputs()
+	inputs, err := i.getBlueprintInputs()
 	if err != nil {
 		return nil, fmt.Errorf("get supply chain inputs: %w", err)
 	}
@@ -541,22 +541,22 @@ func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, er
 	return paramsData, nil // TODO: document
 }
 
-func (i *TemplateTestGivens) getSupplyChainInputs() (*Inputs, error) {
-	if i.SupplyChainInputsFile != "" && i.SupplyChainInputs != nil {
-		return nil, fmt.Errorf("only one of supplyChainInputs or supplyChainInputsFile may be set")
+func (i *TemplateTestGivens) getBlueprintInputs() (*Inputs, error) {
+	if i.BlueprintInputsFile != "" && i.BlueprintInputs != nil {
+		return nil, fmt.Errorf("only one of blueprintInputs or blueprintInputsFile may be set")
 	}
 
-	if i.SupplyChainInputsFile == "" && i.SupplyChainInputs == nil {
+	if i.BlueprintInputsFile == "" && i.BlueprintInputs == nil {
 		return &Inputs{}, nil
 	}
 
-	if i.SupplyChainInputs != nil {
-		return i.SupplyChainInputs, nil
+	if i.BlueprintInputs != nil {
+		return i.BlueprintInputs, nil
 	}
 
-	inputsFile, err := os.ReadFile(i.SupplyChainInputsFile)
+	inputsFile, err := os.ReadFile(i.BlueprintInputsFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not read supplyChainInputsFile: %w", err)
+		return nil, fmt.Errorf("could not read blueprintInputsFile: %w", err)
 	}
 
 	var inputs Inputs

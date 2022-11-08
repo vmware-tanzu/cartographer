@@ -19,7 +19,7 @@ ignoreMetadataFields:
   - ownerReferences
   - namespace
 
-supplyChainInputs:
+blueprintInputs:
   sources:
     unused-source:
       url: some-unused-url
