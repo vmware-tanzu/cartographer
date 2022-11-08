@@ -48,5 +48,5 @@ Note: Please do not remove items. Mark items as done `[x]` or use ~strikethrough
 
 - [ ] Linked to a relevant issue. Eg: `Fixes #123` or `Updates #123`
 - [ ] Removed non-atomic or `wip` commits
-- [ ] Filled in the [Release Note](#Release-Note) section above 
-- [ ] Modified the docs to match changes <!-- TBD: reference doc editing guidance -->
+- [ ] Filled in the [Release Note](#Release-Note) section above
+- [ ] Modified the docs to match changes
