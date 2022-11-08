@@ -879,8 +879,4 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 		})
 	})
-
-	Context("a supply chain with a tekton template with no healthRule specified", func() {
-
-	})
 })
