@@ -1319,7 +1319,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				return nil
 			}
 		})
-		Context("when previous resource stamped from template with default lifecycle", func() {
+		Context("when previous resource stamped from template with mutable lifecycle", func() {
 			BeforeEach(func() {
 				someTemplate := v1alpha1.ClusterTemplate{}
 				repo.GetTemplateReturns(&someTemplate, nil)

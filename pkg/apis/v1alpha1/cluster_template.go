@@ -70,10 +70,10 @@ type TemplateSpec struct {
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
 
 	// Lifecycle specifies whether template modifications should result in originally
-	// created objects being updated (`default`) or in new objects created alongside
+	// created objects being updated (`mutable`) or in new objects created alongside
 	// original objects (`immutable` or `tekton`).
-	// +kubebuilder:validation:Enum=default;immutable;tekton
-	// +kubebuilder:default="default"
+	// +kubebuilder:validation:Enum=mutable;immutable;tekton
+	// +kubebuilder:default="mutable"
 	Lifecycle string `json:"lifecycle,omitempty"`
 
 	// RetentionPolicy specifies how many successful and failed runs should be retained

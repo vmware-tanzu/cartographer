@@ -207,13 +207,13 @@ spec:
                   ImagePath is specified in jsonpath format, eg: .status.artifact.image_digest'
                 type: string
               lifecycle:
-                default: default
+                default: mutable
                 description: Lifecycle specifies whether template modifications should
-                  result in originally created objects being updated (`default`) or
+                  result in originally created objects being updated (`mutable`) or
                   in new objects created alongside original objects (`immutable` or
                   `tekton`).
                 enum:
-                - default
+                - mutable
                 - immutable
                 - tekton
                 type: string

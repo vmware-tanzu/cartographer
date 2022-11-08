@@ -345,9 +345,9 @@ var _ = Describe("ClusterTemplate", func() {
 					})
 				})
 
-				Context("is default", func() {
+				Context("is mutable", func() {
 					BeforeEach(func() {
-						template.Spec.Lifecycle = "default"
+						template.Spec.Lifecycle = "mutable"
 					})
 					Context("a retention policy is set", func() {
 						BeforeEach(func() {
@@ -356,7 +356,7 @@ var _ = Describe("ClusterTemplate", func() {
 						It("returns a helpful error", func() {
 							err := template.ValidateCreate()
 							Expect(err).To(HaveOccurred())
-							Expect(err).To(MatchError("invalid template: if lifecycle is default, no retention policy may be set"))
+							Expect(err).To(MatchError("invalid template: if lifecycle is mutable, no retention policy may be set"))
 						})
 					})
 
@@ -621,7 +621,7 @@ var _ = Describe("ClusterTemplate", func() {
 	})
 
 	It("has a matching valid enum for lifecycle", func() {
-		expectedEnumVals := []string{"default", "immutable", "tekton"}
+		expectedEnumVals := []string{"mutable", "immutable", "tekton"}
 
 		mrkrs, err := markersFor(
 			"cluster_template.go",

@@ -38,7 +38,7 @@ type Reader interface {
 type Lifecycle string
 
 const (
-	Default   Lifecycle = "default"
+	Mutable   Lifecycle = "mutable"
 	Immutable Lifecycle = "immutable"
 	Tekton    Lifecycle = "tekton"
 )
@@ -57,7 +57,7 @@ func convertLifecycle(lifecycleString string) Lifecycle {
 	case "tekton":
 		return Tekton
 	default:
-		return Default
+		return Mutable
 	}
 }
 

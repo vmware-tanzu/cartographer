@@ -206,8 +206,8 @@ func (t *TemplateSpec) validate() error {
 		return t.HealthRule.validate()
 	}
 
-	if t.RetentionPolicy != nil && t.Lifecycle == "default" {
-		return fmt.Errorf("invalid template: if lifecycle is default, no retention policy may be set")
+	if t.RetentionPolicy != nil && t.Lifecycle == "mutable" {
+		return fmt.Errorf("invalid template: if lifecycle is mutable, no retention policy may be set")
 	}
 
 	return nil
