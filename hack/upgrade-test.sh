@@ -37,7 +37,7 @@ readonly CONFIG_BRANCH="main"
 readonly CONFIG_COMMIT_MESSAGE="Update config"
 
 main() {
-  KIND_IMAGE='kindest/node:v1.21.1' "$DIR/setup.sh" cluster example-dependencies
+  KIND_IMAGE='kindest/node:v1.24.6' "$DIR/setup.sh" cluster example-dependencies
   install_latest_released_cartographer
 
   port=$(available_port)
