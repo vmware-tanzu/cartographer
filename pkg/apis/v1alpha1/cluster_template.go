@@ -88,6 +88,7 @@ type TemplateSpec struct {
 // One of AlwaysHealthy, SingleConditionType or MultiMatch must be specified.
 type HealthRule struct {
 	// AlwaysHealthy being set indicates the resource should always be considered healthy
+	// once it exists.
 	// +optional
 	AlwaysHealthy *runtime.RawExtension `json:"alwaysHealthy,omitempty"`
 

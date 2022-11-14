@@ -44,6 +44,17 @@ var _ = Describe("DetermineHealthCondition", func() {
 		Expect(healthcheck.DetermineHealthCondition(healthRule, nil, nil)).To(MatchFields(IgnoreExtras,
 			Fields{
 				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionUnknown),
+				"Reason": Equal(v1alpha1.NoStampedObjectHealthyReason),
+			},
+		))
+	})
+
+	It("is always healthy for AlwaysHealthy health rule if a stamped object exists", func() {
+		healthRule := &v1alpha1.HealthRule{AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}}}
+		Expect(healthcheck.DetermineHealthCondition(healthRule, nil, &unstructured.Unstructured{})).To(MatchFields(IgnoreExtras,
+			Fields{
+				"Type":   Equal("Healthy"),
 				"Status": Equal(metav1.ConditionTrue),
 				"Reason": Equal(v1alpha1.AlwaysHealthyResourcesHealthyReason),
 			},

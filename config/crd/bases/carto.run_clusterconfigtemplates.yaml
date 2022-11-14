@@ -62,7 +62,7 @@ spec:
                 properties:
                   alwaysHealthy:
                     description: AlwaysHealthy being set indicates the resource should
-                      always be considered healthy
+                      always be considered healthy once it exists.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   multiMatch:
