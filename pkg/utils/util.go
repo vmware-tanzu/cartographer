@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -22,12 +23,15 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/yaml"
 )
 
 const DefaultResyncTime = 10 * time.Hour
@@ -54,6 +58,35 @@ func HereYaml(y string) string {
 func HereYamlF(y string, args ...interface{}) string {
 	y = strings.ReplaceAll(y, "\t", "    ")
 	return heredoc.Docf(y, args...)
+}
+
+func CreateNamespacedObjectOnClusterFromYamlDefinition(ctx context.Context, c client.Client, objYaml, namespace string) *unstructured.Unstructured {
+	obj := createUnstructuredObject(objYaml)
+
+	if namespace != "" {
+		obj.SetNamespace(namespace)
+	}
+
+	createObjectOnClusterFromUnstructured(ctx, c, obj)
+	return obj
+}
+
+func CreateObjectOnClusterFromYamlDefinition(ctx context.Context, c client.Client, objYaml string) *unstructured.Unstructured {
+	obj := createUnstructuredObject(objYaml)
+	createObjectOnClusterFromUnstructured(ctx, c, obj)
+	return obj
+}
+
+func createObjectOnClusterFromUnstructured(ctx context.Context, c client.Client, obj *unstructured.Unstructured) {
+	err := c.Create(ctx, obj, &client.CreateOptions{})
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func createUnstructuredObject(objYaml string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	err := yaml.Unmarshal([]byte(objYaml), obj)
+	Expect(err).NotTo(HaveOccurred())
+	return obj
 }
 
 func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) error {

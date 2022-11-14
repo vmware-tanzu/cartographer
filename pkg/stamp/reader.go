@@ -16,7 +16,9 @@ package stamp
 
 import (
 	"fmt"
+	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -80,6 +82,9 @@ type SourceOutputReader struct {
 }
 
 func (r *SourceOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
 	// TODO: We don't need a Builder
 	evaluator := eval.EvaluatorBuilder()
 	url, err := evaluator.EvaluateJsonPath(r.template.Spec.URLPath, stampedObject.UnstructuredContent())
@@ -116,6 +121,9 @@ type ConfigOutputReader struct {
 }
 
 func (r *ConfigOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
 	evaluator := eval.EvaluatorBuilder()
 	config, err := evaluator.EvaluateJsonPath(r.template.Spec.ConfigPath, stampedObject.UnstructuredContent())
 	if err != nil {
@@ -142,6 +150,9 @@ type ImageOutputReader struct {
 }
 
 func (r *ImageOutputReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
 	evaluator := eval.EvaluatorBuilder()
 	image, err := evaluator.EvaluateJsonPath(r.template.Spec.ImagePath, stampedObject.UnstructuredContent())
 	if err != nil {
@@ -169,6 +180,10 @@ type DeploymentPassThroughReader struct {
 }
 
 func (r *DeploymentPassThroughReader) Output(stampedObject *unstructured.Unstructured) (*templates.Output, error) {
+	if stampedObject == nil {
+		return nil, fmt.Errorf("failed to evaluate path of empty object")
+	}
+
 	if err := r.outputReady(stampedObject); err != nil {
 		return nil, err
 	}
@@ -376,4 +391,32 @@ func (r *ConfigPassThroughReader) Output(_ *unstructured.Unstructured) (*templat
 	return &templates.Output{
 		Config: config[r.name].Config,
 	}, nil
+}
+
+type ExaminedObject struct {
+	StampedObject *unstructured.Unstructured
+	Health        metav1.ConditionStatus
+}
+
+func GetLatestSuccessfulObjFromExaminedObject(examinedObjects []*ExaminedObject) *unstructured.Unstructured {
+	var (
+		latestTime           time.Time // zero value is used for comparison
+		latestMatchingObject *unstructured.Unstructured
+	)
+
+	for _, examinedObject := range examinedObjects {
+		if examinedObject.Health != metav1.ConditionTrue {
+			continue
+		}
+
+		stampedObject := examinedObject.StampedObject
+
+		currentTime := stampedObject.GetCreationTimestamp().Time
+		if currentTime.After(latestTime) {
+			latestMatchingObject = stampedObject
+			latestTime = currentTime
+		}
+
+	}
+	return latestMatchingObject
 }

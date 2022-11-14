@@ -604,7 +604,7 @@ var _ = Describe("Reconcile", func() {
 			Context("of type ListCreatedObjectsError", func() {
 				var err error
 				BeforeEach(func() {
-					err = cerrors.RunnableListCreatedObjectsError{
+					err = cerrors.ListCreatedObjectsError{
 						Err:       errors.New("some error"),
 						Namespace: "some-ns",
 						Labels:    map[string]string{"hi": "bye"},

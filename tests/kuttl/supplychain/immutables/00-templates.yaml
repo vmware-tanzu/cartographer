@@ -1,0 +1,89 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source---immutables
+spec:
+  params:
+    - name: revision
+      default: main
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-first-configmap
+    data:
+      url: $(workload.spec.source.git.url)$
+      branch: $(params.revision)$
+  urlPath: data.url
+  revisionPath: data.branch
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: source-immutable---immutables
+spec:
+  lifecycle: immutable
+
+  urlPath: .spec.value.url
+  revisionPath: .spec.value.revision
+
+  params:
+    - name: a-config-map
+      default:
+        key: value
+
+  template:
+    apiVersion: test.run/v1alpha1
+    kind: Test
+    metadata:
+      generateName: my-stamped-resource-inputs-
+    spec:
+      value:
+        url: $(source.url)$
+        revision: $(source.revision)$
+        some-object-def: $(params.a-config-map)$
+        some-hard-coded-info: not-from-the-runnable
+
+  healthRule:
+    multiMatch:
+      healthy:
+        matchFields:
+          - key: 'spec.value.revision'
+            operator: 'In'
+            values: [ 'dev' ]
+      unhealthy:
+        matchFields:
+          - key: 'spec.value.revision'
+            operator: 'NotIn'
+            values: [ 'dev' ]
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: final---immutables
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: final-configmap
+    data:
+      url: $(source.url)$
+      rev: $(source.revision)$

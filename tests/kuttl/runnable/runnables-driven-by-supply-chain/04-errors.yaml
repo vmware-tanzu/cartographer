@@ -20,19 +20,3 @@ metadata:
 data:
   url: https://github.com/spring-projects/spring-petclinic.git
   branch: "main"
-
----
-apiVersion: test.run/v1alpha1
-kind: Test
-spec:
-  value:
-    url: https://github.com/spring-projects/spring-petclinic.git
-    revision: main
-    some-object-def:
-      apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: some-configmap
-      data:
-        an-ice-cream-flavor: cookies-and-cream
-    some-hard-coded-info: not-from-the-runnable

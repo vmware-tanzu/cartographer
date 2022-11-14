@@ -317,7 +317,7 @@ var _ = Describe("Realizer", func() {
 				_, _, err := rlzr.Realize(ctx, runnable, systemRepo, runnableRepo, discoveryClient)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("some list error"))
-				Expect(reflect.TypeOf(err).String()).To(Equal("errors.RunnableListCreatedObjectsError"))
+				Expect(reflect.TypeOf(err).String()).To(Equal("errors.ListCreatedObjectsError"))
 			})
 		})
 
