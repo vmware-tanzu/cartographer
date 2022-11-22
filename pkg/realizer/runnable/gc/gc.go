@@ -19,54 +19,51 @@ import (
 	"sort"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/eval"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 )
 
-type ByCreationTimestamp []*unstructured.Unstructured
+type ByCreationTimestamp []*stamp.ExaminedObject
 
 func (a ByCreationTimestamp) Len() int { return len(a) }
 func (a ByCreationTimestamp) Less(i, j int) bool {
-	return a[i].GetCreationTimestamp().Unix() > a[j].GetCreationTimestamp().Unix()
+	return a[i].StampedObject.GetCreationTimestamp().Unix() > a[j].StampedObject.GetCreationTimestamp().Unix()
 }
 func (a ByCreationTimestamp) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
-func CleanupRunnableStampedObjects(ctx context.Context, allRunnableStampedObjects []*unstructured.Unstructured, retentionPolicy v1alpha1.RetentionPolicy, repo repository.Repository) error {
+func CleanupRunnableStampedObjects(ctx context.Context, examinedObjects []*stamp.ExaminedObject, retentionPolicy v1alpha1.RetentionPolicy, repo repository.Repository) {
 	log := logr.FromContextOrDiscard(ctx).WithName("runnable-stamped-object-cleanup")
 	ctx = logr.NewContext(ctx, log)
 
-	succeededConditionStatusPath := `status.conditions[?(@.type=="Succeeded")].status`
-	evaluator := eval.EvaluatorBuilder()
-
-	sort.Sort(ByCreationTimestamp(allRunnableStampedObjects))
+	sort.Sort(ByCreationTimestamp(examinedObjects))
 
 	var successfulFound int64
 	var failedFound int64
-	for _, runnableStampedObject := range allRunnableStampedObjects {
+	for _, examinedObject := range examinedObjects {
+		runnableStampedObject := examinedObject.StampedObject
+		runnableHealth := examinedObject.Health
 		shouldDelete := false
-		status, err := evaluator.EvaluateJsonPath(succeededConditionStatusPath, runnableStampedObject.UnstructuredContent())
-		if err != nil {
-			log.Error(err, "failed evaluating jsonpath to determine runnable stamped object success", "stampedObject", runnableStampedObject)
-		}
-		if status == "True" {
+		if runnableHealth == metav1.ConditionTrue {
 			successfulFound++
 			shouldDelete = successfulFound > retentionPolicy.MaxSuccessfulRuns
-		} else if status == "False" {
+		} else if runnableHealth == metav1.ConditionFalse {
 			failedFound++
 			shouldDelete = failedFound > retentionPolicy.MaxFailedRuns
+		} else {
+			log.V(logger.INFO).Info("not considered for cleanup because object health has not resolved",
+				"stampedObject", runnableStampedObject)
 		}
+
 		if shouldDelete {
 			log.V(logger.INFO).Info("deleting runnable stamped object", "stampedObject", runnableStampedObject)
-			err = repo.Delete(ctx, runnableStampedObject)
+			err := repo.Delete(ctx, runnableStampedObject)
 			if err != nil {
 				log.Error(err, "failed to delete runnable stamped object", "stampedObject", runnableStampedObject)
 			}
 		}
 	}
-
-	return nil
 }

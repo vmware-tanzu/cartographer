@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
@@ -280,6 +281,92 @@ var _ = Describe("ClusterTemplate", func() {
 						To(MatchError("invalid template: must specify one of template or ytt, found both"))
 				})
 			})
+
+			Context("lifecycle", func() {
+				BeforeEach(func() {
+					raw, err := json.Marshal(&ArbitraryObject{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "some-kind",
+							APIVersion: "v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-name",
+						},
+						Spec: ArbitrarySpec{
+							SomeKey: "some-val",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					template.Spec.Template = &runtime.RawExtension{Raw: raw}
+				})
+				Context("is immutable", func() {
+					BeforeEach(func() {
+						template.Spec.Lifecycle = "immutable"
+					})
+					Context("a retention policy is set", func() {
+						BeforeEach(func() {
+							template.Spec.RetentionPolicy = &v1alpha1.RetentionPolicy{
+								MaxFailedRuns:     1,
+								MaxSuccessfulRuns: 1,
+							}
+						})
+						It("does not return an error", func() {
+							Expect(template.ValidateCreate()).To(Succeed())
+						})
+					})
+
+					Context("a retention policy is not set", func() {
+						It("does not return an error", func() {
+							Expect(template.ValidateCreate()).To(Succeed())
+						})
+					})
+				})
+
+				Context("is tekton", func() {
+					BeforeEach(func() {
+						template.Spec.Lifecycle = "tekton"
+					})
+					Context("a retention policy is set", func() {
+						BeforeEach(func() {
+							template.Spec.RetentionPolicy = &v1alpha1.RetentionPolicy{
+								MaxFailedRuns:     1,
+								MaxSuccessfulRuns: 1,
+							}
+						})
+						It("does not return an error", func() {
+							Expect(template.ValidateCreate()).To(Succeed())
+						})
+					})
+
+					Context("a retention policy is not set", func() {
+						It("does not return an error", func() {
+							Expect(template.ValidateCreate()).To(Succeed())
+						})
+					})
+				})
+
+				Context("is mutable", func() {
+					BeforeEach(func() {
+						template.Spec.Lifecycle = "mutable"
+					})
+					Context("a retention policy is set", func() {
+						BeforeEach(func() {
+							template.Spec.RetentionPolicy = &v1alpha1.RetentionPolicy{}
+						})
+						It("returns a helpful error", func() {
+							err := template.ValidateCreate()
+							Expect(err).To(HaveOccurred())
+							Expect(err).To(MatchError("invalid template: if lifecycle is mutable, no retention policy may be set"))
+						})
+					})
+
+					Context("a retention policy is not set", func() {
+						It("does not return an error", func() {
+							Expect(template.ValidateCreate()).To(Succeed())
+						})
+					})
+				})
+			})
 		})
 
 		Describe("#Update", func() {
@@ -531,5 +618,27 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 			})
 		})
+	})
+
+	It("has a matching valid enum for lifecycle", func() {
+		expectedEnumVals := []string{"mutable", "immutable", "tekton"}
+
+		mrkrs, err := markersFor(
+			"cluster_template.go",
+			"./...",
+			"TemplateSpec",
+			"Lifecycle",
+			"kubebuilder:validation:Enum",
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+
+		enumMarkers, ok := mrkrs.(crdmarkers.Enum)
+		Expect(ok).To(BeTrue())
+
+		Expect(enumMarkers).To(HaveLen(len(expectedEnumVals)))
+		for _, expectedEnumVal := range expectedEnumVals {
+			Expect(enumMarkers).To(ContainElement(expectedEnumVal))
+		}
 	})
 })

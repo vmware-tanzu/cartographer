@@ -31,6 +31,34 @@ type Reader interface {
 	GetResourceTemplate() v1alpha1.TemplateSpec
 	GetHealthRule() *v1alpha1.HealthRule
 	IsYTTTemplate() bool
+	GetLifecycle() *Lifecycle
+	GetRetentionPolicy() v1alpha1.RetentionPolicy
+}
+
+type Lifecycle string
+
+const (
+	Mutable   Lifecycle = "mutable"
+	Immutable Lifecycle = "immutable"
+	Tekton    Lifecycle = "tekton"
+)
+
+func (l *Lifecycle) IsImmutable() bool {
+	if *l == Immutable || *l == Tekton {
+		return true
+	}
+	return false
+}
+
+func convertLifecycle(lifecycleString string) Lifecycle {
+	switch lifecycleString {
+	case "immutable":
+		return Immutable
+	case "tekton":
+		return Tekton
+	default:
+		return Mutable
+	}
 }
 
 func NewReaderFromAPI(template client.Object) (Reader, error) {

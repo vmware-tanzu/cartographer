@@ -56,7 +56,7 @@ spec:
                 properties:
                   alwaysHealthy:
                     description: AlwaysHealthy being set indicates the resource should
-                      always be considered healthy
+                      always be considered healthy once it exists.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   multiMatch:
@@ -199,6 +199,17 @@ spec:
                       unhealthy. Otherwise, healthiness is Unknown.
                     type: string
                 type: object
+              lifecycle:
+                default: mutable
+                description: Lifecycle specifies whether template modifications should
+                  result in originally created objects being updated (`mutable`) or
+                  in new objects created alongside original objects (`immutable` or
+                  `tekton`).
+                enum:
+                - mutable
+                - immutable
+                - tekton
+                type: string
               params:
                 description: 'Additional parameters. See: https://cartographer.sh/docs/latest/architecture/#parameter-hierarchy'
                 items:
@@ -217,6 +228,29 @@ spec:
                   - name
                   type: object
                 type: array
+              retentionPolicy:
+                description: 'RetentionPolicy specifies how many successful and failed
+                  runs should be retained if the template lifecycle is immutable/tekton.
+                  Runs older than this (ordered by creation time) will be deleted.
+                  Setting higher values will increase memory footprint. If unspecified
+                  on immutable/tekton, default behavior will == {maxFailedRuns: 10,
+                  maxSuccessfulRuns: 10}'
+                properties:
+                  maxFailedRuns:
+                    description: MaxFailedRuns is the number of failed runs to retain.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  maxSuccessfulRuns:
+                    description: MaxSuccessfulRuns is the number of successful runs
+                      to retain.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                required:
+                - maxFailedRuns
+                - maxSuccessfulRuns
+                type: object
               template:
                 description: 'Template defines a resource template for a Kubernetes
                   Resource or Custom Resource which is applied to the server each

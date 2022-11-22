@@ -32,8 +32,10 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
@@ -121,17 +123,27 @@ func (r *runnableRealizer) Realize(ctx context.Context, runnable *v1alpha1.Runna
 	allRunnableStampedObjects, err := runnableRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
 	if err != nil {
 		log.Error(err, "failed to list objects")
-		return stampedObject, nil, errors.RunnableListCreatedObjectsError{
+		return stampedObject, nil, errors.ListCreatedObjectsError{
 			Err:       err,
 			Namespace: stampedObject.GetNamespace(),
 			Labels:    labels,
 		}
 	}
 
-	err = gc.CleanupRunnableStampedObjects(ctx, allRunnableStampedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
-	if err != nil {
-		log.Error(err, "failed to cleanup runnable stamped objects")
+	healthRule := &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
+
+	var examinedObjects []*stamp.ExaminedObject
+
+	for _, someStampedObject := range allRunnableStampedObjects {
+		health := healthcheck.DetermineStampedObjectHealth(healthRule, someStampedObject)
+
+		examinedObjects = append(examinedObjects, &stamp.ExaminedObject{
+			StampedObject: someStampedObject,
+			Health:        health,
+		})
 	}
+
+	gc.CleanupRunnableStampedObjects(ctx, examinedObjects, runnable.Spec.RetentionPolicy, runnableRepo)
 
 	outputs, outputSource, err := template.GetLatestSuccessfulOutput(allRunnableStampedObjects)
 	if err != nil {

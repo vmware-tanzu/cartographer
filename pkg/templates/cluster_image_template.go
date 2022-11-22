@@ -24,8 +24,23 @@ type clusterImageTemplate struct {
 	template *v1alpha1.ClusterImageTemplate
 }
 
+func (t *clusterImageTemplate) GetLifecycle() *Lifecycle {
+	lifecycle := convertLifecycle(t.template.Spec.Lifecycle)
+	return &lifecycle
+}
+
 func NewClusterImageTemplateReader(template *v1alpha1.ClusterImageTemplate) *clusterImageTemplate {
 	return &clusterImageTemplate{template: template}
+}
+
+func (t *clusterImageTemplate) GetRetentionPolicy() v1alpha1.RetentionPolicy {
+	if t.template.Spec.RetentionPolicy == nil {
+		return v1alpha1.RetentionPolicy{
+			MaxFailedRuns:     10,
+			MaxSuccessfulRuns: 10,
+		}
+	}
+	return *t.template.Spec.RetentionPolicy
 }
 
 func (t *clusterImageTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

@@ -29,10 +29,30 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
+func AddConditionToUnstructured(conditionType, conditionStatus string, obj *unstructured.Unstructured) {
+	conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	conditions = append(conditions, map[string]interface{}{
+		"type":   conditionType,
+		"status": conditionStatus,
+	})
+	Expect(unstructured.SetNestedSlice(obj.Object, conditions, "status", "conditions")).To(Succeed())
+}
+
 var _ = Describe("DetermineHealthCondition", func() {
 	It("is always healthy for AlwaysHealthy health rule", func() {
 		healthRule := &v1alpha1.HealthRule{AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}}}
 		Expect(healthcheck.DetermineHealthCondition(healthRule, nil, nil)).To(MatchFields(IgnoreExtras,
+			Fields{
+				"Type":   Equal("Healthy"),
+				"Status": Equal(metav1.ConditionUnknown),
+				"Reason": Equal(v1alpha1.NoStampedObjectHealthyReason),
+			},
+		))
+	})
+
+	It("is always healthy for AlwaysHealthy health rule if a stamped object exists", func() {
+		healthRule := &v1alpha1.HealthRule{AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}}}
+		Expect(healthcheck.DetermineHealthCondition(healthRule, nil, &unstructured.Unstructured{})).To(MatchFields(IgnoreExtras,
 			Fields{
 				"Type":   Equal("Healthy"),
 				"Status": Equal(metav1.ConditionTrue),
@@ -571,6 +591,296 @@ var _ = Describe("DetermineHealthCondition", func() {
 					"Message": Equal("field value: true, message: unknown, error retrieving message path [status.usefulErrorMessage]"),
 				},
 			))
+		})
+	})
+})
+
+var _ = Describe("DetermineStampedObjectHealth", func() {
+	var (
+		returnedStatus metav1.ConditionStatus
+		rule           *v1alpha1.HealthRule
+		stampedObject  *unstructured.Unstructured
+	)
+
+	JustBeforeEach(func() {
+		returnedStatus = healthcheck.DetermineStampedObjectHealth(rule, stampedObject)
+	})
+
+	Context("when healthrule is nil", func() {
+		BeforeEach(func() {
+			rule = nil
+		})
+		Context("and the stampedObject exists", func() {
+			BeforeEach(func() {
+				stampedObject = &unstructured.Unstructured{}
+			})
+			It("returns true", func() {
+				Expect(returnedStatus).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("and the stampedObject does not exist", func() {
+			BeforeEach(func() {
+				stampedObject = nil
+			})
+			It("returns unknown", func() {
+				Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+			})
+		})
+	})
+
+	Context("when healthrule is always true", func() {
+		BeforeEach(func() {
+			rule = &v1alpha1.HealthRule{AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}}}
+		})
+		Context("and the stampedObject exists", func() {
+			BeforeEach(func() {
+				stampedObject = &unstructured.Unstructured{}
+			})
+			It("returns true", func() {
+				Expect(returnedStatus).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("and the stampedObject does not exist", func() {
+			BeforeEach(func() {
+				stampedObject = nil
+			})
+			It("returns unknown", func() {
+				Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+			})
+		})
+	})
+
+	Context("when healthRule is singleConditionType", func() {
+		var conditionUnderTest string
+		BeforeEach(func() {
+			conditionUnderTest = "OhSoWonderful"
+			rule = &v1alpha1.HealthRule{
+				SingleConditionType: conditionUnderTest,
+			}
+		})
+
+		Context("and there is no stamped object", func() {
+			BeforeEach(func() {
+				stampedObject = nil
+			})
+
+			It("returns unknown", func() {
+				Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+			})
+		})
+
+		Context("and there is a stamped object", func() {
+			BeforeEach(func() {
+				stampedObject = &unstructured.Unstructured{}
+				stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+				status:
+				  conditions:
+			`)
+
+				dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+				_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("the condition on the stamped object is True", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured(conditionUnderTest, "True", stampedObject)
+				})
+				It("returns true", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionTrue))
+				})
+			})
+
+			Context("the condition on the stamped object is False", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured(conditionUnderTest, "False", stampedObject)
+				})
+
+				It("returns false", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionFalse))
+				})
+			})
+
+			Context("the condition on the stamped object is neither True nor False", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured(conditionUnderTest, "SomethingElse", stampedObject)
+				})
+				It("returns unknown", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+				})
+			})
+
+			Context("the condition does not exist on the stamped object", func() {
+				It("returns unknown", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+				})
+			})
+		})
+	})
+
+	Context("when healthRule is MultiMatch", func() {
+		BeforeEach(func() {
+			rule = &v1alpha1.HealthRule{
+				MultiMatch: &v1alpha1.MultiMatchHealthRule{
+					Healthy: v1alpha1.HealthMatchRule{
+						MatchConditions: []v1alpha1.ConditionRequirement{
+							{
+								Type:   "HealthyCond1",
+								Status: "True",
+							},
+							{
+								Type:   "HealthyCond2",
+								Status: "VeryHealthy",
+							},
+						},
+						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.howgood`,
+									Operator: "In",
+									Values:   []string{"VeryGood"},
+								},
+								MessagePath: "status.usefulErrorMessage",
+							},
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.greenlight`,
+									Operator: "Exists",
+								},
+							},
+						},
+					},
+					Unhealthy: v1alpha1.HealthMatchRule{
+						MatchConditions: []v1alpha1.ConditionRequirement{
+							{
+								Type:   "UnhealthyCond1",
+								Status: "VeryUnhealthy",
+							},
+							{
+								Type:   "UnhealthyCond2",
+								Status: "True",
+							},
+						},
+						MatchFields: []v1alpha1.HealthMatchFieldSelectorRequirement{
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `.status.stopsign`,
+									Operator: "Exists",
+								},
+								MessagePath: "status.usefulErrorMessage",
+							},
+							{
+								FieldSelectorRequirement: v1alpha1.FieldSelectorRequirement{
+									Key:      `status.conditions[?(@.type=="DoesntMatterJustPassingOneIsEnoughToBeUnhealthy")].status`,
+									Operator: "In",
+									Values:   []string{"True"},
+								},
+								MessagePath: "status.usefulErrorMessage",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("when there is no stamped object", func() {
+			BeforeEach(func() {
+				stampedObject = nil
+			})
+
+			It("returns unknown", func() {
+				Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+			})
+		})
+
+		When("there is a stamped object", func() {
+			BeforeEach(func() {
+				stampedObject = &unstructured.Unstructured{}
+				stampedObjectYaml := utils.HereYamlF(`
+				apiVersion: thing/v1
+				kind: Thing
+				metadata:
+				  name: named-thing
+				  namespace: somens
+				spec:
+			`)
+
+				dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+				_, _, err := dec.Decode([]byte(stampedObjectYaml), nil, stampedObject)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("and the stamped object meets all healthy condition and field expectations", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured("HealthyCond1", "True", stampedObject)
+					AddConditionToUnstructured("HealthyCond2", "VeryHealthy", stampedObject)
+					Expect(unstructured.SetNestedField(stampedObject.Object, "VeryGood", "status", "howgood")).To(Succeed())
+					Expect(unstructured.SetNestedField(stampedObject.Object, "true", "status", "greenlight")).To(Succeed())
+				})
+				It("returns true", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionTrue))
+				})
+			})
+
+			Context("and the stamped object does not meets all healthy condition expectations", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured("HealthyCond1", "True", stampedObject)
+					AddConditionToUnstructured("HealthyCond2", "NoSoMuch", stampedObject)
+					Expect(unstructured.SetNestedField(stampedObject.Object, "VeryGood", "status", "howgood")).To(Succeed())
+					Expect(unstructured.SetNestedField(stampedObject.Object, "true", "status", "greenlight")).To(Succeed())
+				})
+				It("returns unknown", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+				})
+			})
+
+			Context("and the stamped object does not meets all field expectations", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured("HealthyCond1", "True", stampedObject)
+					AddConditionToUnstructured("HealthyCond2", "VeryHealthy", stampedObject)
+					Expect(unstructured.SetNestedField(stampedObject.Object, "NotThatGreatHonestly", "status", "howgood")).To(Succeed())
+					Expect(unstructured.SetNestedField(stampedObject.Object, "true", "status", "greenlight")).To(Succeed())
+				})
+				It("returns unknown", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionUnknown))
+				})
+			})
+
+			Context("and the stamped object meets an unhealthy condition", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured("HealthyCond1", "True", stampedObject)
+					AddConditionToUnstructured("HealthyCond2", "VeryHealthy", stampedObject)
+					Expect(unstructured.SetNestedField(stampedObject.Object, "VeryGood", "status", "howgood")).To(Succeed())
+					Expect(unstructured.SetNestedField(stampedObject.Object, "true", "status", "greenlight")).To(Succeed())
+
+					AddConditionToUnstructured("UnhealthyCond2", "True", stampedObject)
+				})
+				It("returns false", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionFalse))
+				})
+			})
+
+			Context("and the stamped object meets an unhealthy field expectation", func() {
+				BeforeEach(func() {
+					AddConditionToUnstructured("HealthyCond1", "True", stampedObject)
+					AddConditionToUnstructured("HealthyCond2", "VeryHealthy", stampedObject)
+					Expect(unstructured.SetNestedField(stampedObject.Object, "VeryGood", "status", "howgood")).To(Succeed())
+					Expect(unstructured.SetNestedField(stampedObject.Object, "true", "status", "greenlight")).To(Succeed())
+
+					Expect(unstructured.SetNestedField(stampedObject.Object, "true", "status", "stopsign")).To(Succeed())
+				})
+				It("returns false", func() {
+					Expect(returnedStatus).To(Equal(metav1.ConditionFalse))
+				})
+			})
 		})
 	})
 })

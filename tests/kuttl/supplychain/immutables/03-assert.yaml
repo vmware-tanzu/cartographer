@@ -18,8 +18,8 @@ kind: ConfigMap
 metadata:
   name: example-first-configmap
 data:
-  url: https://github.com/spring-projects/spring-petclinic.git
-  branch: "main"
+  url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git
+  branch: "dev"
 
 ---
 apiVersion: test.run/v1alpha1
@@ -36,3 +36,28 @@ spec:
       data:
         an-ice-cream-flavor: cookies-and-cream
     some-hard-coded-info: not-from-the-runnable
+
+---
+apiVersion: test.run/v1alpha1
+kind: Test
+spec:
+  value:
+    url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git
+    revision: dev
+    some-object-def:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: some-configmap
+      data:
+        an-ice-cream-flavor: cookies-and-cream
+    some-hard-coded-info: not-from-the-runnable
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: final-configmap
+data:
+  url: https://github.com/immutable-template-will-create-a-new-object/while-regular-template-will-modify-an-object.git
+  rev: dev

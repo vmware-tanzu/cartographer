@@ -157,7 +157,7 @@ var _ = Describe("Realize", func() {
 
 			outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error) {
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, string, error) {
 				executedResourceOrder = append(executedResourceOrder, resource.Name)
 				Expect(blueprintName).To(Equal("greatest-supply-chain"))
 				if resource.Name == "resource1" {
@@ -166,7 +166,7 @@ var _ = Describe("Realize", func() {
 					Expect(err).NotTo(HaveOccurred())
 					stampedObj := &unstructured.Unstructured{}
 					stampedObj.SetName("obj1")
-					return reader, stampedObj, outputFromFirstResource, false, nil
+					return reader, stampedObj, outputFromFirstResource, false, "returned val that would generally equal template 1 name", nil
 				}
 
 				if resource.Name == "resource2" {
@@ -178,7 +178,7 @@ var _ = Describe("Realize", func() {
 				Expect(err).NotTo(HaveOccurred())
 				stampedObj := &unstructured.Unstructured{}
 				stampedObj.SetName("obj2")
-				return reader, stampedObj, &templates.Output{}, false, nil
+				return reader, stampedObj, &templates.Output{}, false, "returned val that would generally equal template 2 name", nil
 			})
 
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
@@ -213,7 +213,7 @@ var _ = Describe("Realize", func() {
 			Expect(currentResourceStatuses).To(HaveLen(2))
 
 			Expect(currentResourceStatuses[0].Name).To(Equal(resource1.Name))
-			Expect(currentResourceStatuses[0].TemplateRef.Name).To(Equal(template1.Name))
+			Expect(currentResourceStatuses[0].TemplateRef.Name).To(Equal("returned val that would generally equal template 1 name"))
 			Expect(currentResourceStatuses[0].StampedRef.Name).To(Equal("obj1"))
 			Expect(currentResourceStatuses[0].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
 			Expect(currentResourceStatuses[0].Inputs).To(BeNil())
@@ -242,7 +242,7 @@ var _ = Describe("Realize", func() {
 			})))
 
 			Expect(currentResourceStatuses[1].Name).To(Equal(resource2.Name))
-			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal("returned val that would generally equal template 2 name"))
 			Expect(currentResourceStatuses[1].StampedRef.Name).To(Equal("obj2"))
 			Expect(currentResourceStatuses[1].StampedRef.Resource).To(Equal("FOO.EXAMPLE.COM"))
 			Expect(len(currentResourceStatuses[1].Inputs)).To(Equal(1))
@@ -298,23 +298,32 @@ var _ = Describe("Realize", func() {
 			Expect(recordedEvents).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Reason": Equal(events.ResourceOutputChangedReason)})))
 		})
 
-		It("returns the first error encountered realizing a resource and continues to realize", func() {
-			reader, err := templates.NewReaderFromAPI(template2)
-			Expect(err).NotTo(HaveOccurred())
-			resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, false, errors.New("realizing is hard"))
-			resourceRealizer.DoReturnsOnCall(1, reader, &unstructured.Unstructured{}, nil, false, nil)
+		Context("the first resource returns an error and the second does not", func() {
+			var (
+				err error
+			)
+			BeforeEach(func() {
+				var reader templates.Reader
+				reader, err = templates.NewReaderFromAPI(template2)
+				Expect(err).NotTo(HaveOccurred())
+				resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, false, "", errors.New("realizing is hard"))
+				resourceRealizer.DoReturnsOnCall(1, reader, &unstructured.Unstructured{}, nil, false, resource2.TemplateRef.Name, nil)
+			})
 
-			resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
-			err = rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
-			Expect(err).To(MatchError("realizing is hard"))
+			It("returns the first error encountered and continues to realize", func() {
+				resourceStatuses := statuses.NewResourceStatuses(nil, conditions.AddConditionForResourceSubmittedWorkload)
+				err = rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 
-			currentResourceStatuses := resourceStatuses.GetCurrent()
-			Expect(currentResourceStatuses).To(HaveLen(2))
+				Expect(err).To(MatchError("realizing is hard"))
+				rs := *resourceStatuses
+				currentResourceStatuses := rs.GetCurrent()
+				Expect(currentResourceStatuses).To(HaveLen(2))
 
-			Expect(currentResourceStatuses[0].Name).To(Equal("resource1"))
-			Expect(currentResourceStatuses[0].TemplateRef).To(BeNil())
-			Expect(currentResourceStatuses[0].StampedRef).To(BeNil())
-			Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+				Expect(currentResourceStatuses[0].Name).To(Equal("resource1"))
+				Expect(currentResourceStatuses[0].TemplateRef).To(BeNil())
+				Expect(currentResourceStatuses[0].StampedRef).To(BeNil())
+				Expect(currentResourceStatuses[1].TemplateRef.Name).To(Equal(template2.Name))
+			})
 		})
 	})
 
@@ -365,7 +374,7 @@ var _ = Describe("Realize", func() {
 
 			outputFromFirstResource := &templates.Output{Image: "whatever"}
 
-			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error) {
+			resourceRealizer.DoCalls(func(ctx context.Context, resource realizer.OwnerResource, blueprintName string, outputs realizer.Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, string, error) {
 				executedResourceOrder = append(executedResourceOrder, resource.Name)
 				Expect(blueprintName).To(Equal("greatest-supply-chain"))
 				if resource.Name == "resource1" {
@@ -374,7 +383,7 @@ var _ = Describe("Realize", func() {
 					Expect(err).NotTo(HaveOccurred())
 					stampedObj := &unstructured.Unstructured{}
 					stampedObj.SetName("obj1")
-					return reader, stampedObj, outputFromFirstResource, false, nil
+					return reader, stampedObj, outputFromFirstResource, false, resource.TemplateRef.Name, nil
 				}
 
 				if resource.Name == "resource2" {
@@ -383,7 +392,7 @@ var _ = Describe("Realize", func() {
 					Expect(outputs).To(Equal(expectedSecondResourceOutputs))
 				}
 
-				return nil, nil, outputFromFirstResource, true, nil
+				return nil, nil, outputFromFirstResource, true, "field not leveraged when pass-through", nil
 			})
 
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
@@ -633,9 +642,9 @@ var _ = Describe("Realize", func() {
 			reader3, err = templates.NewReaderFromAPI(template3)
 			Expect(err).NotTo(HaveOccurred())
 
-			resourceRealizer.DoReturnsOnCall(0, reader1, &unstructured.Unstructured{}, nil, false, nil)
-			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, nil, false, nil)
-			resourceRealizer.DoReturnsOnCall(2, reader3, &unstructured.Unstructured{}, nil, false, nil)
+			resourceRealizer.DoReturnsOnCall(0, reader1, &unstructured.Unstructured{}, nil, false, "first expected name", nil)
+			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, nil, false, resource2.Name, nil)
+			resourceRealizer.DoReturnsOnCall(2, reader3, &unstructured.Unstructured{}, nil, false, resource3.Name, nil)
 
 			fakeMapper.RESTMappingReturns(&meta.RESTMapping{
 				Resource: schema.GroupVersionResource{
@@ -661,17 +670,17 @@ var _ = Describe("Realize", func() {
 			}
 			stampedObj1 := &unstructured.Unstructured{}
 			stampedObj1.SetName("obj1")
-			resourceRealizer.DoReturnsOnCall(0, reader1, stampedObj1, newOutput, false, nil)
+			resourceRealizer.DoReturnsOnCall(0, reader1, stampedObj1, newOutput, false, "", nil)
 
 			oldOutput := &templates.Output{
 				Image: "whatever",
 			}
-			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, oldOutput, false, nil)
+			resourceRealizer.DoReturnsOnCall(1, reader2, &unstructured.Unstructured{}, oldOutput, false, "", nil)
 
 			oldOutput2 := &templates.Output{
 				Config: "whatever",
 			}
-			resourceRealizer.DoReturnsOnCall(2, reader3, obj, oldOutput2, false, nil)
+			resourceRealizer.DoReturnsOnCall(2, reader3, obj, oldOutput2, false, "", nil)
 
 			resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
 			err := rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
@@ -736,13 +745,13 @@ var _ = Describe("Realize", func() {
 
 		Context("there is an error realizing resource 1 and resource 2", func() {
 			BeforeEach(func() {
-				resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, false, errors.New("im in a bad state"))
-				resourceRealizer.DoReturnsOnCall(1, nil, nil, nil, false, errors.New("im missing inputs"))
+				resourceRealizer.DoReturnsOnCall(0, nil, nil, nil, false, "", errors.New("im in a bad state"))
+				resourceRealizer.DoReturnsOnCall(1, nil, nil, nil, false, "", errors.New("im missing inputs"))
 
 				obj = &unstructured.Unstructured{}
 				obj.SetName("StampedObj")
 
-				resourceRealizer.DoReturnsOnCall(2, reader3, obj, nil, false, nil)
+				resourceRealizer.DoReturnsOnCall(2, reader3, obj, nil, false, "expected name for resource 3", nil)
 			})
 
 			It("the status uses the previous resource for resource 2", func() {
@@ -805,6 +814,7 @@ var _ = Describe("Realize", func() {
 				Expect(resource3Status.Name).To(Equal(previousResources[1].Name))
 				Expect(resource3Status.StampedRef).ToNot(Equal(previousResources[1].StampedRef))
 				Expect(resource3Status.TemplateRef).ToNot(Equal(previousResources[1].TemplateRef))
+				Expect(resource3Status.RealizedResource.TemplateRef.Name).To(Equal("expected name for resource 3"))
 				Expect(len(resource3Status.Conditions)).To(Equal(3))
 
 				Expect(resource3Status.Conditions).To(ContainElement(MatchFields(IgnoreExtras, Fields{

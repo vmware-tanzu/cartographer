@@ -27,6 +27,8 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	realizerclient "github.com/vmware-tanzu/cartographer/pkg/realizer/client"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/gc"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/selector"
 	"github.com/vmware-tanzu/cartographer/pkg/stamp"
@@ -72,7 +74,7 @@ func NewResourceRealizerBuilder(repositoryBuilder repository.RepositoryBuilder, 
 	}
 }
 
-func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, error) {
+func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, blueprintName string, outputs Outputs, mapper meta.RESTMapper) (templates.Reader, *unstructured.Unstructured, *templates.Output, bool, string, error) {
 	log := logr.FromContextOrDiscard(ctx).WithValues("template", resource.TemplateRef)
 	ctx = logr.NewContext(ctx, log)
 
@@ -81,6 +83,12 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	var stampReader stamp.Outputter
 	var stampedObject *unstructured.Unstructured
 	var template templates.Reader
+	var output *templates.Output
+	var apiTemplate client.Object
+	var err error
+	var allRunnableStampedObjects []*unstructured.Unstructured
+	var qualifiedResource string
+
 	passThrough := false
 
 	// TODO: consider: should we build this only once, and pass it to the contextGenerator also?
@@ -90,7 +98,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		var err error
 		templateOption, err = r.findMatchingTemplateOption(resource, blueprintName)
 		if err != nil {
-			return nil, nil, nil, passThrough, err
+			return nil, nil, nil, passThrough, templateName, err
 		}
 		if templateOption.PassThrough != "" {
 			passThrough = true
@@ -104,19 +112,23 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	if passThrough {
 		log.V(logger.DEBUG).Info("pass through template", "passThrough", fmt.Sprintf("[%s]", templateOption.PassThrough))
 
-		var err error
 		stampReader, err = stamp.NewPassThroughReader(resource.TemplateRef.Kind, templateOption.PassThrough, inputGenerator)
 		if err != nil {
 			log.Error(err, "failed to create new stamp pass through reader")
-			return nil, nil, nil, passThrough, fmt.Errorf("failed to create new stamp pass through reader: %w", err)
+			return nil, nil, nil, passThrough, templateName, fmt.Errorf("failed to create new stamp pass through reader: %w", err)
+		}
+
+		output, err = stampReader.Output(stampedObject)
+		if err != nil {
+			log.Error(err, "failed to retrieve output from pass through", "passThrough", templateOption.PassThrough)
 		}
 	} else {
 		log.V(logger.DEBUG).Info("realizing template", "template", fmt.Sprintf("[%s/%s]", resource.TemplateRef.Kind, templateName))
 
-		apiTemplate, err := r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
+		apiTemplate, err = r.systemRepo.GetTemplate(ctx, templateName, resource.TemplateRef.Kind)
 		if err != nil {
 			log.Error(err, "failed to get cluster template")
-			return nil, nil, nil, passThrough, errors.GetTemplateError{
+			return nil, nil, nil, passThrough, templateName, errors.GetTemplateError{
 				Err:           err,
 				ResourceName:  resource.Name,
 				TemplateName:  templateName,
@@ -128,7 +140,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		template, err = templates.NewReaderFromAPI(apiTemplate)
 		if err != nil {
 			log.Error(err, "failed to get cluster template")
-			return nil, nil, nil, passThrough, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
+			return nil, nil, nil, passThrough, templateName, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 		}
 
 		labels := r.resourceLabeler(resource)
@@ -137,7 +149,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		stampedObject, err = stamper.Stamp(ctx, template.GetResourceTemplate())
 		if err != nil {
 			log.Error(err, "failed to stamp resource")
-			return template, nil, nil, passThrough, errors.StampError{
+			return template, nil, nil, passThrough, templateName, errors.StampError{
 				Err:           err,
 				TemplateName:  templateName,
 				TemplateKind:  resource.TemplateRef.Kind,
@@ -147,32 +159,82 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			}
 		}
 
-		err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
-		if err != nil {
-			log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
-			return template, nil, nil, passThrough, errors.ApplyStampedObjectError{
-				Err:           err,
-				StampedObject: stampedObject,
-				ResourceName:  resource.Name,
-				BlueprintName: blueprintName,
-				BlueprintType: errors.SupplyChain,
-			}
-		}
-
 		stampReader, err = stamp.NewReader(apiTemplate, inputGenerator)
 		if err != nil {
 			log.Error(err, "failed to create new stamp reader")
-			return nil, nil, nil, passThrough, fmt.Errorf("failed to create new stamp reader: %w", err)
+			return nil, nil, nil, passThrough, templateName, fmt.Errorf("failed to create new stamp reader: %w", err)
 		}
-	}
 
-	output, err := stampReader.Output(stampedObject)
-	if err != nil {
-		var qualifiedResource string
-		if passThrough {
-			log.Error(err, "failed to retrieve output from pass through", "passThrough", templateOption.PassThrough)
+		if template.GetLifecycle().IsImmutable() {
+			err = r.ownerRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labels)
+			if err != nil {
+				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+				return template, nil, nil, passThrough, templateName, errors.ApplyStampedObjectError{
+					Err:           err,
+					StampedObject: stampedObject,
+					ResourceName:  resource.Name,
+					BlueprintName: blueprintName,
+					BlueprintType: errors.SupplyChain,
+				}
+			}
+
+			allRunnableStampedObjects, err = r.ownerRepo.ListUnstructured(ctx, stampedObject.GroupVersionKind(), stampedObject.GetNamespace(), labels)
+			if err != nil {
+				log.Error(err, "failed to list objects")
+				return template, nil, nil, passThrough, templateName, errors.ListCreatedObjectsError{
+					Err:       err,
+					Namespace: stampedObject.GetNamespace(),
+					Labels:    labels,
+				}
+			}
+
+			healthRule := template.GetHealthRule()
+			if healthRule == nil && *template.GetLifecycle() == templates.Tekton {
+				healthRule = &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
+			}
+
+			var examinedObjects []*stamp.ExaminedObject
+
+			for _, someStampedObject := range allRunnableStampedObjects {
+				health := healthcheck.DetermineStampedObjectHealth(healthRule, someStampedObject)
+
+				examinedObjects = append(examinedObjects, &stamp.ExaminedObject{
+					StampedObject: someStampedObject,
+					Health:        health,
+				})
+			}
+
+			gc.CleanupRunnableStampedObjects(ctx, examinedObjects, template.GetRetentionPolicy(), r.ownerRepo)
+
+			latestSuccessfulObject := stamp.GetLatestSuccessfulObjFromExaminedObject(examinedObjects)
+			if latestSuccessfulObject == nil {
+				for _, obj := range allRunnableStampedObjects {
+					log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
+				}
+			}
+
+			output, err = stampReader.Output(latestSuccessfulObject)
 		} else {
-			log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+			err = r.ownerRepo.EnsureMutableObjectExistsOnCluster(ctx, stampedObject)
+			if err != nil {
+				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
+				return template, nil, nil, passThrough, templateName, errors.ApplyStampedObjectError{
+					Err:           err,
+					StampedObject: stampedObject,
+					ResourceName:  resource.Name,
+					BlueprintName: blueprintName,
+					BlueprintType: errors.SupplyChain,
+				}
+			}
+
+			output, err = stampReader.Output(stampedObject)
+
+			if err != nil {
+				log.Error(err, "failed to retrieve output from object", "object", stampedObject)
+			}
+		}
+
+		if err != nil {
 			var rErr error
 			qualifiedResource, rErr = utils.GetQualifiedResource(mapper, stampedObject)
 			if rErr != nil {
@@ -180,8 +242,10 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
 			}
 		}
+	}
 
-		return template, stampedObject, nil, passThrough, errors.RetrieveOutputError{
+	if err != nil {
+		return template, stampedObject, nil, passThrough, templateName, errors.RetrieveOutputError{
 			Err:               err,
 			ResourceName:      resource.Name,
 			StampedObject:     stampedObject,
@@ -192,7 +256,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 	}
 
-	return template, stampedObject, output, passThrough, nil
+	return template, stampedObject, output, passThrough, templateName, nil
 }
 
 func (r *resourceRealizer) findMatchingTemplateOption(resource OwnerResource, supplyChainName string) (v1alpha1.TemplateOption, error) {

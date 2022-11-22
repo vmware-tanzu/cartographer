@@ -22,8 +22,23 @@ type clusterSourceTemplate struct {
 	template *v1alpha1.ClusterSourceTemplate
 }
 
+func (t *clusterSourceTemplate) GetLifecycle() *Lifecycle {
+	lifecycle := convertLifecycle(t.template.Spec.Lifecycle)
+	return &lifecycle
+}
+
 func NewClusterSourceTemplateReader(template *v1alpha1.ClusterSourceTemplate) *clusterSourceTemplate {
 	return &clusterSourceTemplate{template: template}
+}
+
+func (t *clusterSourceTemplate) GetRetentionPolicy() v1alpha1.RetentionPolicy {
+	if t.template.Spec.RetentionPolicy == nil {
+		return v1alpha1.RetentionPolicy{
+			MaxFailedRuns:     10,
+			MaxSuccessfulRuns: 10,
+		}
+	}
+	return *t.template.Spec.RetentionPolicy
 }
 
 func (t *clusterSourceTemplate) GetResourceTemplate() v1alpha1.TemplateSpec {

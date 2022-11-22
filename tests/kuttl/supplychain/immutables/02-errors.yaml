@@ -12,27 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: example-first-configmap
+  name: final-configmap
 data:
   url: https://github.com/spring-projects/spring-petclinic.git
-  branch: "main"
-
----
-apiVersion: test.run/v1alpha1
-kind: Test
-spec:
-  value:
-    url: https://github.com/spring-projects/spring-petclinic.git
-    revision: main
-    some-object-def:
-      apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: some-configmap
-      data:
-        an-ice-cream-flavor: cookies-and-cream
-    some-hard-coded-info: not-from-the-runnable
+  rev: main

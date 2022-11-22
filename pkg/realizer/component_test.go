@@ -18,7 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -121,7 +124,9 @@ var _ = Describe("Resource", func() {
 	})
 
 	Describe("Do", func() {
-		When("passed a owner with outputs", func() {
+		When("passed outputs that are populated", func() {
+			var templateAPI *v1alpha1.ClusterSourceTemplate
+			var expectedObject unstructured.Unstructured
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
@@ -152,7 +157,7 @@ var _ = Describe("Resource", func() {
 				dbytes, err := json.Marshal(configMap)
 				Expect(err).ToNot(HaveOccurred())
 
-				templateAPI := &v1alpha1.ClusterSourceTemplate{
+				templateAPI = &v1alpha1.ClusterSourceTemplate{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ClusterSourceTemplate",
 						APIVersion: "carto.run/v1alpha1",
@@ -170,39 +175,171 @@ var _ = Describe("Resource", func() {
 					},
 				}
 
-				fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
-				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
+				expectedObject = unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "ConfigMap",
+						"metadata": map[string]interface{}{
+							"name": "example-config-map",
+							"ownerReferences": []interface{}{
+								map[string]interface{}{
+									"apiVersion":         "",
+									"kind":               "",
+									"name":               "",
+									"uid":                "",
+									"controller":         true,
+									"blockOwnerDeletion": true,
+								},
+							},
+							"creationTimestamp": nil,
+							"labels": map[string]interface{}{
+								"expected-labels-from-labeler-placeholder": "labeler",
+							},
+						},
+						"data": map[string]interface{}{
+							"player_current_lives": "some-url",
+							"some_other_info":      "some-revision",
+						},
+					},
+				}
 			})
 
-			It("creates a stamped object and returns the outputs and stampedObjects", func() {
-				template, returnedStampedObject, out, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(template).ToNot(BeNil())
-				Expect(isPassThrough).To(BeFalse())
+			When("template is mutable", func() {
+				BeforeEach(func() {
+					fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
+					fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(nil)
+				})
 
-				_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
+				It("creates a stamped object and returns the outputs and stampedObjects", func() {
+					template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(template).ToNot(BeNil())
+					Expect(isPassThrough).To(BeFalse())
+					Expect(templateRefName).To(Equal("image-template-1"))
+					Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
 
-				Expect(returnedStampedObject).To(Equal(stampedObject))
+					Expect(fakeOwnerRepo.EnsureMutableObjectExistsOnClusterCallCount()).To(Equal(1))
 
-				metadata := stampedObject.Object["metadata"]
-				metadataValues, ok := metadata.(map[string]interface{})
-				Expect(ok).To(BeTrue())
-				Expect(metadataValues["name"]).To(Equal("example-config-map"))
-				Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-					map[string]interface{}{
-						"apiVersion":         "",
-						"kind":               "",
-						"name":               "",
-						"uid":                "",
-						"controller":         true,
-						"blockOwnerDeletion": true,
-					},
-				}))
-				Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-				Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+					_, stampedObject := fakeOwnerRepo.EnsureMutableObjectExistsOnClusterArgsForCall(0)
 
-				Expect(out.Source.Revision).To(Equal("some-revision"))
-				Expect(out.Source.URL).To(Equal("some-url"))
+					Expect(returnedStampedObject).To(Equal(stampedObject))
+
+					metadata := stampedObject.Object["metadata"]
+					metadataValues, ok := metadata.(map[string]interface{})
+					Expect(ok).To(BeTrue())
+					Expect(metadataValues["name"]).To(Equal("example-config-map"))
+					Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+						map[string]interface{}{
+							"apiVersion":         "",
+							"kind":               "",
+							"name":               "",
+							"uid":                "",
+							"controller":         true,
+							"blockOwnerDeletion": true,
+						},
+					}))
+					Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+					Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+					Expect(out.Source.Revision).To(Equal("some-revision"))
+					Expect(out.Source.URL).To(Equal("some-url"))
+				})
+			})
+
+			When("template is immutable", func() {
+				BeforeEach(func() {
+					templateAPI.Spec.TemplateSpec.Lifecycle = "immutable"
+					templateAPI.Spec.TemplateSpec.RetentionPolicy = &v1alpha1.RetentionPolicy{
+						MaxFailedRuns:     10,
+						MaxSuccessfulRuns: 10,
+					}
+
+					fakeSystemRepo.GetTemplateReturns(templateAPI, nil)
+				})
+
+				When("call to ensure immutable object succeeds", func() {
+					BeforeEach(func() {
+						fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterReturns(nil)
+					})
+
+					When("call to list objects succeeds", func() {
+						BeforeEach(func() {
+							stampedObjectWithTime := expectedObject.DeepCopy()
+
+							stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
+
+							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
+						})
+
+						It("creates a stamped object and returns the outputs and stampedObjects", func() {
+							template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+							Expect(err).ToNot(HaveOccurred())
+							Expect(template).ToNot(BeNil())
+							Expect(isPassThrough).To(BeFalse())
+							Expect(templateRefName).To(Equal("image-template-1"))
+							Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+
+							Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+
+							_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+
+							Expect(returnedStampedObject).To(Equal(stampedObject))
+
+							metadata := stampedObject.Object["metadata"]
+							metadataValues, ok := metadata.(map[string]interface{})
+							Expect(ok).To(BeTrue())
+							Expect(metadataValues["name"]).To(Equal("example-config-map"))
+							Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+								map[string]interface{}{
+									"apiVersion":         "",
+									"kind":               "",
+									"name":               "",
+									"uid":                "",
+									"controller":         true,
+									"blockOwnerDeletion": true,
+								},
+							}))
+							Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+							Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+							Expect(out.Source.Revision).To(Equal("some-revision"))
+							Expect(out.Source.URL).To(Equal("some-url"))
+						})
+					})
+
+					When("the call to list objects fails", func() {
+						BeforeEach(func() {
+							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{}, fmt.Errorf("some error"))
+						})
+
+						It("returns ListCreatedObjectsError", func() {
+							template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+							Expect(template).ToNot(BeNil())
+							Expect(isPassThrough).To(BeFalse())
+							Expect(templateRefName).To(Equal("image-template-1"))
+
+							Expect(err).To(HaveOccurred())
+							Expect(err.Error()).To(ContainSubstring("some error"))
+							Expect(reflect.TypeOf(err).String()).To(Equal("errors.ListCreatedObjectsError"))
+						})
+					})
+				})
+				When("call to ensure immutable object fails", func() {
+					BeforeEach(func() {
+						fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterReturns(fmt.Errorf("bad object"))
+					})
+
+					It("returns ApplyStampedObjectError", func() {
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						Expect(template).ToNot(BeNil())
+						Expect(isPassThrough).To(BeFalse())
+						Expect(templateRefName).To(Equal("image-template-1"))
+
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("bad object"))
+						Expect(reflect.TypeOf(err).String()).To(Equal("errors.ApplyStampedObjectError"))
+					})
+				})
 			})
 		})
 
@@ -212,7 +349,7 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns GetTemplateError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(err).To(HaveOccurred())
 				Expect(template).To(BeNil())
 				Expect(isPassThrough).To(BeFalse())
@@ -239,10 +376,11 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns a helpful error", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 
 				Expect(template).To(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get cluster template [{Kind:ClusterImageTemplate Name:image-template-1}]: resource does not match a known template"))
@@ -271,9 +409,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to stamp object for resource [resource-1]"))
@@ -336,9 +475,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns RetrieveOutputError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("jsonpath returned empty list: data.does-not-exist"))
@@ -347,7 +487,7 @@ var _ = Describe("Resource", func() {
 			})
 		})
 
-		When("unable to EnsureImmutableObjectExistsOnCluster the stamped object", func() {
+		When("unable to EnsureMutableObjectExistsOnCluster the stamped object", func() {
 			BeforeEach(func() {
 				resource.Sources = []v1alpha1.ResourceReference{
 					{
@@ -399,9 +539,10 @@ var _ = Describe("Resource", func() {
 				fakeOwnerRepo.EnsureMutableObjectExistsOnClusterReturns(errors.New("bad object"))
 			})
 			It("returns ApplyStampedObjectError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("bad object"))
@@ -450,9 +591,10 @@ var _ = Describe("Resource", func() {
 			})
 
 			It("returns StampError", func() {
-				template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+				template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 				Expect(template).ToNot(BeNil())
 				Expect(isPassThrough).To(BeFalse())
+				Expect(templateRefName).To(Equal("image-template-1"))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("cannot set namespace in resource template"))
@@ -536,7 +678,7 @@ var _ = Describe("Resource", func() {
 				})
 
 				It("returns the input as an output", func() {
-					template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					template, stamped, output, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 					Expect(template).To(BeNil())
 					Expect(stamped).To(BeNil())
 					Expect(isPassThrough).To(BeTrue())
@@ -546,7 +688,7 @@ var _ = Describe("Resource", func() {
 				})
 
 				It("does not call to the repo", func() {
-					_, _, _, _, _ = r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+					_, _, _, _, _, _ = r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 					Expect(fakeSystemRepo.GetTemplateCallCount()).To(Equal(0))
 					Expect(fakeOwnerRepo.EnsureMutableObjectExistsOnClusterCallCount()).To(Equal(0))
 				})
@@ -557,7 +699,7 @@ var _ = Describe("Resource", func() {
 					})
 
 					It("returns an error", func() {
-						template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, stamped, output, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(stamped).To(BeNil())
 						Expect(output).To(BeNil())
@@ -574,7 +716,7 @@ var _ = Describe("Resource", func() {
 					})
 
 					It("returns an error", func() {
-						template, stamped, output, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, stamped, output, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(stamped).To(BeNil())
 						Expect(output).To(BeNil())
@@ -651,10 +793,11 @@ var _ = Describe("Resource", func() {
 
 				When("one option matches", func() {
 					It("finds the correct template", func() {
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
 						Expect(err).NotTo(HaveOccurred())
+						Expect(templateRefName).To(Equal("template-chosen"))
 
 						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 						Expect(name).To(Equal("template-chosen"))
@@ -666,7 +809,7 @@ var _ = Describe("Resource", func() {
 					It("returns a TemplateOptionsMatchError", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.git.ref.branch"
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(isPassThrough).To(BeFalse())
 
@@ -681,7 +824,7 @@ var _ = Describe("Resource", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = "spec.source.image"
 						resource.TemplateOptions[1].Selector.MatchFields[0].Key = "spec.source.subPath"
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 
 						Expect(template).To(BeNil())
 						Expect(isPassThrough).To(BeFalse())
@@ -695,9 +838,10 @@ var _ = Describe("Resource", func() {
 					It("does not error", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[?(@.name=="some-name")].bad`
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
+						Expect(templateRefName).To(Equal("template-chosen"))
 
 						Expect(err).NotTo(HaveOccurred())
 						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
@@ -710,7 +854,7 @@ var _ = Describe("Resource", func() {
 					It("returns a ResolveTemplateOptionError", func() {
 						resource.TemplateOptions[0].Selector.MatchFields[0].Key = `spec.env[`
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).To(BeNil())
 						Expect(isPassThrough).To(BeFalse())
 
@@ -728,16 +872,16 @@ var _ = Describe("Resource", func() {
 							Operator: "Exists",
 						})
 
-						template, _, _, isPassThrough, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+						template, _, _, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 						Expect(template).ToNot(BeNil())
 						Expect(isPassThrough).To(BeFalse())
+						Expect(templateRefName).To(Equal("template-chosen"))
 
 						Expect(err).NotTo(HaveOccurred())
 						_, name, kind := fakeSystemRepo.GetTemplateArgsForCall(0)
 						Expect(name).To(Equal("template-chosen"))
 						Expect(kind).To(Equal("ClusterImageTemplate"))
 					})
-
 				})
 			})
 		})

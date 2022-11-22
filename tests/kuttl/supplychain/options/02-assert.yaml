@@ -44,3 +44,8 @@ status:
   supplyChainRef:
     name: responsible-ops---options
     kind: ClusterSupplyChain
+  resources:
+    - templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: git-template---options
