@@ -39,7 +39,8 @@ type TestStatus struct {
 }
 
 type TestSpec struct {
-	Foo string `json:"foo,omitempty"`
+	Foo             string `json:"foo,omitempty"`
+	AdditionalField string `json:"additionalField,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Value runtime.RawExtension `json:"value,omitempty"`
 }
