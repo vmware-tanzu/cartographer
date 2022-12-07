@@ -821,7 +821,7 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 	})
 
-	FContext("immutable template healthRule progression", func() {
+	Context("immutable template healthRule progression", func() {
 		var workload v1alpha1.Workload
 		BeforeEach(func() {
 			immutableTemplateYaml := utils.HereYaml(`
@@ -973,7 +973,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				}))
 			})
 
-			When("object subsequently does not satisfy healthRule", func() {
+			When("object subsequently satisfies unhealthy rule", func() {
 				BeforeEach(func() {
 					// ensure first reconcile occurred
 					opts := []client.ListOption{
@@ -1059,6 +1059,27 @@ var _ = Describe("WorkloadReconciler", func() {
 						"Ready": MatchFields(IgnoreExtras, Fields{
 							"Status": Equal(metav1.ConditionFalse),
 							//"Reason": Equal("Ready"),
+						}),
+					}))
+
+					Consistently(func() []metav1.Condition {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return obj.Status.Resources[0].Conditions
+					}).Should(MatchAllElements(getConditionOfType, Elements{
+						"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionTrue),
+							"Reason": Equal("ResourceSubmissionComplete"),
+						}),
+						"Healthy": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionFalse),
+							"Reason": Equal("MatchedField"),
+						}),
+						"Ready": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionFalse),
+							"Reason": Equal("MatchedField"),
 						}),
 					}))
 				})
@@ -1162,10 +1183,11 @@ var _ = Describe("WorkloadReconciler", func() {
 func updateWorkload(ctx context.Context, originalWorkloadName string, namespace string, newWorkload *v1alpha1.Workload) {
 	obj := &v1alpha1.Workload{}
 
-	err := c.Get(ctx, client.ObjectKey{Name: originalWorkloadName, Namespace: namespace}, obj)
-	Expect(err).NotTo(HaveOccurred())
-
 	Eventually(func() error {
+		err := c.Get(ctx, client.ObjectKey{Name: originalWorkloadName, Namespace: namespace}, obj)
+		if err != nil {
+			return err
+		}
 		return c.Patch(ctx, newWorkload, client.MergeFromWithOptions(obj, client.MergeFromWithOptimisticLock{}))
 	}).Should(Succeed())
 }
