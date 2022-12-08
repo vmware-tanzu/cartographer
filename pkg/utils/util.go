@@ -89,6 +89,24 @@ func createUnstructuredObject(objYaml string) *unstructured.Unstructured {
 	return obj
 }
 
+func UpdateObjectOnClusterFromYamlDefinition(ctx context.Context, c client.Client, newObjYaml string, originalObjNamespace string, origObjType client.Object) {
+	newObj := createUnstructuredObject(newObjYaml)
+	if originalObjNamespace != "" {
+		newObj.SetNamespace(originalObjNamespace)
+	}
+	updateObjectOnCluster(ctx, c, newObj, origObjType)
+}
+
+func updateObjectOnCluster(ctx context.Context, c client.Client, newObj, origObjType client.Object) {
+	Eventually(func() error {
+		err := c.Get(ctx, client.ObjectKey{Name: newObj.GetName(), Namespace: newObj.GetNamespace()}, origObjType)
+		if err != nil {
+			return err
+		}
+		return c.Patch(ctx, newObj, client.MergeFromWithOptions(origObjType, client.MergeFromWithOptimisticLock{}))
+	}).Should(Succeed())
+}
+
 func AlterFieldOfNestedStringMaps(obj interface{}, key string, value string) error {
 	switch knownType := obj.(type) {
 	case map[string]interface{}:

@@ -1178,6 +1178,179 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 		})
 	})
+
+	Context("mutable template", func() {
+		BeforeEach(func() {
+			templateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: spec.foo
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  name: mutable-test-obj
+					spec:
+					  foo: hard-coded-other-val
+					  additionalField: $(params.health)$
+				  healthRule:
+				    multiMatch:
+				      healthy:
+				        matchFields:
+				          - key: 'spec.additionalField'
+				            operator: 'In'
+				            values: [ 'healthy' ]
+				      unhealthy:
+				        matchFields:
+				          - key: 'spec.additionalField'
+				            operator: 'NotIn'
+				            values: [ 'healthy' ]
+			`)
+
+			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+			cleanups = append(cleanups, template)
+
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			`)
+
+			supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+			cleanups = append(cleanups, supplyChain)
+
+			workload := v1alpha1.Workload{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Workload",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{
+					ServiceAccountName: "my-service-account",
+					Params: []v1alpha1.OwnerParam{
+						{
+							Name:  "foo",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"bar"`)},
+						},
+						{
+							Name:  "health",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"healthy"`)},
+						},
+					},
+				},
+			}
+
+			cleanups = append(cleanups, &workload)
+			err := c.Create(ctx, &workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("creates the object", func() {
+			testList := &resources.TestObjList{}
+
+			Eventually(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}).Should(Equal(1))
+
+			Consistently(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}, "2s").Should(Equal(1))
+
+			Expect(testList.Items[0].Name).To(Equal("mutable-test-obj"))
+			Expect(testList.Items[0].Spec.Foo).To(Equal("hard-coded-other-val"))
+		})
+		When("the template is changed to an immutable template", func() {
+			BeforeEach(func() {
+				opts := []client.ListOption{
+					client.InNamespace(testNS),
+				}
+				testsList := &resources.TestObjList{}
+				Eventually(func() ([]resources.TestObj, error) {
+					err := c.List(ctx, testsList, opts...)
+					return testsList.Items, err
+				}).Should(HaveLen(1))
+
+				immutableTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: spec.foo
+			      lifecycle: immutable
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(params.foo)$
+					  additionalField: $(params.health)$
+				  healthRule:
+				    multiMatch:
+				      healthy:
+				        matchFields:
+				          - key: 'spec.additionalField'
+				            operator: 'In'
+				            values: [ 'healthy' ]
+				      unhealthy:
+				        matchFields:
+				          - key: 'spec.additionalField'
+				            operator: 'NotIn'
+				            values: [ 'healthy' ]
+			`)
+
+				utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterConfigTemplate{})
+			})
+			FIt("deletes the original mutable stamped object", func() {
+				testList := &resources.TestObjList{}
+				type testAssertion struct {
+					TestObjectsCount     int
+					FoundTestObjectName  string
+					FoundTestObjFieldVal string
+				}
+
+				Eventually(func() (testAssertion, error) {
+					var ta testAssertion
+					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+					ta.TestObjectsCount = len(testList.Items)
+					if len(testList.Items) != 1 || err != nil {
+						return ta, err
+					}
+					ta.FoundTestObjectName = testList.Items[0].Name
+					ta.FoundTestObjFieldVal = testList.Items[0].Spec.Foo
+					return ta, nil
+				}).Should(MatchAllFields(Fields{
+					"TestObjectsCount":     Equal(1),
+					"FoundTestObjectName":  ContainSubstring("test-resource-"),
+					"FoundTestObjFieldVal": Equal("bar"),
+				}))
+			})
+		})
+	})
 })
 
 func updateWorkload(ctx context.Context, originalWorkloadName string, namespace string, newWorkload *v1alpha1.Workload) {
