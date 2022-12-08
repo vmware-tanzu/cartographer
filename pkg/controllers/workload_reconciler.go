@@ -333,32 +333,22 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
-	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus, context.Context, *WorkloadReconciler) (bool, error)
+	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus, context.Context, repository.Repository) (bool, error)
+	var err error
+
 	for _, prevResource := range previousResources {
 		if prevResource.StampedRef == nil {
 			continue
 		}
 		orphaned := true
 
-		apiTemplate, err := r.Repo.GetTemplate(ctx, prevResource.TemplateRef.Name, prevResource.TemplateRef.Kind)
+		equivalenceTest, err = getEquivalenceTest(ctx, r.Repo, prevResource)
 		if err != nil {
-			log.Error(err, "unable to get api template")
 			if kerrors.IsNotFound(err) {
 				orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
 				continue
 			}
-			return fmt.Errorf("unable to get api template [%s/%s]: %w", prevResource.TemplateRef.Kind, prevResource.TemplateRef.Name, err)
-		}
-		reader, err := templates.NewReaderFromAPI(apiTemplate)
-		if err != nil {
-			log.Error(err, "failed to get reader for apiTemplate")
-			return fmt.Errorf("failed to get reader for apiTemplate [%s/%s]: %w", prevResource.TemplateRef.Kind, prevResource.TemplateRef.Name, err)
-		}
-
-		if reader.GetLifecycle().IsImmutable() {
-			equivalenceTest = immutableEquivalenceTest
-		} else {
-			equivalenceTest = mutableEquivalenceTest
+			return fmt.Errorf("unable to get equivalence test %w", err)
 		}
 
 		for _, realizedResource := range realizedResources {
@@ -368,7 +358,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 
 			var equivalent bool
 
-			equivalent, err = equivalenceTest(realizedResource, prevResource, ctx, r)
+			equivalent, err = equivalenceTest(realizedResource, prevResource, ctx, r.Repo)
 			if err != nil {
 				return fmt.Errorf("failed to perform equivalence test: %w", err)
 			}
@@ -389,42 +379,13 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 		obj.SetGroupVersionKind(orphanedObj.GroupVersionKind())
 
 		log.V(logger.DEBUG).Info("deleting orphaned object", "object", orphanedObj)
-		err := r.Repo.Delete(ctx, obj)
+		err = r.Repo.Delete(ctx, obj)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func mutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus, _ context.Context, _ *WorkloadReconciler) (bool, error) {
-	return realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
-		realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
-		realizedResource.StampedRef.Name == prevResource.StampedRef.Name, nil
-}
-
-func immutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus, ctx context.Context, r *WorkloadReconciler) (bool, error) {
-	obj := &unstructured.Unstructured{}
-
-	obj.SetNamespace(prevResource.StampedRef.ObjectReference.Namespace)
-	obj.SetName(prevResource.StampedRef.ObjectReference.Name)
-	obj.SetGroupVersionKind(prevResource.StampedRef.ObjectReference.GroupVersionKind())
-
-	prevObj, err := r.Repo.GetUnstructured(ctx, obj)
-	if err != nil {
-		return false, fmt.Errorf("get unstructured: %w", err)
-	}
-
-	prevLabels := prevObj.GetLabels()
-
-	if lifecycleLabel, ok := prevLabels["carto.run/template-lifecycle"]; !ok || lifecycleLabel == "mutable" {
-		return mutableEquivalenceTest(realizedResource, prevResource, ctx, r)
-	}
-
-	return realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
-		realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind &&
-		realizedResource.Name == prevResource.Name, nil
 }
 
 func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {

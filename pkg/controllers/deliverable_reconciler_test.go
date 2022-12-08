@@ -1422,6 +1422,10 @@ var _ = Describe("DeliverableReconciler", func() {
 						},
 						Resource: "some-kind",
 					},
+					TemplateRef: &corev1.ObjectReference{
+						Kind: "some-template-kind",
+						Name: "some-template-name",
+					},
 				}, nil, false,
 			)
 			rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
@@ -1432,36 +1436,331 @@ var _ = Describe("DeliverableReconciler", func() {
 				return nil
 			}
 		})
-		Context("template does not change so there are no orphaned objects", func() {
+		Context("when current resource stamped from template with mutable lifecycle", func() {
 			BeforeEach(func() {
-				dl.Status.Resources = []v1alpha1.ResourceStatus{
-					{
-						RealizedResource: v1alpha1.RealizedResource{
-							Name: "some-resource",
-							StampedRef: &v1alpha1.StampedRef{
-								ObjectReference: &corev1.ObjectReference{
-									APIVersion: "some-api-version",
-									Kind:       "some-kind",
-									Name:       "some-new-stamped-obj-name",
+				someTemplate := v1alpha1.ClusterTemplate{}
+				repo.GetTemplateReturns(&someTemplate, nil)
+			})
+			Context("template does not change so there are no orphaned objects", func() {
+				BeforeEach(func() {
+					dl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: v1alpha1.RealizedResource{
+								Name: "some-resource",
+								StampedRef: &v1alpha1.StampedRef{
+									ObjectReference: &corev1.ObjectReference{
+										APIVersion: "some-api-version",
+										Kind:       "some-kind",
+										Name:       "some-new-stamped-obj-name",
+									},
+									Resource: "some-kind",
 								},
-								Resource: "some-kind",
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-template-name",
+									Kind: "some-template-kind",
+								},
 							},
 						},
-					},
-				}
-				repo.GetDeliverableReturns(dl, nil)
+					}
+					repo.GetDeliverableReturns(dl, nil)
+				})
+
+				It("does not attempt to delete any objects", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(0))
+				})
 			})
 
-			It("does not attempt to delete any objects", func() {
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).NotTo(HaveOccurred())
+			Context("a template changes so there are orphaned objects", func() {
+				BeforeEach(func() {
+					dl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: v1alpha1.RealizedResource{
+								Name: "some-resource",
+								StampedRef: &v1alpha1.StampedRef{
+									ObjectReference: &corev1.ObjectReference{
+										APIVersion: "some-api-version",
+										Kind:       "some-kind",
+										Name:       "some-old-stamped-obj-name",
+									},
+									Resource: "some-kind",
+								},
+								TemplateRef: &corev1.ObjectReference{
+									Name: "some-template-name",
+									Kind: "some-template-kind",
+								},
+							},
+						},
+					}
+					repo.GetDeliverableReturns(dl, nil)
+				})
 
-				Expect(repo.DeleteCallCount()).To(Equal(0))
+				It("deletes the orphaned objects", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(1))
+
+					_, obj := repo.DeleteArgsForCall(0)
+					Expect(obj.GetName()).To(Equal("some-old-stamped-obj-name"))
+					Expect(obj.GetKind()).To(Equal("some-kind"))
+				})
+
+				Context("deleting the object fails", func() {
+					BeforeEach(func() {
+						repo.DeleteReturns(fmt.Errorf("some error"))
+					})
+
+					It("logs an error but does not requeue", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","deliverable":"my-namespace/my-deliverable-name"`))
+					})
+				})
 			})
 		})
 
-		Context("a template changes so there are orphaned objects", func() {
+		Context("when current resource stamped from immutable template", func() {
 			BeforeEach(func() {
+				someTemplate := v1alpha1.ClusterTemplate{Spec: v1alpha1.TemplateSpec{Lifecycle: "immutable"}}
+				repo.GetTemplateReturns(&someTemplate, nil)
+			})
+
+			Context("when previous resource stamped with immutable template", func() {
+				BeforeEach(func() {
+					unstructuredWithImmutableLabel := unstructured.Unstructured{}
+					unstructuredWithImmutableLabel.SetLabels(map[string]string{"carto.run/template-lifecycle": "immutable"})
+					repo.GetUnstructuredReturnsOnCall(0, &unstructuredWithImmutableLabel, nil)
+				})
+				Context("and the previous resource and a newly created resource are from the same step and template", func() {
+					BeforeEach(func() {
+						dl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetDeliverableReturns(dl, nil)
+					})
+
+					It("does not attempt to delete any objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(0))
+					})
+				})
+
+				Context("and the previous resource shares a template with a newly created resource but shares no step", func() {
+					BeforeEach(func() {
+						dl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-other-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetDeliverableReturns(dl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
+				})
+
+				Context("and the previous resource shares a step with a newly created resource but is from a different template", func() {
+					BeforeEach(func() {
+						dl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-other-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetDeliverableReturns(dl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
+				})
+			})
+
+			Context("when previous resource stamped from a mutable template", func() {
+				BeforeEach(func() {
+					unstructuredWithMutableLabel := unstructured.Unstructured{}
+					unstructuredWithMutableLabel.SetLabels(map[string]string{"carto.run/template-lifecycle": "mutable"})
+					repo.GetUnstructuredReturnsOnCall(0, &unstructuredWithMutableLabel, nil)
+				})
+
+				Context("and the previous resource and a newly created resource are from the same step and template", func() {
+					BeforeEach(func() {
+						dl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetDeliverableReturns(dl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
+				})
+
+				Context("and the previous resource shares a template with a newly created resource but shares no step", func() {
+					BeforeEach(func() {
+						dl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-other-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetDeliverableReturns(dl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
+				})
+
+				Context("and the previous resource shares a step with a newly created resource but is from a different template", func() {
+					BeforeEach(func() {
+						dl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-other-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetDeliverableReturns(dl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
+				})
+			})
+		})
+
+		Context("when previous resource was stamped from a template that is no longer on cluster", func() {
+			BeforeEach(func() {
+				repo.GetTemplateReturns(nil, kerrors.NewNotFound(schema.GroupResource{}, "somename"))
+
 				dl.Status.Resources = []v1alpha1.ResourceStatus{
 					{
 						RealizedResource: v1alpha1.RealizedResource{
@@ -1470,9 +1769,13 @@ var _ = Describe("DeliverableReconciler", func() {
 								ObjectReference: &corev1.ObjectReference{
 									APIVersion: "some-api-version",
 									Kind:       "some-kind",
-									Name:       "some-old-stamped-obj-name",
+									Name:       "some-obj-name",
 								},
 								Resource: "some-kind",
+							},
+							TemplateRef: &corev1.ObjectReference{
+								Name: "some-template-name",
+								Kind: "some-template-kind",
 							},
 						},
 					},
@@ -1487,21 +1790,8 @@ var _ = Describe("DeliverableReconciler", func() {
 				Expect(repo.DeleteCallCount()).To(Equal(1))
 
 				_, obj := repo.DeleteArgsForCall(0)
-				Expect(obj.GetName()).To(Equal("some-old-stamped-obj-name"))
+				Expect(obj.GetName()).To(Equal("some-obj-name"))
 				Expect(obj.GetKind()).To(Equal("some-kind"))
-			})
-
-			Context("deleting the object fails", func() {
-				BeforeEach(func() {
-					repo.DeleteReturns(fmt.Errorf("some error"))
-				})
-
-				It("logs an error but does not requeue", func() {
-					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","deliverable":"my-namespace/my-deliverable-name"`))
-				})
 			})
 		})
 	})

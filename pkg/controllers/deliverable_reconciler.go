@@ -17,6 +17,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -282,18 +283,36 @@ func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, prev
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
+	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus, context.Context, repository.Repository) (bool, error)
+	var err error
+
 	for _, prevResource := range previousResources {
 		if prevResource.StampedRef == nil {
 			continue
 		}
 		orphaned := true
+
+		equivalenceTest, err = getEquivalenceTest(ctx, r.Repo, prevResource)
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
+				continue
+			}
+			return fmt.Errorf("unable to get equivalence test %w", err)
+		}
+
 		for _, realizedResource := range realizedResources {
 			if realizedResource.StampedRef == nil {
 				continue
 			}
-			if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
-				realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
-				realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
+
+			var equivalent bool
+
+			equivalent, err = equivalenceTest(realizedResource, prevResource, ctx, r.Repo)
+			if err != nil {
+				return fmt.Errorf("failed to perform equivalence test: %w", err)
+			}
+			if equivalent {
 				orphaned = false
 				break
 			}

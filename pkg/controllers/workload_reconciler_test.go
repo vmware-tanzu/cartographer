@@ -1359,7 +1359,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				})
 			})
 
-			Context("there was a template change so there are orphaned objects", func() {
+			Context("a template changes so there are orphaned objects", func() {
 				BeforeEach(func() {
 					wl.Status.Resources = []v1alpha1.ResourceStatus{
 						{
