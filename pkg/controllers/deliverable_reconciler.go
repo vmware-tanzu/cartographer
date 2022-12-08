@@ -225,7 +225,7 @@ func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelive
 }
 
 func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
-	return func(resource realizer.OwnerResource) templates.Labels {
+	return func(resource realizer.OwnerResource, reader templates.Reader) templates.Labels {
 		return templates.Labels{
 			"carto.run/deliverable-name":      owner.GetName(),
 			"carto.run/deliverable-namespace": owner.GetNamespace(),
@@ -233,6 +233,7 @@ func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.Re
 			"carto.run/resource-name":         resource.Name,
 			"carto.run/template-kind":         resource.TemplateRef.Kind,
 			"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			"carto.run/template-lifecycle":    string(*reader.GetLifecycle()),
 		}
 	}
 }

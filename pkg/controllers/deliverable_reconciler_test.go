@@ -306,7 +306,9 @@ var _ = Describe("DeliverableReconciler", func() {
 				Name: "fine-i-have-a-name",
 			}
 
-			labels := labelerForBuiltResourceRealizer(resource)
+			lifecycleReader := lifecycleReader{lifecycle: templates.Mutable}
+
+			labels := labelerForBuiltResourceRealizer(resource, &lifecycleReader)
 			Expect(labels).To(Equal(templates.Labels{
 				"carto.run/deliverable-name":      "my-deliverable",
 				"carto.run/deliverable-namespace": "my-namespace",
@@ -314,6 +316,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				"carto.run/resource-name":         resource.Name,
 				"carto.run/template-kind":         resource.TemplateRef.Kind,
 				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+				"carto.run/template-lifecycle":    "mutable",
 			}))
 		})
 

@@ -50,7 +50,7 @@ type resourceRealizer struct {
 	resourceLabeler   ResourceLabeler
 }
 
-type ResourceLabeler func(resource OwnerResource) templates.Labels
+type ResourceLabeler func(resource OwnerResource, reader templates.Reader) templates.Labels
 
 type ResourceRealizerBuilder func(authToken string, owner client.Object, templatingContext ContextGenerator, systemRepo repository.Repository, resourceLabeler ResourceLabeler) (ResourceRealizer, error)
 
@@ -143,8 +143,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 			return nil, nil, nil, passThrough, templateName, fmt.Errorf("failed to get cluster template [%+v]: %w", resource.TemplateRef, err)
 		}
 
-		labels := r.resourceLabeler(resource)
-		labels["carto.run/template-lifecycle"] = string(*template.GetLifecycle())
+		labels := r.resourceLabeler(resource, template)
 
 		stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
 		stampedObject, err = stamper.Stamp(ctx, template.GetResourceTemplate())

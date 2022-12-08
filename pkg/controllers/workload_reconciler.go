@@ -229,7 +229,7 @@ func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSup
 }
 
 func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
-	return func(resource realizer.OwnerResource) templates.Labels {
+	return func(resource realizer.OwnerResource, reader templates.Reader) templates.Labels {
 		return templates.Labels{
 			"carto.run/workload-name":         owner.GetName(),
 			"carto.run/workload-namespace":    owner.GetNamespace(),
@@ -237,6 +237,7 @@ func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.Resou
 			"carto.run/resource-name":         resource.Name,
 			"carto.run/template-kind":         resource.TemplateRef.Kind,
 			"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			"carto.run/template-lifecycle":    string(*reader.GetLifecycle()),
 		}
 	}
 }
