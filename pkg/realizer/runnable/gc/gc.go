@@ -58,6 +58,11 @@ func CleanupRunnableStampedObjects(ctx context.Context, examinedObjects []*stamp
 				"stampedObject", runnableStampedObject)
 		}
 
+		labels := runnableStampedObject.GetLabels()
+		if labels["carto.run/template-lifecycle"] == "mutable" {
+			shouldDelete = true
+		}
+
 		if shouldDelete {
 			log.V(logger.INFO).Info("deleting runnable stamped object", "stampedObject", runnableStampedObject)
 			err := repo.Delete(ctx, runnableStampedObject)
