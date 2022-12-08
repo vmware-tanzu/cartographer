@@ -739,7 +739,6 @@ var _ = Describe("DeliverableReconciler", func() {
 					  name: mutable-test-obj
 					data:
 					  foo: hard-coded-other-val
-					  additionalField: $(params.health)$
 			`)
 
 			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
@@ -833,7 +832,6 @@ var _ = Describe("DeliverableReconciler", func() {
 					  generateName: test-resource-
 					spec:
 					  foo: $(params.foo)$
-					  additionalField: $(params.health)$
 			`)
 
 				utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterTemplate{})

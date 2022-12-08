@@ -823,19 +823,6 @@ var _ = Describe("WorkloadReconciler", func() {
 					  name: mutable-test-obj
 					data:
 					  foo: hard-coded-other-val
-					  additionalField: $(params.health)$
-				  healthRule:
-				    multiMatch:
-				      healthy:
-				        matchFields:
-				          - key: 'data.additionalField'
-				            operator: 'In'
-				            values: [ 'healthy' ]
-				      unhealthy:
-				        matchFields:
-				          - key: 'data.additionalField'
-				            operator: 'NotIn'
-				            values: [ 'healthy' ]
 			`)
 
 			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
@@ -930,19 +917,6 @@ var _ = Describe("WorkloadReconciler", func() {
 					  generateName: test-resource-
 					spec:
 					  foo: $(params.foo)$
-					  additionalField: $(params.health)$
-				  healthRule:
-				    multiMatch:
-				      healthy:
-				        matchFields:
-				          - key: 'spec.additionalField'
-				            operator: 'In'
-				            values: [ 'healthy' ]
-				      unhealthy:
-				        matchFields:
-				          - key: 'spec.additionalField'
-				            operator: 'NotIn'
-				            values: [ 'healthy' ]
 			`)
 
 				utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterConfigTemplate{})

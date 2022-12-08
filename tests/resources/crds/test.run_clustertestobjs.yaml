@@ -47,8 +47,6 @@ spec:
             type: object
           spec:
             properties:
-              additionalField:
-                type: string
               foo:
                 type: string
               value:
