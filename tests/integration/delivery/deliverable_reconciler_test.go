@@ -871,4 +871,431 @@ var _ = Describe("DeliverableReconciler", func() {
 			})
 		})
 	})
+
+	Context("delivery with immutable template", func() {
+		var (
+			expectedValue           string
+			healthRuleSpecification string
+			lifecycleSpecification  string
+			immutableTemplateBase   string
+			deliverable             v1alpha1.Deliverable
+		)
+
+		BeforeEach(func() {
+			immutableTemplateBase = `
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSourceTemplate
+				metadata:
+				  name: my-template
+				spec:
+				  urlPath: spec.foo
+				  revisionPath: spec.foo
+			      lifecycle: %s
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(deliverable.spec.source.image)$
+				  %s
+			`
+
+			followOnTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: follow-on-template
+				spec:
+			      template:
+					apiVersion: v1
+					kind: ConfigMap
+					metadata:
+					  name: follow-object
+					data:
+					  foo: $(sources.source.url)$
+			`)
+
+			followOnTemplate := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, followOnTemplateYaml)
+			cleanups = append(cleanups, followOnTemplate)
+
+			deliveryYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterDelivery
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterSourceTemplate
+				        name: my-template
+			        - name: follow-on-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: follow-on-template
+					  sources:
+			            - resource: my-first-resource
+			              name: source
+			`)
+
+			delivery := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, deliveryYaml)
+			cleanups = append(cleanups, delivery)
+
+			expectedValue = "some-address"
+
+			deliverable = v1alpha1.Deliverable{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deliverable",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deliverable-jaylen",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.DeliverableSpec{
+					ServiceAccountName: "my-service-account",
+					Source: &v1alpha1.Source{
+						Image: &expectedValue,
+					},
+				},
+			}
+
+			cleanups = append(cleanups, &deliverable)
+			err := c.Create(ctx, &deliverable, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		var itResultsInAHealthyDeliverable = func() {
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Deliverable{}
+				err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("DeliveryReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Reason": Equal("ResourceSubmissionComplete"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+			))
+
+			Consistently(func() []metav1.Condition {
+				obj := &v1alpha1.Deliverable{}
+				err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Reason": Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+		}
+
+		var itStampsTheTemplatedObjectOnce = func() {
+			testList := &resources.TestObjList{}
+
+			Eventually(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}).Should(Equal(1))
+
+			Consistently(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}, "2s").Should(Equal(1))
+
+			Expect(testList.Items[0].Name).To(ContainSubstring("test-resource-"))
+			Expect(testList.Items[0].Spec.Foo).To(Equal("some-address"))
+		}
+
+		Context("generic immutable template", func() {
+			BeforeEach(func() {
+				lifecycleSpecification = "immutable"
+			})
+			Context("without a healthRule", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = ""
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				It("results in a healthy deliverable", func() {
+					itResultsInAHealthyDeliverable()
+				})
+
+				It("stamps the templated object once", func() {
+					itStampsTheTemplatedObjectOnce()
+				})
+
+				Context("and the deliverable is updated", func() {
+					BeforeEach(func() {
+						// ensure first objects have been created
+						Eventually(func() (map[string]int, error) {
+							testList := &resources.TestObjList{}
+							configmapList := &corev1.ConfigMapList{}
+
+							err := c.List(ctx, configmapList, &client.ListOptions{Namespace: testNS})
+							if err != nil {
+								return nil, err
+							}
+							err = c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+							objectCountMap := map[string]int{
+								"testObj":   len(testList.Items),
+								"configMap": len(configmapList.Items),
+							}
+							return objectCountMap, err
+						}, "2s").Should(MatchAllKeys(Keys{
+							"testObj":   Equal(1),
+							"configMap": Equal(1),
+						}))
+
+						image := "a-different-image"
+
+						deliverable.Spec.Source.Image = &image
+
+						utils.UpdateObjectOnCluster(ctx, c, &deliverable, &v1alpha1.Deliverable{})
+					})
+
+					It("creates a second object alongside the first", func() {
+						testList := &resources.TestObjList{}
+						configmapList := &corev1.ConfigMapList{}
+
+						Eventually(func() (map[string]int, error) {
+							err := c.List(ctx, configmapList, &client.ListOptions{Namespace: testNS})
+							if err != nil {
+								return nil, err
+							}
+							err = c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+							objectCountMap := map[string]int{
+								"testObj":   len(testList.Items),
+								"configMap": len(configmapList.Items),
+							}
+							return objectCountMap, err
+						}, "2s").Should(MatchAllKeys(Keys{
+							"testObj":   Equal(2),
+							"configMap": Equal(1),
+						}))
+
+						Consistently(func() (int, error) {
+							err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+							return len(testList.Items), err
+						}, "2s").Should(Equal(2))
+
+						Expect(testList.Items[0].Name).To(ContainSubstring("test-resource-"))
+						Expect(testList.Items[1].Name).To(ContainSubstring("test-resource-"))
+
+						id := func(element interface{}) string {
+							return element.(resources.TestObj).Spec.Foo
+						}
+						Expect(testList.Items).To(MatchAllElements(id, Elements{
+							"a-different-image": Not(BeNil()),
+							"some-address":      Not(BeNil()),
+						}))
+					})
+				})
+			})
+
+			Context("with an alwaysHealthy healthRule", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = "healthRule:\n    alwaysHealthy: {}"
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				It("results in a healthy deliverable", func() {
+					itResultsInAHealthyDeliverable()
+				})
+
+				It("stamps the templated object once", func() {
+					itStampsTheTemplatedObjectOnce()
+				})
+			})
+
+			Context("with a healthRule that must be satisfied", func() {
+				Context("which is not satisfied", func() {
+					BeforeEach(func() {
+						healthRuleSpecification = "healthRule:\n    singleConditionType: Ready"
+						templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+						template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+						cleanups = append(cleanups, template)
+					})
+
+					It("stamps the templated object once", func() {
+						itStampsTheTemplatedObjectOnce()
+					})
+					It("results in an unhealthy deliverable", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesHealthy"),
+								"Reason": Equal("HealthyConditionRule"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+
+					It("prevents reading fields of the stamped object", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesSubmitted"),
+								"Reason": Equal("MissingValueAtPath"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+
+					When("the healthRule is subsequently satisfied", func() {
+						It("results in a healthy deliverable", func() {
+							// update the object
+							opts := []client.ListOption{
+								client.InNamespace(testNS),
+							}
+
+							testsList := &resources.TestObjList{}
+
+							Eventually(func() ([]resources.TestObj, error) {
+								err := c.List(ctx, testsList, opts...)
+								return testsList.Items, err
+							}).Should(HaveLen(1))
+
+							testToUpdate := &testsList.Items[0]
+							testToUpdate.Status.Conditions = []metav1.Condition{
+								{
+									Type:               "Ready",
+									Status:             "True",
+									Reason:             "Ready",
+									LastTransitionTime: metav1.Now(),
+								},
+							}
+
+							err := c.Status().Update(ctx, testToUpdate)
+							Expect(err).NotTo(HaveOccurred())
+
+							// assert expected state
+							itResultsInAHealthyDeliverable()
+						})
+					})
+				})
+			})
+		})
+
+		Context("tekton template", func() {
+			BeforeEach(func() {
+				lifecycleSpecification = "tekton"
+			})
+
+			Context("without a healthRule", func() {
+				BeforeEach(func() {
+					healthRuleSpecification = ""
+					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				It("stamps the templated object once", func() {
+					itStampsTheTemplatedObjectOnce()
+				})
+
+				When("the stamped object's succeeded condition has status == true", func() {
+					It("results in a healthy deliverable", func() {
+						// update the object
+						opts := []client.ListOption{
+							client.InNamespace(testNS),
+						}
+
+						testsList := &resources.TestObjList{}
+
+						Eventually(func() ([]resources.TestObj, error) {
+							err := c.List(ctx, testsList, opts...)
+							return testsList.Items, err
+						}).Should(HaveLen(1))
+
+						testToUpdate := &testsList.Items[0]
+						testToUpdate.Status.Conditions = []metav1.Condition{
+							{
+								Type:               "Succeeded",
+								Status:             "True",
+								Reason:             "SomeGoodReason",
+								LastTransitionTime: metav1.Now(),
+							},
+						}
+
+						err := c.Status().Update(ctx, testToUpdate)
+						Expect(err).NotTo(HaveOccurred())
+
+						// assert expected state
+						itResultsInAHealthyDeliverable()
+					})
+				})
+
+				When("the stamped object's succeeded condition is not yet true", func() {
+					It("results in a resource with an unknown healthy status deliverable", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesHealthy"),
+								"Reason": Equal("HealthyConditionRule"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+
+					It("prevents reading fields of the stamped object", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesSubmitted"),
+								"Reason": Equal("MissingValueAtPath"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+					})
+				})
+			})
+		})
+	})
 })
