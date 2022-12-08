@@ -398,6 +398,10 @@ func mutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResour
 }
 
 func immutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus) bool {
+	if realizedResource.StampedRef.Lifecycle != prevResource.StampedRef.Lifecycle {
+		return mutableEquivalenceTest(realizedResource, prevResource)
+	}
+
 	return realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
 		realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind &&
 		realizedResource.Name == prevResource.Name

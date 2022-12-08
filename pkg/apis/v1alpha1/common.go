@@ -210,6 +210,9 @@ type StampedRef struct {
 	// Resource refers to the resource name and group [NAME(.GROUP)]
 	// The NAME segment is the CRD's plural value. You can use this to fully qualify a kubectl reference.
 	Resource string `json:"resource,omitempty"`
+
+	// Lifecycle indicates whether the object was
+	Lifecycle string `json:"lifecycle,omitempty"`
 }
 
 type RealizedResource struct {
