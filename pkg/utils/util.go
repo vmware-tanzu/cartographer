@@ -94,10 +94,10 @@ func UpdateObjectOnClusterFromYamlDefinition(ctx context.Context, c client.Clien
 	if originalObjNamespace != "" {
 		newObj.SetNamespace(originalObjNamespace)
 	}
-	updateObjectOnCluster(ctx, c, newObj, origObjType)
+	UpdateObjectOnCluster(ctx, c, newObj, origObjType)
 }
 
-func updateObjectOnCluster(ctx context.Context, c client.Client, newObj, origObjType client.Object) {
+func UpdateObjectOnCluster(ctx context.Context, c client.Client, newObj, origObjType client.Object) {
 	Eventually(func() error {
 		err := c.Get(ctx, client.ObjectKey{Name: newObj.GetName(), Namespace: newObj.GetNamespace()}, origObjType)
 		if err != nil {

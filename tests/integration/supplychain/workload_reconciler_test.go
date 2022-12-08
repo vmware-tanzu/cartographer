@@ -386,6 +386,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			healthRuleSpecification string
 			lifecycleSpecification  string
 			immutableTemplateBase   string
+			workload                v1alpha1.Workload
 		)
 
 		BeforeEach(func() {
@@ -455,7 +456,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 			expectedValue = "some-address"
 
-			workload := &v1alpha1.Workload{
+			workload = v1alpha1.Workload{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Workload",
 					APIVersion: "carto.run/v1alpha1",
@@ -475,8 +476,8 @@ var _ = Describe("WorkloadReconciler", func() {
 				},
 			}
 
-			cleanups = append(cleanups, workload)
-			err := c.Create(ctx, workload, &client.CreateOptions{})
+			cleanups = append(cleanups, &workload)
+			err := c.Create(ctx, &workload, &client.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -558,10 +559,10 @@ var _ = Describe("WorkloadReconciler", func() {
 				Context("and the workload is updated", func() {
 					BeforeEach(func() {
 						// ensure first objects have been created
-						testList := &resources.TestObjList{}
-						configmapList := &corev1.ConfigMapList{}
-
 						Eventually(func() (map[string]int, error) {
+							testList := &resources.TestObjList{}
+							configmapList := &corev1.ConfigMapList{}
+
 							err := c.List(ctx, configmapList, &client.ListOptions{Namespace: testNS})
 							if err != nil {
 								return nil, err
@@ -579,25 +580,9 @@ var _ = Describe("WorkloadReconciler", func() {
 
 						image := "a-different-image"
 
-						newWorkload := v1alpha1.Workload{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "workload-joe",
-								Namespace: testNS,
-								Labels: map[string]string{
-									"some-key": "some-value",
-								},
-							},
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "Workload",
-								APIVersion: "carto.run/v1alpha1",
-							},
-							Spec: v1alpha1.WorkloadSpec{
-								Source:             &v1alpha1.Source{Image: &image},
-								ServiceAccountName: "my-service-account",
-							},
-						}
+						workload.Spec.Source.Image = &image
 
-						updateWorkload(ctx, "workload-joe", testNS, &newWorkload)
+						utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
 					})
 
 					It("creates a second object alongside the first", func() {
@@ -996,7 +981,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						},
 					}
 
-					updateWorkload(ctx, workload.Name, workload.Namespace, &workload)
+					utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
 				})
 
 				It("workload resource shares previous value", func() {
@@ -1109,7 +1094,7 @@ var _ = Describe("WorkloadReconciler", func() {
 							},
 						}
 
-						updateWorkload(ctx, workload.Name, workload.Namespace, &workload)
+						utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
 					})
 					It("workload resource shares value", func() {
 						Eventually(func() int {
@@ -1354,15 +1339,3 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 	})
 })
-
-func updateWorkload(ctx context.Context, originalWorkloadName string, namespace string, newWorkload *v1alpha1.Workload) {
-	obj := &v1alpha1.Workload{}
-
-	Eventually(func() error {
-		err := c.Get(ctx, client.ObjectKey{Name: originalWorkloadName, Namespace: namespace}, obj)
-		if err != nil {
-			return err
-		}
-		return c.Patch(ctx, newWorkload, client.MergeFromWithOptions(obj, client.MergeFromWithOptimisticLock{}))
-	}).Should(Succeed())
-}
