@@ -832,6 +832,364 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 	})
 
+	Context("immutable template healthRule progression", func() {
+		var workload v1alpha1.Workload
+		BeforeEach(func() {
+			immutableTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: spec.foo
+			      lifecycle: immutable
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(params.foo)$
+					  additionalField: $(params.health)$
+				  healthRule:
+				    multiMatch:
+				      healthy:
+				        matchFields:
+				          - key: 'spec.additionalField'
+				            operator: 'In'
+				            values: [ 'healthy' ]
+				      unhealthy:
+				        matchFields:
+				          - key: 'spec.additionalField'
+				            operator: 'NotIn'
+				            values: [ 'healthy' ]
+			`)
+
+			immutableTemplate := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml)
+			cleanups = append(cleanups, immutableTemplate)
+
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			`)
+
+			supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+			cleanups = append(cleanups, supplyChain)
+
+			workload = v1alpha1.Workload{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Workload",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{
+					ServiceAccountName: "my-service-account",
+					Params: []v1alpha1.OwnerParam{
+						{
+							Name:  "foo",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"bar"`)},
+						},
+						{
+							Name:  "health",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"healthy"`)},
+						},
+					},
+				},
+			}
+
+			cleanups = append(cleanups, &workload)
+			err := c.Create(ctx, &workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		When("object satisfies healthRule", func() {
+			It("workload resource shares value", func() {
+				Eventually(func() int {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return len(obj.Status.Resources)
+				}).Should(Equal(1))
+
+				Eventually(func() int {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return len(obj.Status.Resources[0].Outputs)
+				}).Should(Equal(1))
+
+				Eventually(func() v1alpha1.Output {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return obj.Status.Resources[0].Outputs[0]
+				}).Should(MatchFields(IgnoreExtras, Fields{
+					"Name":    Equal("config"),
+					"Preview": Equal("bar\n"), // TODO: investigate why there is a trailing newline
+				}))
+			})
+
+			It("workload resource is healthy", func() {
+				getConditionOfType := func(element interface{}) string {
+					return element.(metav1.Condition).Type
+				}
+
+				Eventually(func() int {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return len(obj.Status.Resources)
+				}).Should(Equal(1))
+
+				Eventually(func() []metav1.Condition {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return obj.Status.Resources[0].Conditions
+				}).Should(MatchAllElements(getConditionOfType, Elements{
+					"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+						"Status": Equal(metav1.ConditionTrue),
+						"Reason": Equal("ResourceSubmissionComplete"),
+					}),
+					"Healthy": MatchFields(IgnoreExtras, Fields{
+						"Status": Equal(metav1.ConditionTrue),
+						"Reason": Equal("MatchedField"),
+					}),
+					"Ready": MatchFields(IgnoreExtras, Fields{
+						"Status": Equal(metav1.ConditionTrue),
+						"Reason": Equal("Ready"),
+					}),
+				}))
+			})
+
+			When("object subsequently satisfies unhealthy rule", func() {
+				BeforeEach(func() {
+					// ensure first reconcile occurred
+					opts := []client.ListOption{
+						client.InNamespace(testNS),
+					}
+					testsList := &resources.TestObjList{}
+					Eventually(func() ([]resources.TestObj, error) {
+						err := c.List(ctx, testsList, opts...)
+						return testsList.Items, err
+					}).Should(HaveLen(1))
+
+					workload.Spec.Params = []v1alpha1.OwnerParam{
+						{
+							Name:  "foo",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"baz"`)},
+						},
+						{
+							Name:  "health",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"unhealthy"`)},
+						},
+					}
+
+					utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
+				})
+
+				It("workload resource shares previous value", func() {
+					Eventually(func() int {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return len(obj.Status.Resources)
+					}).Should(Equal(1))
+
+					Eventually(func() int {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return len(obj.Status.Resources[0].Outputs)
+					}).Should(Equal(1))
+
+					Consistently(func() v1alpha1.Output {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return obj.Status.Resources[0].Outputs[0]
+					}).Should(MatchFields(IgnoreExtras, Fields{
+						"Name":    Equal("config"),
+						"Preview": Equal("bar\n"),
+					}))
+				})
+
+				It("workload resource is unhealthy", func() {
+					getConditionOfType := func(element interface{}) string {
+						return element.(metav1.Condition).Type
+					}
+
+					Eventually(func() int {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return len(obj.Status.Resources)
+					}).Should(Equal(1))
+
+					Eventually(func() []metav1.Condition {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return obj.Status.Resources[0].Conditions
+					}).Should(MatchAllElements(getConditionOfType, Elements{
+						"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionTrue),
+							"Reason": Equal("ResourceSubmissionComplete"),
+						}),
+						"Healthy": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionFalse),
+							//"Reason": Equal("MatchedField"),
+						}),
+						"Ready": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionFalse),
+							//"Reason": Equal("Ready"),
+						}),
+					}))
+
+					Consistently(func() []metav1.Condition {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return obj.Status.Resources[0].Conditions
+					}).Should(MatchAllElements(getConditionOfType, Elements{
+						"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionTrue),
+							"Reason": Equal("ResourceSubmissionComplete"),
+						}),
+						"Healthy": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionFalse),
+							"Reason": Equal("MatchedField"),
+						}),
+						"Ready": MatchFields(IgnoreExtras, Fields{
+							"Status": Equal(metav1.ConditionFalse),
+							"Reason": Equal("MatchedField"),
+						}),
+					}))
+				})
+
+				When("object subsequently satisfies healthRule again", func() {
+					BeforeEach(func() {
+						// ensure second reconcile occurred
+						opts := []client.ListOption{
+							client.InNamespace(testNS),
+						}
+
+						testsList := &resources.TestObjList{}
+
+						Eventually(func() ([]resources.TestObj, error) {
+							err := c.List(ctx, testsList, opts...)
+							return testsList.Items, err
+						}).Should(HaveLen(2))
+
+						workload.Spec.Params = []v1alpha1.OwnerParam{
+							{
+								Name:  "foo",
+								Value: apiextensionsv1.JSON{Raw: []byte(`"qux"`)},
+							},
+							{
+								Name:  "health",
+								Value: apiextensionsv1.JSON{Raw: []byte(`"healthy"`)},
+							},
+						}
+
+						utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
+					})
+					It("workload resource shares value", func() {
+						Eventually(func() int {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return len(obj.Status.Resources)
+						}).Should(Equal(1))
+
+						Eventually(func() int {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return len(obj.Status.Resources[0].Outputs)
+						}).Should(Equal(1))
+
+						Eventually(func() v1alpha1.Output {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Resources[0].Outputs[0]
+						}).Should(MatchFields(IgnoreExtras, Fields{
+							"Name":    Equal("config"),
+							"Preview": Equal("qux\n"), // TODO: investigate why there is a trailing newline
+						}))
+					})
+
+					It("workload resource is healthy", func() {
+						getConditionOfType := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() int {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return len(obj.Status.Resources)
+						}).Should(Equal(1))
+
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Resources[0].Conditions
+						}).Should(MatchAllElements(getConditionOfType, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+								"Reason": Equal("ResourceSubmissionComplete"),
+							}),
+							"Healthy": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+								"Reason": Equal("MatchedField"),
+							}),
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+								"Reason": Equal("Ready"),
+							}),
+						}))
+					})
+				})
+			})
+		})
+	})
+
 	Context("mutable template", func() {
 		BeforeEach(func() {
 			templateYaml := utils.HereYaml(`
