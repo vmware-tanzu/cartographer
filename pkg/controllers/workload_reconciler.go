@@ -332,7 +332,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
-	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus) bool
+	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus, context.Context, *WorkloadReconciler) (bool, error)
 	for _, prevResource := range previousResources {
 		if prevResource.StampedRef == nil {
 			continue
@@ -365,7 +365,13 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 				continue
 			}
 
-			if equivalenceTest(realizedResource, prevResource) {
+			var equivalent bool
+
+			equivalent, err = equivalenceTest(realizedResource, prevResource, ctx, r)
+			if err != nil {
+				return fmt.Errorf("failed to perform equivalence test: %w", err)
+			}
+			if equivalent {
 				orphaned = false
 				break
 			}
@@ -391,20 +397,33 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	return nil
 }
 
-func mutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus) bool {
+func mutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus, _ context.Context, _ *WorkloadReconciler) (bool, error) {
 	return realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
 		realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
-		realizedResource.StampedRef.Name == prevResource.StampedRef.Name
+		realizedResource.StampedRef.Name == prevResource.StampedRef.Name, nil
 }
 
-func immutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus) bool {
-	if realizedResource.StampedRef.Lifecycle != prevResource.StampedRef.Lifecycle {
-		return mutableEquivalenceTest(realizedResource, prevResource)
+func immutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevResource v1alpha1.ResourceStatus, ctx context.Context, r *WorkloadReconciler) (bool, error) {
+	obj := &unstructured.Unstructured{}
+
+	obj.SetNamespace(prevResource.StampedRef.ObjectReference.Namespace)
+	obj.SetName(prevResource.StampedRef.ObjectReference.Name)
+	obj.SetGroupVersionKind(prevResource.StampedRef.ObjectReference.GroupVersionKind())
+
+	prevObj, err := r.Repo.GetUnstructured(ctx, obj)
+	if err != nil {
+		return false, fmt.Errorf("get unstructured: %w", err)
+	}
+
+	prevLabels := prevObj.GetLabels()
+
+	if lifecycleLabel, ok := prevLabels["carto.run/template-lifecycle"]; !ok || lifecycleLabel == "mutable" {
+		return mutableEquivalenceTest(realizedResource, prevResource, ctx, r)
 	}
 
 	return realizedResource.TemplateRef.Name == prevResource.TemplateRef.Name &&
 		realizedResource.TemplateRef.Kind == prevResource.TemplateRef.Kind &&
-		realizedResource.Name == prevResource.Name
+		realizedResource.Name == prevResource.Name, nil
 }
 
 func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {

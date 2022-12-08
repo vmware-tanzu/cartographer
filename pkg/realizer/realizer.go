@@ -235,8 +235,7 @@ func (r *realizer) generateRealizedResource(ctx context.Context, resource OwnerR
 				Name:       stampedObject.GetName(),
 				APIVersion: stampedObject.GetAPIVersion(),
 			},
-			Resource:  qualifiedResource,
-			Lifecycle: stampedObject.GetLabels()["carto.run/template-lifecycle"],
+			Resource: qualifiedResource,
 		}
 	}
 

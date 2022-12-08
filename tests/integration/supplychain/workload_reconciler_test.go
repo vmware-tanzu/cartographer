@@ -1320,7 +1320,7 @@ var _ = Describe("WorkloadReconciler", func() {
 
 				utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterConfigTemplate{})
 			})
-			FIt("deletes the original mutable stamped object", func() {
+			It("deletes the original mutable stamped object", func() {
 				type testAssertion struct {
 					TestObjectsCount     int
 					FoundTestObjectName  string

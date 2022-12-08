@@ -144,13 +144,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 
 		labels := r.resourceLabeler(resource)
-		labelsWithLifecycle := make(map[string]string)
-		for k, v := range labels {
-			labelsWithLifecycle[k] = v
-		}
-		labelsWithLifecycle["carto.run/template-lifecycle"] = string(*template.GetLifecycle())
+		labels["carto.run/template-lifecycle"] = string(*template.GetLifecycle())
 
-		stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labelsWithLifecycle)
+		stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
 		stampedObject, err = stamper.Stamp(ctx, template.GetResourceTemplate())
 		if err != nil {
 			log.Error(err, "failed to stamp resource")
@@ -171,7 +167,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		}
 
 		if template.GetLifecycle().IsImmutable() {
-			err = r.ownerRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labelsWithLifecycle)
+			err = r.ownerRepo.EnsureImmutableObjectExistsOnCluster(ctx, stampedObject, labels)
 			if err != nil {
 				log.Error(err, "failed to ensure object exists on cluster", "object", stampedObject)
 				return template, nil, nil, passThrough, templateName, errors.ApplyStampedObjectError{
