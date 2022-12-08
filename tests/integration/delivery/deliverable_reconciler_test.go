@@ -722,4 +722,153 @@ var _ = Describe("DeliverableReconciler", func() {
 
 		})
 	})
+
+	Context("mutable template", func() {
+		BeforeEach(func() {
+			templateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: my-template
+				spec:
+			      template:
+					apiVersion: v1
+					kind: ConfigMap
+					metadata:
+					  name: mutable-test-obj
+					data:
+					  foo: hard-coded-other-val
+					  additionalField: $(params.health)$
+			`)
+
+			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+			cleanups = append(cleanups, template)
+
+			deliveryYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterDelivery
+				metadata:
+				  name: my-delivery
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: my-template
+			`)
+
+			delivery := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, deliveryYaml)
+			cleanups = append(cleanups, delivery)
+
+			deliverable := v1alpha1.Deliverable{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deliverable",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deliverable-jaylen",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.DeliverableSpec{
+					ServiceAccountName: "my-service-account",
+					Params: []v1alpha1.OwnerParam{
+						{
+							Name:  "foo",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"bar"`)},
+						},
+						{
+							Name:  "health",
+							Value: apiextensionsv1.JSON{Raw: []byte(`"healthy"`)},
+						},
+					},
+				},
+			}
+
+			cleanups = append(cleanups, &deliverable)
+			err := c.Create(ctx, &deliverable, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("creates the object", func() {
+			configList := &corev1.ConfigMapList{}
+
+			Eventually(func() (int, error) {
+				err := c.List(ctx, configList, &client.ListOptions{Namespace: testNS})
+				return len(configList.Items), err
+			}).Should(Equal(1))
+
+			Expect(configList.Items[0].Name).To(Equal("mutable-test-obj"))
+			Expect(configList.Items[0].Data["foo"]).To(Equal("hard-coded-other-val"))
+		})
+		When("the template is changed to an immutable template", func() {
+			BeforeEach(func() {
+				opts := []client.ListOption{
+					client.InNamespace(testNS),
+				}
+				configMapList := &corev1.ConfigMapList{}
+				Eventually(func() (int, error) {
+					err := c.List(ctx, configMapList, opts...)
+					return len(configMapList.Items), err
+				}).Should(Equal(1))
+
+				immutableTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: my-template
+				spec:
+			      lifecycle: immutable
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(params.foo)$
+					  additionalField: $(params.health)$
+			`)
+
+				utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterTemplate{})
+			})
+			It("deletes the original mutable stamped object", func() {
+				type testAssertion struct {
+					TestObjectsCount     int
+					FoundTestObjectName  string
+					FoundTestObjFieldVal string
+					ConfigMapCount       int
+				}
+
+				Eventually(func() (testAssertion, error) {
+					testList := &resources.TestObjList{}
+					var ta testAssertion
+					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+					ta.TestObjectsCount = len(testList.Items)
+					if len(testList.Items) != 1 || err != nil {
+						return ta, err
+					}
+
+					ta.FoundTestObjectName = testList.Items[0].Name
+					ta.FoundTestObjFieldVal = testList.Items[0].Spec.Foo
+
+					configMapList := &corev1.ConfigMapList{}
+					err = c.List(ctx, configMapList, &client.ListOptions{Namespace: testNS})
+					ta.ConfigMapCount = len(configMapList.Items)
+					return ta, err
+				}).Should(MatchAllFields(Fields{
+					"TestObjectsCount":     Equal(1),
+					"FoundTestObjectName":  ContainSubstring("test-resource-"),
+					"FoundTestObjFieldVal": Equal("bar"),
+					"ConfigMapCount":       Equal(0),
+				}))
+			})
+		})
+	})
 })
