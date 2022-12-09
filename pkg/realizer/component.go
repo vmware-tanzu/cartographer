@@ -211,6 +211,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 				for _, obj := range allRunnableStampedObjects {
 					log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
 				}
+				// TODO: throw a custom error here
 			}
 
 			output, err = stampReader.Output(latestSuccessfulObject)
