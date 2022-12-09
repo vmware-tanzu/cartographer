@@ -329,7 +329,7 @@ func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, prev
 		obj.SetGroupVersionKind(orphanedObj.GroupVersionKind())
 
 		log.V(logger.DEBUG).Info("deleting orphaned object", "object", orphanedObj)
-		err := r.Repo.Delete(ctx, obj)
+		err = r.Repo.Delete(ctx, obj)
 		if err != nil {
 			return err
 		}

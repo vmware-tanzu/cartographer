@@ -670,19 +670,32 @@ var _ = Describe("WorkloadReconciler", func() {
 					})
 
 					It("prevents reading fields of the stamped object", func() {
+						getConditionOfType := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
 						Eventually(func() []metav1.Condition {
-							obj := &v1alpha1.Workload{}
-							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							workload := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
 							Expect(err).NotTo(HaveOccurred())
 
-							return obj.Status.Conditions
-						}).Should(ContainElements(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("ResourcesSubmitted"),
-								"Reason": Equal("MissingValueAtPath"),
-								"Status": Equal(metav1.ConditionUnknown),
+							if len(workload.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+
+							return workload.Status.Resources[1].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("TemplateStampFailure"),
+								"Message": ContainSubstring("failed to recursively evaluate template: failed to interpolate template at path [data.foo]: evaluate tag $(config)$: jsonpath returned empty list: config"),
 							}),
-						))
+						}))
+
+						workload := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(workload.Status.Resources[0].Outputs).To(HaveLen(0))
 					})
 
 					When("the healthRule is subsequently satisfied", func() {
@@ -787,19 +800,32 @@ var _ = Describe("WorkloadReconciler", func() {
 					})
 
 					It("prevents reading fields of the stamped object", func() {
+						getConditionOfType := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
 						Eventually(func() []metav1.Condition {
-							obj := &v1alpha1.Workload{}
-							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+							workload := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
 							Expect(err).NotTo(HaveOccurred())
 
-							return obj.Status.Conditions
-						}).Should(ContainElements(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("ResourcesSubmitted"),
-								"Reason": Equal("MissingValueAtPath"),
-								"Status": Equal(metav1.ConditionUnknown),
+							if len(workload.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+
+							return workload.Status.Resources[1].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("TemplateStampFailure"),
+								"Message": ContainSubstring("failed to recursively evaluate template: failed to interpolate template at path [data.foo]: evaluate tag $(config)$: jsonpath returned empty list: config"),
 							}),
-						))
+						}))
+
+						workload := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(workload.Status.Resources[0].Outputs).To(HaveLen(0))
 					})
 				})
 			})

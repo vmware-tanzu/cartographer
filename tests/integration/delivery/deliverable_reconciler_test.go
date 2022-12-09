@@ -1160,20 +1160,33 @@ var _ = Describe("DeliverableReconciler", func() {
 						))
 					})
 
-					XIt("prevents reading fields of the stamped object", func() {
+					It("prevents reading fields of the stamped object", func() {
+						getConditionOfType := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
 						Eventually(func() []metav1.Condition {
 							deliverable := &v1alpha1.Deliverable{}
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
 							Expect(err).NotTo(HaveOccurred())
 
-							return deliverable.Status.Conditions
-						}).Should(ContainElements(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("ResourcesSubmitted"),
-								"Reason": Equal("MissingValueAtPath"),
-								"Status": Equal(metav1.ConditionUnknown),
+							if len(deliverable.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+
+							return deliverable.Status.Resources[1].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("TemplateStampFailure"),
+								"Message": ContainSubstring("failed to recursively evaluate template: failed to interpolate template at path [data.foo]: evaluate tag $(sources.source.url)$: jsonpath returned empty list: sources.source.url"),
 							}),
-						))
+						}))
+
+						deliverable := &v1alpha1.Deliverable{}
+						err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(deliverable.Status.Resources[0].Outputs).To(HaveLen(0))
 					})
 
 					When("the healthRule is subsequently satisfied", func() {
@@ -1277,20 +1290,33 @@ var _ = Describe("DeliverableReconciler", func() {
 						))
 					})
 
-					XIt("prevents reading fields of the stamped object", func() {
+					It("prevents reading fields of the stamped object", func() {
+						getConditionOfType := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
 						Eventually(func() []metav1.Condition {
-							obj := &v1alpha1.Deliverable{}
-							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							deliverable := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
 							Expect(err).NotTo(HaveOccurred())
 
-							return obj.Status.Conditions
-						}).Should(ContainElements(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("ResourcesSubmitted"),
-								"Reason": Equal("MissingValueAtPath"),
-								"Status": Equal(metav1.ConditionUnknown),
+							if len(deliverable.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+
+							return deliverable.Status.Resources[1].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionFalse),
+								"Reason":  Equal("TemplateStampFailure"),
+								"Message": ContainSubstring("failed to recursively evaluate template: failed to interpolate template at path [data.foo]: evaluate tag $(sources.source.url)$: jsonpath returned empty list: sources.source.url"),
 							}),
-						))
+						}))
+
+						deliverable := &v1alpha1.Deliverable{}
+						err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(deliverable.Status.Resources[0].Outputs).To(HaveLen(0))
 					})
 				})
 			})
