@@ -308,7 +308,9 @@ var _ = Describe("WorkloadReconciler", func() {
 				Name: "fine-i-have-a-name",
 			}
 
-			labels := labelerForBuiltResourceRealizer(resource)
+			lifecycleReader := lifecycleReader{lifecycle: templates.Immutable}
+
+			labels := labelerForBuiltResourceRealizer(resource, &lifecycleReader)
 			Expect(labels).To(Equal(templates.Labels{
 				"carto.run/workload-name":         "my-workload-name",
 				"carto.run/workload-namespace":    "my-namespace",
@@ -316,6 +318,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				"carto.run/resource-name":         resource.Name,
 				"carto.run/template-kind":         resource.TemplateRef.Kind,
 				"carto.run/cluster-template-name": resource.TemplateRef.Name,
+				"carto.run/template-lifecycle":    "immutable",
 			}))
 		})
 
@@ -1319,7 +1322,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				return nil
 			}
 		})
-		Context("when previous resource stamped from template with mutable lifecycle", func() {
+		Context("when current resource stamped from template with mutable lifecycle", func() {
 			BeforeEach(func() {
 				someTemplate := v1alpha1.ClusterTemplate{}
 				repo.GetTemplateReturns(&someTemplate, nil)
@@ -1406,113 +1409,236 @@ var _ = Describe("WorkloadReconciler", func() {
 			})
 		})
 
-		Context("when previous resource stamped from immutable template", func() {
+		Context("when current resource stamped from immutable template", func() {
 			BeforeEach(func() {
 				someTemplate := v1alpha1.ClusterTemplate{Spec: v1alpha1.TemplateSpec{Lifecycle: "immutable"}}
 				repo.GetTemplateReturns(&someTemplate, nil)
 			})
 
-			Context("and the previous resource and a newly created resource are from the same step and template", func() {
+			Context("when previous resource stamped with immutable template", func() {
 				BeforeEach(func() {
-					wl.Status.Resources = []v1alpha1.ResourceStatus{
-						{
-							RealizedResource: v1alpha1.RealizedResource{
-								Name: "some-resource",
-								StampedRef: &v1alpha1.StampedRef{
-									ObjectReference: &corev1.ObjectReference{
-										APIVersion: "some-api-version",
-										Kind:       "some-kind",
-										Name:       "some-obj-name",
+					unstructuredWithImmutableLabel := unstructured.Unstructured{}
+					unstructuredWithImmutableLabel.SetLabels(map[string]string{"carto.run/template-lifecycle": "immutable"})
+					repo.GetUnstructuredReturnsOnCall(0, &unstructuredWithImmutableLabel, nil)
+				})
+				Context("and the previous resource and a newly created resource are from the same step and template", func() {
+					BeforeEach(func() {
+						wl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
 									},
-									Resource: "some-kind",
-								},
-								TemplateRef: &corev1.ObjectReference{
-									Name: "some-template-name",
-									Kind: "some-template-kind",
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
 								},
 							},
-						},
-					}
-					repo.GetWorkloadReturns(wl, nil)
+						}
+						repo.GetWorkloadReturns(wl, nil)
+					})
+
+					It("does not attempt to delete any objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(0))
+					})
 				})
 
-				It("does not attempt to delete any objects", func() {
-					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).NotTo(HaveOccurred())
+				Context("and the previous resource shares a template with a newly created resource but shares no step", func() {
+					BeforeEach(func() {
+						wl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-other-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetWorkloadReturns(wl, nil)
+					})
 
-					Expect(repo.DeleteCallCount()).To(Equal(0))
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
+				})
+
+				Context("and the previous resource shares a step with a newly created resource but is from a different template", func() {
+					BeforeEach(func() {
+						wl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-other-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetWorkloadReturns(wl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
 				})
 			})
 
-			Context("and the previous resource shares a template with a newly created resource but shares no step", func() {
+			Context("when previous resource stamped from a mutable template", func() {
 				BeforeEach(func() {
-					wl.Status.Resources = []v1alpha1.ResourceStatus{
-						{
-							RealizedResource: v1alpha1.RealizedResource{
-								Name: "some-other-resource",
-								StampedRef: &v1alpha1.StampedRef{
-									ObjectReference: &corev1.ObjectReference{
-										APIVersion: "some-api-version",
-										Kind:       "some-kind",
-										Name:       "some-obj-name",
+					unstructuredWithMutableLabel := unstructured.Unstructured{}
+					unstructuredWithMutableLabel.SetLabels(map[string]string{"carto.run/template-lifecycle": "mutable"})
+					repo.GetUnstructuredReturnsOnCall(0, &unstructuredWithMutableLabel, nil)
+				})
+
+				Context("and the previous resource and a newly created resource are from the same step and template", func() {
+					BeforeEach(func() {
+						wl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
 									},
-									Resource: "some-kind",
-								},
-								TemplateRef: &corev1.ObjectReference{
-									Name: "some-template-name",
-									Kind: "some-template-kind",
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
 								},
 							},
-						},
-					}
-					repo.GetWorkloadReturns(wl, nil)
+						}
+						repo.GetWorkloadReturns(wl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
 				})
 
-				It("deletes the orphaned objects", func() {
-					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(repo.DeleteCallCount()).To(Equal(1))
-
-					_, obj := repo.DeleteArgsForCall(0)
-					Expect(obj.GetName()).To(Equal("some-obj-name"))
-					Expect(obj.GetKind()).To(Equal("some-kind"))
-				})
-			})
-
-			Context("and the previous resource shares a step with a newly created resource but is from a different template", func() {
-				BeforeEach(func() {
-					wl.Status.Resources = []v1alpha1.ResourceStatus{
-						{
-							RealizedResource: v1alpha1.RealizedResource{
-								Name: "some-resource",
-								StampedRef: &v1alpha1.StampedRef{
-									ObjectReference: &corev1.ObjectReference{
-										APIVersion: "some-api-version",
-										Kind:       "some-kind",
-										Name:       "some-obj-name",
+				Context("and the previous resource shares a template with a newly created resource but shares no step", func() {
+					BeforeEach(func() {
+						wl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-other-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
 									},
-									Resource: "some-kind",
-								},
-								TemplateRef: &corev1.ObjectReference{
-									Name: "some-other-template-name",
-									Kind: "some-template-kind",
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-template-name",
+										Kind: "some-template-kind",
+									},
 								},
 							},
-						},
-					}
-					repo.GetWorkloadReturns(wl, nil)
+						}
+						repo.GetWorkloadReturns(wl, nil)
+					})
+
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
 				})
 
-				It("deletes the orphaned objects", func() {
-					_, err := reconciler.Reconcile(ctx, req)
-					Expect(err).NotTo(HaveOccurred())
+				Context("and the previous resource shares a step with a newly created resource but is from a different template", func() {
+					BeforeEach(func() {
+						wl.Status.Resources = []v1alpha1.ResourceStatus{
+							{
+								RealizedResource: v1alpha1.RealizedResource{
+									Name: "some-resource",
+									StampedRef: &v1alpha1.StampedRef{
+										ObjectReference: &corev1.ObjectReference{
+											APIVersion: "some-api-version",
+											Kind:       "some-kind",
+											Name:       "some-obj-name",
+										},
+										Resource: "some-kind",
+									},
+									TemplateRef: &corev1.ObjectReference{
+										Name: "some-other-template-name",
+										Kind: "some-template-kind",
+									},
+								},
+							},
+						}
+						repo.GetWorkloadReturns(wl, nil)
+					})
 
-					Expect(repo.DeleteCallCount()).To(Equal(1))
+					It("deletes the orphaned objects", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
 
-					_, obj := repo.DeleteArgsForCall(0)
-					Expect(obj.GetName()).To(Equal("some-obj-name"))
-					Expect(obj.GetKind()).To(Equal("some-kind"))
+						Expect(repo.DeleteCallCount()).To(Equal(1))
+
+						_, obj := repo.DeleteArgsForCall(0)
+						Expect(obj.GetName()).To(Equal("some-obj-name"))
+						Expect(obj.GetKind()).To(Equal("some-kind"))
+					})
 				})
 			})
 		})

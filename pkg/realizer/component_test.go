@@ -104,7 +104,7 @@ var _ = Describe("Resource", func() {
 
 		theAuthToken = "tis-but-a-flesh-wound"
 
-		placeholderLabeler := func(resource realizer.OwnerResource) templates.Labels {
+		placeholderLabeler := func(resource realizer.OwnerResource, reader templates.Reader) templates.Labels {
 			return templates.Labels{"expected-labels-from-labeler-placeholder": "labeler"}
 		}
 		r, err = resourceRealizerBuilder(theAuthToken, &workload, realizer.NewContextGenerator(&workload, []v1alpha1.OwnerParam{}, supplyChainParams), &fakeSystemRepo, placeholderLabeler)
