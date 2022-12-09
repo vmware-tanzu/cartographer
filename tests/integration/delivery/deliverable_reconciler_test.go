@@ -1166,16 +1166,6 @@ var _ = Describe("DeliverableReconciler", func() {
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
 							Expect(err).NotTo(HaveOccurred())
 
-							testList := &resources.TestObjList{}
-
-							err = c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
-
-							if len(testList.Items) == 1 {
-								testObj := testList.Items[0]
-								Expect(testObj.Name).To(ContainSubstring("test-resource-"))
-								Expect(testObj.Spec.Foo).To(Equal("some-address"))
-							}
-
 							return deliverable.Status.Conditions
 						}).Should(ContainElements(
 							MatchFields(IgnoreExtras, Fields{
