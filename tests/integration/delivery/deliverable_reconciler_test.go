@@ -1160,13 +1160,23 @@ var _ = Describe("DeliverableReconciler", func() {
 						))
 					})
 
-					It("prevents reading fields of the stamped object", func() {
+					XIt("prevents reading fields of the stamped object", func() {
 						Eventually(func() []metav1.Condition {
-							obj := &v1alpha1.Deliverable{}
-							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							deliverable := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
 							Expect(err).NotTo(HaveOccurred())
 
-							return obj.Status.Conditions
+							testList := &resources.TestObjList{}
+
+							err = c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+
+							if len(testList.Items) == 1 {
+								testObj := testList.Items[0]
+								Expect(testObj.Name).To(ContainSubstring("test-resource-"))
+								Expect(testObj.Spec.Foo).To(Equal("some-address"))
+							}
+
+							return deliverable.Status.Conditions
 						}).Should(ContainElements(
 							MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal("ResourcesSubmitted"),
@@ -1277,7 +1287,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						))
 					})
 
-					It("prevents reading fields of the stamped object", func() {
+					XIt("prevents reading fields of the stamped object", func() {
 						Eventually(func() []metav1.Condition {
 							obj := &v1alpha1.Deliverable{}
 							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
