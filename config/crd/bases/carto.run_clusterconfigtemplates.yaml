@@ -57,8 +57,8 @@ spec:
                   is specified in jsonpath format, eg: .data'
                 type: string
               healthRule:
-                description: HealthRule specifies rubric for determining the health
-                  of a resource stamped by this template
+                description: 'HealthRule specifies rubric for determining the health
+                  of a resource stamped by this template See: https://cartographer.sh/docs/latest/health-rules/'
                 properties:
                   alwaysHealthy:
                     description: AlwaysHealthy being set indicates the resource should
@@ -207,10 +207,10 @@ spec:
                 type: object
               lifecycle:
                 default: mutable
-                description: Lifecycle specifies whether template modifications should
+                description: 'Lifecycle specifies whether template modifications should
                   result in originally created objects being updated (`mutable`) or
                   in new objects created alongside original objects (`immutable` or
-                  `tekton`).
+                  `tekton`). See: https://cartographer.sh/docs/latest/lifecycle/'
                 enum:
                 - mutable
                 - immutable
