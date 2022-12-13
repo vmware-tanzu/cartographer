@@ -21,6 +21,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
@@ -1188,6 +1189,195 @@ var _ = Describe("WorkloadReconciler", func() {
 				})
 			})
 		})
+	})
+
+	Context("health progression", func() {
+		var (
+			immutableTemplateBase, expectedValue string
+			workload                             v1alpha1.Workload
+		)
+
+		var itResultsInAHealthyWorkload = func() {
+			Eventually(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("SupplyChainReady"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("ResourcesSubmitted"),
+					"Reason": Equal("ResourceSubmissionComplete"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal("Ready"),
+					"Reason": Equal("Ready"),
+					"Status": Equal(metav1.ConditionTrue),
+				}),
+			))
+
+			Consistently(func() []metav1.Condition {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				return obj.Status.Conditions
+			}).Should(ContainElements(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal("Ready"),
+				"Reason": Equal("Ready"),
+				"Status": Equal(metav1.ConditionTrue),
+			})))
+		}
+		var itStampsTheObjectNTimes = func(times int) {
+			testList := &resources.TestObjList{}
+
+			Eventually(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}).Should(Equal(times))
+
+			Consistently(func() (int, error) {
+				err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+				return len(testList.Items), err
+			}, "2s").Should(Equal(1))
+
+			for _, item := range testList.Items {
+				Expect(item.Name).To(ContainSubstring("test-resource-"))
+			}
+		}
+		var itStampsTheTemplatedObjectOnce = func() {
+			itStampsTheObjectNTimes(1)
+		}
+		var updateWorkloadWithImage = func(image string) {
+			workload.Spec.Source.Image = &image
+			utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
+		}
+
+		BeforeEach(func() {
+			immutableTemplateBase = `
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterConfigTemplate
+				metadata:
+				  name: my-config-template
+				spec:
+				  configPath: spec.foo
+			      lifecycle: %s
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  generateName: test-resource-
+					spec:
+					  foo: $(workload.spec.source.image)$
+				  healthRule:
+					  %s:
+			`
+
+			followOnTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: follow-on-template
+				spec:
+			      template:
+					apiVersion: v1
+					kind: ConfigMap
+					metadata:
+					  name: follow-object
+					data:
+					  foo: $(config)$
+			`)
+
+			supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: my-supply-chain
+				spec:
+				  selector:
+					"some-key": "some-value"
+			      resources:
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			        - name: follow-on-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: follow-on-template
+					  configs:
+			            - resource: my-first-resource
+			              name: config
+			`)
+
+			expectedValue = "iteration 0"
+
+			workload = v1alpha1.Workload{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Workload",
+					APIVersion: "carto.run/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workload-joe",
+					Namespace: testNS,
+					Labels: map[string]string{
+						"some-key": "some-value",
+					},
+				},
+				Spec: v1alpha1.WorkloadSpec{
+					ServiceAccountName: "my-service-account",
+					Source: &v1alpha1.Source{
+						Image: &expectedValue,
+					},
+				},
+			}
+
+			followOnTemplate := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, followOnTemplateYaml)
+			cleanups = append(cleanups, followOnTemplate)
+
+			supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+			cleanups = append(cleanups, supplyChain)
+
+			err := c.Create(ctx, &workload, &client.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			cleanups = append(cleanups, &workload)
+		})
+
+		type Round struct {
+			ObjectStatus []metav1.Condition
+			Expectations []func()
+		}
+
+		DescribeTable("Health Progression",
+			func(healthRule string, lifecycle string, rounds []Round) {
+
+			},
+			Entry(nil, "alwaysHealthy: {}", "mutable", []Round{
+				{
+					ObjectStatus: []metav1.Condition{
+						{
+							Type:    "Ready",
+							Status:  "True",
+							Reason:  "Ready",
+							Message: "",
+						},
+					},
+					Expectations: []func(){
+						itResultsInAHealthyWorkload,
+						itStampsTheTemplatedObjectOnce,
+					},
+				},
+			}),
+		)
 	})
 
 	Context("mutable template", func() {
