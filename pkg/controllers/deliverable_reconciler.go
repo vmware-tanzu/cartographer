@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -225,7 +226,7 @@ func (r *DeliverableReconciler) isDeliveryReady(delivery *v1alpha1.ClusterDelive
 }
 
 func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
-	return func(resource realizer.OwnerResource) templates.Labels {
+	return func(resource realizer.OwnerResource, reader templates.Reader) templates.Labels {
 		return templates.Labels{
 			"carto.run/deliverable-name":      owner.GetName(),
 			"carto.run/deliverable-namespace": owner.GetNamespace(),
@@ -233,6 +234,7 @@ func buildDeliverableResourceLabeler(owner, blueprint client.Object) realizer.Re
 			"carto.run/resource-name":         resource.Name,
 			"carto.run/template-kind":         resource.TemplateRef.Kind,
 			"carto.run/cluster-template-name": resource.TemplateRef.Name,
+			"carto.run/template-lifecycle":    string(*reader.GetLifecycle()),
 		}
 	}
 }
@@ -281,18 +283,36 @@ func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, prev
 	log := logr.FromContextOrDiscard(ctx)
 
 	var orphanedObjs []*corev1.ObjectReference
+	var equivalenceTest func(v1alpha1.ResourceStatus, v1alpha1.ResourceStatus, context.Context, repository.Repository) (bool, error)
+	var err error
+
 	for _, prevResource := range previousResources {
 		if prevResource.StampedRef == nil {
 			continue
 		}
 		orphaned := true
+
+		equivalenceTest, err = getEquivalenceTest(ctx, r.Repo, prevResource)
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				orphanedObjs = append(orphanedObjs, prevResource.StampedRef.ObjectReference)
+				continue
+			}
+			return fmt.Errorf("unable to get equivalence test %w", err)
+		}
+
 		for _, realizedResource := range realizedResources {
 			if realizedResource.StampedRef == nil {
 				continue
 			}
-			if realizedResource.StampedRef.GroupVersionKind() == prevResource.StampedRef.GroupVersionKind() &&
-				realizedResource.StampedRef.Namespace == prevResource.StampedRef.Namespace &&
-				realizedResource.StampedRef.Name == prevResource.StampedRef.Name {
+
+			var equivalent bool
+
+			equivalent, err = equivalenceTest(realizedResource, prevResource, ctx, r.Repo)
+			if err != nil {
+				return fmt.Errorf("failed to perform equivalence test: %w", err)
+			}
+			if equivalent {
 				orphaned = false
 				break
 			}
@@ -309,7 +329,7 @@ func (r *DeliverableReconciler) cleanupOrphanedObjects(ctx context.Context, prev
 		obj.SetGroupVersionKind(orphanedObj.GroupVersionKind())
 
 		log.V(logger.DEBUG).Info("deleting orphaned object", "object", orphanedObj)
-		err := r.Repo.Delete(ctx, obj)
+		err = r.Repo.Delete(ctx, obj)
 		if err != nil {
 			return err
 		}
