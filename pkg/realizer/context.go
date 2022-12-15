@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
 // Todo: Pass an interface for owner and ownerParams that supports getParams and getObject
@@ -36,7 +37,7 @@ type contextGenerator struct {
 }
 
 // Generate builds a context based on the template, owner and resource
-func (c contextGenerator) Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter) map[string]interface{} {
+func (c contextGenerator) Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter, labels templates.Labels) map[string]interface{} {
 	inputGenerator := NewInputGenerator(resource, outputs)
 	merger := NewParamMerger(resource.Params, c.blueprintParams, c.ownerParams)
 
@@ -51,6 +52,7 @@ func (c contextGenerator) Generate(templateParams TemplateParams, resource Owner
 		"images":      images,
 		"configs":     configs,
 		"deployment":  inputGenerator.GetDeployment(),
+		"labels":      labels,
 	}
 
 	if len(sources) == 1 {
