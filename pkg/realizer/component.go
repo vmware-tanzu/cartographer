@@ -39,7 +39,7 @@ import (
 //go:generate go run -modfile ../../hack/tools/go.mod github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 type ContextGenerator interface {
-	Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter) map[string]interface{}
+	Generate(templateParams TemplateParams, resource OwnerResource, outputs OutputsGetter, labels templates.Labels) map[string]interface{}
 }
 
 type resourceRealizer struct {
@@ -145,7 +145,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 
 		labels := r.resourceLabeler(resource, template)
 
-		stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs), labels)
+		stamper := templates.StamperBuilder(r.owner, r.templatingContext.Generate(template, resource, outputs, labels), labels)
 		stampedObject, err = stamper.Stamp(ctx, template.GetResourceTemplate())
 		if err != nil {
 			log.Error(err, "failed to stamp resource")
