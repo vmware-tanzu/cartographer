@@ -799,7 +799,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						))
 					})
 
-					FIt("prevents reading fields of the stamped object", func() {
+					It("prevents reading fields of the stamped object", func() {
 						getConditionOfType := func(element interface{}) string {
 							return element.(metav1.Condition).Type
 						}
@@ -826,7 +826,6 @@ var _ = Describe("WorkloadReconciler", func() {
 						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(workload.Status.Resources[0].Outputs).To(HaveLen(0))
-						itResultsInAHealthyWorkload()
 					})
 				})
 			})
