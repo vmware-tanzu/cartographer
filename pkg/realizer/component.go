@@ -188,9 +188,6 @@ func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResour
 	}
 
 	healthRule := template.GetHealthRule()
-	if healthRule == nil && *template.GetLifecycle() == templates.Tekton {
-		healthRule = &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
-	}
 
 	var examinedObjects []*stamp.ExaminedObject
 
