@@ -124,13 +124,14 @@ func (e StampError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err               error
-	ResourceName      string
-	StampedObject     *unstructured.Unstructured
-	BlueprintName     string
-	BlueprintType     string
-	QualifiedResource string
-	PassThroughInput  string
+	Err                  error
+	ResourceName         string
+	StampedObject        *unstructured.Unstructured
+	BlueprintName        string
+	BlueprintType        string
+	QualifiedResource    string
+	PassThroughInput     string
+	IsLifecycleImmutable bool
 }
 
 func (e RetrieveOutputError) Error() string {
@@ -141,6 +142,15 @@ func (e RetrieveOutputError) Error() string {
 			e.BlueprintType,
 			e.BlueprintName,
 			e.Err).Error()
+	}
+
+	if e.IsLifecycleImmutable && e.QualifiedResource == "" {
+		return fmt.Errorf("unable to retrieve outputs for resource [%s] in %s [%s]: %w",
+			e.ResourceName,
+			e.BlueprintType,
+			e.BlueprintName,
+			e.Err,
+		).Error()
 	}
 
 	if e.JsonPathExpression() == NoJsonpathContext {

@@ -271,39 +271,89 @@ var _ = Describe("Resource", func() {
 							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
 						})
 
-						It("creates a stamped object and returns the outputs and stampedObjects", func() {
-							template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-							Expect(err).ToNot(HaveOccurred())
-							Expect(template).ToNot(BeNil())
-							Expect(isPassThrough).To(BeFalse())
-							Expect(templateRefName).To(Equal("image-template-1"))
-							Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+						When("no returned object meets the healthRule", func() {
+							BeforeEach(func() {
+								templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
+									SingleConditionType: "Ready",
+								}
+							})
+							It("creates a stamped object, but returns an error and no output", func() {
+								template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+								Expect(template).ToNot(BeNil())
+								Expect(isPassThrough).To(BeFalse())
+								Expect(templateRefName).To(Equal("image-template-1"))
+								Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+								Expect(out).To(BeNil())
 
-							Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+								Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
 
-							_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+								_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
 
-							Expect(returnedStampedObject).To(Equal(stampedObject))
+								Expect(returnedStampedObject).To(Equal(stampedObject))
 
-							metadata := stampedObject.Object["metadata"]
-							metadataValues, ok := metadata.(map[string]interface{})
-							Expect(ok).To(BeTrue())
-							Expect(metadataValues["name"]).To(Equal("example-config-map"))
-							Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-								map[string]interface{}{
-									"apiVersion":         "",
-									"kind":               "",
-									"name":               "",
-									"uid":                "",
-									"controller":         true,
-									"blockOwnerDeletion": true,
-								},
-							}))
-							Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-							Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+								metadata := stampedObject.Object["metadata"]
+								metadataValues, ok := metadata.(map[string]interface{})
+								Expect(ok).To(BeTrue())
+								Expect(metadataValues["name"]).To(Equal("example-config-map"))
+								Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+									map[string]interface{}{
+										"apiVersion":         "",
+										"kind":               "",
+										"name":               "",
+										"uid":                "",
+										"controller":         true,
+										"blockOwnerDeletion": true,
+									},
+								}))
+								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
 
-							Expect(out.Source.Revision).To(Equal("some-revision"))
-							Expect(out.Source.URL).To(Equal("some-url"))
+								Expect(err).To(HaveOccurred())
+								Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in set of stamped objects"))
+								Expect(reflect.TypeOf(err).String()).To(Equal("errors.RetrieveOutputError"))
+							})
+						})
+
+						When("at least one returned object meets the healthRule", func() {
+							BeforeEach(func() {
+								templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
+									AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}},
+								}
+							})
+							It("creates a stamped object and returns the outputs and stampedObjects", func() {
+								template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+								Expect(err).ToNot(HaveOccurred())
+								Expect(template).ToNot(BeNil())
+								Expect(isPassThrough).To(BeFalse())
+								Expect(templateRefName).To(Equal("image-template-1"))
+								Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+
+								Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+
+								_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+
+								Expect(returnedStampedObject).To(Equal(stampedObject))
+
+								metadata := stampedObject.Object["metadata"]
+								metadataValues, ok := metadata.(map[string]interface{})
+								Expect(ok).To(BeTrue())
+								Expect(metadataValues["name"]).To(Equal("example-config-map"))
+								Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+									map[string]interface{}{
+										"apiVersion":         "",
+										"kind":               "",
+										"name":               "",
+										"uid":                "",
+										"controller":         true,
+										"blockOwnerDeletion": true,
+									},
+								}))
+								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+								Expect(out.Source.Revision).To(Equal("some-revision"))
+								Expect(out.Source.URL).To(Equal("some-url"))
+							})
 						})
 					})
 

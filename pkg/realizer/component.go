@@ -214,8 +214,16 @@ func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResour
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
 		}
 
-		return template, stampedObject, nil, passThrough, templateName, nil
-
+		return template, stampedObject, nil, passThrough, templateName, errors.RetrieveOutputError{
+			Err:                  fmt.Errorf("failed to find any healthy object in set of stamped objects"),
+			ResourceName:         resource.Name,
+			StampedObject:        stampedObject,
+			BlueprintName:        blueprintName,
+			BlueprintType:        errors.SupplyChain,
+			QualifiedResource:    "",
+			PassThroughInput:     templateOption.PassThrough,
+			IsLifecycleImmutable: true,
+		}
 	}
 
 	output, err = stampReader.Output(latestSuccessfulObject)
@@ -228,13 +236,14 @@ func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResour
 		}
 
 		return template, stampedObject, nil, passThrough, templateName, errors.RetrieveOutputError{
-			Err:               err,
-			ResourceName:      resource.Name,
-			StampedObject:     stampedObject,
-			BlueprintName:     blueprintName,
-			BlueprintType:     errors.SupplyChain,
-			QualifiedResource: qualifiedResource,
-			PassThroughInput:  templateOption.PassThrough,
+			Err:                  err,
+			ResourceName:         resource.Name,
+			StampedObject:        stampedObject,
+			BlueprintName:        blueprintName,
+			BlueprintType:        errors.SupplyChain,
+			QualifiedResource:    qualifiedResource,
+			PassThroughInput:     templateOption.PassThrough,
+			IsLifecycleImmutable: true,
 		}
 	}
 
