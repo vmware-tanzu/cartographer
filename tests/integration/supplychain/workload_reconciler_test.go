@@ -548,8 +548,18 @@ var _ = Describe("WorkloadReconciler", func() {
 					cleanups = append(cleanups, template)
 				})
 
-				It("results in a healthy workload", func() {
+				It("results in a healthy workload and propagates outputs", func() {
 					itResultsInAHealthyWorkload()
+
+					workload := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(workload.Status.Resources[0].Outputs).To(HaveLen(1))
+					Expect(workload.Status.Resources[0].Outputs[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Name":    Equal("config"),
+						"Preview": Equal("some-address\n"),
+					}))
 				})
 
 				It("stamps the templated object once", func() {
@@ -632,8 +642,18 @@ var _ = Describe("WorkloadReconciler", func() {
 					cleanups = append(cleanups, template)
 				})
 
-				It("results in a healthy workload", func() {
+				It("results in a healthy workload and propagates outputs", func() {
 					itResultsInAHealthyWorkload()
+
+					workload := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(workload.Status.Resources[0].Outputs).To(HaveLen(1))
+					Expect(workload.Status.Resources[0].Outputs[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Name":    Equal("config"),
+						"Preview": Equal("some-address\n"),
+					}))
 				})
 
 				It("stamps the templated object once", func() {
@@ -710,7 +730,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					})
 
 					When("the healthRule is subsequently satisfied", func() {
-						It("results in a healthy workload", func() {
+						It("results in a healthy workload and propagates outputs", func() {
 							// update the object
 							opts := []client.ListOption{
 								client.InNamespace(testNS),
@@ -738,6 +758,16 @@ var _ = Describe("WorkloadReconciler", func() {
 
 							// assert expected state
 							itResultsInAHealthyWorkload()
+
+							workload := &v1alpha1.Workload{}
+							err = c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+							Expect(err).NotTo(HaveOccurred())
+
+							Expect(workload.Status.Resources[0].Outputs).To(HaveLen(1))
+							Expect(workload.Status.Resources[0].Outputs[0]).To(MatchFields(IgnoreExtras, Fields{
+								"Name":    Equal("config"),
+								"Preview": Equal("some-address\n"),
+							}))
 						})
 					})
 				})
@@ -762,7 +792,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				})
 
 				When("the stamped object's succeeded condition has status == true", func() {
-					It("results in a healthy workload", func() {
+					It("results in a healthy workload and propagates outputs", func() {
 						// update the object
 						opts := []client.ListOption{
 							client.InNamespace(testNS),
@@ -790,6 +820,108 @@ var _ = Describe("WorkloadReconciler", func() {
 
 						// assert expected state
 						itResultsInAHealthyWorkload()
+
+						workload := &v1alpha1.Workload{}
+						err = c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(workload.Status.Resources[0].Outputs).To(HaveLen(1))
+						Expect(workload.Status.Resources[0].Outputs[0]).To(MatchFields(IgnoreExtras, Fields{
+							"Name":    Equal("config"),
+							"Preview": Equal("some-address\n"),
+						}))
+					})
+				})
+
+				When("a successful stamp is followed by an unsuccessful stamp", func() {
+					It("passes the outputs of the first object and reports an unhealthy object", func() {
+						// update the object
+						opts := []client.ListOption{
+							client.InNamespace(testNS),
+						}
+
+						testsList := &resources.TestObjList{}
+
+						Eventually(func() ([]resources.TestObj, error) {
+							err := c.List(ctx, testsList, opts...)
+							return testsList.Items, err
+						}).Should(HaveLen(1))
+
+						testToUpdate := &testsList.Items[0]
+						testToUpdate.Status.Conditions = []metav1.Condition{
+							{
+								Type:               "Succeeded",
+								Status:             "True",
+								Reason:             "SomeGoodReason",
+								LastTransitionTime: metav1.Now(),
+							},
+						}
+
+						err := c.Status().Update(ctx, testToUpdate)
+						Expect(err).NotTo(HaveOccurred())
+
+						// assert expected state
+						itResultsInAHealthyWorkload()
+
+						image := "a-different-image"
+						workload.Spec.Source.Image = &image
+						utils.UpdateObjectOnCluster(ctx, c, &workload, &v1alpha1.Workload{})
+
+						getConditionOfType := func(element interface{}) string {
+							return element.(metav1.Condition).Type
+						}
+
+						Eventually(func() []metav1.Condition {
+							workload := &v1alpha1.Workload{}
+							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+							Expect(err).NotTo(HaveOccurred())
+
+							if len(workload.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+
+							return workload.Status.Resources[0].Conditions
+						}).Should(MatchAllElements(getConditionOfType, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+								"Reason": Equal("ResourceSubmissionComplete"),
+							}),
+							"Healthy": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal(v1alpha1.SucceededStampedObjectConditionReason),
+								"Message": ContainSubstring("condition with type [Succeeded] not found on resource status"),
+							}),
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.SucceededStampedObjectConditionReason),
+							}),
+						}))
+
+						workload := &v1alpha1.Workload{}
+						err = c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(workload.Status.Conditions).To(MatchAllElements(getConditionOfType, Elements{
+							"SupplyChainReady": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+							"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal("HealthyConditionRule"),
+							}),
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						}))
+
+						Expect(workload.Status.Resources[0].Outputs).To(HaveLen(1))
+						Expect(workload.Status.Resources[0].Outputs[0]).To(MatchFields(IgnoreExtras, Fields{
+							"Name":    Equal("config"),
+							"Preview": Equal("some-address\n"),
+						}))
 					})
 				})
 
