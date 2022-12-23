@@ -783,23 +783,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				})
 
 				When("the stamped object's succeeded condition is not yet true", func() {
-					It("results in a resource with an unknown healthy status workload", func() {
-						Eventually(func() []metav1.Condition {
-							obj := &v1alpha1.Workload{}
-							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
-							Expect(err).NotTo(HaveOccurred())
-
-							return obj.Status.Conditions
-						}).Should(ContainElements(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("ResourcesHealthy"),
-								"Reason": Equal("HealthyConditionRule"),
-								"Status": Equal(metav1.ConditionUnknown),
-							}),
-						))
-					})
-
-					It("prevents reading fields of the stamped object", func() {
+					It("results in proper status", func() {
 						getConditionOfType := func(element interface{}) string {
 							return element.(metav1.Condition).Type
 						}
@@ -813,18 +797,45 @@ var _ = Describe("WorkloadReconciler", func() {
 								return []metav1.Condition{}
 							}
 
-							return workload.Status.Resources[1].Conditions
-						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							return workload.Status.Resources[0].Conditions
+						}).Should(MatchAllElements(getConditionOfType, Elements{
 							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
-								"Reason":  Equal("TemplateStampFailure"),
-								"Message": ContainSubstring("failed to recursively evaluate template: failed to interpolate template at path [data.foo]: evaluate tag $(config)$: jsonpath returned empty list: config"),
+								"Reason":  Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
+								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of stamped objects"),
+							}),
+							"Healthy": MatchFields(IgnoreExtras, Fields{
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal(v1alpha1.SucceededStampedObjectConditionReason),
+								"Message": ContainSubstring("condition with type [Succeeded] not found on resource status"),
+							}),
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionFalse),
+								"Reason": Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
 							}),
 						}))
 
 						workload := &v1alpha1.Workload{}
 						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
 						Expect(err).NotTo(HaveOccurred())
+
+						Expect(workload.Status.Conditions).To(MatchAllElements(getConditionOfType, Elements{
+							"SupplyChainReady": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionFalse),
+								"Reason": Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
+							}),
+							"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal("HealthyConditionRule"),
+							}),
+							"Ready": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionFalse),
+							}),
+						}))
+
 						Expect(workload.Status.Resources[0].Outputs).To(HaveLen(0))
 					})
 				})

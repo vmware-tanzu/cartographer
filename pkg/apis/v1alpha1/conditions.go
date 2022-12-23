@@ -165,6 +165,7 @@ const (
 	OutputPathNotSatisfiedRunTemplateReason           = "OutputPathNotSatisfied"
 	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
 	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
+	NoHealthyStampedObjectsFoundReason                = "NoHealthyStampedObjectsFound"
 	UnknownErrorReason                                = "UnknownError"
 	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
 	SucceededStampedObjectConditionReason             = "SucceededCondition"

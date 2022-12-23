@@ -124,14 +124,13 @@ func (e StampError) Error() string {
 }
 
 type RetrieveOutputError struct {
-	Err                  error
-	ResourceName         string
-	StampedObject        *unstructured.Unstructured
-	BlueprintName        string
-	BlueprintType        string
-	QualifiedResource    string
-	PassThroughInput     string
-	IsLifecycleImmutable bool
+	Err               error
+	ResourceName      string
+	StampedObject     *unstructured.Unstructured
+	BlueprintName     string
+	BlueprintType     string
+	QualifiedResource string
+	PassThroughInput  string
 }
 
 func (e RetrieveOutputError) Error() string {
@@ -142,15 +141,6 @@ func (e RetrieveOutputError) Error() string {
 			e.BlueprintType,
 			e.BlueprintName,
 			e.Err).Error()
-	}
-
-	if e.IsLifecycleImmutable && e.QualifiedResource == "" {
-		return fmt.Errorf("unable to retrieve outputs for resource [%s] in %s [%s]: %w",
-			e.ResourceName,
-			e.BlueprintType,
-			e.BlueprintName,
-			e.Err,
-		).Error()
 	}
 
 	if e.JsonPathExpression() == NoJsonpathContext {
@@ -194,6 +184,22 @@ func (e RetrieveOutputError) GetResourceName() string {
 
 func (e RetrieveOutputError) GetQualifiedResource() string {
 	return e.QualifiedResource
+}
+
+type NoHealthyImmutableObjectsError struct {
+	Err           error
+	ResourceName  string
+	BlueprintName string
+	BlueprintType string
+}
+
+func (e NoHealthyImmutableObjectsError) Error() string {
+	return fmt.Errorf("unable to retrieve outputs for resource [%s] in %s [%s]: %w",
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
+		e.Err,
+	).Error()
 }
 
 func WrapUnhandledError(err error) error {
