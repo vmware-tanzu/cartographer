@@ -310,7 +310,7 @@ var _ = Describe("Resource", func() {
 
 								Expect(err).To(HaveOccurred())
 								Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in the set of stamped objects"))
-								Expect(reflect.TypeOf(err).String()).To(Equal("errors.RetrieveOutputError"))
+								Expect(reflect.TypeOf(err).String()).To(Equal("errors.NoHealthyImmutableObjectsError"))
 							})
 						})
 
