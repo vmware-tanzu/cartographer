@@ -31,6 +31,8 @@ var certDir string
 var verbosity string
 var metricsPort int
 var pProfPort int
+var maxConcurrentDeliveries int
+var maxConcurrentWorkloads int
 
 func init() {
 	flag.IntVar(&port, "Port", 9443, "Webhook server Port")
@@ -39,6 +41,8 @@ func init() {
 	flag.StringVar(&verbosity, "log-level", "info", "Log levels")
 	flag.IntVar(&metricsPort, "metrics-port", 0, "Metrics port")
 	flag.IntVar(&pProfPort, "pprof-port", 0, "Pprof port")
+	flag.IntVar(&maxConcurrentDeliveries, "max-concurrent-deliveries", 10, "Maximum Concurrent Deliveries")
+	flag.IntVar(&maxConcurrentWorkloads, "max-concurrent-workloads", 10, "Maximum Concurrent Workloads")
 	flag.Parse()
 }
 
@@ -49,11 +53,13 @@ func main() {
 	}
 
 	c := cmd.Command{
-		Port:        port,
-		CertDir:     certDir,
-		Logger:      zap.New(loggerOpt, zap.UseDevMode(devMode)),
-		MetricsPort: metricsPort,
-		PprofPort:   pProfPort,
+		Port:                    port,
+		CertDir:                 certDir,
+		Logger:                  zap.New(loggerOpt, zap.UseDevMode(devMode)),
+		MetricsPort:             metricsPort,
+		PprofPort:               pProfPort,
+		MaxConcurrentDeliveries: maxConcurrentDeliveries,
+		MaxConcurrentWorkloads:  maxConcurrentWorkloads,
 	}
 
 	if err = c.Execute(ctrl.SetupSignalHandler()); err != nil {

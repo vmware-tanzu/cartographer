@@ -33,11 +33,13 @@ import (
 )
 
 type Command struct {
-	Port        int
-	CertDir     string
-	MetricsPort int
-	PprofPort   int
-	Logger      logr.Logger
+	Port                    int
+	CertDir                 string
+	MetricsPort             int
+	PprofPort               int
+	Logger                  logr.Logger
+	MaxConcurrentDeliveries int
+	MaxConcurrentWorkloads  int
 }
 
 func (cmd *Command) Execute(ctx context.Context) error {
@@ -75,7 +77,7 @@ func (cmd *Command) Execute(ctx context.Context) error {
 		return fmt.Errorf("failed to create new manager: %w", err)
 	}
 
-	if err := registerControllers(mgr); err != nil {
+	if err := cmd.registerControllers(mgr); err != nil {
 		return fmt.Errorf("failed to register controllers: %w", err)
 	}
 
@@ -94,8 +96,8 @@ func (cmd *Command) Execute(ctx context.Context) error {
 	return nil
 }
 
-func registerControllers(mgr manager.Manager) error {
-	if err := (&controllers.WorkloadReconciler{}).SetupWithManager(mgr); err != nil {
+func (cmd *Command) registerControllers(mgr manager.Manager) error {
+	if err := (&controllers.WorkloadReconciler{}).SetupWithManager(mgr, cmd.MaxConcurrentWorkloads); err != nil {
 		return fmt.Errorf("failed to register workload controller: %w", err)
 	}
 
@@ -103,7 +105,7 @@ func registerControllers(mgr manager.Manager) error {
 		return fmt.Errorf("failed to register supply chain controller: %w", err)
 	}
 
-	if err := (&controllers.DeliverableReconciler{}).SetupWithManager(mgr); err != nil {
+	if err := (&controllers.DeliverableReconciler{}).SetupWithManager(mgr, cmd.MaxConcurrentDeliveries); err != nil {
 		return fmt.Errorf("failed to register deliverable controller: %w", err)
 	}
 

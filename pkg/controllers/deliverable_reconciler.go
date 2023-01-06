@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crtcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -409,7 +410,7 @@ func getServiceAccountNameAndNamespaceForDeliverable(deliverable *v1alpha1.Deliv
 	return serviceAccountName, serviceAccountNS
 }
 
-func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
@@ -436,6 +437,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 
 	builder := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(crtcontroller.Options{MaxConcurrentReconciles: concurrency}).
 		For(&v1alpha1.Deliverable{})
 
 	m := mapper.Mapper{
@@ -468,6 +470,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	controller, err := builder.Build(r)
+
 	if err != nil {
 		return fmt.Errorf("failed to build controller for deliverable: %w", err)
 	}
