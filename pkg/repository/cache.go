@@ -17,6 +17,7 @@ package repository
 import (
 	"fmt"
 	"reflect"
+	"sync"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -35,6 +36,7 @@ type RepoCache interface {
 
 func NewCache(l Logger) RepoCache {
 	return &cache{
+		mtx:            &sync.RWMutex{},
 		logger:         l,
 		submittedCache: make(map[string]unstructured.Unstructured),
 		persistedCache: make(map[string]unstructured.Unstructured),
@@ -42,18 +44,23 @@ func NewCache(l Logger) RepoCache {
 }
 
 type cache struct {
+	mtx            *sync.RWMutex
 	logger         Logger
 	submittedCache map[string]unstructured.Unstructured
 	persistedCache map[string]unstructured.Unstructured
 }
 
 func (c *cache) Set(submitted, persisted *unstructured.Unstructured, ownerDiscriminant string) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	key := getKey(submitted, ownerDiscriminant)
 	c.submittedCache[key] = *submitted
 	c.persistedCache[key] = *persisted
 }
 
 func (c *cache) UnchangedSinceCachedFromList(submitted *unstructured.Unstructured, existingList []*unstructured.Unstructured, ownerDiscriminant string) *unstructured.Unstructured {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
 	key := getKey(submitted, ownerDiscriminant)
 	c.logger.Info("checking for changes since cached", "key", key)
 	if !c.isSubmittedCacheHit(submitted, key) {
@@ -75,6 +82,8 @@ func (c *cache) UnchangedSinceCachedFromList(submitted *unstructured.Unstructure
 }
 
 func (c *cache) UnchangedSinceCached(submitted *unstructured.Unstructured, existingObj *unstructured.Unstructured) *unstructured.Unstructured {
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
 	key := getKey(submitted, "")
 	c.logger.Info("checking for changes since cached", "key", key)
 	if !c.isSubmittedCacheHit(submitted, key) {
