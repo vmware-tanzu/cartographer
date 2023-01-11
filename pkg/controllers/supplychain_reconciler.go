@@ -41,7 +41,6 @@ type Timer interface {
 type SupplyChainReconciler struct {
 	Repo                    repository.Repository
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
-	conditionManager        conditions.ConditionManager
 	DependencyTracker       dependency.DependencyTracker
 }
 
@@ -64,18 +63,18 @@ func (r *SupplyChainReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.BlueprintReady, supplyChain.Status.Conditions)
+	conditionManager := r.ConditionManagerBuilder(v1alpha1.BlueprintReady, supplyChain.Status.Conditions)
 
-	err = r.reconcileSupplyChain(ctx, supplyChain)
+	err = r.reconcileSupplyChain(ctx, supplyChain, conditionManager)
 
-	return r.completeReconciliation(ctx, supplyChain, err)
+	return r.completeReconciliation(ctx, supplyChain, conditionManager, err)
 }
 
-func (r *SupplyChainReconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, err error) (ctrl.Result, error) {
+func (r *SupplyChainReconciler) completeReconciliation(ctx context.Context, supplyChain *v1alpha1.ClusterSupplyChain, conditionManager conditions.ConditionManager, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var changed bool
-	supplyChain.Status.Conditions, changed = r.conditionManager.Finalize()
+	supplyChain.Status.Conditions, changed = conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (supplyChain.Status.ObservedGeneration != supplyChain.Generation) {
@@ -98,7 +97,7 @@ func (r *SupplyChainReconciler) completeReconciliation(ctx context.Context, supp
 	return ctrl.Result{}, nil
 }
 
-func (r *SupplyChainReconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain) error {
+func (r *SupplyChainReconciler) reconcileSupplyChain(ctx context.Context, chain *v1alpha1.ClusterSupplyChain, conditionManager conditions.ConditionManager) error {
 	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
@@ -133,9 +132,9 @@ func (r *SupplyChainReconciler) reconcileSupplyChain(ctx context.Context, chain 
 	}
 
 	if len(resourcesNotFound) > 0 {
-		r.conditionManager.AddPositive(conditions.TemplatesNotFoundCondition(resourcesNotFound))
+		conditionManager.AddPositive(conditions.TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
-		r.conditionManager.AddPositive(conditions.TemplatesFoundCondition())
+		conditionManager.AddPositive(conditions.TemplatesFoundCondition())
 	}
 
 	return nil
