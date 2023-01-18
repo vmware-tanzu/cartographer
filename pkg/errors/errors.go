@@ -186,6 +186,22 @@ func (e RetrieveOutputError) GetQualifiedResource() string {
 	return e.QualifiedResource
 }
 
+type NoHealthyImmutableObjectsError struct {
+	Err           error
+	ResourceName  string
+	BlueprintName string
+	BlueprintType string
+}
+
+func (e NoHealthyImmutableObjectsError) Error() string {
+	return fmt.Errorf("unable to retrieve outputs for resource [%s] in %s [%s]: %w",
+		e.ResourceName,
+		e.BlueprintType,
+		e.BlueprintName,
+		e.Err,
+	).Error()
+}
+
 func WrapUnhandledError(err error) error {
 	if IsUnhandledErrorType(err) {
 		return NewUnhandledError(err)

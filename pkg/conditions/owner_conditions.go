@@ -102,6 +102,15 @@ func BlueprintsFailedToListCreatedObjectsCondition(isOwner bool, err error) meta
 	}
 }
 
+func NoHealthyImmutableObjectsCondition(isOwner bool, err error) metav1.Condition {
+	return metav1.Condition{
+		Type:    getConditionType(isOwner),
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason,
+		Message: err.Error(),
+	}
+}
+
 func UnknownResourceErrorCondition(isOwner bool, err error) metav1.Condition {
 	return metav1.Condition{
 		Type:    getConditionType(isOwner),

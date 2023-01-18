@@ -50,6 +50,10 @@ func (t *clusterConfigTemplate) GetDefaultParams() v1alpha1.TemplateParams {
 }
 
 func (t *clusterConfigTemplate) GetHealthRule() *v1alpha1.HealthRule {
+	if t.template.Spec.HealthRule == nil && t.template.Spec.Lifecycle == "tekton" {
+		return &v1alpha1.HealthRule{SingleConditionType: "Succeeded"}
+	}
+
 	return t.template.Spec.HealthRule
 }
 
