@@ -309,7 +309,7 @@ var _ = Describe("Resource", func() {
 								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
 
 								Expect(err).To(HaveOccurred())
-								Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in the set of stamped objects"))
+								Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in the set of immutable stamped objects"))
 								Expect(reflect.TypeOf(err).String()).To(Equal("errors.NoHealthyImmutableObjectsError"))
 							})
 						})

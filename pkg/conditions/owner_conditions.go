@@ -106,7 +106,7 @@ func NoHealthyImmutableObjectsCondition(isOwner bool, err error) metav1.Conditio
 	return metav1.Condition{
 		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.NoHealthyStampedObjectsFoundReason,
+		Reason:  v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason,
 		Message: err.Error(),
 	}
 }

@@ -212,7 +212,7 @@ func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResour
 		}
 
 		return template, stampedObject, nil, passThrough, templateName, errors.NoHealthyImmutableObjectsError{
-			Err:           fmt.Errorf("failed to find any healthy object in the set of stamped objects"),
+			Err:           fmt.Errorf("failed to find any healthy object in the set of immutable stamped objects"),
 			ResourceName:  resource.Name,
 			BlueprintName: blueprintName,
 			BlueprintType: errors.SupplyChain,

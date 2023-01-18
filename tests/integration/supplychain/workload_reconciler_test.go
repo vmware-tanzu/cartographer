@@ -691,8 +691,8 @@ var _ = Describe("WorkloadReconciler", func() {
 						}).Should(MatchAllElements(getConditionOfType, Elements{
 							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
-								"Reason":  Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
-								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of stamped objects"),
+								"Reason":  Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
+								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of immutable stamped objects"),
 							}),
 							"Healthy": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
@@ -701,7 +701,7 @@ var _ = Describe("WorkloadReconciler", func() {
 							}),
 							"Ready": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
+								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
 							}),
 						}))
 
@@ -715,7 +715,7 @@ var _ = Describe("WorkloadReconciler", func() {
 							}),
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
+								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
 							}),
 							"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionUnknown),
@@ -944,8 +944,8 @@ var _ = Describe("WorkloadReconciler", func() {
 						}).Should(MatchAllElements(getConditionOfType, Elements{
 							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionFalse),
-								"Reason":  Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
-								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of stamped objects"),
+								"Reason":  Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
+								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of immutable stamped objects"),
 							}),
 							"Healthy": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
@@ -954,7 +954,7 @@ var _ = Describe("WorkloadReconciler", func() {
 							}),
 							"Ready": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
+								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
 							}),
 						}))
 
@@ -968,7 +968,7 @@ var _ = Describe("WorkloadReconciler", func() {
 							}),
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.NoHealthyStampedObjectsFoundReason),
+								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
 							}),
 							"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionUnknown),
