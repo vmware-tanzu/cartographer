@@ -130,6 +130,7 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 		"images":      inputs.Images,
 		"deployment":  inputs.Deployment,
 		"configs":     inputs.Configs,
+		"labels":      labels,
 	}
 
 	if inputs.OnlyConfig() != nil {
