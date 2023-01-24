@@ -99,13 +99,10 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      # More assembly might be required: Docker logins, GPG, etc. It all depends
-      # on your needs.
-      - uses: goreleaser/goreleaser-action@v2
+      - uses: goreleaser/goreleaser-action@v3
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
           version: latest
           args: release --rm-dist
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TAP }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
