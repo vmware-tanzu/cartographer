@@ -40,6 +40,7 @@ type Command struct {
 	Logger                  logr.Logger
 	MaxConcurrentDeliveries int
 	MaxConcurrentWorkloads  int
+	MaxConcurrentRunnables  int
 }
 
 func (cmd *Command) Execute(ctx context.Context) error {
@@ -113,7 +114,7 @@ func (cmd *Command) registerControllers(mgr manager.Manager) error {
 		return fmt.Errorf("failed to register delivery controller: %w", err)
 	}
 
-	if err := (&controllers.RunnableReconciler{}).SetupWithManager(mgr); err != nil {
+	if err := (&controllers.RunnableReconciler{}).SetupWithManager(mgr, cmd.MaxConcurrentRunnables); err != nil {
 		return fmt.Errorf("failed to register runnable controller: %w", err)
 	}
 

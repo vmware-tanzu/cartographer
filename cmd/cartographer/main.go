@@ -33,6 +33,7 @@ var metricsPort int
 var pProfPort int
 var maxConcurrentDeliveries int
 var maxConcurrentWorkloads int
+var maxConcurrentRunnables int
 
 func init() {
 	flag.IntVar(&port, "Port", 9443, "Webhook server Port")
@@ -43,6 +44,7 @@ func init() {
 	flag.IntVar(&pProfPort, "pprof-port", 0, "Pprof port")
 	flag.IntVar(&maxConcurrentDeliveries, "max-concurrent-deliveries", 10, "Maximum Concurrent Deliveries")
 	flag.IntVar(&maxConcurrentWorkloads, "max-concurrent-workloads", 10, "Maximum Concurrent Workloads")
+	flag.IntVar(&maxConcurrentRunnables, "max-concurrent-runnables", 10, "Maximum Concurrent Runnables")
 	flag.Parse()
 }
 
@@ -60,6 +62,7 @@ func main() {
 		PprofPort:               pProfPort,
 		MaxConcurrentDeliveries: maxConcurrentDeliveries,
 		MaxConcurrentWorkloads:  maxConcurrentWorkloads,
+		MaxConcurrentRunnables:  maxConcurrentRunnables,
 	}
 
 	if err = c.Execute(ctrl.SetupSignalHandler()); err != nil {
