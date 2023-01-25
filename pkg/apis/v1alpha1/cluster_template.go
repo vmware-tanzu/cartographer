@@ -65,13 +65,15 @@ type TemplateSpec struct {
 	Params TemplateParams `json:"params,omitempty"`
 
 	// HealthRule specifies rubric for determining the health of a resource
-	// stamped by this template
+	// stamped by this template.
+	// See: https://cartographer.sh/docs/latest/health-rules/
 	// +optional
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
 
 	// Lifecycle specifies whether template modifications should result in originally
 	// created objects being updated (`mutable`) or in new objects created alongside
 	// original objects (`immutable` or `tekton`).
+	// See: https://cartographer.sh/docs/latest/lifecycle/
 	// +kubebuilder:validation:Enum=mutable;immutable;tekton
 	// +kubebuilder:default="mutable"
 	Lifecycle string `json:"lifecycle,omitempty"`
