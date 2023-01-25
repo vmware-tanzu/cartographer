@@ -52,7 +52,7 @@ spec:
             properties:
               healthRule:
                 description: 'HealthRule specifies rubric for determining the health
-                  of a resource stamped by this template See: https://cartographer.sh/docs/latest/health-rules/'
+                  of a resource stamped by this template. See: https://cartographer.sh/docs/latest/health-rules/'
                 properties:
                   alwaysHealthy:
                     description: AlwaysHealthy being set indicates the resource should

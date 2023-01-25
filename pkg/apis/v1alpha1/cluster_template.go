@@ -65,7 +65,7 @@ type TemplateSpec struct {
 	Params TemplateParams `json:"params,omitempty"`
 
 	// HealthRule specifies rubric for determining the health of a resource
-	// stamped by this template
+	// stamped by this template.
 	// See: https://cartographer.sh/docs/latest/health-rules/
 	// +optional
 	HealthRule *HealthRule `json:"healthRule,omitempty"`
