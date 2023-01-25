@@ -79,6 +79,8 @@ func AddConditionForResourceSubmittedWorkload(conditionManager *ConditionManager
 		(*conditionManager).AddPositive(TemplateRejectedByAPIServerCondition(isOwner, typedErr))
 	case cerrors.ListCreatedObjectsError:
 		(*conditionManager).AddPositive(BlueprintsFailedToListCreatedObjectsCondition(isOwner, typedErr))
+	case cerrors.NoHealthyImmutableObjectsError:
+		(*conditionManager).AddPositive(NoHealthyImmutableObjectsCondition(isOwner, typedErr))
 	case cerrors.RetrieveOutputError:
 		(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
 	case cerrors.ResolveTemplateOptionError:
