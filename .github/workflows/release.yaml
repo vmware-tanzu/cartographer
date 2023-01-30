@@ -90,7 +90,7 @@ jobs:
 
   gorelease-cartotest:
     runs-on: ubuntu-latest
-    needs: validate
+    needs: release
     steps:
       - uses: actions/checkout@v3
         with:
