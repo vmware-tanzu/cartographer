@@ -88,13 +88,6 @@ jobs:
           asset_name: cartographer.yaml
           asset_content_type: application/x-yaml
 
-  gorelease-cartotest:
-    runs-on: ubuntu-latest
-    needs: release
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - run: git fetch --force --tags
       - uses: actions/setup-go@v3
         with:
