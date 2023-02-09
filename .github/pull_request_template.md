@@ -42,6 +42,12 @@ If there are no additional notes necessary you may remove this entire section.
 -->
 [imperative mood]: https://chris.beams.io/posts/git-commit/#imperative
 
+## Cherry-pick branches
+
+<!--
+List any version lines you think this should be backported to. e.g. "0.5.x"
+-->
+
 ## PR Checklist
 
 Note: Please do not remove items. Mark items as done `[x]` or use ~strikethrough~ if you believe they are not relevant
@@ -49,4 +55,5 @@ Note: Please do not remove items. Mark items as done `[x]` or use ~strikethrough
 - [ ] Linked to a relevant issue. Eg: `Fixes #123` or `Updates #123`
 - [ ] Removed non-atomic or `wip` commits
 - [ ] Filled in the [Release Note](#Release-Note) section above
+- [ ] Added any relevant branches to cherry-pick
 - [ ] Modified the docs to match changes
