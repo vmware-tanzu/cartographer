@@ -1,24 +1,48 @@
 # manifest for updateCLI: Read about the tool at https://www.updatecli.io/docs/prologue/introduction/
-
-# manifest.yaml
 name: Update .ko.yaml base image with updateCLI
 
-# Defines how to get "source" information such as Jenkins version
+# Defines how to get "source" information
 sources:
-  arbitraryName:
+  JammyDigests:
     name: Get the latest tag digest of paketo jammy tiny
     kind: dockerdigest
     spec:
       image: gcr.io/paketo-buildpacks/run-jammy-tiny
       tag: latest
 
-# Defines "targets" which need to be updated if different than "source" information.
+# Defines "targets" which need to be updated if different from "source" information.
 targets:
-  dataFile:
+  bumpKo:
     name: Bump ko Base Image Tag
     kind: yaml
+    scmid: githubProvider
     transformers:
       - addprefix: gcr.io/paketo-buildpacks/run-jammy-tiny@
     spec:
       key: defaultBaseImage
       file: .ko.yaml
+
+scms:
+  githubProvider:
+    kind: "github"
+    spec:
+      user: "Cartographer UpdateCLI"
+      email: "cartographer@groups.vmware.com"
+      owner: "vmware-tanzu"
+      repository: "cartographer"
+      token: '{{ requiredEnv "GITHUB_TOKEN" }}'
+      username: '{{ requiredEnv "GITHUB_AUTHOR" }}'
+      branch: "main"
+
+# Define action configurations
+actions:
+  pullRequest:
+    title: "UpdateCLI: ko baseImage Bump"
+    kind: github/pullrequest
+    scmid: githubProvider
+    spec:
+      automerge: false
+      description: |
+        Updates ko base image to latest published run-jammy-tiny digest.
+        See images here: https://console.cloud.google.com/gcr/images/paketo-buildpacks/global/run-jammy-tiny"
+      draft: false
