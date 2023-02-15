@@ -1,0 +1,24 @@
+# manifest for updateCLI: Read about the tool at https://www.updatecli.io/docs/prologue/introduction/
+
+# manifest.yaml
+name: Update .ko.yaml base image with updateCLI
+
+# Defines how to get "source" information such as Jenkins version
+sources:
+  arbitraryName:
+    name: Get the latest tag digest of paketo jammy tiny
+    kind: dockerdigest
+    spec:
+      image: gcr.io/paketo-buildpacks/run-jammy-tiny
+      tag: latest
+
+# Defines "targets" which need to be updated if different than "source" information.
+targets:
+  dataFile:
+    name: Bump ko Base Image Tag
+    kind: yaml
+    transformers:
+      - addprefix: gcr.io/paketo-buildpacks/run-jammy-tiny@
+    spec:
+      key: defaultBaseImage
+      file: .ko.yaml
