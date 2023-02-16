@@ -1,0 +1,29 @@
+name: run-updatecli
+
+on:
+  # Enables manual triggering of this workflow.
+  workflow_dispatch:
+
+  # Run once a day
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: "write"
+  pull-requests: "write"
+
+jobs:
+  updatecli:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@v2
+
+      - name: Run Updatecli in apply mode
+        run: "updatecli apply --config .updatecli/ko-manifest.yaml"
+        env:
+          GITHUB_TOKEN: ${{secrets.update_CLI_token_ww}}
+          GITHUB_AUTHOR: ${{secrets.update_CLI_author_ww}}
