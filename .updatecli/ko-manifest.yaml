@@ -1,0 +1,62 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# manifest for updateCLI: Read about the tool at https://www.updatecli.io/docs/prologue/introduction/
+name: Update .ko.yaml base image with updateCLI
+
+# Defines how to get "source" information
+sources:
+  JammyDigests:
+    name: Get the latest tag digest of paketo jammy tiny
+    kind: dockerdigest
+    spec:
+      image: gcr.io/paketo-buildpacks/run-jammy-tiny
+      tag: latest
+
+# Defines "targets" which need to be updated if different from "source" information.
+targets:
+  bumpKo:
+    name: Bump ko Base Image Tag
+    kind: yaml
+    scmid: githubProvider
+    transformers:
+      - addprefix: gcr.io/paketo-buildpacks/run-jammy-tiny@
+    spec:
+      key: defaultBaseImage
+      file: .ko.yaml
+
+scms:
+  githubProvider:
+    kind: "github"
+    spec:
+      user: "Cartographer UpdateCLI"
+      email: "cartographer@groups.vmware.com"
+      owner: "vmware-tanzu"
+      repository: "cartographer"
+      token: '{{ requiredEnv "GITHUB_TOKEN" }}'
+      username: '{{ requiredEnv "GITHUB_AUTHOR" }}'
+      branch: "main"
+
+# Define action configurations
+actions:
+  pullRequest:
+    title: "UpdateCLI: ko baseImage Bump"
+    kind: github/pullrequest
+    scmid: githubProvider
+    spec:
+      automerge: false
+      description: |
+        Updates ko base image to latest published run-jammy-tiny digest.
+        See images here: https://console.cloud.google.com/gcr/images/paketo-buildpacks/global/run-jammy-tiny"
+      draft: false
