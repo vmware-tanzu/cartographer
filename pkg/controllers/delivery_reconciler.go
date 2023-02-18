@@ -37,7 +37,6 @@ import (
 type DeliveryReconiler struct {
 	Repo              repository.Repository
 	DependencyTracker dependency.DependencyTracker
-	conditionManager  conditions.ConditionManager
 }
 
 func (r *DeliveryReconiler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
@@ -59,14 +58,14 @@ func (r *DeliveryReconiler) Reconcile(ctx context.Context, req reconcile.Request
 		return ctrl.Result{}, nil
 	}
 
-	r.conditionManager = conditions.NewConditionManager(v1alpha1.BlueprintReady, delivery.Status.Conditions)
+	conditionManager := conditions.NewConditionManager(v1alpha1.BlueprintReady, delivery.Status.Conditions)
 
-	err = r.reconcileDelivery(ctx, delivery)
+	err = r.reconcileDelivery(ctx, delivery, conditionManager)
 
-	return r.completeReconciliation(ctx, delivery, err)
+	return r.completeReconciliation(ctx, delivery, conditionManager, err)
 }
 
-func (r *DeliveryReconiler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.ClusterDelivery) error {
+func (r *DeliveryReconiler) reconcileDelivery(ctx context.Context, delivery *v1alpha1.ClusterDelivery, conditionManager conditions.ConditionManager) error {
 	log := logr.FromContextOrDiscard(ctx)
 	var resourcesNotFound []string
 
@@ -101,9 +100,9 @@ func (r *DeliveryReconiler) reconcileDelivery(ctx context.Context, delivery *v1a
 	}
 
 	if len(resourcesNotFound) > 0 {
-		r.conditionManager.AddPositive(conditions.TemplatesNotFoundCondition(resourcesNotFound))
+		conditionManager.AddPositive(conditions.TemplatesNotFoundCondition(resourcesNotFound))
 	} else {
-		r.conditionManager.AddPositive(conditions.TemplatesFoundCondition())
+		conditionManager.AddPositive(conditions.TemplatesFoundCondition())
 	}
 
 	return nil
@@ -130,11 +129,11 @@ func (r *DeliveryReconiler) validateResource(ctx context.Context, delivery *v1al
 	return template != nil, nil
 }
 
-func (r *DeliveryReconiler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, err error) (ctrl.Result, error) {
+func (r *DeliveryReconiler) completeReconciliation(ctx context.Context, delivery *v1alpha1.ClusterDelivery, conditionManager conditions.ConditionManager, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 
 	var changed bool
-	delivery.Status.Conditions, changed = r.conditionManager.Finalize()
+	delivery.Status.Conditions, changed = conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (delivery.Status.ObservedGeneration != delivery.Generation) {

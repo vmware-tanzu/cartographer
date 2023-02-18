@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crtcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -60,7 +61,6 @@ type WorkloadReconciler struct {
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
 	ResourceRealizerBuilder realizer.ResourceRealizerBuilder
 	Realizer                Realizer
-	conditionManager        conditions.ConditionManager
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
 	EventRecorder           record.EventRecorder
@@ -92,11 +92,11 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, workload, r.RESTMapper, log))
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
+	conditionManager := r.ConditionManagerBuilder(v1alpha1.OwnerReady, workload.Status.Conditions)
 
-	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload)
+	supplyChain, err := r.getSupplyChainsForWorkload(ctx, workload, conditionManager)
 	if err != nil {
-		return r.completeReconciliation(ctx, workload, nil, err)
+		return r.completeReconciliation(ctx, workload, nil, conditionManager, err)
 	}
 
 	log = log.WithValues("supply chain", supplyChain.Name)
@@ -105,7 +105,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	supplyChainGVK, err := utils.GetObjectGVK(supplyChain, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for supply chain")
-		return r.completeReconciliation(ctx, workload, nil, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, nil, conditionManager, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for supply chain [%s]: %w", supplyChain.Name, err)),
 		)
 	}
@@ -114,33 +114,33 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	workload.Status.SupplyChainRef.Name = supplyChain.Name
 
 	if !r.isSupplyChainReady(supplyChain) {
-		r.conditionManager.AddPositive(conditions.MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
+		conditionManager.AddPositive(conditions.MissingReadyInSupplyChainCondition(getSupplyChainReadyCondition(supplyChain)))
 		log.Info("supply chain is not in ready state")
-		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
+		return r.completeReconciliation(ctx, workload, nil, conditionManager, fmt.Errorf("supply chain [%s] is not in ready state", supplyChain.Name))
 	}
-	r.conditionManager.AddPositive(conditions.SupplyChainReadyCondition())
+	conditionManager.AddPositive(conditions.SupplyChainReadyCondition())
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForWorkload(workload, supplyChain)
 
 	serviceAccount, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountNotFoundCondition(err))
-		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+		conditionManager.AddPositive(conditions.ServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, workload, nil, conditionManager, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	saToken, err := r.TokenManager.GetServiceAccountToken(serviceAccount)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountTokenErrorCondition(err))
+		conditionManager.AddPositive(conditions.ServiceAccountTokenErrorCondition(err))
 		log.Info("failed to get token for service account", "service account", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName))
-		return r.completeReconciliation(ctx, workload, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		return r.completeReconciliation(ctx, workload, nil, conditionManager, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	contextGenerator := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
 	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, contextGenerator, r.Repo, buildWorkloadResourceLabeler(workload, supplyChain))
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
+		conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
-		return r.completeReconciliation(ctx, workload, nil, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, workload, nil, conditionManager, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
@@ -149,11 +149,11 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	err = r.Realizer.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
 	if err != nil {
-		conditions.AddConditionForResourceSubmittedWorkload(&r.conditionManager, true, err)
+		conditions.AddConditionForResourceSubmittedWorkload(&conditionManager, true, err)
 		log.V(logger.DEBUG).Info("failed to realize")
 		reconcileErr = cerrors.WrapUnhandledError(err)
 	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
+		conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 		if log.V(logger.DEBUG).Enabled() {
 			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
@@ -162,7 +162,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), workload.Status.Conditions))
+	conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), workload.Status.Conditions))
 
 	r.trackDependencies(workload, resourceStatuses.GetCurrent(), serviceAccountName, serviceAccountNS)
 
@@ -190,13 +190,13 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	return r.completeReconciliation(ctx, workload, resourceStatuses, reconcileErr)
+	return r.completeReconciliation(ctx, workload, resourceStatuses, conditionManager, reconcileErr)
 }
 
-func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {
+func (r *WorkloadReconciler) completeReconciliation(ctx context.Context, workload *v1alpha1.Workload, resourceStatuses statuses.ResourceStatuses, conditionManager conditions.ConditionManager, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
-	workload.Status.Conditions, changed = r.conditionManager.Finalize()
+	workload.Status.Conditions, changed = conditionManager.Finalize()
 	var updateErr error
 
 	if changed || (workload.Status.ObservedGeneration != workload.Generation) || (resourceStatuses != nil && resourceStatuses.IsChanged()) {
@@ -251,10 +251,10 @@ func getSupplyChainReadyCondition(supplyChain *v1alpha1.ClusterSupplyChain) meta
 	return metav1.Condition{}
 }
 
-func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
+func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, workload *v1alpha1.Workload, conditionManager conditions.ConditionManager) (*v1alpha1.ClusterSupplyChain, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	if len(workload.Labels) == 0 {
-		r.conditionManager.AddPositive(conditions.WorkloadMissingLabelsCondition())
+		conditionManager.AddPositive(conditions.WorkloadMissingLabelsCondition())
 		log.Info("workload is missing required labels")
 		return nil, fmt.Errorf("workload [%s/%s] is missing required labels",
 			workload.Namespace, workload.Name)
@@ -268,7 +268,7 @@ func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, wor
 	}
 
 	if len(supplyChains) == 0 {
-		r.conditionManager.AddPositive(conditions.SupplyChainNotFoundCondition(workload.Labels))
+		conditionManager.AddPositive(conditions.SupplyChainNotFoundCondition(workload.Labels))
 		log.Info("no supply chain found where full selector is satisfied by label",
 			"labels", workload.Labels)
 		return nil, fmt.Errorf("no supply chain [%s/%s] found where full selector is satisfied by labels: %v",
@@ -276,7 +276,7 @@ func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, wor
 	}
 
 	if len(supplyChains) > 1 {
-		r.conditionManager.AddPositive(conditions.TooManySupplyChainMatchesCondition())
+		conditionManager.AddPositive(conditions.TooManySupplyChainMatchesCondition())
 		log.Info("more than one supply chain selected for workload",
 			"supply chains", getSupplyChainNames(supplyChains))
 		return nil, fmt.Errorf("more than one supply chain selected for workload [%s/%s]: %+v",
@@ -414,7 +414,7 @@ func getServiceAccountNameAndNamespaceForWorkload(workload *v1alpha1.Workload, s
 }
 
 // TODO: kubebuilder:rbac
-func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
@@ -441,6 +441,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 
 	builder := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(crtcontroller.Options{MaxConcurrentReconciles: concurrency}).
 		For(&v1alpha1.Workload{})
 
 	m := mapper.Mapper{

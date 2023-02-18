@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crtcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -62,7 +63,6 @@ type DeliverableReconciler struct {
 	Realizer                Realizer
 	StampedTracker          stamped.StampedTracker
 	DependencyTracker       dependency.DependencyTracker
-	conditionManager        conditions.ConditionManager
 	EventRecorder           record.EventRecorder
 	RESTMapper              meta.RESTMapper
 }
@@ -92,11 +92,11 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, deliverable, r.RESTMapper, log))
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
+	conditionManager := r.ConditionManagerBuilder(v1alpha1.OwnerReady, deliverable.Status.Conditions)
 
-	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable)
+	delivery, err := r.getDeliveriesForDeliverable(ctx, deliverable, conditionManager)
 	if err != nil {
-		return r.completeReconciliation(ctx, deliverable, nil, err)
+		return r.completeReconciliation(ctx, deliverable, nil, conditionManager, err)
 	}
 
 	log = log.WithValues("delivery", delivery.Name)
@@ -105,7 +105,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	deliveryGVK, err := utils.GetObjectGVK(delivery, r.Repo.GetScheme())
 	if err != nil {
 		log.Error(err, "failed to get object gvk for delivery")
-		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(
+		return r.completeReconciliation(ctx, deliverable, nil, conditionManager, cerrors.NewUnhandledError(
 			fmt.Errorf("failed to get object gvk for delivery [%s]: %w", delivery.Name, err)))
 	}
 
@@ -113,32 +113,32 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	deliverable.Status.DeliveryRef.Name = delivery.Name
 
 	if !r.isDeliveryReady(delivery) {
-		r.conditionManager.AddPositive(conditions.MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
+		conditionManager.AddPositive(conditions.MissingReadyInDeliveryCondition(getDeliveryReadyCondition(delivery)))
 		log.Info("delivery is not in ready state")
-		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
+		return r.completeReconciliation(ctx, deliverable, nil, conditionManager, fmt.Errorf("delivery [%s] is not in ready state", delivery.Name))
 	}
-	r.conditionManager.AddPositive(conditions.DeliveryReadyCondition())
+	conditionManager.AddPositive(conditions.DeliveryReadyCondition())
 
 	serviceAccountName, serviceAccountNS := getServiceAccountNameAndNamespaceForDeliverable(deliverable, delivery)
 
 	serviceAccount, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, serviceAccountNS)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountNotFoundCondition(err))
-		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+		conditionManager.AddPositive(conditions.ServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, deliverable, nil, conditionManager, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	saToken, err := r.TokenManager.GetServiceAccountToken(serviceAccount)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ServiceAccountTokenErrorCondition(err))
-		return r.completeReconciliation(ctx, deliverable, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
+		conditionManager.AddPositive(conditions.ServiceAccountTokenErrorCondition(err))
+		return r.completeReconciliation(ctx, deliverable, nil, conditionManager, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", serviceAccountNS, serviceAccountName), err))
 	}
 
 	contextGenerator := realizer.NewContextGenerator(deliverable, deliverable.Spec.Params, delivery.Spec.Params)
 	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, deliverable, contextGenerator, r.Repo, buildDeliverableResourceLabeler(deliverable, delivery))
 
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, deliverable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+		conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
+		return r.completeReconciliation(ctx, deliverable, nil, conditionManager, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	var reconcileErr error
@@ -146,11 +146,11 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.Realizer.Realize(ctx, resourceRealizer, delivery.Name, realizer.MakeDeliveryOwnerResources(delivery), resourceStatuses)
 	if err != nil {
-		conditions.AddConditionForResourceSubmittedDeliverable(&r.conditionManager, true, err)
+		conditions.AddConditionForResourceSubmittedDeliverable(&conditionManager, true, err)
 		log.V(logger.DEBUG).Info("failed to realize")
 		reconcileErr = cerrors.WrapUnhandledError(err)
 	} else {
-		r.conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
+		conditionManager.AddPositive(conditions.ResourcesSubmittedCondition(true))
 		if log.V(logger.DEBUG).Enabled() {
 			for _, resource := range resourceStatuses.GetCurrent() {
 				log.V(logger.DEBUG).Info("realized object",
@@ -159,7 +159,7 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	r.conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), deliverable.Status.Conditions))
+	conditionManager.AddPositive(healthcheck.OwnerHealthCondition(resourceStatuses.GetCurrent(), deliverable.Status.Conditions))
 
 	r.trackDependencies(deliverable, resourceStatuses.GetCurrent(), serviceAccountName, serviceAccountNS)
 
@@ -187,13 +187,13 @@ func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	return r.completeReconciliation(ctx, deliverable, resourceStatuses, reconcileErr)
+	return r.completeReconciliation(ctx, deliverable, resourceStatuses, conditionManager, reconcileErr)
 }
 
-func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses statuses.ResourceStatuses, err error) (ctrl.Result, error) {
+func (r *DeliverableReconciler) completeReconciliation(ctx context.Context, deliverable *v1alpha1.Deliverable, resourceStatuses statuses.ResourceStatuses, conditionManager conditions.ConditionManager, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
-	deliverable.Status.Conditions, changed = r.conditionManager.Finalize()
+	deliverable.Status.Conditions, changed = conditionManager.Finalize()
 
 	var updateErr error
 	if changed || (deliverable.Status.ObservedGeneration != deliverable.Generation) || (resourceStatuses != nil && resourceStatuses.IsChanged()) {
@@ -347,10 +347,10 @@ func getDeliveryReadyCondition(delivery *v1alpha1.ClusterDelivery) metav1.Condit
 	return metav1.Condition{}
 }
 
-func (r *DeliverableReconciler) getDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable) (*v1alpha1.ClusterDelivery, error) {
+func (r *DeliverableReconciler) getDeliveriesForDeliverable(ctx context.Context, deliverable *v1alpha1.Deliverable, conditionManager conditions.ConditionManager) (*v1alpha1.ClusterDelivery, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	if len(deliverable.Labels) == 0 {
-		r.conditionManager.AddPositive(conditions.DeliverableMissingLabelsCondition())
+		conditionManager.AddPositive(conditions.DeliverableMissingLabelsCondition())
 		log.Info("deliverable is missing required labels")
 		return nil, fmt.Errorf("deliverable [%s/%s] is missing required labels",
 			deliverable.Namespace, deliverable.Name)
@@ -364,7 +364,7 @@ func (r *DeliverableReconciler) getDeliveriesForDeliverable(ctx context.Context,
 	}
 
 	if len(deliveries) == 0 {
-		r.conditionManager.AddPositive(conditions.DeliveryNotFoundCondition(deliverable.Labels))
+		conditionManager.AddPositive(conditions.DeliveryNotFoundCondition(deliverable.Labels))
 		log.Info("no delivery found where full selector is satisfied by label",
 			"labels", deliverable.Labels)
 		return nil, fmt.Errorf("no delivery [%s/%s] found where full selector is satisfied by labels: %v",
@@ -372,7 +372,7 @@ func (r *DeliverableReconciler) getDeliveriesForDeliverable(ctx context.Context,
 	}
 
 	if len(deliveries) > 1 {
-		r.conditionManager.AddPositive(conditions.TooManyDeliveryMatchesCondition())
+		conditionManager.AddPositive(conditions.TooManyDeliveryMatchesCondition())
 		log.Info("more than one delivery selected for deliverable",
 			"deliveries", getDeliveryNames(deliveries))
 		return nil, fmt.Errorf("more than one delivery selected for deliverable [%s/%s]: %+v",
@@ -409,7 +409,7 @@ func getServiceAccountNameAndNamespaceForDeliverable(deliverable *v1alpha1.Deliv
 	return serviceAccountName, serviceAccountNS
 }
 
-func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
@@ -436,6 +436,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 
 	builder := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(crtcontroller.Options{MaxConcurrentReconciles: concurrency}).
 		For(&v1alpha1.Deliverable{})
 
 	m := mapper.Mapper{
@@ -468,6 +469,7 @@ func (r *DeliverableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	controller, err := builder.Build(r)
+
 	if err != nil {
 		return fmt.Errorf("failed to build controller for deliverable: %w", err)
 	}
