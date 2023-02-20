@@ -100,3 +100,10 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
+
+retract (
+	v1.2.0
+	v1.0.1 
+	v0.6.4-yet-another-fake 
+	v0.6.4-still-fake 
+)
