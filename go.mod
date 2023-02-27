@@ -12,12 +12,12 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect
 	golang.org/x/text v0.5.0 // indirect
-	k8s.io/api v0.25.6
+	k8s.io/api v0.26.1
 	k8s.io/apiextensions-apiserver v0.25.6
-	k8s.io/apimachinery v0.25.6
+	k8s.io/apimachinery v0.26.1
 	k8s.io/apiserver v0.25.6
 	k8s.io/client-go v0.25.6
-	k8s.io/utils v0.0.0-20220823124924-e9cbc92d1a73
+	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
 	sigs.k8s.io/cluster-api v1.3.0
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/controller-tools v0.10.0
@@ -96,14 +96,14 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/component-base v0.25.6 // indirect
-	k8s.io/kube-openapi v0.0.0-20220803164354-a70c9af30aea // indirect
+	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
 retract (
 	v1.2.0
-	v1.0.1 
-	v0.6.4-yet-another-fake 
-	v0.6.4-still-fake 
+	v1.0.1
+	v0.6.4-yet-another-fake
+	v0.6.4-still-fake
 )
