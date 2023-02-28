@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/cluster-api/controllers/external"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crtcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -56,7 +57,6 @@ type RunnableReconciler struct {
 	Repo                    repository.Repository
 	Realizer                realizer.Realizer
 	ConditionManagerBuilder conditions.ConditionManagerBuilder
-	conditionManager        conditions.ConditionManager
 	RepositoryBuilder       repository.RepositoryBuilder
 	ClientBuilder           realizerclient.ClientBuilder
 	RunnableCache           repository.RepoCache
@@ -91,7 +91,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	ctx = events.NewContext(ctx, events.FromEventRecorder(r.EventRecorder, runnable, r.RESTMapper, log))
 
-	r.conditionManager = r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
+	conditionManager := r.ConditionManagerBuilder(v1alpha1.RunnableReady, runnable.Status.Conditions)
 
 	serviceAccountName := "default"
 	if runnable.Spec.ServiceAccountName != "" {
@@ -102,21 +102,21 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	serviceAccount, err := r.Repo.GetServiceAccount(ctx, serviceAccountName, req.Namespace)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.RunnableServiceAccountNotFoundCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+		conditionManager.AddPositive(conditions.RunnableServiceAccountNotFoundCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, conditionManager, fmt.Errorf("failed to get service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	saToken, err := r.TokenManager.GetServiceAccountToken(serviceAccount)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.RunnableServiceAccountTokenErrorCondition(err))
+		conditionManager.AddPositive(conditions.RunnableServiceAccountTokenErrorCondition(err))
 		log.Info("failed to get token for service account", "service account", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName))
-		return r.completeReconciliation(ctx, runnable, nil, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
+		return r.completeReconciliation(ctx, runnable, nil, conditionManager, fmt.Errorf("failed to get token for service account [%s]: %w", fmt.Sprintf("%s/%s", req.Namespace, serviceAccountName), err))
 	}
 
 	runnableClient, discoveryClient, err := r.ClientBuilder(saToken, true)
 	if err != nil {
-		r.conditionManager.AddPositive(conditions.ClientBuilderErrorCondition(err))
-		return r.completeReconciliation(ctx, runnable, nil, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
+		conditionManager.AddPositive(conditions.ClientBuilderErrorCondition(err))
+		return r.completeReconciliation(ctx, runnable, nil, conditionManager, cerrors.NewUnhandledError(fmt.Errorf("failed to build resource realizer: %w", err)))
 	}
 
 	stampedObject, outputs, err := r.Realizer.Realize(ctx, runnable, r.Repo, r.RepositoryBuilder(runnableClient, r.RunnableCache), discoveryClient)
@@ -124,29 +124,29 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.V(logger.DEBUG).Info("failed to realize")
 		switch typedErr := err.(type) {
 		case cerrors.RunnableGetRunTemplateError:
-			r.conditionManager.AddPositive(conditions.RunTemplateMissingCondition(typedErr))
+			conditionManager.AddPositive(conditions.RunTemplateMissingCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		case cerrors.RunnableResolveSelectorError:
-			r.conditionManager.AddPositive(conditions.RunnableTemplateStampFailureCondition(typedErr))
+			conditionManager.AddPositive(conditions.RunnableTemplateStampFailureCondition(typedErr))
 		case cerrors.RunnableStampError:
-			r.conditionManager.AddPositive(conditions.RunnableTemplateStampFailureCondition(typedErr))
+			conditionManager.AddPositive(conditions.RunnableTemplateStampFailureCondition(typedErr))
 		case cerrors.RunnableApplyStampedObjectError:
-			r.conditionManager.AddPositive(conditions.StampedObjectRejectedByAPIServerCondition(typedErr))
+			conditionManager.AddPositive(conditions.StampedObjectRejectedByAPIServerCondition(typedErr))
 			if !kerrors.IsForbidden(typedErr.Err) {
 				err = cerrors.NewUnhandledError(err)
 			}
 		case cerrors.ListCreatedObjectsError:
-			r.conditionManager.AddPositive(conditions.FailedToListCreatedObjectsCondition(typedErr))
+			conditionManager.AddPositive(conditions.FailedToListCreatedObjectsCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		case cerrors.RunnableRetrieveOutputError:
-			r.conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.QualifiedResource, typedErr.Error()))
+			conditionManager.AddPositive(conditions.OutputPathNotSatisfiedCondition(typedErr.StampedObject, typedErr.QualifiedResource, typedErr.Error()))
 		default:
-			r.conditionManager.AddPositive(conditions.UnknownErrorCondition(typedErr))
+			conditionManager.AddPositive(conditions.UnknownErrorCondition(typedErr))
 			err = cerrors.NewUnhandledError(err)
 		}
 	} else {
 		log.V(logger.DEBUG).Info("realized object", "object", stampedObject)
-		r.conditionManager.AddPositive(conditions.RunTemplateReadyCondition())
+		conditionManager.AddPositive(conditions.RunTemplateReadyCondition())
 	}
 
 	var stampedObjectStatusPresent = false
@@ -155,7 +155,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if stampedObject != nil {
 		stampedCondition := utils.ExtractConditions(stampedObject).ConditionWithType("Succeeded")
 		if stampedCondition != nil {
-			r.conditionManager.AddPositive(conditions.StampedObjectConditionKnown(stampedCondition))
+			conditionManager.AddPositive(conditions.StampedObjectConditionKnown(stampedCondition))
 			stampedObjectStatusPresent = true
 		}
 		trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
@@ -167,16 +167,16 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 	if !stampedObjectStatusPresent {
-		r.conditionManager.AddPositive(conditions.StampedObjectConditionUnknown())
+		conditionManager.AddPositive(conditions.StampedObjectConditionUnknown())
 	}
 
-	return r.completeReconciliation(ctx, runnable, outputs, err)
+	return r.completeReconciliation(ctx, runnable, outputs, conditionManager, err)
 }
 
-func (r *RunnableReconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, err error) (ctrl.Result, error) {
+func (r *RunnableReconciler) completeReconciliation(ctx context.Context, runnable *v1alpha1.Runnable, outputs map[string]apiextensionsv1.JSON, conditionManager conditions.ConditionManager, err error) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
 	var changed bool
-	runnable.Status.Conditions, changed = r.conditionManager.Finalize()
+	runnable.Status.Conditions, changed = conditionManager.Finalize()
 
 	if changed || (runnable.Status.ObservedGeneration != runnable.Generation) || !reflect.DeepEqual(runnable.Status.Outputs, outputs) {
 		runnable.Status.Outputs = outputs
@@ -232,7 +232,7 @@ func (r *RunnableReconciler) trackDependencies(runnable *v1alpha1.Runnable, serv
 	})
 }
 
-func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	clientSet, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return err
@@ -259,6 +259,7 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 
 	builder := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(crtcontroller.Options{MaxConcurrentReconciles: concurrency}).
 		For(&v1alpha1.Runnable{}).
 		Watches(&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
 			enqueuer.EnqueueTracked(&v1alpha1.ClusterRunTemplate{}, r.DependencyTracker, mgr.GetScheme()),
