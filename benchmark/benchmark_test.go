@@ -17,6 +17,10 @@ package benchmark_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cartographer/benchmark/sampler"
@@ -28,11 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
-	"strconv"
-	"time"
 )
 
 const timeoutSecsPerWorkload = 10
