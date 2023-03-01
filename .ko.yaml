@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-defaultBaseImage: gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:3d0d25ef085f20549118ef6c77efbcabe9bd55afa29573af29e7de0343b44cc5
+defaultBaseImage: gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:536297bc973136d1faa90be0840ea286efc5f8447d99d0361674dcadb8f5cdc6
