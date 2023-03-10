@@ -53,6 +53,10 @@ func immutableEquivalenceTest(realizedResource v1alpha1.ResourceStatus, prevReso
 		return false, fmt.Errorf("get unstructured: %w", err)
 	}
 
+	if prevObj == nil {
+		return false, nil
+	}
+
 	prevLabels := prevObj.GetLabels()
 
 	if lifecycleLabel, ok := prevLabels["carto.run/template-lifecycle"]; !ok || lifecycleLabel == "mutable" {
