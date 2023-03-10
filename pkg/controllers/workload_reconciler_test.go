@@ -1641,6 +1641,44 @@ var _ = Describe("WorkloadReconciler", func() {
 					})
 				})
 			})
+
+			Context("when the previously stamped object no longer exists", func() {
+				BeforeEach(func() {
+					referenceToNonExistentObject := v1alpha1.RealizedResource{
+						Name: "some-resource",
+						StampedRef: &v1alpha1.StampedRef{
+							ObjectReference: &corev1.ObjectReference{
+								APIVersion: "some-api-version",
+								Kind:       "some-kind",
+								Name:       "some-obj-name",
+							},
+							Resource: "some-kind",
+						},
+						TemplateRef: &corev1.ObjectReference{
+							Name: "some-template-name",
+							Kind: "some-template-kind",
+						},
+					}
+
+					wl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: referenceToNonExistentObject,
+						},
+					}
+					repo.GetWorkloadReturns(wl, nil)
+
+					repo.GetUnstructuredReturnsOnCall(0, nil, nil)
+					repo.DeleteReturns(fmt.Errorf("some error"))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(1))
+					Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":"my-namespace/my-workload-name"`))
+				})
+			})
 		})
 
 		Context("when previous resource was stamped from a template that is no longer on cluster", func() {
