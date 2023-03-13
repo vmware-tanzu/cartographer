@@ -3,7 +3,7 @@ module github.com/vmware-tanzu/cartographer/hack/tools
 go 1.19
 
 require (
-	github.com/daixiang0/gci v0.9.1
+	github.com/daixiang0/gci v0.10.0
 	github.com/get-woke/woke v0.19.0
 	github.com/golangci/golangci-lint v1.51.2
 	github.com/google/addlicense v1.1.1
@@ -185,7 +185,7 @@ require (
 	gitlab.com/bosi/decorder v0.2.3 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.19.0 // indirect
+	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230203172020-98cc5a0785f9 // indirect
 	golang.org/x/mod v0.8.0 // indirect
