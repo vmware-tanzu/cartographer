@@ -16,19 +16,36 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
-    labels: ["dependencies"]
     schedule:
       interval: daily
       time: "00:00"
   - package-ecosystem: gomod
-    labels: ["dependencies"]
     directory: /hack/tools
     schedule:
       interval: daily
       time: "00:00"
   - package-ecosystem: github-actions
     directory: /
-    labels: ["dependencies"]
     schedule:
       interval: daily
       time: "00:00"
+  - package-ecosystem: gomod
+    directory: /
+    target-branch: "release/0.6.x"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    schedule:
+      interval: daily
+      time: "14:20"
+      timezone: "America/New_York"
+  - package-ecosystem: gomod
+    directory: /
+    target-branch: "release/0.5.x"
+    ignore:
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-major" ]
+    schedule:
+      interval: daily
+      time: "14:20"
+      timezone: "America/New_York"
