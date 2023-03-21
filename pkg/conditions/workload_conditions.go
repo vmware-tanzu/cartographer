@@ -69,6 +69,15 @@ func MissingReadyInSupplyChainCondition(supplyChainReadyCondition metav1.Conditi
 	}
 }
 
+func MissingPassThroughInputCondition(input string, resource string) metav1.Condition {
+	return metav1.Condition{
+		Type:    v1alpha1.WorkloadSupplyChainReady,
+		Status:  metav1.ConditionFalse,
+		Reason:  v1alpha1.PassThroughReason,
+		Message: fmt.Sprintf("unable to find passthrough [%s] in [%s]", input, resource),
+	}
+}
+
 func AddConditionForResourceSubmittedWorkload(conditionManager *ConditionManager, isOwner bool, err error) {
 	switch typedErr := err.(type) {
 	case cerrors.GetTemplateError:
@@ -82,7 +91,11 @@ func AddConditionForResourceSubmittedWorkload(conditionManager *ConditionManager
 	case cerrors.NoHealthyImmutableObjectsError:
 		(*conditionManager).AddPositive(NoHealthyImmutableObjectsCondition(isOwner, typedErr))
 	case cerrors.RetrieveOutputError:
-		(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
+		if typedErr.PassThroughInput == "" {
+			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
+		} else {
+			(*conditionManager).AddPositive(MissingPassThroughInputCondition(typedErr.PassThroughInput, typedErr.GetQualifiedResource()))
+		}
 	case cerrors.ResolveTemplateOptionError:
 		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(isOwner, typedErr))
 	case cerrors.TemplateOptionsMatchError:
