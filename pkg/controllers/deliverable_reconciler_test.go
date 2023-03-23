@@ -792,7 +792,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				})
 			})
 
-			Context("of type RetrieveOutputError", func() {
+			Context("of type RetrieveOutputError from JSONPath", func() {
 				var retrieveError cerrors.RetrieveOutputError
 				var wrappedError error
 				var stampedObject *unstructured.Unstructured
@@ -1008,6 +1008,137 @@ var _ = Describe("DeliverableReconciler", func() {
 						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
+					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(2)
+						Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					})
+				})
+			})
+			Context("of type RetrieveOutputError from passthrough", func() {
+				var retrieveError cerrors.RetrieveOutputError
+				var wrappedError error
+
+				JustBeforeEach(func() {
+					retrieveError = cerrors.RetrieveOutputError{
+						Err:               wrappedError,
+						ResourceName:      "some-resource",
+						BlueprintName:     deliveryName,
+						BlueprintType:     cerrors.Delivery,
+						StampedObject:     nil,
+						QualifiedResource: "mything.thing.io",
+						PassThroughInput:  "configs",
+					}
+
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return retrieveError
+					}
+				})
+
+				Context("which wraps an ObservedGenerationError", func() {
+					BeforeEach(func() {
+						wrappedError = stamp.NewObservedGenerationError(errors.New("some error"))
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.TemplateStampFailureByObservedGenerationCondition(retrieveError)))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
+						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"delivery":"some-delivery"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
+					})
+
+				})
+
+				Context("which wraps an DeploymentFailedConditionMetError", func() {
+					BeforeEach(func() {
+						wrappedError = stamp.NewDeploymentFailedConditionMetError(errors.New("some error"))
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.DeploymentFailedConditionMetCondition(retrieveError)))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
+						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"delivery":"some-delivery"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
+					})
+
+					It("does track the template", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
+						key, obj := dependencyTracker.TrackArgsForCall(0)
+						Expect(key.String()).To(Equal("ServiceAccount/my-namespace/service-account-name-for-deliverable"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(1)
+						Expect(key.String()).To(Equal("my-image-kind.carto.run//my-image-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+						key, obj = dependencyTracker.TrackArgsForCall(2)
+						Expect(key.String()).To(Equal("my-config-kind.carto.run//my-config-template"))
+						Expect(obj.String()).To(Equal("my-namespace/my-deliverable"))
+					})
+				})
+
+				Context("which wraps any other error", func() {
+					BeforeEach(func() {
+						wrappedError = errors.New("some error")
+					})
+
+					It("calls the condition manager to report", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.UnknownResourceErrorCondition(true, retrieveError)))
+					})
+
+					It("does not return an error", func() {
+						_, err := reconciler.Reconcile(ctx, req)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("logs the handled error message", func() {
+						_, _ = reconciler.Reconcile(ctx, req)
+
+						Expect(out).To(Say(`"level":"info"`))
+						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
+						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"delivery":"some-delivery"`))
+						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
 
 					It("does track the template", func() {
