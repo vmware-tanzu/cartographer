@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
-	github.com/vmware-tanzu/cartographer v0.7.1
+	github.com/vmware-tanzu/cartographer v0.7.2-0.20230324203912-1978912e9439
 	k8s.io/api v0.25.6
 	k8s.io/apiextensions-apiserver v0.25.6
 	k8s.io/apimachinery v0.25.6
@@ -28,7 +28,6 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
-	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
