@@ -91,10 +91,10 @@ func AddConditionForResourceSubmittedWorkload(conditionManager *ConditionManager
 	case cerrors.NoHealthyImmutableObjectsError:
 		(*conditionManager).AddPositive(NoHealthyImmutableObjectsCondition(isOwner, typedErr))
 	case cerrors.RetrieveOutputError:
-		if typedErr.PassThroughInput == "" {
-			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
-		} else {
+		if typedErr.StampedObject == nil {
 			(*conditionManager).AddPositive(MissingPassThroughInputCondition(typedErr.PassThroughInput, typedErr.GetQualifiedResource()))
+		} else {
+			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
 		}
 	case cerrors.ResolveTemplateOptionError:
 		(*conditionManager).AddPositive(ResolveTemplateOptionsErrorCondition(isOwner, typedErr))
