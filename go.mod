@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/go-logr/logr v1.2.3
-	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
 	github.com/valyala/fasttemplate v1.2.2
