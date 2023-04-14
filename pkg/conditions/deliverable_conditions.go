@@ -117,7 +117,11 @@ func AddConditionForResourceSubmittedDeliverable(conditionManager *ConditionMana
 		case stamp.DeploymentConditionError:
 			(*conditionManager).AddPositive(DeploymentConditionNotMetCondition(typedErr))
 		case stamp.JsonPathError:
-			(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
+			if typedErr.StampedObject == nil {
+				(*conditionManager).AddPositive(MissingPassThroughInputCondition(typedErr.PassThroughInput, typedErr.GetQualifiedResource()))
+			} else {
+				(*conditionManager).AddPositive(MissingValueAtPathCondition(isOwner, typedErr.StampedObject, typedErr.JsonPathExpression(), typedErr.GetQualifiedResource()))
+			}
 		default:
 			(*conditionManager).AddPositive(UnknownResourceErrorCondition(isOwner, typedErr))
 		}
