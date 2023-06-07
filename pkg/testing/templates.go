@@ -209,40 +209,27 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 	}
 }
 
-// TemplateTestExpectation must provide the expected object as
-// an object,
-// an unstructured.Unstructured, or as
-// a yaml file.
-type TemplateTestExpectation struct {
-	ExpectedFile         string
-	ExpectedObject       client.Object
+type TemplateTestExpectation interface {
+	getExpectedObject() (*unstructured.Unstructured, error)
+}
+
+type TemplateTestExpectedFile struct {
+	ExpectedFile string
+}
+
+type TemplateTestExpectedUnstructured struct {
 	ExpectedUnstructured *unstructured.Unstructured
 }
 
-func (e *TemplateTestExpectation) getExpectedObject() (*unstructured.Unstructured, error) {
-	populatedFieldCount := 0
-	if e.ExpectedFile != "" {
-		populatedFieldCount++
-	}
-	if e.ExpectedObject != nil {
-		populatedFieldCount++
-	}
-	if e.ExpectedUnstructured != nil {
-		populatedFieldCount++
-	}
+func (e *TemplateTestExpectedUnstructured) getExpectedObject() (*unstructured.Unstructured, error) {
+	return e.ExpectedUnstructured, nil
+}
 
-	if populatedFieldCount != 1 {
-		return nil, fmt.Errorf("exactly one of ExpectedFile, ExpectedObject or ExpectedUnstructured must be set")
-	}
+type TemplateTestExpectedObject struct {
+	ExpectedObject client.Object
+}
 
-	if e.ExpectedUnstructured != nil {
-		return e.ExpectedUnstructured, nil
-	}
-
-	if e.ExpectedFile != "" {
-		return e.getExpectedObjectFromFile()
-	}
-
+func (e *TemplateTestExpectedObject) getExpectedObject() (*unstructured.Unstructured, error) {
 	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ExpectedObject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert template to unstructured: %w", err)
@@ -251,7 +238,7 @@ func (e *TemplateTestExpectation) getExpectedObject() (*unstructured.Unstructure
 	return &unstructured.Unstructured{Object: unstruct}, nil
 }
 
-func (e *TemplateTestExpectation) getExpectedObjectFromFile() (*unstructured.Unstructured, error) {
+func (e *TemplateTestExpectedFile) getExpectedObject() (*unstructured.Unstructured, error) {
 	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not read expected yaml: %w", err)

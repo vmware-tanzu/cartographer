@@ -57,7 +57,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 
 	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.TemplateFile, directory, templateDefaultFilename, info.Template)
 	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, workloadDefaultFilename, info.Workload)
-	testCase.Expect.ExpectedFile = replaceIfFound(testCase.Expect.ExpectedFile, directory, expectedDefaultFilename, info.Expected)
+	testCase.Expect = replaceExpectedIfFound(testCase.Expect, directory, expectedDefaultFilename, info.Expected)
 
 	yttFile := ""
 	if testCase.Given.YttFiles != nil {
@@ -147,4 +147,26 @@ func replaceIfFound(originalPath string, directory, filename string, priorityPat
 		log.Debugf("%s replaced a value found in a parent directory", candidatePath)
 	}
 	return candidatePath
+}
+
+func replaceExpectedIfFound(originalExpectation TemplateTestExpectation, directory, filename string, priorityPath *string) TemplateTestExpectation {
+	var newExpectation TemplateTestExpectedFile
+
+	if priorityPath != nil {
+		newExpectation.ExpectedFile = filepath.Join(directory, *priorityPath)
+		return &newExpectation
+	}
+	candidatePath := filepath.Join(directory, filename)
+	_, err := os.Stat(candidatePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return originalExpectation
+	}
+
+	if originalExpectedAsFile, ok := originalExpectation.(*TemplateTestExpectedFile); ok && originalExpectedAsFile.ExpectedFile != "" {
+		log.Debugf("%s replaced parent %s as the expected file", candidatePath, originalExpectedAsFile.ExpectedFile)
+	}
+
+	newExpectation.ExpectedFile = candidatePath
+
+	return &newExpectation
 }
