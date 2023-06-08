@@ -55,17 +55,30 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	testCase.Given.TemplateFile = replaceIfFound(testCase.Given.TemplateFile, directory, templateDefaultFilename, info.Template)
-	testCase.Given.WorkloadFile = replaceIfFound(testCase.Given.WorkloadFile, directory, workloadDefaultFilename, info.Workload)
+	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Template)
+	if err != nil {
+		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
+	}
+	if newTemplateValue != "" {
+		testCase.Given.TemplateFile = newTemplateValue
+	}
+
+	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Workload)
+	if err != nil {
+		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
+	}
+	if newWorkloadValue != "" {
+		testCase.Given.WorkloadFile = newWorkloadValue
+	}
+
 	testCase.Expect = replaceExpectedIfFound(testCase.Expect, directory, expectedDefaultFilename, info.Expected)
 
-	yttFile := ""
-	if testCase.Given.YttFiles != nil {
-		yttFile = testCase.Given.YttFiles[0]
+	newYTTValue, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Ytt)
+	if err != nil {
+		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
-	yttFile = replaceIfFound(yttFile, directory, yttValuesDefaultFilename, info.Ytt)
-	if yttFile != "" {
-		testCase.Given.YttFiles = []string{yttFile}
+	if newYTTValue != "" {
+		testCase.Given.YttFiles = []string{newYTTValue}
 	}
 
 	if info.Focus != nil {
@@ -134,19 +147,18 @@ func getSubdirectories(directory string) ([]string, error) {
 	return subdirectories, nil
 }
 
-func replaceIfFound(originalPath string, directory, filename string, priorityPath *string) string {
+func replaceIfFound(directory, filename string, priorityPath *string) (string, error) {
 	if priorityPath != nil {
-		return filepath.Join(directory, *priorityPath)
+		return filepath.Join(directory, *priorityPath), nil
 	}
 	candidatePath := filepath.Join(directory, filename)
 	_, err := os.Stat(candidatePath)
 	if errors.Is(err, fs.ErrNotExist) {
-		return originalPath
+		return "", nil
+	} else if err != nil {
+		return "", fmt.Errorf("failed while getting file info on %s: %w", candidatePath, err)
 	}
-	if originalPath != "" {
-		log.Debugf("%s replaced a value found in a parent directory", candidatePath)
-	}
-	return candidatePath
+	return candidatePath, nil
 }
 
 func replaceExpectedIfFound(originalExpectation TemplateTestExpectation, directory, filename string, priorityPath *string) TemplateTestExpectation {
