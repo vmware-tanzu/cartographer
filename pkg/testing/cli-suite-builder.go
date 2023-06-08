@@ -21,8 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
@@ -71,7 +69,13 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		testCase.Given.WorkloadFile = newWorkloadValue
 	}
 
-	testCase.Expect = replaceExpectedIfFound(testCase.Expect, directory, expectedDefaultFilename, info.Expected)
+	newExpectedFilePath, err := replaceIfFound(directory, expectedDefaultFilename, info.Expected)
+	if err != nil {
+		return nil, fmt.Errorf("replace expected file in directory %s: %w", directory, err)
+	}
+	if newExpectedFilePath != "" {
+		testCase.Expect = &TemplateTestExpectedFile{ExpectedFile: newExpectedFilePath}
+	}
 
 	newYTTValue, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Ytt)
 	if err != nil {
@@ -159,26 +163,4 @@ func replaceIfFound(directory, filename string, priorityPath *string) (string, e
 		return "", fmt.Errorf("failed while getting file info on %s: %w", candidatePath, err)
 	}
 	return candidatePath, nil
-}
-
-func replaceExpectedIfFound(originalExpectation TemplateTestExpectation, directory, filename string, priorityPath *string) TemplateTestExpectation {
-	var newExpectation TemplateTestExpectedFile
-
-	if priorityPath != nil {
-		newExpectation.ExpectedFile = filepath.Join(directory, *priorityPath)
-		return &newExpectation
-	}
-	candidatePath := filepath.Join(directory, filename)
-	_, err := os.Stat(candidatePath)
-	if errors.Is(err, fs.ErrNotExist) {
-		return originalExpectation
-	}
-
-	if originalExpectedAsFile, ok := originalExpectation.(*TemplateTestExpectedFile); ok && originalExpectedAsFile.ExpectedFile != "" {
-		log.Debugf("%s replaced parent %s as the expected file", candidatePath, originalExpectedAsFile.ExpectedFile)
-	}
-
-	newExpectation.ExpectedFile = candidatePath
-
-	return &newExpectation
 }
