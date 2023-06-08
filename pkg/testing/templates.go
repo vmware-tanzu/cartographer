@@ -282,10 +282,6 @@ type TemplateTestGivens struct {
 	TTOutputs           TTOutputs
 }
 
-type TTSupplyChain interface {
-	GetSupplyChain() (*v1alpha1.ClusterSupplyChain, error)
-}
-
 type TargetResource interface {
 	GetTargetResourceName() (string, error)
 }
@@ -323,15 +319,15 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		}
 	}
 
-	if i.isMockedBlueprint() {
-		return i.mockedBlueprintStamp(ctx, workload, apiTemplate, template)
+	if i.actualBlueprintSupplied() {
+		return i.actualBlueprintStamp(ctx, workload, template)
 	}
 
-	return i.actualBlueprintStamp(ctx, workload, template)
+	return i.mockedBlueprintStamp(ctx, workload, apiTemplate, template)
 }
 
 func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, template templates.Reader) (*unstructured.Unstructured, error) {
-	supplyChain, err := i.TTSupplyChain.GetSupplyChain()
+	supplyChain, err := i.TTSupplyChain.GetSupplyChain(workload)
 	if err != nil {
 		return nil, fmt.Errorf("get supplychain: %w", err)
 	}
@@ -372,8 +368,8 @@ func (i *TemplateTestGivens) getTargetResource(resources []realizer.OwnerResourc
 	return nil, fmt.Errorf("did not find a supply chain resource with target name: %s", targetResourceName)
 }
 
-func (i *TemplateTestGivens) isMockedBlueprint() bool {
-	return i.BlueprintParamsFile != "" || i.BlueprintParams != nil
+func (i *TemplateTestGivens) actualBlueprintSupplied() bool {
+	return i.TTSupplyChain != nil
 }
 
 func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate templateType, template templates.Reader) (*unstructured.Unstructured, error) {

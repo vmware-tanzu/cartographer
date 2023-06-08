@@ -278,9 +278,9 @@ func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, wor
 	if len(supplyChains) > 1 {
 		conditionManager.AddPositive(conditions.TooManySupplyChainMatchesCondition())
 		log.Info("more than one supply chain selected for workload",
-			"supply chains", getSupplyChainNames(supplyChains))
+			"supply chains", GetSupplyChainNames(supplyChains))
 		return nil, fmt.Errorf("more than one supply chain selected for workload [%s/%s]: %+v",
-			workload.Namespace, workload.Name, getSupplyChainNames(supplyChains))
+			workload.Namespace, workload.Name, GetSupplyChainNames(supplyChains))
 	}
 
 	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].Name)
@@ -388,7 +388,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	return nil
 }
 
-func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
+func GetSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
 	var names []string
 	for _, obj := range objs {
 		names = append(names, obj.GetName())

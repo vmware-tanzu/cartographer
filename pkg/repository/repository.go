@@ -321,10 +321,21 @@ func (r *repository) GetSupplyChainsForWorkload(ctx context.Context, workload *v
 		return nil, fmt.Errorf("unable to list supply chains from api server: %w", err)
 	}
 
-	var selectorGetters []SelectingObject
+	var supplyChains []*v1alpha1.ClusterSupplyChain
+
 	for _, item := range list.Items {
 		itemValue := item
-		selectorGetters = append(selectorGetters, &itemValue)
+		supplyChains = append(supplyChains, &itemValue)
+	}
+
+	return GetSelectedSupplyChain(supplyChains, workload, log)
+}
+
+func GetSelectedSupplyChain(allSupplyChains []*v1alpha1.ClusterSupplyChain, workload *v1alpha1.Workload, log logr.Logger) ([]*v1alpha1.ClusterSupplyChain, error) {
+	var selectorGetters []SelectingObject
+	for _, item := range allSupplyChains {
+		itemValue := item
+		selectorGetters = append(selectorGetters, itemValue)
 	}
 
 	var supplyChains []*v1alpha1.ClusterSupplyChain
