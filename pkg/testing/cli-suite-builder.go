@@ -66,7 +66,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
 	if newWorkloadValue != "" {
-		testCase.Given.WorkloadFile = newWorkloadValue
+		testCase.Given.Workload = &WorkloadFile{Path: newWorkloadValue}
 	}
 
 	newExpectedFilePath, err := replaceIfFound(directory, expectedDefaultFilename, info.Expected)

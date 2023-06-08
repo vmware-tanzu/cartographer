@@ -61,8 +61,10 @@ func TestTemplateExample(t *testing.T) {
 	testSuite := cartotesting.TemplateTestSuite{
 		"template, workload and expected defined in files": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+				TemplateFile: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 				BlueprintParams: params,
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
@@ -74,7 +76,9 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.TemplateTestGivens{
 				Template:        templateOfDeliverable,
 				BlueprintParams: params,
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
@@ -85,7 +89,7 @@ func TestTemplateExample(t *testing.T) {
 		"workload defined as an object": {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				Workload:        workload,
+				Workload:        &cartotesting.WorkloadObject{Workload: workload},
 				BlueprintParams: params,
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
@@ -95,8 +99,10 @@ func TestTemplateExample(t *testing.T) {
 
 		"blueprints defined as a file": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:        filepath.Join("deliverable", "regular-template", "template.yaml"),
-				WorkloadFile:        filepath.Join("deliverable", "common-workload.yaml"),
+				TemplateFile: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 				BlueprintParamsFile: filepath.Join("deliverable", "regular-template", "params-file-not-used-by-cli-tests.yaml"),
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
@@ -108,7 +114,9 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
 				BlueprintParams: params,
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 			},
 			Expect: &cartotesting.TemplateTestExpectedObject{
 				ExpectedObject: expectedDeliverable,
@@ -118,8 +126,10 @@ func TestTemplateExample(t *testing.T) {
 
 		"expected defined as an unstructured": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+				TemplateFile: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 				BlueprintParams: params,
 			},
 			Expect: &cartotesting.TemplateTestExpectedUnstructured{
@@ -129,8 +139,10 @@ func TestTemplateExample(t *testing.T) {
 
 		"clustertemplate uses ytt field": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "ytt-template", "template-ytt.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+				TemplateFile: filepath.Join("deliverable", "ytt-template", "template-ytt.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 				BlueprintParams: params,
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
@@ -140,8 +152,10 @@ func TestTemplateExample(t *testing.T) {
 
 		"template requires ytt preprocessing, data supplied in object": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+				TemplateFile: filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 				BlueprintParams: params,
 				YttValues: cartotesting.Values{
 					"kind": "Deliverable",
@@ -155,8 +169,10 @@ func TestTemplateExample(t *testing.T) {
 		"template requires ytt preprocessing, data supplied in files": {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
-				WorkloadFile: filepath.Join("deliverable", "common-workload.yaml"),
-				YttFiles:     []string{filepath.Join("deliverable", "ytt-preprocess", "values.yaml")},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
+				YttFiles: []string{filepath.Join("deliverable", "ytt-preprocess", "values.yaml")},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
@@ -166,7 +182,9 @@ func TestTemplateExample(t *testing.T) {
 		"template that requires a supply chain input": {
 			Given: cartotesting.TemplateTestGivens{
 				TemplateFile: filepath.Join("kpack", "template.yaml"),
-				WorkloadFile: filepath.Join("kpack", "workload.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("kpack", "workload.yaml"),
+				},
 				BlueprintInputs: &cartotesting.Inputs{
 					Sources: map[string]templates.SourceInput{
 						"source": {
@@ -183,8 +201,10 @@ func TestTemplateExample(t *testing.T) {
 
 		"providing a supply chain input file": {
 			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:        filepath.Join("kpack", "template.yaml"),
-				WorkloadFile:        filepath.Join("kpack", "workload.yaml"),
+				TemplateFile: filepath.Join("kpack", "template.yaml"),
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("kpack", "workload.yaml"),
+				},
 				BlueprintInputsFile: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{

@@ -58,8 +58,7 @@ type FailedTest struct {
 type TemplateTestGivens struct {
 	TemplateFile        string
 	Template            templateType
-	WorkloadFile        string
-	Workload            *v1alpha1.Workload
+	Workload            TTWorkload
 	BlueprintParams     []v1alpha1.BlueprintParam
 	BlueprintParamsFile string
 	YttValues           Values
@@ -83,7 +82,7 @@ type TTOutputs interface {
 func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
 	ctx := context.Background()
 
-	workload, err := i.getWorkload()
+	workload, err := i.Workload.GetWorkload()
 	if err != nil {
 		return nil, fmt.Errorf("get workload failed: %w", err)
 	}
@@ -185,30 +184,6 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 	}
 
 	return actualStampedObject, nil
-}
-
-func (i *TemplateTestGivens) getWorkload() (*v1alpha1.Workload, error) {
-	if (i.Workload == nil && i.WorkloadFile == "") ||
-		(i.Workload != nil && i.WorkloadFile != "") {
-		return nil, fmt.Errorf("exactly one of Workload or WorkloadFile must be specified")
-	}
-
-	if i.Workload != nil {
-		return i.Workload, nil
-	}
-
-	workload := &v1alpha1.Workload{}
-
-	workloadData, err := os.ReadFile(i.WorkloadFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read workload file: %w", err)
-	}
-
-	if err = yaml.Unmarshal(workloadData, workload); err != nil {
-		return nil, fmt.Errorf("unmarshall template: %w", err)
-	}
-
-	return workload, nil
 }
 
 func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (templateType, error) {
