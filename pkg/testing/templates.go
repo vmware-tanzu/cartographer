@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
@@ -276,6 +277,21 @@ type TemplateTestGivens struct {
 	labels              map[string]string
 	BlueprintInputs     *Inputs
 	BlueprintInputsFile string
+	TTSupplyChain       TTSupplyChain
+	TargetResource      TargetResource
+	TTOutputs           TTOutputs
+}
+
+type TTSupplyChain interface {
+	GetSupplyChain() (*v1alpha1.ClusterSupplyChain, error)
+}
+
+type TargetResource interface {
+	GetTargetResourceName() (string, error)
+}
+
+type TTOutputs interface {
+	GetOutputs() (realizer.Outputs, error)
 }
 
 func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
@@ -307,6 +323,60 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		}
 	}
 
+	if i.isMockedBlueprint() {
+		return i.mockedBlueprintStamp(ctx, workload, apiTemplate, template)
+	}
+
+	return i.actualBlueprintStamp(ctx, workload, template)
+}
+
+func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, template templates.Reader) (*unstructured.Unstructured, error) {
+	supplyChain, err := i.TTSupplyChain.GetSupplyChain()
+	if err != nil {
+		return nil, fmt.Errorf("get supplychain: %w", err)
+	}
+
+	resource, err := i.getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain))
+	if err != nil {
+		return nil, fmt.Errorf("get target resource: %w", err)
+	}
+
+	templatingContext := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
+
+	resourceLabeler := controllers.BuildWorkloadResourceLabeler(workload, supplyChain)
+	labels := resourceLabeler(*resource, template)
+
+	outputs, err := i.TTOutputs.GetOutputs()
+
+	stamper := templates.StamperBuilder(workload, templatingContext.Generate(template, *resource, outputs, labels), labels)
+	actualStampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
+	if err != nil {
+		return nil, fmt.Errorf("could not stamp: %w", err)
+	}
+
+	return actualStampedObject, nil
+}
+
+func (i *TemplateTestGivens) getTargetResource(resources []realizer.OwnerResource) (*realizer.OwnerResource, error) {
+	targetResourceName, err := i.TargetResource.GetTargetResourceName()
+	if err != nil {
+		return nil, fmt.Errorf("get target resource name: %w", err)
+	}
+
+	for _, resource := range resources {
+		if resource.Name == targetResourceName {
+			return &resource, nil
+		}
+	}
+
+	return nil, fmt.Errorf("did not find a supply chain resource with target name: %s", targetResourceName)
+}
+
+func (i *TemplateTestGivens) isMockedBlueprint() bool {
+	return i.BlueprintParamsFile != "" || i.BlueprintParams != nil
+}
+
+func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate templateType, template templates.Reader) (*unstructured.Unstructured, error) {
 	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	blueprintParams, err := i.getBlueprintParams()

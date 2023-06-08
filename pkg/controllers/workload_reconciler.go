@@ -136,7 +136,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	contextGenerator := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
-	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, contextGenerator, r.Repo, buildWorkloadResourceLabeler(workload, supplyChain))
+	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, contextGenerator, r.Repo, BuildWorkloadResourceLabeler(workload, supplyChain))
 	if err != nil {
 		conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -228,7 +228,7 @@ func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSup
 	return supplyChainReadyCondition.Status == "True"
 }
 
-func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
+func BuildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
 	return func(resource realizer.OwnerResource, reader templates.Reader) templates.Labels {
 		return templates.Labels{
 			"carto.run/workload-name":         owner.GetName(),
