@@ -13,19 +13,23 @@ import (
 )
 
 type testInfo struct {
-	metadata             testInfoMetadata `yaml:"metadata"`
-	Given                testInfoGiven    `yaml:"given"`
-	Expected             *string          `yaml:"expected"`
-	Focus                *bool            `yaml:"focus"`
-	IgnoreMetadata       *bool            `yaml:"ignoreMetadata"`
-	IgnoreOwnerRefs      *bool            `yaml:"ignoreOwnerRefs"`
-	IgnoreLabels         *bool            `yaml:"ignoreLabels"`
-	IgnoreMetadataFields []string         `yaml:"ignoreMetadataFields"`
+	Metadata       testInfoMetadata       `yaml:"metadata"`
+	Given          testInfoGiven          `yaml:"given"`
+	Expected       *string                `yaml:"expected"`
+	Focus          *bool                  `yaml:"focus"`
+	CompareOptions testInfoCompareOptions `yaml:"compareOptions"`
 }
 
 type testInfoMetadata struct {
 	Name        *string `yaml:"name"`
 	Description *string `yaml:"description"`
+}
+
+type testInfoCompareOptions struct {
+	IgnoreMetadata       *bool    `yaml:"ignoreMetadata"`
+	IgnoreOwnerRefs      *bool    `yaml:"ignoreOwnerRefs"`
+	IgnoreLabels         *bool    `yaml:"ignoreLabels"`
+	IgnoreMetadataFields []string `yaml:"ignoreMetadataFields"`
 }
 
 type testInfoGiven struct {
@@ -87,29 +91,29 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 	if info.Focus != nil {
 		testCase.Focus = *info.Focus
 	}
-	if info.IgnoreMetadata != nil {
+	if info.CompareOptions.IgnoreMetadata != nil {
 		if testCase.CompareOptions == nil {
 			testCase.CompareOptions = &CompareOptions{}
 		}
-		testCase.CompareOptions.IgnoreMetadata = *info.IgnoreMetadata
+		testCase.CompareOptions.IgnoreMetadata = *info.CompareOptions.IgnoreMetadata
 	}
-	if info.IgnoreOwnerRefs != nil {
+	if info.CompareOptions.IgnoreOwnerRefs != nil {
 		if testCase.CompareOptions == nil {
 			testCase.CompareOptions = &CompareOptions{}
 		}
-		testCase.CompareOptions.IgnoreOwnerRefs = *info.IgnoreOwnerRefs
+		testCase.CompareOptions.IgnoreOwnerRefs = *info.CompareOptions.IgnoreOwnerRefs
 	}
-	if info.IgnoreLabels != nil {
+	if info.CompareOptions.IgnoreLabels != nil {
 		if testCase.CompareOptions == nil {
 			testCase.CompareOptions = &CompareOptions{}
 		}
-		testCase.CompareOptions.IgnoreLabels = *info.IgnoreLabels
+		testCase.CompareOptions.IgnoreLabels = *info.CompareOptions.IgnoreLabels
 	}
-	if info.IgnoreMetadataFields != nil {
+	if info.CompareOptions.IgnoreMetadataFields != nil {
 		if testCase.CompareOptions == nil {
 			testCase.CompareOptions = &CompareOptions{}
 		}
-		testCase.CompareOptions.IgnoreMetadataFields = info.IgnoreMetadataFields
+		testCase.CompareOptions.IgnoreMetadataFields = info.CompareOptions.IgnoreMetadataFields
 	}
 
 	var (

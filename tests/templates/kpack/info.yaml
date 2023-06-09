@@ -15,10 +15,11 @@
 metadata:
   name: image-template
   description: "template requiring 'source' input"
-ignoreMetadataFields:
-  - labels
-  - ownerReferences
-  - namespace
+compareOptions:
+  ignoreMetadataFields:
+    - labels
+    - ownerReferences
+    - namespace
 given:
   mockSupplyChain:
     blueprintInputs:

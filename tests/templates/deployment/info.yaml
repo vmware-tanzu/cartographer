@@ -5,4 +5,5 @@ given:
     previousOutputs:
       build-image:
         image: my-image
-ignoreMetadata: true
+compareOptions:
+  ignoreMetadata: true
