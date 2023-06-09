@@ -27,10 +27,9 @@ import (
 type testInfo struct {
 	Name                 *string                   `yaml:"name"`
 	Description          *string                   `yaml:"description"`
-	Template             *string                   `yaml:"template"`
+	Template             testInfoTemplate          `yaml:"template"`
 	Workload             *string                   `yaml:"workload"`
 	Expected             *string                   `yaml:"expected"`
-	TemplateYtt          *string                   `yaml:"templateYtt"`
 	BlueprintInputs      *Inputs                   `yaml:"blueprintInputs"`
 	BlueprintParams      []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
 	Focus                *bool                     `yaml:"focus"`
@@ -38,6 +37,11 @@ type testInfo struct {
 	IgnoreOwnerRefs      *bool                     `yaml:"ignoreOwnerRefs"`
 	IgnoreLabels         *bool                     `yaml:"ignoreLabels"`
 	IgnoreMetadataFields []string                  `yaml:"ignoreMetadataFields"`
+}
+
+type testInfoTemplate struct {
+	Path    *string `yaml:"path"`
+	YttPath *string `yaml:"yttPath"`
 }
 
 const (
@@ -53,7 +57,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Template)
+	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Template.Path)
 	if err != nil {
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
 	}
@@ -66,7 +70,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 
 		newTemplateFile := TemplateFile{Path: newTemplateValue}
 
-		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.TemplateYtt)
+		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Template.YttPath)
 		if err != nil {
 			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 		}

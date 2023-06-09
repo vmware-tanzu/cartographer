@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-template: template-ytt.yaml
+template:
+  path: template-ytt.yaml
 name: YTT Template Test
 description: The template's spec.ytt field exists instead of a spec.template field
 

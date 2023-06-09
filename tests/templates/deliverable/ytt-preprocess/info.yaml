@@ -13,5 +13,6 @@
 # limitations under the License.
 
 description: template is incomplete without being formatted with ytt and the ytt-values.yaml file
-template: "template-requires-preprocess.yaml"
-templateYtt: values.yaml
+template:
+  path: "template-requires-preprocess.yaml"
+  yttPath: values.yaml
