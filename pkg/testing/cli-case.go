@@ -74,7 +74,7 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 		return nil, fmt.Errorf("populate testCase workload: %w", err)
 	}
 
-	newExpectedFilePath, err := replaceIfFound(directory, expectedDefaultFilename, info.Expected)
+	newExpectedFilePath, err := getLocallySpecifiedPath(directory, expectedDefaultFilename, info.Expected)
 	if err != nil {
 		return nil, fmt.Errorf("replace expected file in directory %s: %w", directory, err)
 	}
@@ -117,7 +117,7 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 }
 
 func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
-	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Given.Workload)
+	newWorkloadValue, err := getLocallySpecifiedPath(directory, workloadDefaultFilename, info.Given.Workload)
 	if err != nil {
 		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
@@ -128,12 +128,12 @@ func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info
 }
 
 func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
-	newTemplateFilepath, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
+	newTemplateFilepath, err := getLocallySpecifiedPath(directory, templateDefaultFilename, info.Given.Template.Path)
 	if err != nil {
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
 	}
 
-	yttFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
+	yttFile, err := getLocallySpecifiedPath(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
 	if err != nil {
 		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
@@ -182,7 +182,9 @@ func populateTestCaseSupplyChain(testCase *TemplateTestCase, directory string, i
 	//return testCase, false, nil
 }
 
-func replaceIfFound(directory, filename string, priorityPath *string) (string, error) {
+// getLocallySpecifiedPath returns the path specified in info.yaml, or if none specified there, the default
+// filename (if the file exists)
+func getLocallySpecifiedPath(directory, filename string, priorityPath *string) (string, error) {
 	if priorityPath != nil {
 		return filepath.Join(directory, *priorityPath), nil
 	}
