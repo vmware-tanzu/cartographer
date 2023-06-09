@@ -1,0 +1,8 @@
+---
+given:
+  supplyChain:
+    targetResourceName: deploy
+    previousOutputs:
+      build-image:
+        image: my-image
+ignoreMetadata: true

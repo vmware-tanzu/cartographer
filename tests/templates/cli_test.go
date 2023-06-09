@@ -7,7 +7,7 @@ import (
 )
 
 func TestCLIExample(t *testing.T) {
-	directories := []string{"kpack", "deliverable"}
+	directories := []string{"kpack", "deliverable", "deployment"}
 
 	for _, directory := range directories {
 		err := cartotesting.CliTest(directory)

@@ -32,7 +32,7 @@ type testInfoGiven struct {
 	Template        testInfoTemplate    `yaml:"template"`
 	Workload        *string             `yaml:"workload"`
 	MockSupplyChain testInfoMockSC      `yaml:"mockSupplyChain"`
-	SupplyChain     testInfoSupplyChain `yaml:"SupplyChain"`
+	SupplyChain     testInfoSupplyChain `yaml:"supplyChain"`
 }
 
 type testInfoTemplate struct {
@@ -215,6 +215,10 @@ func populateTestCaseSupplyChain(testCase *TemplateTestCase, directory string, i
 		}
 	}
 
+	if fileSetNotEmpty(&newSupplyChain) {
+		testCase.Given.SupplyChain = &newSupplyChain
+	}
+
 	return testCase, supplyChainSpecified, nil
 }
 
@@ -249,4 +253,11 @@ func getFilesPrefixedSupplyChainInDir(directory string) ([]string, error) {
 	}
 
 	return supplyChainYamlFilesFound, nil
+}
+
+func fileSetNotEmpty(supplyChainfileSet *SupplyChainFileSet) bool {
+	return len(supplyChainfileSet.YttFiles) > 0 ||
+		len(supplyChainfileSet.Paths) > 0 ||
+		supplyChainfileSet.TargetResourceName != "" ||
+		supplyChainfileSet.PreviousOutputs != nil
 }
