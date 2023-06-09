@@ -57,7 +57,7 @@ type FailedTest struct {
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
 	Template            Template
-	Workload            TTWorkload
+	Workload            Workload
 	BlueprintParams     []v1alpha1.BlueprintParam
 	BlueprintParamsFile string
 	labels              map[string]string

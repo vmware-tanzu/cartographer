@@ -9,7 +9,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
-type TTWorkload interface {
+type Workload interface {
 	GetWorkload() (*v1alpha1.Workload, error)
 }
 
