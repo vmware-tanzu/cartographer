@@ -19,7 +19,7 @@ type MockSupplyChain struct {
 	BlueprintInputs BlueprintInputs
 }
 
-func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
+func (i *MockSupplyChain) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	labels := completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	var (
@@ -28,8 +28,8 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 
 	blueprintParams := make([]v1alpha1.BlueprintParam, 0)
 
-	if i.MockSupplyChain.BlueprintParams != nil {
-		blueprintParams, err = i.MockSupplyChain.BlueprintParams.GetBlueprintParams()
+	if i.BlueprintParams != nil {
+		blueprintParams, err = i.BlueprintParams.GetBlueprintParams()
 		if err != nil {
 			return nil, fmt.Errorf("get blueprint params failed: %w", err)
 		}
@@ -175,7 +175,7 @@ func (p *BlueprintInputsFile) GetBlueprintInputs() (*Inputs, error) {
 	return &inputs, nil
 }
 
-func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
+func (i *MockSupplyChain) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
 	var (
 		inputs *Inputs
 		err    error
@@ -183,8 +183,8 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 
 	inputs = &Inputs{}
 
-	if i.MockSupplyChain.BlueprintInputs != nil {
-		inputs, err = i.MockSupplyChain.BlueprintInputs.GetBlueprintInputs()
+	if i.BlueprintInputs != nil {
+		inputs, err = i.BlueprintInputs.GetBlueprintInputs()
 		if err != nil {
 			return nil, fmt.Errorf("get supply chain inputs: %w", err)
 		}

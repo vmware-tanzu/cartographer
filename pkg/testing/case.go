@@ -114,5 +114,5 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return i.actualBlueprintStamp(ctx, workload, template)
 	}
 
-	return i.mockedBlueprintStamp(ctx, workload, *apiTemplate, template)
+	return i.MockSupplyChain.mockedBlueprintStamp(ctx, workload, *apiTemplate, template)
 }
