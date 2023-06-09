@@ -3,6 +3,9 @@ package testing
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"path/filepath"
 
@@ -163,3 +166,49 @@ func (n *NoLog) Info(_ int, _ string, _ ...interface{})    {}
 func (n *NoLog) Error(_ error, _ string, _ ...interface{}) {}
 func (n *NoLog) WithValues(_ ...interface{}) logr.LogSink  { return n }
 func (n *NoLog) WithName(name string) logr.LogSink         { return n }
+
+func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, template templates.Reader) (*unstructured.Unstructured, error) {
+	supplyChain, err := i.SupplyChain.GetSupplyChain(workload)
+	if err != nil {
+		return nil, fmt.Errorf("get supplychain: %w", err)
+	}
+
+	resource, err := i.getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain))
+	if err != nil {
+		return nil, fmt.Errorf("get target resource: %w", err)
+	}
+
+	templatingContext := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
+
+	resourceLabeler := controllers.BuildWorkloadResourceLabeler(workload, supplyChain)
+	labels := resourceLabeler(*resource, template)
+
+	outputs, err := i.TTOutputs.GetOutputs()
+
+	stamper := templates.StamperBuilder(workload, templatingContext.Generate(template, *resource, outputs, labels), labels)
+	actualStampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
+	if err != nil {
+		return nil, fmt.Errorf("could not stamp: %w", err)
+	}
+
+	return actualStampedObject, nil
+}
+
+func (i *TemplateTestGivens) getTargetResource(resources []realizer.OwnerResource) (*realizer.OwnerResource, error) {
+	targetResourceName, err := i.TargetResource.GetTargetResourceName()
+	if err != nil {
+		return nil, fmt.Errorf("get target resource name: %w", err)
+	}
+
+	for _, resource := range resources {
+		if resource.Name == targetResourceName {
+			return &resource, nil
+		}
+	}
+
+	return nil, fmt.Errorf("did not find a supply chain resource with target name: %s", targetResourceName)
+}
+
+func (i *TemplateTestGivens) actualBlueprintSupplied() bool {
+	return i.SupplyChain != nil
+}

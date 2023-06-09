@@ -1,9 +1,11 @@
 package testing
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -77,4 +79,40 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 		delete(expectedMetadata, field)
 		delete(actualMetadata, field)
 	}
+}
+
+func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
+	ctx := context.Background()
+
+	workload, err := i.Workload.GetWorkload()
+	if err != nil {
+		return nil, fmt.Errorf("get workload failed: %w", err)
+	}
+
+	apiTemplate, err := i.Template.GetTemplate()
+	if err != nil {
+		return nil, fmt.Errorf("get populated template failed: %w", err)
+	}
+
+	if err = (*apiTemplate).ValidateCreate(); err != nil {
+		return nil, fmt.Errorf("template validation failed: %w", err)
+	}
+
+	template, err := templates.NewReaderFromAPI(*apiTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster template")
+	}
+
+	if template.IsYTTTemplate() {
+		err = ensureYTTAvailable(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("ensure YTT available: %w", err)
+		}
+	}
+
+	if i.actualBlueprintSupplied() {
+		return i.actualBlueprintStamp(ctx, workload, template)
+	}
+
+	return i.mockedBlueprintStamp(ctx, workload, *apiTemplate, template)
 }
