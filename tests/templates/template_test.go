@@ -90,7 +90,9 @@ func TestTemplateExample(t *testing.T) {
 			Expect: &cartotesting.ExpectedFile{
 				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
-			IgnoreMetadataFields: []string{"creationTimestamp"},
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadataFields: []string{"creationTimestamp"},
+			},
 		},
 
 		"workload defined as an object": {
@@ -144,7 +146,9 @@ func TestTemplateExample(t *testing.T) {
 			Expect: &cartotesting.ExpectedObject{
 				Object: expectedDeliverable,
 			},
-			IgnoreMetadata: true,
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
 		},
 
 		"expected defined as an unstructured": {
@@ -241,7 +245,9 @@ func TestTemplateExample(t *testing.T) {
 			Expect: &cartotesting.ExpectedFile{
 				Path: filepath.Join("kpack", "expected.yaml"),
 			},
-			IgnoreMetadata: true,
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
 		},
 
 		"providing a supply chain input file": {
@@ -261,7 +267,9 @@ func TestTemplateExample(t *testing.T) {
 			Expect: &cartotesting.ExpectedFile{
 				Path: filepath.Join("kpack", "expected.yaml"),
 			},
-			IgnoreMetadata: true,
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
 		},
 
 		"actual supply chain": {
@@ -283,7 +291,9 @@ func TestTemplateExample(t *testing.T) {
 			Expect: &cartotesting.ExpectedFile{
 				Path: filepath.Join("deployment", "expected.yaml"),
 			},
-			IgnoreMetadata: true, // TODO Remove!
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
 		},
 	}
 

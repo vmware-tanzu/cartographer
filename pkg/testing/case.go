@@ -16,13 +16,10 @@ import (
 // This will exercise the individual test(s).
 // Note that the overall suite will fail (preventing focused tests from passing CI).
 type TemplateTestCase struct {
-	Given                Given
-	Expect               Expectation
-	IgnoreMetadata       bool
-	IgnoreOwnerRefs      bool
-	IgnoreLabels         bool
-	IgnoreMetadataFields []string
-	Focus                bool
+	Given          Given
+	Expect         Expectation
+	CompareOptions *CompareOptions
+	Focus          bool
 }
 
 // Given must specify a Template and a Workload.
@@ -31,6 +28,18 @@ type Given struct {
 	Template    Template
 	Workload    Workload
 	SupplyChain SupplyChain
+}
+
+type CompareOptions struct {
+	IgnoreMetadata       bool
+	IgnoreOwnerRefs      bool
+	IgnoreLabels         bool
+	IgnoreMetadataFields []string
+	CMPOption            CMPOption
+}
+
+type CMPOption interface {
+	getOpts() (cmp.Options, error)
 }
 
 func (c *TemplateTestCase) Run() error {
@@ -59,12 +68,12 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 	delete(expected.Object, "status")
 	delete(actual.Object, "status")
 
-	if c.IgnoreLabels {
+	if c.CompareOptions != nil && c.CompareOptions.IgnoreLabels {
 		expected.SetLabels(nil)
 		actual.SetLabels(nil)
 	}
 
-	if c.IgnoreMetadata {
+	if c.CompareOptions != nil && c.CompareOptions.IgnoreMetadata {
 		delete(expected.Object, "metadata")
 		delete(actual.Object, "metadata")
 	}
@@ -78,14 +87,16 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 		actualMetadata = actual.Object["metadata"].(map[string]interface{})
 	}
 
-	if c.IgnoreOwnerRefs {
+	if c.CompareOptions != nil && c.CompareOptions.IgnoreOwnerRefs {
 		delete(expectedMetadata, "ownerReferences")
 		delete(actualMetadata, "ownerReferences")
 	}
 
-	for _, field := range c.IgnoreMetadataFields {
-		delete(expectedMetadata, field)
-		delete(actualMetadata, field)
+	if c.CompareOptions != nil {
+		for _, field := range c.CompareOptions.IgnoreMetadataFields {
+			delete(expectedMetadata, field)
+			delete(actualMetadata, field)
+		}
 	}
 }
 

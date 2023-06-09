@@ -88,16 +88,28 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 		testCase.Focus = *info.Focus
 	}
 	if info.IgnoreMetadata != nil {
-		testCase.IgnoreMetadata = *info.IgnoreMetadata
+		if testCase.CompareOptions == nil {
+			testCase.CompareOptions = &CompareOptions{}
+		}
+		testCase.CompareOptions.IgnoreMetadata = *info.IgnoreMetadata
 	}
 	if info.IgnoreOwnerRefs != nil {
-		testCase.IgnoreOwnerRefs = *info.IgnoreOwnerRefs
+		if testCase.CompareOptions == nil {
+			testCase.CompareOptions = &CompareOptions{}
+		}
+		testCase.CompareOptions.IgnoreOwnerRefs = *info.IgnoreOwnerRefs
 	}
 	if info.IgnoreLabels != nil {
-		testCase.IgnoreLabels = *info.IgnoreLabels
+		if testCase.CompareOptions == nil {
+			testCase.CompareOptions = &CompareOptions{}
+		}
+		testCase.CompareOptions.IgnoreLabels = *info.IgnoreLabels
 	}
 	if info.IgnoreMetadataFields != nil {
-		testCase.IgnoreMetadataFields = info.IgnoreMetadataFields
+		if testCase.CompareOptions == nil {
+			testCase.CompareOptions = &CompareOptions{}
+		}
+		testCase.CompareOptions.IgnoreMetadataFields = info.IgnoreMetadataFields
 	}
 
 	var (
