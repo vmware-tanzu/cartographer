@@ -30,7 +30,7 @@ type testInfo struct {
 	Template             *string                   `yaml:"template"`
 	Workload             *string                   `yaml:"workload"`
 	Expected             *string                   `yaml:"expected"`
-	Ytt                  *string                   `yaml:"ytt"`
+	TemplateYtt          *string                   `yaml:"templateYtt"`
 	BlueprintInputs      *Inputs                   `yaml:"blueprintInputs"`
 	BlueprintParams      []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
 	Focus                *bool                     `yaml:"focus"`
@@ -66,7 +66,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 
 		newTemplateFile := TemplateFile{Path: newTemplateValue}
 
-		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Ytt)
+		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.TemplateYtt)
 		if err != nil {
 			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 		}

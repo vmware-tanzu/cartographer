@@ -14,4 +14,4 @@
 
 description: template is incomplete without being formatted with ytt and the ytt-values.yaml file
 template: "template-requires-preprocess.yaml"
-ytt: values.yaml
+templateYtt: values.yaml
