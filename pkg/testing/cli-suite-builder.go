@@ -25,23 +25,27 @@ import (
 )
 
 type testInfo struct {
-	Name                 *string                   `yaml:"name"`
-	Description          *string                   `yaml:"description"`
-	Template             testInfoTemplate          `yaml:"template"`
-	Workload             *string                   `yaml:"workload"`
-	Expected             *string                   `yaml:"expected"`
-	BlueprintInputs      *Inputs                   `yaml:"blueprintInputs"`
-	BlueprintParams      []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
-	Focus                *bool                     `yaml:"focus"`
-	IgnoreMetadata       *bool                     `yaml:"ignoreMetadata"`
-	IgnoreOwnerRefs      *bool                     `yaml:"ignoreOwnerRefs"`
-	IgnoreLabels         *bool                     `yaml:"ignoreLabels"`
-	IgnoreMetadataFields []string                  `yaml:"ignoreMetadataFields"`
+	Name                 *string          `yaml:"name"`
+	Description          *string          `yaml:"description"`
+	Template             testInfoTemplate `yaml:"template"`
+	Workload             *string          `yaml:"workload"`
+	Expected             *string          `yaml:"expected"`
+	MockSupplyChain      testInfoMockSC   `yaml:"mockSupplyChain"`
+	Focus                *bool            `yaml:"focus"`
+	IgnoreMetadata       *bool            `yaml:"ignoreMetadata"`
+	IgnoreOwnerRefs      *bool            `yaml:"ignoreOwnerRefs"`
+	IgnoreLabels         *bool            `yaml:"ignoreLabels"`
+	IgnoreMetadataFields []string         `yaml:"ignoreMetadataFields"`
 }
 
 type testInfoTemplate struct {
 	Path    *string `yaml:"path"`
 	YttPath *string `yaml:"yttPath"`
+}
+
+type testInfoMockSC struct {
+	BlueprintInputs *Inputs                   `yaml:"blueprintInputs"`
+	BlueprintParams []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
 }
 
 const (
@@ -117,12 +121,12 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 
 	mockSupplyChain := MockSupplyChain{}
 
-	if info.BlueprintInputs != nil {
-		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.BlueprintInputs}
+	if info.MockSupplyChain.BlueprintInputs != nil {
+		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.MockSupplyChain.BlueprintInputs}
 	}
 
-	if info.BlueprintParams != nil {
-		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.BlueprintParams}
+	if info.MockSupplyChain.BlueprintParams != nil {
+		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.MockSupplyChain.BlueprintParams}
 	}
 
 	testCase.Given.SupplyChain = &mockSupplyChain
