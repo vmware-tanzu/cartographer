@@ -21,3 +21,5 @@ given:
         image: my-image
 compareOptions:
   ignoreMetadata: true
+  namedCMPOptionFuncs:
+   - ConvertNumbersToFloatsDuringComparison

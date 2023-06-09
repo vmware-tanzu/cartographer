@@ -44,6 +44,7 @@ type testInfoCompareOptions struct {
 	IgnoreOwnerRefs      *bool    `yaml:"ignoreOwnerRefs"`
 	IgnoreLabels         *bool    `yaml:"ignoreLabels"`
 	IgnoreMetadataFields []string `yaml:"ignoreMetadataFields"`
+	NamedCMPOptionFuncs  []string `yaml:"namedCMPOptionFuncs"`
 }
 
 type testInfoGiven struct {
@@ -105,6 +106,28 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 	if info.Focus != nil {
 		testCase.Focus = *info.Focus
 	}
+
+	testCase = populateCompareOptions(testCase, info)
+
+	var (
+		mockSupplyChainSpecified bool
+		supplyChainSpecified     bool
+	)
+
+	testCase, mockSupplyChainSpecified = populateTestCaseMockSupplyChain(testCase, info)
+	testCase, supplyChainSpecified, err = populateTestCaseSupplyChain(testCase, directory, info)
+	if err != nil {
+		return nil, fmt.Errorf("populate testCase supplychain: %w", err)
+	}
+
+	if mockSupplyChainSpecified && supplyChainSpecified {
+		return nil, fmt.Errorf("only one of mock supply chain and real supply chain may be specified")
+	}
+
+	return testCase, nil
+}
+
+func populateCompareOptions(testCase *TemplateTestCase, info *testInfo) *TemplateTestCase {
 	if info.CompareOptions.IgnoreMetadata != nil {
 		if testCase.CompareOptions == nil {
 			testCase.CompareOptions = &CompareOptions{}
@@ -130,22 +153,16 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 		testCase.CompareOptions.IgnoreMetadataFields = info.CompareOptions.IgnoreMetadataFields
 	}
 
-	var (
-		mockSupplyChainSpecified bool
-		supplyChainSpecified     bool
-	)
-
-	testCase, mockSupplyChainSpecified = populateTestCaseMockSupplyChain(testCase, info)
-	testCase, supplyChainSpecified, err = populateTestCaseSupplyChain(testCase, directory, info)
-	if err != nil {
-		return nil, fmt.Errorf("populate testCase supplychain: %w", err)
+	for _, optionFunc := range info.CompareOptions.NamedCMPOptionFuncs {
+		if optionFunc == "ConvertNumbersToFloatsDuringComparison" {
+			if testCase.CompareOptions == nil {
+				testCase.CompareOptions = &CompareOptions{}
+			}
+			testCase.CompareOptions.CMPOption = ConvertNumbersToFloatsDuringComparison
+		}
 	}
 
-	if mockSupplyChainSpecified && supplyChainSpecified {
-		return nil, fmt.Errorf("only one of mock supply chain and real supply chain may be specified")
-	}
-
-	return testCase, nil
+	return testCase
 }
 
 func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
