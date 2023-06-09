@@ -19,19 +19,20 @@ import (
 
 type SupplyChain interface {
 	stamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error)
-	//getSupplyChain(*v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error)
-	//getTargetResourceName() string
-	//getOutputs() (realizer.Outputs, error)
 }
 
-// SupplyChainFileSet is a set of multiple supply chains
+// SupplyChainFileSet is a set of one or more supply chains
 // Paths is a list of either paths to a supply chain
 // or a directory containing supply chain files
 // YttValues and YttFiles are values to use in preprocessing the supply chains
+// TargetResourceName is the name of the resource/step that will be stamped
+// PreviousOutputs are mocked outputs from earlier resources/steps in the supply chain
 type SupplyChainFileSet struct {
-	Paths     []string
-	YttValues Values
-	YttFiles  []string
+	Paths              []string
+	YttValues          Values
+	YttFiles           []string
+	TargetResourceName string
+	PreviousOutputs    *realizer.Outputs
 }
 
 func (s *SupplyChainFileSet) getSupplyChain(workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
@@ -177,7 +178,7 @@ func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workl
 		return nil, fmt.Errorf("get supplychain: %w", err)
 	}
 
-	resource, err := getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain), s.getTargetResourceName())
+	resource, err := getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain), s.TargetResourceName)
 	if err != nil {
 		return nil, fmt.Errorf("get target resource: %w", err)
 	}
@@ -187,7 +188,13 @@ func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workl
 	resourceLabeler := controllers.BuildWorkloadResourceLabeler(workload, supplyChain)
 	labels := resourceLabeler(*resource, template)
 
-	outputs, err := s.getOutputs()
+	var outputs realizer.OutputsGetter
+
+	if s.PreviousOutputs != nil {
+		outputs = s.PreviousOutputs
+	} else {
+		outputs = realizer.NewOutputs()
+	}
 
 	stamper := templates.StamperBuilder(workload, templatingContext.Generate(template, *resource, outputs, labels), labels)
 	actualStampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
@@ -206,11 +213,4 @@ func getTargetResource(resources []realizer.OwnerResource, targetResourceName st
 	}
 
 	return nil, fmt.Errorf("did not find a supply chain resource with target name: %s", targetResourceName)
-}
-
-func (s *SupplyChainFileSet) getTargetResourceName() string {
-	panic("not implemented")
-}
-func (s *SupplyChainFileSet) getOutputs() (realizer.Outputs, error) {
-	panic("not implemented")
 }
