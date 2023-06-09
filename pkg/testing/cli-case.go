@@ -138,19 +138,18 @@ func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info
 		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
 
-	previousTemplateFile, prevTemplateFileExisted := testCase.Given.Template.(*TemplateFile)
-
 	newTemplateFile := TemplateFile{}
+
+	if previousTemplateFile, prevTemplateFileExisted := testCase.Given.Template.(*TemplateFile); prevTemplateFileExisted {
+		newTemplateFile = *previousTemplateFile
+	}
+
 	if newTemplateFilepath != "" {
 		newTemplateFile.Path = newTemplateFilepath
-	} else if prevTemplateFileExisted {
-		newTemplateFile.Path = previousTemplateFile.Path
 	}
 
 	if yttFile != "" {
 		newTemplateFile.YttFiles = []string{yttFile}
-	} else if prevTemplateFileExisted && len(previousTemplateFile.YttFiles) > 0 {
-		newTemplateFile.YttFiles = []string{previousTemplateFile.YttFiles[0]}
 	}
 
 	testCase.Given.Template = &newTemplateFile
