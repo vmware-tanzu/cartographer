@@ -128,12 +128,6 @@ func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info
 }
 
 func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
-	var previousYttFile string
-	previousTemplateFile, prevTemplateFileExisted := testCase.Given.Template.(*TemplateFile)
-	if prevTemplateFileExisted && len(previousTemplateFile.YttFiles) > 0 {
-		previousYttFile = previousTemplateFile.YttFiles[0]
-	}
-
 	newTemplateFilepath, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
 	if err != nil {
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
@@ -144,20 +138,19 @@ func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info
 		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
 
-	var newTemplateFile TemplateFile
+	previousTemplateFile, prevTemplateFileExisted := testCase.Given.Template.(*TemplateFile)
 
+	newTemplateFile := TemplateFile{}
 	if newTemplateFilepath != "" {
-		newTemplateFile = TemplateFile{Path: newTemplateFilepath}
+		newTemplateFile.Path = newTemplateFilepath
 	} else if prevTemplateFileExisted {
-		newTemplateFile = TemplateFile{Path: previousTemplateFile.Path}
-	} else {
-		newTemplateFile = TemplateFile{}
+		newTemplateFile.Path = previousTemplateFile.Path
 	}
 
 	if yttFile != "" {
 		newTemplateFile.YttFiles = []string{yttFile}
-	} else if previousYttFile != "" {
-		newTemplateFile.YttFiles = []string{previousYttFile}
+	} else if prevTemplateFileExisted && len(previousTemplateFile.YttFiles) > 0 {
+		newTemplateFile.YttFiles = []string{previousTemplateFile.YttFiles[0]}
 	}
 
 	testCase.Given.Template = &newTemplateFile
