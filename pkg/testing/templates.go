@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -178,48 +177,4 @@ func (i *TemplateFile) preprocessYtt(ctx context.Context) (string, error) {
 	}
 
 	return f.Name(), nil
-}
-
-func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
-	var (
-		inputs *Inputs
-		err    error
-	)
-
-	inputs = &Inputs{}
-
-	if i.MockSupplyChain.BlueprintInputs != nil {
-		inputs, err = i.MockSupplyChain.BlueprintInputs.GetBlueprintInputs()
-		if err != nil {
-			return nil, fmt.Errorf("get supply chain inputs: %w", err)
-		}
-	}
-
-	templatingContext := map[string]interface{}{
-		"workload": workload,
-		"params":   params,
-		"sources":  inputs.Sources,
-		"images":   inputs.Images,
-		"configs":  inputs.Configs,
-		//"deployment": // not implemented yet,
-	}
-
-	if len(inputs.Sources) == 1 {
-		for _, source := range inputs.Sources {
-			templatingContext["source"] = &source
-		}
-	}
-
-	if len(inputs.Images) == 1 {
-		for _, image := range inputs.Images {
-			templatingContext["image"] = image.Image
-		}
-	}
-
-	if len(inputs.Configs) == 1 {
-		for _, config := range inputs.Configs {
-			templatingContext["config"] = config.Config
-		}
-	}
-	return templatingContext, nil
 }
