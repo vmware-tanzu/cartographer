@@ -30,18 +30,6 @@ type Given struct {
 	SupplyChain SupplyChain
 }
 
-type CompareOptions struct {
-	IgnoreMetadata       bool
-	IgnoreOwnerRefs      bool
-	IgnoreLabels         bool
-	IgnoreMetadataFields []string
-	CMPOption            CMPOption
-}
-
-type CMPOption interface {
-	getOpts() (cmp.Options, error)
-}
-
 func (c *TemplateTestCase) Run() error {
 	expectedObject, err := c.Expect.getExpected()
 	if err != nil {
@@ -57,47 +45,19 @@ func (c *TemplateTestCase) Run() error {
 
 	c.stripIgnoredFields(expectedObject, actualObject)
 
-	if diff := cmp.Diff(expectedObject.Object, actualObject.Object); diff != "" {
+	var opts cmp.Options
+	if c.CompareOptions != nil && c.CompareOptions.CMPOption != nil {
+		opts, err = c.CompareOptions.CMPOption()
+		if err != nil {
+			return fmt.Errorf("get compare options: %w", err)
+		}
+	}
+
+	if diff := cmp.Diff(expectedObject.Object, actualObject.Object, opts); diff != "" {
 		return fmt.Errorf("expected does not equal actual: (-expected +actual):\n%s", diff)
 	}
 
 	return nil
-}
-
-func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
-	delete(expected.Object, "status")
-	delete(actual.Object, "status")
-
-	if c.CompareOptions != nil && c.CompareOptions.IgnoreLabels {
-		expected.SetLabels(nil)
-		actual.SetLabels(nil)
-	}
-
-	if c.CompareOptions != nil && c.CompareOptions.IgnoreMetadata {
-		delete(expected.Object, "metadata")
-		delete(actual.Object, "metadata")
-	}
-
-	var expectedMetadata, actualMetadata map[string]interface{}
-
-	if expected.Object["metadata"] != nil {
-		expectedMetadata = expected.Object["metadata"].(map[string]interface{})
-	}
-	if actual.Object["metadata"] != nil {
-		actualMetadata = actual.Object["metadata"].(map[string]interface{})
-	}
-
-	if c.CompareOptions != nil && c.CompareOptions.IgnoreOwnerRefs {
-		delete(expectedMetadata, "ownerReferences")
-		delete(actualMetadata, "ownerReferences")
-	}
-
-	if c.CompareOptions != nil {
-		for _, field := range c.CompareOptions.IgnoreMetadataFields {
-			delete(expectedMetadata, field)
-			delete(actualMetadata, field)
-		}
-	}
 }
 
 func (i *Given) getActualObject() (*unstructured.Unstructured, error) {

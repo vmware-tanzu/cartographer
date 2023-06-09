@@ -293,6 +293,7 @@ func TestTemplateExample(t *testing.T) {
 			},
 			CompareOptions: &cartotesting.CompareOptions{
 				IgnoreMetadata: true,
+				CMPOption:      cartotesting.ConvertNumbersToFloatsDuringComparison,
 			},
 		},
 	}
