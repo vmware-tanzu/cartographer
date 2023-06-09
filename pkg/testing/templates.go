@@ -58,7 +58,6 @@ type TemplateTestGivens struct {
 	Template            Template
 	Workload            Workload
 	BlueprintParams     BlueprintParams
-	labels              map[string]string
 	BlueprintInputs     *Inputs
 	BlueprintInputsFile string
 	SupplyChain         SupplyChain

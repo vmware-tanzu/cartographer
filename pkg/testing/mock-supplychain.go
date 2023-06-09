@@ -15,7 +15,7 @@ import (
 )
 
 func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
-	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
+	labels := completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	var (
 		blueprintParams []v1alpha1.BlueprintParam
@@ -37,7 +37,7 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 		return nil, fmt.Errorf("create templating context: %w", err)
 	}
 
-	stampContext := templates.StamperBuilder(workload, templatingContext, i.labels)
+	stampContext := templates.StamperBuilder(workload, templatingContext, labels)
 	actualStampedObject, err := stampContext.Stamp(ctx, template.GetResourceTemplate())
 	if err != nil {
 		return nil, fmt.Errorf("could not stamp: %w", err)
@@ -46,13 +46,15 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 	return actualStampedObject, nil
 }
 
-func (i *TemplateTestGivens) completeLabels(workload v1alpha1.Workload, name string, kind string) {
-	i.labels = map[string]string{}
+func completeLabels(workload v1alpha1.Workload, name string, kind string) map[string]string {
+	labels := make(map[string]string)
 
-	i.labels["carto.run/workload-name"] = workload.GetName()
-	i.labels["carto.run/workload-namespace"] = workload.GetNamespace()
-	i.labels["carto.run/template-kind"] = kind
-	i.labels["carto.run/cluster-template-name"] = name
+	labels["carto.run/workload-name"] = workload.GetName()
+	labels["carto.run/workload-namespace"] = workload.GetNamespace()
+	labels["carto.run/template-kind"] = kind
+	labels["carto.run/cluster-template-name"] = name
+
+	return labels
 }
 
 type BlueprintParams interface {
