@@ -57,8 +57,7 @@ type FailedTest struct {
 type TemplateTestGivens struct {
 	Template        Template
 	Workload        Workload
-	BlueprintParams BlueprintParams
-	BlueprintInputs BlueprintInputs
+	MockSupplyChain MockSupplyChain
 	SupplyChain     SupplyChain
 	TargetResource  TargetResource
 	TTOutputs       TTOutputs
@@ -189,8 +188,8 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 
 	inputs = &Inputs{}
 
-	if i.BlueprintInputs != nil {
-		inputs, err = i.BlueprintInputs.GetBlueprintInputs()
+	if i.MockSupplyChain.BlueprintInputs != nil {
+		inputs, err = i.MockSupplyChain.BlueprintInputs.GetBlueprintInputs()
 		if err != nil {
 			return nil, fmt.Errorf("get supply chain inputs: %w", err)
 		}

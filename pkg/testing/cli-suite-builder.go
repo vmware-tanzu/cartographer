@@ -111,13 +111,17 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		testCase.IgnoreMetadataFields = info.IgnoreMetadataFields
 	}
 
+	mockSupplyChain := MockSupplyChain{}
+
 	if info.BlueprintInputs != nil {
-		testCase.Given.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.BlueprintInputs}
+		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.BlueprintInputs}
 	}
 
 	if info.BlueprintParams != nil {
-		testCase.Given.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.BlueprintParams}
+		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.BlueprintParams}
 	}
+
+	testCase.Given.MockSupplyChain = mockSupplyChain
 
 	subdirectories, err := getSubdirectories(directory)
 	if err != nil {

@@ -14,6 +14,11 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
+type MockSupplyChain struct {
+	BlueprintParams BlueprintParams
+	BlueprintInputs BlueprintInputs
+}
+
 func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	labels := completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
@@ -23,8 +28,8 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 
 	blueprintParams := make([]v1alpha1.BlueprintParam, 0)
 
-	if i.BlueprintParams != nil {
-		blueprintParams, err = i.BlueprintParams.GetBlueprintParams()
+	if i.MockSupplyChain.BlueprintParams != nil {
+		blueprintParams, err = i.MockSupplyChain.BlueprintParams.GetBlueprintParams()
 		if err != nil {
 			return nil, fmt.Errorf("get blueprint params failed: %w", err)
 		}
