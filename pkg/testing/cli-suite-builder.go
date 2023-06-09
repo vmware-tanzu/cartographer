@@ -73,59 +73,12 @@ const (
 )
 
 func buildTestSuite(testCase *TemplateTestCase, directory string) (TemplateTestSuite, error) {
-	info, err := populateInfo(directory)
+	var err error
+
+	testCase, err = populateTestCase(testCase, directory)
 	if err != nil {
-		return nil, fmt.Errorf("populate info: %w", err)
+		return nil, fmt.Errorf("populate testCase: %w", err)
 	}
-
-	testCase, err = populateTestCaseTemplate(testCase, directory, info)
-	if err != nil {
-		return nil, err
-	}
-
-	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Given.Workload)
-	if err != nil {
-		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
-	}
-	if newWorkloadValue != "" {
-		testCase.Given.Workload = &WorkloadFile{Path: newWorkloadValue}
-	}
-
-	newExpectedFilePath, err := replaceIfFound(directory, expectedDefaultFilename, info.Expected)
-	if err != nil {
-		return nil, fmt.Errorf("replace expected file in directory %s: %w", directory, err)
-	}
-	if newExpectedFilePath != "" {
-		testCase.Expect = &ExpectedFile{Path: newExpectedFilePath}
-	}
-
-	if info.Focus != nil {
-		testCase.Focus = *info.Focus
-	}
-	if info.IgnoreMetadata != nil {
-		testCase.IgnoreMetadata = *info.IgnoreMetadata
-	}
-	if info.IgnoreOwnerRefs != nil {
-		testCase.IgnoreOwnerRefs = *info.IgnoreOwnerRefs
-	}
-	if info.IgnoreLabels != nil {
-		testCase.IgnoreLabels = *info.IgnoreLabels
-	}
-	if info.IgnoreMetadataFields != nil {
-		testCase.IgnoreMetadataFields = info.IgnoreMetadataFields
-	}
-
-	mockSupplyChain := MockSupplyChain{}
-
-	if info.Given.MockSupplyChain.BlueprintInputs != nil {
-		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.Given.MockSupplyChain.BlueprintInputs}
-	}
-
-	if info.Given.MockSupplyChain.BlueprintParams != nil {
-		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.Given.MockSupplyChain.BlueprintParams}
-	}
-
-	testCase.Given.SupplyChain = &mockSupplyChain
 
 	subdirectories, err := getSubdirectories(directory)
 	if err != nil {
@@ -152,6 +105,75 @@ func buildTestSuite(testCase *TemplateTestCase, directory string) (TemplateTestS
 	return TemplateTestSuite{
 		directory: testCase,
 	}, nil
+}
+
+func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTestCase, error) {
+	info, err := populateInfo(directory)
+	if err != nil {
+		return nil, fmt.Errorf("populate info: %w", err)
+	}
+
+	testCase, err = populateTestCaseTemplate(testCase, directory, info)
+	if err != nil {
+		return nil, fmt.Errorf("populate testCase template: %w", err)
+	}
+
+	testCase, err = populateTestCaseWorkload(testCase, directory, info)
+	if err != nil {
+		return nil, fmt.Errorf("populate testCase workload: %w", err)
+	}
+
+	newExpectedFilePath, err := replaceIfFound(directory, expectedDefaultFilename, info.Expected)
+	if err != nil {
+		return nil, fmt.Errorf("replace expected file in directory %s: %w", directory, err)
+	}
+	if newExpectedFilePath != "" {
+		testCase.Expect = &ExpectedFile{Path: newExpectedFilePath}
+	}
+
+	if info.Focus != nil {
+		testCase.Focus = *info.Focus
+	}
+	if info.IgnoreMetadata != nil {
+		testCase.IgnoreMetadata = *info.IgnoreMetadata
+	}
+	if info.IgnoreOwnerRefs != nil {
+		testCase.IgnoreOwnerRefs = *info.IgnoreOwnerRefs
+	}
+	if info.IgnoreLabels != nil {
+		testCase.IgnoreLabels = *info.IgnoreLabels
+	}
+	if info.IgnoreMetadataFields != nil {
+		testCase.IgnoreMetadataFields = info.IgnoreMetadataFields
+	}
+
+	var (
+		mockSupplyChainSpecified bool
+		supplyChainSpecified     bool
+	)
+
+	testCase, mockSupplyChainSpecified = populateTestCaseMockSupplyChain(testCase, info)
+	testCase, supplyChainSpecified, err = populateTestCaseSupplyChain(testCase, directory, info)
+	if err != nil {
+		return nil, fmt.Errorf("populate testCase supplychain: %w", err)
+	}
+
+	if mockSupplyChainSpecified && supplyChainSpecified {
+		return nil, fmt.Errorf("only one of mock supply chain and real supply chain may be specified")
+	}
+
+	return testCase, nil
+}
+
+func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
+	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Given.Workload)
+	if err != nil {
+		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
+	}
+	if newWorkloadValue != "" {
+		testCase.Given.Workload = &WorkloadFile{Path: newWorkloadValue}
+	}
+	return testCase, nil
 }
 
 func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
@@ -181,6 +203,30 @@ func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info
 		testCase.Given.Template = &newTemplateFile
 	}
 	return testCase, nil
+}
+
+func populateTestCaseMockSupplyChain(testCase *TemplateTestCase, info *testInfo) (*TemplateTestCase, bool) {
+	var isMockSupplyChainSpecified bool
+	mockSupplyChain := MockSupplyChain{}
+
+	if info.Given.MockSupplyChain.BlueprintInputs != nil {
+		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.Given.MockSupplyChain.BlueprintInputs}
+		isMockSupplyChainSpecified = true
+	}
+
+	if info.Given.MockSupplyChain.BlueprintParams != nil {
+		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.Given.MockSupplyChain.BlueprintParams}
+		isMockSupplyChainSpecified = true
+	}
+
+	testCase.Given.SupplyChain = &mockSupplyChain
+
+	return testCase, isMockSupplyChainSpecified
+}
+
+func populateTestCaseSupplyChain(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, bool, error) {
+	panic("not implemented")
+	//return testCase, false, nil
 }
 
 func getSubdirectories(directory string) ([]string, error) {
