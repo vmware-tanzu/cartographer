@@ -12,23 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: image-template
-description: "template requiring 'source' input"
+metadata:
+  name: image-template
+  description: "template requiring 'source' input"
 ignoreMetadataFields:
   - labels
   - ownerReferences
   - namespace
-
-mockSupplyChain:
-  blueprintInputs:
-    sources:
-      unused-source:
-        url: some-unused-url
-        distracting-key: is-never-read
-      source:
-        url: some-passed-on-url
-        revision:
-          branch: "some_unused_branch"
-    images:
-      some-unused-name:
-        image: some-image-location
+given:
+  mockSupplyChain:
+    blueprintInputs:
+      sources:
+        unused-source:
+          url: some-unused-url
+          distracting-key: is-never-read
+        source:
+          url: some-passed-on-url
+          revision:
+            branch: "some_unused_branch"
+      images:
+        some-unused-name:
+          image: some-image-location

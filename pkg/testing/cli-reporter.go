@@ -106,8 +106,8 @@ func (t *testCaseReporter) report(verbose bool) string {
 }
 
 func (t *testCaseReporter) reportPassed(verbose bool) string {
-	if verbose && t.info.Name != nil {
-		return fmt.Sprintf("PASS: %s %s", t.path, *t.info.Name)
+	if verbose && t.info.metadata.Name != nil {
+		return fmt.Sprintf("PASS: %s %s", t.path, *t.info.metadata.Name)
 	}
 	return fmt.Sprintf("PASS: %s", t.path)
 }
@@ -115,12 +115,12 @@ func (t *testCaseReporter) reportPassed(verbose bool) string {
 func (t *testCaseReporter) reportFailed(verbose bool) string {
 	returnString := fmt.Sprintf("FAIL: %s", t.path)
 
-	if verbose && t.info.Name != nil {
-		returnString = fmt.Sprintf("%s\nName: %s", returnString, *t.info.Name)
+	if verbose && t.info.metadata.Name != nil {
+		returnString = fmt.Sprintf("%s\nName: %s", returnString, *t.info.metadata.Name)
 	}
 
-	if verbose && t.info.Description != nil {
-		returnString = fmt.Sprintf("%s\nDescription: %s", returnString, *t.info.Description)
+	if verbose && t.info.metadata.Description != nil {
+		returnString = fmt.Sprintf("%s\nDescription: %s", returnString, *t.info.metadata.Description)
 	}
 
 	if verbose && t.err != nil {

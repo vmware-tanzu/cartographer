@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mockSupplyChain:
-  blueprintParams:
-    - name: "gitops_branch"
-      value: "main"
+given:
+  mockSupplyChain:
+    blueprintParams:
+      - name: "gitops_branch"
+        value: "main"

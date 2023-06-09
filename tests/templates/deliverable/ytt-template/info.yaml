@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-template:
-  path: template-ytt.yaml
-name: YTT Template Test
-description: The template's spec.ytt field exists instead of a spec.template field
-mockSupplyChain:
-  blueprintParams:
-    - name: "gitops_branch"
-      value: "main"
+metadata:
+  name: YTT Template Test
+  description: The template's spec.ytt field exists instead of a spec.template field
+given:
+  template:
+    path: template-ytt.yaml
+  mockSupplyChain:
+    blueprintParams:
+      - name: "gitops_branch"
+        value: "main"

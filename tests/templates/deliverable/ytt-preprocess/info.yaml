@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-description: template is incomplete without being formatted with ytt and the ytt-values.yaml file
-template:
-  path: "template-requires-preprocess.yaml"
-  yttPath: values.yaml
+metadata:
+  description: template is incomplete without being formatted with ytt and the ytt-values.yaml file
+given:
+  template:
+    path: "template-requires-preprocess.yaml"
+    yttPath: values.yaml

@@ -13,4 +13,5 @@
 # limitations under the License.
 
 expected: common-expectation.yaml
-workload: common-workload.yaml
+given:
+  workload: common-workload.yaml

@@ -25,17 +25,25 @@ import (
 )
 
 type testInfo struct {
-	Name                 *string          `yaml:"name"`
-	Description          *string          `yaml:"description"`
-	Template             testInfoTemplate `yaml:"template"`
-	Workload             *string          `yaml:"workload"`
+	metadata             testInfoMetadata `yaml:"metadata"`
+	Given                testInfoGiven    `yaml:"given"`
 	Expected             *string          `yaml:"expected"`
-	MockSupplyChain      testInfoMockSC   `yaml:"mockSupplyChain"`
 	Focus                *bool            `yaml:"focus"`
 	IgnoreMetadata       *bool            `yaml:"ignoreMetadata"`
 	IgnoreOwnerRefs      *bool            `yaml:"ignoreOwnerRefs"`
 	IgnoreLabels         *bool            `yaml:"ignoreLabels"`
 	IgnoreMetadataFields []string         `yaml:"ignoreMetadataFields"`
+}
+
+type testInfoMetadata struct {
+	Name        *string `yaml:"name"`
+	Description *string `yaml:"description"`
+}
+
+type testInfoGiven struct {
+	Template        testInfoTemplate `yaml:"template"`
+	Workload        *string          `yaml:"workload"`
+	MockSupplyChain testInfoMockSC   `yaml:"mockSupplyChain"`
 }
 
 type testInfoTemplate struct {
@@ -61,7 +69,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Template.Path)
+	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
 	if err != nil {
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
 	}
@@ -74,7 +82,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 
 		newTemplateFile := TemplateFile{Path: newTemplateValue}
 
-		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Template.YttPath)
+		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
 		if err != nil {
 			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 		}
@@ -87,7 +95,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		testCase.Given.Template = &newTemplateFile
 	}
 
-	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Workload)
+	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Given.Workload)
 	if err != nil {
 		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
@@ -121,12 +129,12 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 
 	mockSupplyChain := MockSupplyChain{}
 
-	if info.MockSupplyChain.BlueprintInputs != nil {
-		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.MockSupplyChain.BlueprintInputs}
+	if info.Given.MockSupplyChain.BlueprintInputs != nil {
+		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.Given.MockSupplyChain.BlueprintInputs}
 	}
 
-	if info.MockSupplyChain.BlueprintParams != nil {
-		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.MockSupplyChain.BlueprintParams}
+	if info.Given.MockSupplyChain.BlueprintParams != nil {
+		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.Given.MockSupplyChain.BlueprintParams}
 	}
 
 	testCase.Given.SupplyChain = &mockSupplyChain
