@@ -58,8 +58,7 @@ type FailedTest struct {
 type TemplateTestGivens struct {
 	Template            Template
 	Workload            Workload
-	BlueprintParams     []v1alpha1.BlueprintParam
-	BlueprintParamsFile string
+	BlueprintParams     BlueprintParams
 	labels              map[string]string
 	BlueprintInputs     *Inputs
 	BlueprintInputsFile string
@@ -241,9 +240,16 @@ func (i *TemplateTestGivens) actualBlueprintSupplied() bool {
 func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
-	blueprintParams, err := i.getBlueprintParams()
-	if err != nil {
-		return nil, fmt.Errorf("get blueprint params failed: %w", err)
+	var (
+		blueprintParams []v1alpha1.BlueprintParam
+		err             error
+	)
+
+	if i.BlueprintParams != nil {
+		blueprintParams, err = i.BlueprintParams.GetBlueprintParams()
+		if err != nil {
+			return nil, fmt.Errorf("get blueprint params failed: %w", err)
+		}
 	}
 
 	paramMerger := realizer.NewParamMerger([]v1alpha1.BlueprintParam{}, blueprintParams, workload.Spec.Params)
@@ -336,34 +342,6 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 		}
 	}
 	return templatingContext, nil
-}
-
-func (i *TemplateTestGivens) getBlueprintParams() ([]v1alpha1.BlueprintParam, error) {
-	if i.BlueprintParamsFile != "" && i.BlueprintParams != nil {
-		return nil, fmt.Errorf("only one of blueprintParams or blueprintParamsFile may be set")
-	}
-
-	if i.BlueprintParamsFile == "" && i.BlueprintParams == nil {
-		return []v1alpha1.BlueprintParam{}, nil
-	}
-
-	if i.BlueprintParams != nil {
-		return i.BlueprintParams, nil
-	}
-
-	paramsFile, err := os.ReadFile(i.BlueprintParamsFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
-	}
-
-	var paramsData []v1alpha1.BlueprintParam
-
-	err = yaml.Unmarshal(paramsFile, &paramsData)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshall params: %w", err)
-	}
-
-	return paramsData, nil // TODO: document
 }
 
 func (i *TemplateTestGivens) getBlueprintInputs() (*Inputs, error) {

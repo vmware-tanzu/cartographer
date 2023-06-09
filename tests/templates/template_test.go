@@ -67,7 +67,7 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
@@ -77,7 +77,7 @@ func TestTemplateExample(t *testing.T) {
 		"template defined as an object": {
 			Given: cartotesting.TemplateTestGivens{
 				Template:        &cartotesting.TemplateObject{Template: templateOfDeliverable},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
@@ -94,7 +94,7 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
 				Workload:        &cartotesting.WorkloadObject{Workload: workload},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
@@ -109,7 +109,9 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
-				BlueprintParamsFile: filepath.Join("deliverable", "regular-template", "params-file-not-used-by-cli-tests.yaml"),
+				BlueprintParams: &cartotesting.BlueprintParamsFile{
+					Path: filepath.Join("deliverable", "regular-template", "params-file-not-used-by-cli-tests.yaml"),
+				},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
@@ -121,7 +123,7 @@ func TestTemplateExample(t *testing.T) {
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
@@ -140,7 +142,7 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 			},
 			Expect: &cartotesting.TemplateTestExpectedUnstructured{
 				ExpectedUnstructured: &expectedUnstructured,
@@ -155,7 +157,7 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
@@ -173,7 +175,7 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
-				BlueprintParams: params,
+				BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),

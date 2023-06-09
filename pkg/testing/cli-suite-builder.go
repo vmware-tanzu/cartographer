@@ -116,7 +116,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 	}
 
 	if info.BlueprintParams != nil {
-		testCase.Given.BlueprintParams = info.BlueprintParams
+		testCase.Given.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.BlueprintParams}
 	}
 
 	subdirectories, err := getSubdirectories(directory)
