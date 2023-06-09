@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 )
 
 type testInfo struct {
@@ -41,9 +42,10 @@ type testInfoMetadata struct {
 }
 
 type testInfoGiven struct {
-	Template        testInfoTemplate `yaml:"template"`
-	Workload        *string          `yaml:"workload"`
-	MockSupplyChain testInfoMockSC   `yaml:"mockSupplyChain"`
+	Template        testInfoTemplate    `yaml:"template"`
+	Workload        *string             `yaml:"workload"`
+	MockSupplyChain testInfoMockSC      `yaml:"mockSupplyChain"`
+	SupplyChain     testInfoSupplyChain `yaml:"SupplyChain"`
 }
 
 type testInfoTemplate struct {
@@ -56,6 +58,13 @@ type testInfoMockSC struct {
 	BlueprintParams []v1alpha1.BlueprintParam `yaml:"blueprintParams"`
 }
 
+type testInfoSupplyChain struct {
+	Path               *string           `yaml:"path"`
+	YttPath            *string           `yaml:"yttPath"`
+	TargetResourceName *string           `yaml:"targetResourceName"`
+	PreviousOutputs    *realizer.Outputs `yaml:"previousOutputs"`
+}
+
 const (
 	templateDefaultFilename  = "template.yaml"
 	workloadDefaultFilename  = "workload.yaml"
@@ -63,36 +72,15 @@ const (
 	yttValuesDefaultFilename = "ytt-values.yaml"
 )
 
-func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSuite, error) {
+func buildTestSuite(testCase *TemplateTestCase, directory string) (TemplateTestSuite, error) {
 	info, err := populateInfo(directory)
 	if err != nil {
 		return nil, fmt.Errorf("populate info: %w", err)
 	}
 
-	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
+	testCase, err = populateTestCaseTemplate(testCase, directory, info)
 	if err != nil {
-		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
-	}
-	if newTemplateValue != "" {
-		var previousYttFile []string
-		previousTemplateFile, ok := testCase.Given.Template.(*TemplateFile)
-		if ok {
-			previousYttFile = previousTemplateFile.YttFiles
-		}
-
-		newTemplateFile := TemplateFile{Path: newTemplateValue}
-
-		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
-		if err != nil {
-			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
-		}
-		if newYTTFile != "" {
-			newTemplateFile.YttFiles = []string{newYTTFile}
-		} else {
-			newTemplateFile.YttFiles = previousYttFile
-		}
-
-		testCase.Given.Template = &newTemplateFile
+		return nil, err
 	}
 
 	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Given.Workload)
@@ -148,9 +136,9 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 	if len(subdirectories) > 0 {
 		testSuite := make(TemplateTestSuite)
 		for _, subdirectory := range subdirectories {
-			newCase := testCase
+			newCase := *testCase
 			var tempTestSuite TemplateTestSuite
-			tempTestSuite, err = buildTestSuite(newCase, filepath.Join(directory, subdirectory))
+			tempTestSuite, err = buildTestSuite(&newCase, filepath.Join(directory, subdirectory))
 			if err != nil {
 				return nil, fmt.Errorf("failed building test case for subdirectory: %s: %w", subdirectory, err)
 			}
@@ -162,8 +150,37 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 	}
 
 	return TemplateTestSuite{
-		directory: &testCase,
+		directory: testCase,
 	}, nil
+}
+
+func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
+	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
+	if err != nil {
+		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
+	}
+	if newTemplateValue != "" {
+		var previousYttFile []string
+		previousTemplateFile, ok := testCase.Given.Template.(*TemplateFile)
+		if ok {
+			previousYttFile = previousTemplateFile.YttFiles
+		}
+
+		newTemplateFile := TemplateFile{Path: newTemplateValue}
+
+		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
+		if err != nil {
+			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
+		}
+		if newYTTFile != "" {
+			newTemplateFile.YttFiles = []string{newYTTFile}
+		} else {
+			newTemplateFile.YttFiles = previousYttFile
+		}
+
+		testCase.Given.Template = &newTemplateFile
+	}
+	return testCase, nil
 }
 
 func getSubdirectories(directory string) ([]string, error) {

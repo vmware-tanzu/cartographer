@@ -12,7 +12,7 @@ func TestCLIExample(t *testing.T) {
 	for _, directory := range directories {
 		err := cartotesting.CliTest(directory)
 		if err != nil {
-			t.Fatal("cli test failed", "directory", directory, "err", err)
+			t.Fatal("cli test failed,", "directory:", directory, "err:", err)
 		}
 	}
 }
