@@ -24,16 +24,17 @@ type SupplyChain interface {
 	//getOutputs() (realizer.Outputs, error)
 }
 
-// TTSupplyChainFileSet
+// SupplyChainFileSet is a set of multiple supply chains
 // Paths is a list of either paths to a supply chain
 // or a directory containing supply chain files
-type TTSupplyChainFileSet struct {
+// YttValues and YttFiles are values to use in preprocessing the supply chains
+type SupplyChainFileSet struct {
 	Paths     []string
 	YttValues Values
 	YttFiles  []string
 }
 
-func (s *TTSupplyChainFileSet) getSupplyChain(workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
+func (s *SupplyChainFileSet) getSupplyChain(workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
 	var noLog *NoLog
 
 	allSupplyChains, err := s.readAllPaths()
@@ -59,7 +60,7 @@ func (s *TTSupplyChainFileSet) getSupplyChain(workload *v1alpha1.Workload) (*v1a
 	return selectedSupplyChains[0], nil
 }
 
-func (s *TTSupplyChainFileSet) readAllPaths() ([]*v1alpha1.ClusterSupplyChain, error) {
+func (s *SupplyChainFileSet) readAllPaths() ([]*v1alpha1.ClusterSupplyChain, error) {
 	var supplyChains []*v1alpha1.ClusterSupplyChain
 
 	for _, path := range s.Paths {
@@ -89,7 +90,7 @@ func (s *TTSupplyChainFileSet) readAllPaths() ([]*v1alpha1.ClusterSupplyChain, e
 }
 
 // readSupplyChainDir is not recursive and will not walk a nested directory
-func (s *TTSupplyChainFileSet) readSupplyChainDir(path string) ([]*v1alpha1.ClusterSupplyChain, error) {
+func (s *SupplyChainFileSet) readSupplyChainDir(path string) ([]*v1alpha1.ClusterSupplyChain, error) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("os read directory: %w", err)
@@ -110,7 +111,7 @@ func (s *TTSupplyChainFileSet) readSupplyChainDir(path string) ([]*v1alpha1.Clus
 	return supplyChains, nil
 }
 
-func (s *TTSupplyChainFileSet) readSupplyChainFile(path string) (*v1alpha1.ClusterSupplyChain, error) {
+func (s *SupplyChainFileSet) readSupplyChainFile(path string) (*v1alpha1.ClusterSupplyChain, error) {
 	var (
 		supplyChainFilepath string
 		err                 error
@@ -146,7 +147,7 @@ func (s *TTSupplyChainFileSet) readSupplyChainFile(path string) (*v1alpha1.Clust
 	return supplyChain, nil
 }
 
-func (s *TTSupplyChainFileSet) preprocessYtt(ctx context.Context, supplyChainFilepath string) (string, error) {
+func (s *SupplyChainFileSet) preprocessYtt(ctx context.Context, supplyChainFilepath string) (string, error) {
 	yt := YTT()
 	yt.Values(s.YttValues)
 	yt.F(supplyChainFilepath)
@@ -170,7 +171,7 @@ func (n *NoLog) Error(_ error, _ string, _ ...interface{}) {}
 func (n *NoLog) WithValues(_ ...interface{}) logr.LogSink  { return n }
 func (n *NoLog) WithName(name string) logr.LogSink         { return n }
 
-func (s *TTSupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workload, _ ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
+func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workload, _ ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	supplyChain, err := s.getSupplyChain(workload)
 	if err != nil {
 		return nil, fmt.Errorf("get supplychain: %w", err)
@@ -207,9 +208,9 @@ func getTargetResource(resources []realizer.OwnerResource, targetResourceName st
 	return nil, fmt.Errorf("did not find a supply chain resource with target name: %s", targetResourceName)
 }
 
-func (s *TTSupplyChainFileSet) getTargetResourceName() string {
+func (s *SupplyChainFileSet) getTargetResourceName() string {
 	panic("not implemented")
 }
-func (s *TTSupplyChainFileSet) getOutputs() (realizer.Outputs, error) {
+func (s *SupplyChainFileSet) getOutputs() (realizer.Outputs, error) {
 	panic("not implemented")
 }
