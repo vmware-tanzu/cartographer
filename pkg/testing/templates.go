@@ -39,7 +39,7 @@ type Inputs struct {
 	Deployment *templates.SourceInput
 }
 
-type templateType interface {
+type ValidatableTemplate interface {
 	ValidateCreate() error
 	client.Object
 }
@@ -56,19 +56,96 @@ type FailedTest struct {
 // Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
-	TemplateFile        string
-	Template            templateType
+	Template            Template
 	Workload            TTWorkload
 	BlueprintParams     []v1alpha1.BlueprintParam
 	BlueprintParamsFile string
-	YttValues           Values
-	YttFiles            []string
 	labels              map[string]string
 	BlueprintInputs     *Inputs
 	BlueprintInputsFile string
 	TTSupplyChain       TTSupplyChain
 	TargetResource      TargetResource
 	TTOutputs           TTOutputs
+}
+
+type Template interface {
+	GetTemplate() (*ValidatableTemplate, error)
+}
+
+type TemplateObject struct {
+	Template ValidatableTemplate
+}
+
+func (t *TemplateObject) GetTemplate() (*ValidatableTemplate, error) {
+	return &t.Template, nil
+}
+
+type TemplateFile struct {
+	Path      string
+	YttValues Values
+	YttFiles  []string
+}
+
+func (i *TemplateFile) GetTemplate() (*ValidatableTemplate, error) {
+	var (
+		templateFile string
+		err          error
+	)
+	ctx := context.TODO()
+
+	if len(i.YttValues) != 0 || len(i.YttFiles) != 0 {
+		err = ensureYTTAvailable(ctx)
+
+		if err != nil {
+			return nil, fmt.Errorf("ensure ytt available: %w", err)
+		}
+
+		templateFile, err = i.preprocessYtt(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to preprocess ytt: %w", err)
+		}
+		defer os.RemoveAll(templateFile)
+	} else {
+		templateFile = i.Path
+	}
+
+	templateData, err := os.ReadFile(templateFile)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not read template file: %w", err)
+	}
+
+	unknownTemplate := unstructured.Unstructured{}
+
+	templateJson, err := yaml.YAMLToJSON(templateData)
+	if err != nil {
+		return nil, fmt.Errorf("convert yaml to json: %w", err)
+	}
+
+	if err = unknownTemplate.UnmarshalJSON(templateJson); err != nil {
+		return nil, fmt.Errorf("unmarshall json: %w", err)
+	}
+
+	var apiTemplate ValidatableTemplate
+
+	switch templateKind := unknownTemplate.GetKind(); templateKind {
+	case "ClusterSourceTemplate":
+		apiTemplate = &v1alpha1.ClusterSourceTemplate{}
+	case "ClusterImageTemplate":
+		apiTemplate = &v1alpha1.ClusterImageTemplate{}
+	case "ClusterConfigTemplate":
+		apiTemplate = &v1alpha1.ClusterConfigTemplate{}
+	case "ClusterTemplate":
+		apiTemplate = &v1alpha1.ClusterTemplate{}
+	default:
+		return nil, fmt.Errorf("template kind not found")
+	}
+
+	if err = yaml.Unmarshal(templateData, apiTemplate); err != nil {
+		return nil, fmt.Errorf("unmarshall template: %w", err)
+	}
+
+	return &apiTemplate, nil
 }
 
 type TargetResource interface {
@@ -87,16 +164,16 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return nil, fmt.Errorf("get workload failed: %w", err)
 	}
 
-	apiTemplate, err := i.getPopulatedTemplate(ctx)
+	apiTemplate, err := i.Template.GetTemplate()
 	if err != nil {
 		return nil, fmt.Errorf("get populated template failed: %w", err)
 	}
 
-	if err = apiTemplate.ValidateCreate(); err != nil {
+	if err = (*apiTemplate).ValidateCreate(); err != nil {
 		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
 
-	template, err := templates.NewReaderFromAPI(apiTemplate)
+	template, err := templates.NewReaderFromAPI(*apiTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cluster template")
 	}
@@ -112,7 +189,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		return i.actualBlueprintStamp(ctx, workload, template)
 	}
 
-	return i.mockedBlueprintStamp(ctx, workload, apiTemplate, template)
+	return i.mockedBlueprintStamp(ctx, workload, *apiTemplate, template)
 }
 
 func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, template templates.Reader) (*unstructured.Unstructured, error) {
@@ -161,7 +238,7 @@ func (i *TemplateTestGivens) actualBlueprintSupplied() bool {
 	return i.TTSupplyChain != nil
 }
 
-func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate templateType, template templates.Reader) (*unstructured.Unstructured, error) {
+func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	i.completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	blueprintParams, err := i.getBlueprintParams()
@@ -186,76 +263,6 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 	return actualStampedObject, nil
 }
 
-func (i *TemplateTestGivens) getPopulatedTemplate(ctx context.Context) (templateType, error) {
-	if (i.TemplateFile == "" && i.Template == nil) ||
-		(i.TemplateFile != "" && i.Template != nil) {
-		return nil, fmt.Errorf("exactly one of template or templateFile must be set")
-	}
-
-	if i.Template != nil {
-		return i.Template, nil
-	}
-
-	var (
-		templateFile string
-		err          error
-	)
-
-	if len(i.YttValues) != 0 || len(i.YttFiles) != 0 {
-		err = ensureYTTAvailable(ctx)
-
-		if err != nil {
-			return nil, fmt.Errorf("ensure ytt available: %w", err)
-		}
-
-		templateFile, err = i.preprocessYtt(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to preprocess ytt: %w", err)
-		}
-		defer os.RemoveAll(templateFile)
-	} else {
-		templateFile = i.TemplateFile
-	}
-
-	templateData, err := os.ReadFile(templateFile)
-
-	if err != nil {
-		return nil, fmt.Errorf("could not read template file: %w", err)
-	}
-
-	unknownTemplate := unstructured.Unstructured{}
-
-	templateJson, err := yaml.YAMLToJSON(templateData)
-	if err != nil {
-		return nil, fmt.Errorf("convert yaml to json: %w", err)
-	}
-
-	if err = unknownTemplate.UnmarshalJSON(templateJson); err != nil {
-		return nil, fmt.Errorf("unmarshall json: %w", err)
-	}
-
-	var apiTemplate templateType
-
-	switch templateKind := unknownTemplate.GetKind(); templateKind {
-	case "ClusterSourceTemplate":
-		apiTemplate = &v1alpha1.ClusterSourceTemplate{}
-	case "ClusterImageTemplate":
-		apiTemplate = &v1alpha1.ClusterImageTemplate{}
-	case "ClusterConfigTemplate":
-		apiTemplate = &v1alpha1.ClusterConfigTemplate{}
-	case "ClusterTemplate":
-		apiTemplate = &v1alpha1.ClusterTemplate{}
-	default:
-		return nil, fmt.Errorf("template kind not found")
-	}
-
-	if err = yaml.Unmarshal(templateData, apiTemplate); err != nil {
-		return nil, fmt.Errorf("unmarshall template: %w", err)
-	}
-
-	return apiTemplate, nil
-}
-
 var yttNotFound = errors.New("ytt must be installed in PATH but was not found")
 
 func ensureYTTAvailable(ctx context.Context) error {
@@ -270,10 +277,10 @@ func ensureYTTAvailable(ctx context.Context) error {
 	return nil
 }
 
-func (i *TemplateTestGivens) preprocessYtt(ctx context.Context) (string, error) {
+func (i *TemplateFile) preprocessYtt(ctx context.Context) (string, error) {
 	yt := YTT()
 	yt.Values(i.YttValues)
-	yt.F(i.TemplateFile)
+	yt.F(i.Path)
 	for _, yttfile := range i.YttFiles {
 		yt.F(yttfile)
 	}

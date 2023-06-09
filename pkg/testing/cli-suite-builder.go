@@ -58,7 +58,25 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
 	}
 	if newTemplateValue != "" {
-		testCase.Given.TemplateFile = newTemplateValue
+		var previousYttFile []string
+		previousTemplateFile, ok := testCase.Given.Template.(*TemplateFile)
+		if ok {
+			previousYttFile = previousTemplateFile.YttFiles
+		}
+
+		newTemplateFile := TemplateFile{Path: newTemplateValue}
+
+		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Ytt)
+		if err != nil {
+			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
+		}
+		if newYTTFile != "" {
+			newTemplateFile.YttFiles = []string{newYTTFile}
+		} else {
+			newTemplateFile.YttFiles = previousYttFile
+		}
+
+		testCase.Given.Template = &newTemplateFile
 	}
 
 	newWorkloadValue, err := replaceIfFound(directory, workloadDefaultFilename, info.Workload)
@@ -75,14 +93,6 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 	}
 	if newExpectedFilePath != "" {
 		testCase.Expect = &TemplateTestExpectedFile{ExpectedFile: newExpectedFilePath}
-	}
-
-	newYTTValue, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Ytt)
-	if err != nil {
-		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
-	}
-	if newYTTValue != "" {
-		testCase.Given.YttFiles = []string{newYTTValue}
 	}
 
 	if info.Focus != nil {
