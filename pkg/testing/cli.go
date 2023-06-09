@@ -81,16 +81,20 @@ Read more at cartographer.sh`,
 		cmd.SilenceUsage = true
 		cmd.SilenceErrors = true
 
-		baseTestCase := TemplateTestCase{}
-		testSuite, err := buildTestSuite(baseTestCase, directory)
-		if err != nil {
-			return fmt.Errorf("build test cases: %w", err)
-		}
-
-		passedTests, failedTests := testSuite.Assert()
-
-		return reportTestResults(passedTests, failedTests, testSuite.HasFocusedTests())
+		return CliTest(directory)
 	},
+}
+
+func CliTest(directory string) error {
+	baseTestCase := TemplateTestCase{}
+	testSuite, err := buildTestSuite(baseTestCase, directory)
+	if err != nil {
+		return fmt.Errorf("build test cases: %w", err)
+	}
+
+	passedTests, failedTests := testSuite.Assert()
+
+	return reportTestResults(passedTests, failedTests, testSuite.HasFocusedTests())
 }
 
 func init() {
