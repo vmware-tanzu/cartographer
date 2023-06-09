@@ -128,31 +128,40 @@ func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info
 }
 
 func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
+	var previousYttFile string
+	previousTemplateFile, prevTemplateFileExisted := testCase.Given.Template.(*TemplateFile)
+	if prevTemplateFileExisted && len(previousTemplateFile.YttFiles) > 0 {
+		previousYttFile = previousTemplateFile.YttFiles[0]
+	}
+
 	newTemplateFilepath, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
 	if err != nil {
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
 	}
-	if newTemplateFilepath != "" {
-		var previousYttFile []string
-		previousTemplateFile, ok := testCase.Given.Template.(*TemplateFile)
-		if ok {
-			previousYttFile = previousTemplateFile.YttFiles
-		}
 
-		newTemplateFile := TemplateFile{Path: newTemplateFilepath}
-
-		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
-		if err != nil {
-			return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
-		}
-		if newYTTFile != "" {
-			newTemplateFile.YttFiles = []string{newYTTFile}
-		} else {
-			newTemplateFile.YttFiles = previousYttFile
-		}
-
-		testCase.Given.Template = &newTemplateFile
+	yttFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
+	if err != nil {
+		return nil, fmt.Errorf("replace workload file in directory %s: %w", directory, err)
 	}
+
+	var newTemplateFile TemplateFile
+
+	if newTemplateFilepath != "" {
+		newTemplateFile = TemplateFile{Path: newTemplateFilepath}
+	} else if prevTemplateFileExisted {
+		newTemplateFile = TemplateFile{Path: previousTemplateFile.Path}
+	} else {
+		newTemplateFile = TemplateFile{}
+	}
+
+	if yttFile != "" {
+		newTemplateFile.YttFiles = []string{yttFile}
+	} else if previousYttFile != "" {
+		newTemplateFile.YttFiles = []string{previousYttFile}
+	}
+
+	testCase.Given.Template = &newTemplateFile
+
 	return testCase, nil
 }
 
