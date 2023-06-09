@@ -63,7 +63,7 @@ type TemplateTestGivens struct {
 	labels              map[string]string
 	BlueprintInputs     *Inputs
 	BlueprintInputsFile string
-	TTSupplyChain       TTSupplyChain
+	SupplyChain         SupplyChain
 	TargetResource      TargetResource
 	TTOutputs           TTOutputs
 }
@@ -193,7 +193,7 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 }
 
 func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, template templates.Reader) (*unstructured.Unstructured, error) {
-	supplyChain, err := i.TTSupplyChain.GetSupplyChain(workload)
+	supplyChain, err := i.SupplyChain.GetSupplyChain(workload)
 	if err != nil {
 		return nil, fmt.Errorf("get supplychain: %w", err)
 	}
@@ -235,7 +235,7 @@ func (i *TemplateTestGivens) getTargetResource(resources []realizer.OwnerResourc
 }
 
 func (i *TemplateTestGivens) actualBlueprintSupplied() bool {
-	return i.TTSupplyChain != nil
+	return i.SupplyChain != nil
 }
 
 func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {

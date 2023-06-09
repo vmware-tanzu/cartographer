@@ -14,7 +14,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 )
 
-type TTSupplyChain interface {
+type SupplyChain interface {
 	GetSupplyChain(*v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error)
 }
 
