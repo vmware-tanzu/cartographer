@@ -128,18 +128,18 @@ func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info
 }
 
 func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
-	newTemplateValue, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
+	newTemplateFilepath, err := replaceIfFound(directory, templateDefaultFilename, info.Given.Template.Path)
 	if err != nil {
 		return nil, fmt.Errorf("replace template file in directory %s: %w", directory, err)
 	}
-	if newTemplateValue != "" {
+	if newTemplateFilepath != "" {
 		var previousYttFile []string
 		previousTemplateFile, ok := testCase.Given.Template.(*TemplateFile)
 		if ok {
 			previousYttFile = previousTemplateFile.YttFiles
 		}
 
-		newTemplateFile := TemplateFile{Path: newTemplateValue}
+		newTemplateFile := TemplateFile{Path: newTemplateFilepath}
 
 		newYTTFile, err := replaceIfFound(directory, yttValuesDefaultFilename, info.Given.Template.YttPath)
 		if err != nil {
@@ -157,22 +157,22 @@ func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info
 }
 
 func populateTestCaseMockSupplyChain(testCase *TemplateTestCase, info *testInfo) (*TemplateTestCase, bool) {
-	var isMockSupplyChainSpecified bool
+	var mockSupplyChainSpecified bool
 	mockSupplyChain := MockSupplyChain{}
 
 	if info.Given.MockSupplyChain.BlueprintInputs != nil {
 		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.Given.MockSupplyChain.BlueprintInputs}
-		isMockSupplyChainSpecified = true
+		mockSupplyChainSpecified = true
 	}
 
 	if info.Given.MockSupplyChain.BlueprintParams != nil {
 		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.Given.MockSupplyChain.BlueprintParams}
-		isMockSupplyChainSpecified = true
+		mockSupplyChainSpecified = true
 	}
 
 	testCase.Given.SupplyChain = &mockSupplyChain
 
-	return testCase, isMockSupplyChainSpecified
+	return testCase, mockSupplyChainSpecified
 }
 
 func populateTestCaseSupplyChain(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, bool, error) {
