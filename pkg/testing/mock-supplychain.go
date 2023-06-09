@@ -18,9 +18,10 @@ func (i *TemplateTestGivens) mockedBlueprintStamp(ctx context.Context, workload 
 	labels := completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	var (
-		blueprintParams []v1alpha1.BlueprintParam
-		err             error
+		err error
 	)
+
+	blueprintParams := make([]v1alpha1.BlueprintParam, 0)
 
 	if i.BlueprintParams != nil {
 		blueprintParams, err = i.BlueprintParams.GetBlueprintParams()
@@ -135,4 +136,36 @@ func buildBlueprintStringParam(name string, value string, defaultValue string) (
 	}
 
 	return &param, nil
+}
+
+type BlueprintInputs interface {
+	GetBlueprintInputs() (*Inputs, error)
+}
+
+type BlueprintInputsObject struct {
+	BlueprintInputs *Inputs
+}
+
+func (i *BlueprintInputsObject) GetBlueprintInputs() (*Inputs, error) {
+	return i.BlueprintInputs, nil
+}
+
+type BlueprintInputsFile struct {
+	Path string
+}
+
+func (p *BlueprintInputsFile) GetBlueprintInputs() (*Inputs, error) {
+	inputsFile, err := os.ReadFile(p.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not read blueprintInputsFile %s: %w", p.Path, err)
+	}
+
+	var inputs Inputs
+
+	err = yaml.Unmarshal(inputsFile, &inputs)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshall params: %w", err)
+	}
+
+	return &inputs, nil
 }

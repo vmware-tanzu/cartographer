@@ -112,7 +112,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 	}
 
 	if info.BlueprintInputs != nil {
-		testCase.Given.BlueprintInputs = info.BlueprintInputs
+		testCase.Given.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.BlueprintInputs}
 	}
 
 	if info.BlueprintParams != nil {

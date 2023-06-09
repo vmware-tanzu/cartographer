@@ -55,14 +55,13 @@ type FailedTest struct {
 // Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
-	Template            Template
-	Workload            Workload
-	BlueprintParams     BlueprintParams
-	BlueprintInputs     *Inputs
-	BlueprintInputsFile string
-	SupplyChain         SupplyChain
-	TargetResource      TargetResource
-	TTOutputs           TTOutputs
+	Template        Template
+	Workload        Workload
+	BlueprintParams BlueprintParams
+	BlueprintInputs BlueprintInputs
+	SupplyChain     SupplyChain
+	TargetResource  TargetResource
+	TTOutputs       TTOutputs
 }
 
 type Template interface {
@@ -183,11 +182,18 @@ func (i *TemplateFile) preprocessYtt(ctx context.Context) (string, error) {
 }
 
 func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload, params map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
-	var inputs *Inputs
+	var (
+		inputs *Inputs
+		err    error
+	)
 
-	inputs, err := i.getBlueprintInputs()
-	if err != nil {
-		return nil, fmt.Errorf("get supply chain inputs: %w", err)
+	inputs = &Inputs{}
+
+	if i.BlueprintInputs != nil {
+		inputs, err = i.BlueprintInputs.GetBlueprintInputs()
+		if err != nil {
+			return nil, fmt.Errorf("get supply chain inputs: %w", err)
+		}
 	}
 
 	templatingContext := map[string]interface{}{
@@ -217,32 +223,4 @@ func (i *TemplateTestGivens) createTemplatingContext(workload v1alpha1.Workload,
 		}
 	}
 	return templatingContext, nil
-}
-
-func (i *TemplateTestGivens) getBlueprintInputs() (*Inputs, error) {
-	if i.BlueprintInputsFile != "" && i.BlueprintInputs != nil {
-		return nil, fmt.Errorf("only one of blueprintInputs or blueprintInputsFile may be set")
-	}
-
-	if i.BlueprintInputsFile == "" && i.BlueprintInputs == nil {
-		return &Inputs{}, nil
-	}
-
-	if i.BlueprintInputs != nil {
-		return i.BlueprintInputs, nil
-	}
-
-	inputsFile, err := os.ReadFile(i.BlueprintInputsFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read blueprintInputsFile: %w", err)
-	}
-
-	var inputs Inputs
-
-	err = yaml.Unmarshal(inputsFile, &inputs)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshall params: %w", err)
-	}
-
-	return &inputs, nil
 }

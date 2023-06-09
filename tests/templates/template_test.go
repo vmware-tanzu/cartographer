@@ -205,10 +205,12 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("kpack", "workload.yaml"),
 				},
-				BlueprintInputs: &cartotesting.Inputs{
-					Sources: map[string]templates.SourceInput{
-						"source": {
-							URL: "some-passed-on-url",
+				BlueprintInputs: &cartotesting.BlueprintInputsObject{
+					BlueprintInputs: &cartotesting.Inputs{
+						Sources: map[string]templates.SourceInput{
+							"source": {
+								URL: "some-passed-on-url",
+							},
 						},
 					},
 				},
@@ -227,7 +229,9 @@ func TestTemplateExample(t *testing.T) {
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("kpack", "workload.yaml"),
 				},
-				BlueprintInputsFile: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
+				BlueprintInputs: &cartotesting.BlueprintInputsFile{
+					Path: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
+				},
 			},
 			Expect: &cartotesting.TemplateTestExpectedFile{
 				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
