@@ -25,6 +25,21 @@ type TemplateTestCase struct {
 	Focus                bool
 }
 
+// TemplateTestGivens must specify a template and a workload.
+// These can be specified as yaml files or as objects.
+// If the template is a yaml file, it may be pre-processed with ytt and values provided
+// as objects or in a values yaml file.
+// Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
+// Params may be specified in the BlueprintParams
+type TemplateTestGivens struct {
+	Template        Template
+	Workload        Workload
+	MockSupplyChain MockSupplyChain
+	SupplyChain     SupplyChain
+	TargetResource  TargetResource
+	TTOutputs       TTOutputs
+}
+
 func (c *TemplateTestCase) Run() error {
 	expectedObject, err := c.Expect.getExpectedObject()
 	if err != nil {

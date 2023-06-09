@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
-	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
@@ -40,26 +39,6 @@ type Inputs struct {
 type ValidatableTemplate interface {
 	ValidateCreate() error
 	client.Object
-}
-
-type FailedTest struct {
-	name string
-	err  error
-}
-
-// TemplateTestGivens must specify a template and a workload.
-// These can be specified as yaml files or as objects.
-// If the template is a yaml file, it may be pre-processed with ytt and values provided
-// as objects or in a values yaml file.
-// Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
-// Params may be specified in the BlueprintParams
-type TemplateTestGivens struct {
-	Template        Template
-	Workload        Workload
-	MockSupplyChain MockSupplyChain
-	SupplyChain     SupplyChain
-	TargetResource  TargetResource
-	TTOutputs       TTOutputs
 }
 
 type Template interface {
@@ -140,14 +119,6 @@ func (i *TemplateFile) GetTemplate() (*ValidatableTemplate, error) {
 	}
 
 	return &apiTemplate, nil
-}
-
-type TargetResource interface {
-	GetTargetResourceName() (string, error)
-}
-
-type TTOutputs interface {
-	GetOutputs() (realizer.Outputs, error)
 }
 
 var yttNotFound = errors.New("ytt must be installed in PATH but was not found")

@@ -5,6 +5,11 @@ import "testing"
 // TemplateTestSuite is a collection of named template tests which may be run together
 type TemplateTestSuite map[string]*TemplateTestCase
 
+type FailedTest struct {
+	name string
+	err  error
+}
+
 // Assert allows testing a TemplateTestSuite when a *testing.T is not available,
 // e.g. when tests are not run from 'go test'
 // It returns a list of the named tests that passed and a list of the named tests that failed with their errors

@@ -21,6 +21,14 @@ type SupplyChain interface {
 	GetSupplyChain(*v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error)
 }
 
+type TargetResource interface {
+	GetTargetResourceName() (string, error)
+}
+
+type TTOutputs interface {
+	GetOutputs() (realizer.Outputs, error)
+}
+
 // TTSupplyChainFileSet
 // Paths is a list of either paths to a supply chain
 // or a directory containing supply chain files
