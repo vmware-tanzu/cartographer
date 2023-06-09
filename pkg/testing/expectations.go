@@ -15,23 +15,23 @@ type Expectation interface {
 }
 
 type ExpectedFile struct {
-	ExpectedFile string
+	Path string
 }
 
 type ExpectedUnstructured struct {
-	ExpectedUnstructured *unstructured.Unstructured
+	Unstructured *unstructured.Unstructured
 }
 
 func (e *ExpectedUnstructured) getExpected() (*unstructured.Unstructured, error) {
-	return e.ExpectedUnstructured, nil
+	return e.Unstructured, nil
 }
 
 type ExpectedObject struct {
-	ExpectedObject client.Object
+	Object client.Object
 }
 
 func (e *ExpectedObject) getExpected() (*unstructured.Unstructured, error) {
-	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ExpectedObject)
+	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.Object)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert template to unstructured: %w", err)
 	}
@@ -40,7 +40,7 @@ func (e *ExpectedObject) getExpected() (*unstructured.Unstructured, error) {
 }
 
 func (e *ExpectedFile) getExpected() (*unstructured.Unstructured, error) {
-	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
+	expectedStampedObjectYaml, err := os.ReadFile(e.Path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read expected yaml: %w", err)
 	}

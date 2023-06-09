@@ -72,7 +72,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
@@ -87,7 +87,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 			IgnoreMetadataFields: []string{"creationTimestamp"},
 		},
@@ -103,7 +103,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
@@ -122,7 +122,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
@@ -141,7 +141,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedObject{
-				ExpectedObject: expectedDeliverable,
+				Object: expectedDeliverable,
 			},
 			IgnoreMetadata: true,
 		},
@@ -161,7 +161,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedUnstructured{
-				ExpectedUnstructured: &expectedUnstructured,
+				Unstructured: &expectedUnstructured,
 			},
 		},
 
@@ -178,7 +178,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
@@ -198,7 +198,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
@@ -213,7 +213,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
@@ -238,7 +238,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
+				Path: filepath.Join("kpack", "expected.yaml"),
 			},
 			IgnoreMetadata: true,
 		},
@@ -258,7 +258,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
-				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
+				Path: filepath.Join("kpack", "expected.yaml"),
 			},
 			IgnoreMetadata: true,
 		},
