@@ -34,7 +34,7 @@ type Given struct {
 }
 
 func (c *TemplateTestCase) Run() error {
-	expectedObject, err := c.Expect.getExpectedObject()
+	expectedObject, err := c.Expect.getExpected()
 	if err != nil {
 		return fmt.Errorf("failed to get expected object: %w", err)
 	}

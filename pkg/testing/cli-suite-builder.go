@@ -92,7 +92,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		return nil, fmt.Errorf("replace expected file in directory %s: %w", directory, err)
 	}
 	if newExpectedFilePath != "" {
-		testCase.Expect = &TemplateTestExpectedFile{ExpectedFile: newExpectedFilePath}
+		testCase.Expect = &ExpectedFile{ExpectedFile: newExpectedFilePath}
 	}
 
 	if info.Focus != nil {

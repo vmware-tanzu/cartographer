@@ -11,26 +11,26 @@ import (
 )
 
 type Expectation interface {
-	getExpectedObject() (*unstructured.Unstructured, error)
+	getExpected() (*unstructured.Unstructured, error)
 }
 
-type TemplateTestExpectedFile struct {
+type ExpectedFile struct {
 	ExpectedFile string
 }
 
-type TemplateTestExpectedUnstructured struct {
+type ExpectedUnstructured struct {
 	ExpectedUnstructured *unstructured.Unstructured
 }
 
-func (e *TemplateTestExpectedUnstructured) getExpectedObject() (*unstructured.Unstructured, error) {
+func (e *ExpectedUnstructured) getExpected() (*unstructured.Unstructured, error) {
 	return e.ExpectedUnstructured, nil
 }
 
-type TemplateTestExpectedObject struct {
+type ExpectedObject struct {
 	ExpectedObject client.Object
 }
 
-func (e *TemplateTestExpectedObject) getExpectedObject() (*unstructured.Unstructured, error) {
+func (e *ExpectedObject) getExpected() (*unstructured.Unstructured, error) {
 	unstruct, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ExpectedObject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert template to unstructured: %w", err)
@@ -39,7 +39,7 @@ func (e *TemplateTestExpectedObject) getExpectedObject() (*unstructured.Unstruct
 	return &unstructured.Unstructured{Object: unstruct}, nil
 }
 
-func (e *TemplateTestExpectedFile) getExpectedObject() (*unstructured.Unstructured, error) {
+func (e *ExpectedFile) getExpected() (*unstructured.Unstructured, error) {
 	expectedStampedObjectYaml, err := os.ReadFile(e.ExpectedFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not read expected yaml: %w", err)
