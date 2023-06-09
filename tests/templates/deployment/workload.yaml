@@ -1,0 +1,13 @@
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  name: hello-again
+  labels:
+    workload-type: source-code
+spec:
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/waciumawanjohi/demo-hello-world

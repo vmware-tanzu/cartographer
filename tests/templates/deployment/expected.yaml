@@ -1,0 +1,21 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-again-deployment
+  labels:
+    app: hello-again
+spec:
+  # replicas: 3
+  selector:
+    matchLabels:
+      app: hello-again
+  template:
+    metadata:
+      labels:
+        app: hello-again
+    spec:
+      serviceAccountName: expected-service-account
+      containers:
+        - name: hello-again
+          image: my-image

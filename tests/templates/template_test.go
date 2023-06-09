@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	cartotesting "github.com/vmware-tanzu/cartographer/pkg/testing"
 )
@@ -262,9 +263,38 @@ func TestTemplateExample(t *testing.T) {
 			},
 			IgnoreMetadata: true,
 		},
+
+		"actual supply chain": {
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deployment", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deployment", "workload.yaml"),
+				},
+				SupplyChain: &cartotesting.SupplyChainFileSet{
+					Paths: []string{
+						filepath.Join("deployment", "supply-chain.yaml"),
+					},
+					TargetResourceName: "deploy",
+					PreviousOutputs:    getActualSupplyChainOutputs(),
+				},
+			},
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deployment", "expected.yaml"),
+			},
+			IgnoreMetadata: true, // TODO Remove!
+		},
 	}
 
 	testSuite.Run(t)
+}
+
+func getActualSupplyChainOutputs() *realizer.Outputs {
+	outputs := realizer.NewOutputs()
+	outputs.AddOutput("build-image", &templates.Output{Image: "my-image"})
+
+	return &outputs
 }
 
 func createWorkload() *v1alpha1.Workload {
