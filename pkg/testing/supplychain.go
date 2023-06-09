@@ -18,15 +18,10 @@ import (
 )
 
 type SupplyChain interface {
-	GetSupplyChain(*v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error)
-}
-
-type TargetResource interface {
-	GetTargetResourceName() (string, error)
-}
-
-type TTOutputs interface {
-	GetOutputs() (realizer.Outputs, error)
+	stamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error)
+	//getSupplyChain(*v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error)
+	//getTargetResourceName() string
+	//getOutputs() (realizer.Outputs, error)
 }
 
 // TTSupplyChainFileSet
@@ -38,7 +33,7 @@ type TTSupplyChainFileSet struct {
 	YttFiles  []string
 }
 
-func (s *TTSupplyChainFileSet) GetSupplyChain(workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
+func (s *TTSupplyChainFileSet) getSupplyChain(workload *v1alpha1.Workload) (*v1alpha1.ClusterSupplyChain, error) {
 	var noLog *NoLog
 
 	allSupplyChains, err := s.readAllPaths()
@@ -175,13 +170,13 @@ func (n *NoLog) Error(_ error, _ string, _ ...interface{}) {}
 func (n *NoLog) WithValues(_ ...interface{}) logr.LogSink  { return n }
 func (n *NoLog) WithName(name string) logr.LogSink         { return n }
 
-func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, template templates.Reader) (*unstructured.Unstructured, error) {
-	supplyChain, err := i.SupplyChain.GetSupplyChain(workload)
+func (s *TTSupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workload, _ ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
+	supplyChain, err := s.getSupplyChain(workload)
 	if err != nil {
 		return nil, fmt.Errorf("get supplychain: %w", err)
 	}
 
-	resource, err := i.getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain))
+	resource, err := getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain), s.getTargetResourceName())
 	if err != nil {
 		return nil, fmt.Errorf("get target resource: %w", err)
 	}
@@ -191,7 +186,7 @@ func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload 
 	resourceLabeler := controllers.BuildWorkloadResourceLabeler(workload, supplyChain)
 	labels := resourceLabeler(*resource, template)
 
-	outputs, err := i.TTOutputs.GetOutputs()
+	outputs, err := s.getOutputs()
 
 	stamper := templates.StamperBuilder(workload, templatingContext.Generate(template, *resource, outputs, labels), labels)
 	actualStampedObject, err := stamper.Stamp(ctx, template.GetResourceTemplate())
@@ -202,12 +197,7 @@ func (i *TemplateTestGivens) actualBlueprintStamp(ctx context.Context, workload 
 	return actualStampedObject, nil
 }
 
-func (i *TemplateTestGivens) getTargetResource(resources []realizer.OwnerResource) (*realizer.OwnerResource, error) {
-	targetResourceName, err := i.TargetResource.GetTargetResourceName()
-	if err != nil {
-		return nil, fmt.Errorf("get target resource name: %w", err)
-	}
-
+func getTargetResource(resources []realizer.OwnerResource, targetResourceName string) (*realizer.OwnerResource, error) {
 	for _, resource := range resources {
 		if resource.Name == targetResourceName {
 			return &resource, nil
@@ -217,6 +207,9 @@ func (i *TemplateTestGivens) getTargetResource(resources []realizer.OwnerResourc
 	return nil, fmt.Errorf("did not find a supply chain resource with target name: %s", targetResourceName)
 }
 
-func (i *TemplateTestGivens) actualBlueprintSupplied() bool {
-	return i.SupplyChain != nil
+func (s *TTSupplyChainFileSet) getTargetResourceName() string {
+	panic("not implemented")
+}
+func (s *TTSupplyChainFileSet) getOutputs() (realizer.Outputs, error) {
+	panic("not implemented")
 }

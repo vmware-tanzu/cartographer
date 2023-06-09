@@ -121,7 +121,7 @@ func buildTestSuite(testCase TemplateTestCase, directory string) (TemplateTestSu
 		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.BlueprintParams}
 	}
 
-	testCase.Given.MockSupplyChain = mockSupplyChain
+	testCase.Given.SupplyChain = &mockSupplyChain
 
 	subdirectories, err := getSubdirectories(directory)
 	if err != nil {

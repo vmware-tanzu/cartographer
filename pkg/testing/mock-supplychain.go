@@ -19,7 +19,7 @@ type MockSupplyChain struct {
 	BlueprintInputs BlueprintInputs
 }
 
-func (i *MockSupplyChain) mockedBlueprintStamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
+func (i *MockSupplyChain) stamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	labels := completeLabels(*workload, apiTemplate.GetName(), apiTemplate.GetObjectKind().GroupVersionKind().Kind)
 
 	var (

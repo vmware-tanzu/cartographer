@@ -32,12 +32,9 @@ type TemplateTestCase struct {
 // Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
 // Params may be specified in the BlueprintParams
 type TemplateTestGivens struct {
-	Template        Template
-	Workload        Workload
-	MockSupplyChain MockSupplyChain
-	SupplyChain     SupplyChain
-	TargetResource  TargetResource
-	TTOutputs       TTOutputs
+	Template    Template
+	Workload    Workload
+	SupplyChain SupplyChain
 }
 
 func (c *TemplateTestCase) Run() error {
@@ -125,9 +122,9 @@ func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, erro
 		}
 	}
 
-	if i.actualBlueprintSupplied() {
-		return i.actualBlueprintStamp(ctx, workload, template)
+	if i.SupplyChain == nil {
+		i.SupplyChain = &MockSupplyChain{}
 	}
 
-	return i.MockSupplyChain.mockedBlueprintStamp(ctx, workload, *apiTemplate, template)
+	return i.SupplyChain.stamp(ctx, workload, *apiTemplate, template)
 }
