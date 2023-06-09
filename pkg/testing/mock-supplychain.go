@@ -14,6 +14,9 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 )
 
+// MockSupplyChain implements SupplyChain
+// BlueprintInputs simulate outputs expected from earlier templates in the supply chain
+// BlueprintParams supplies params as if defined in the supply chain
 type MockSupplyChain struct {
 	BlueprintParams BlueprintParams
 	BlueprintInputs BlueprintInputs
@@ -148,7 +151,7 @@ type StringParam struct {
 	DefaultValue string
 }
 
-// BuildBlueprintStringParams is a helper method for creating string BlueprintParams for Givens.
+// BuildBlueprintStringParams is a helper method for creating string BlueprintParams.
 // BlueprintParams that hold other valid JSON values must be constructed by hand.
 func BuildBlueprintStringParams(candidateParams []StringParam) ([]v1alpha1.BlueprintParam, error) {
 	var completeParams []v1alpha1.BlueprintParam

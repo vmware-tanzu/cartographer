@@ -45,6 +45,7 @@ type Template interface {
 	GetTemplate() (*ValidatableTemplate, error)
 }
 
+// TemplateObject implements Template
 type TemplateObject struct {
 	Template ValidatableTemplate
 }
@@ -53,6 +54,10 @@ func (t *TemplateObject) GetTemplate() (*ValidatableTemplate, error) {
 	return &t.Template, nil
 }
 
+// TemplateFile implements Template
+// Path is the filepath to the yaml template definition.
+// This file may be pre-processed with ytt and including values provided
+// as objects (YttValues) or in yaml files (YttFiles).
 type TemplateFile struct {
 	Path      string
 	YttValues Values

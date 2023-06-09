@@ -16,8 +16,8 @@ import (
 // This will exercise the individual test(s).
 // Note that the overall suite will fail (preventing focused tests from passing CI).
 type TemplateTestCase struct {
-	Given                TemplateTestGivens
-	Expect               TemplateTestExpectation
+	Given                Given
+	Expect               Expectation
 	IgnoreMetadata       bool
 	IgnoreOwnerRefs      bool
 	IgnoreLabels         bool
@@ -25,13 +25,9 @@ type TemplateTestCase struct {
 	Focus                bool
 }
 
-// TemplateTestGivens must specify a template and a workload.
-// These can be specified as yaml files or as objects.
-// If the template is a yaml file, it may be pre-processed with ytt and values provided
-// as objects or in a values yaml file.
-// Any outputs expected from earlier templates in a supply chain may be provided in BlueprintInputs.
-// Params may be specified in the BlueprintParams
-type TemplateTestGivens struct {
+// Given must specify a Template and a Workload.
+// SupplyChain is optional
+type Given struct {
 	Template    Template
 	Workload    Workload
 	SupplyChain SupplyChain
@@ -93,7 +89,7 @@ func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructure
 	}
 }
 
-func (i *TemplateTestGivens) getActualObject() (*unstructured.Unstructured, error) {
+func (i *Given) getActualObject() (*unstructured.Unstructured, error) {
 	ctx := context.Background()
 
 	workload, err := i.Workload.GetWorkload()

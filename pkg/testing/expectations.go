@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type TemplateTestExpectation interface {
+type Expectation interface {
 	getExpectedObject() (*unstructured.Unstructured, error)
 }
 

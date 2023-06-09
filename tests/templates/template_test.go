@@ -60,7 +60,7 @@ func TestTemplateExample(t *testing.T) {
 
 	testSuite := cartotesting.TemplateTestSuite{
 		"template, workload and expected defined in files": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
@@ -77,7 +77,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"template defined as an object": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateObject{Template: templateOfDeliverable},
 				SupplyChain: &cartotesting.MockSupplyChain{
 					BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
@@ -93,7 +93,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"workload defined as an object": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
@@ -108,7 +108,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"blueprints defined as a file": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
@@ -127,7 +127,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"expected defined as an object": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
@@ -147,7 +147,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"expected defined as an unstructured": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
@@ -166,7 +166,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"clustertemplate uses ytt field": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "ytt-template", "template-ytt.yaml"),
 				},
@@ -183,7 +183,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"template requires ytt preprocessing, data supplied in object": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
 					YttValues: cartotesting.Values{
@@ -203,7 +203,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"template requires ytt preprocessing, data supplied in files": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path:     filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
 					YttFiles: []string{filepath.Join("deliverable", "ytt-preprocess", "values.yaml")},
@@ -218,7 +218,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"template that requires a supply chain input": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("kpack", "template.yaml"),
 				},
@@ -244,7 +244,7 @@ func TestTemplateExample(t *testing.T) {
 		},
 
 		"providing a supply chain input file": {
-			Given: cartotesting.TemplateTestGivens{
+			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{
 					Path: filepath.Join("kpack", "template.yaml"),
 				},
