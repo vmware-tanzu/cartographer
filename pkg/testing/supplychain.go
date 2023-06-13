@@ -186,7 +186,7 @@ func (n *NoLog) Error(_ error, _ string, _ ...interface{}) {}
 func (n *NoLog) WithValues(_ ...interface{}) logr.LogSink  { return n }
 func (n *NoLog) WithName(name string) logr.LogSink         { return n }
 
-func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workload, _ ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
+func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workload, templateObject ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
 	supplyChain, err := s.getSupplyChain(workload)
 	if err != nil {
 		return nil, fmt.Errorf("get supplychain: %w", err)
@@ -195,6 +195,10 @@ func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workl
 	resource, err := getTargetResource(realizer.MakeSupplychainOwnerResources(supplyChain), s.TargetResourceName)
 	if err != nil {
 		return nil, fmt.Errorf("get target resource: %w", err)
+	}
+
+	if !templateMatchesResource(templateObject, resource) {
+		return nil, fmt.Errorf("template '%s' is not selected by resource/stage '%s' in supply chain '%s'", templateObject.GetName(), resource.Name, supplyChain.Name)
 	}
 
 	templatingContext := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
@@ -217,6 +221,10 @@ func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workl
 	}
 
 	return actualStampedObject, nil
+}
+
+func templateMatchesResource(template ValidatableTemplate, resource *realizer.OwnerResource) bool {
+	return template.GetName() == resource.TemplateRef.Name && template.GetObjectKind().GroupVersionKind().Kind == resource.TemplateRef.Kind
 }
 
 func getTargetResource(resources []realizer.OwnerResource, targetResourceName string) (*realizer.OwnerResource, error) {
