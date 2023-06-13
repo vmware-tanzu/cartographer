@@ -58,14 +58,35 @@ var rootCmd = &cobra.Command{
 	Version: version,
 	Short:   "cartotest - test Cartographer files",
 	Long: `cartotest is a CLI to verify the output of your Cartographer files
-This version tests only templates with the 'templates' command
+
 Read more at cartographer.sh`,
-	Args: cobra.NoArgs,
+	Args:    cobra.ExactArgs(1),
+	Example: "cartotest ./tests/templates",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.SetFormatter(&log.TextFormatter{})
 		if verbose {
 			log.SetLevel(log.DebugLevel)
 		}
+	},
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		directory := args[0]
+		directoryInfo, err := os.Stat(directory)
+		if err != nil {
+			return fmt.Errorf("argument must be a valid path")
+		}
+
+		if !directoryInfo.IsDir() {
+			return fmt.Errorf("argument must be a valid directory")
+		}
+
+		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
+		cmd.SilenceErrors = true
+
+		directory := args[0]
+		return CliTest(directory)
 	},
 }
 
@@ -76,7 +97,9 @@ var templateCmd = &cobra.Command{
 	Long: `the templates command allows assertion that a given template will create an expected object.
 Users can mock the templating context that would be available from the supply chain.
 Read more at cartographer.sh`,
-	Args: cobra.NoArgs,
+	Args:       cobra.NoArgs,
+	Deprecated: "the templates command is no longer necessary. 'cartotest templates --directory ./tests/templates/' becomes 'cartotest ./tests/templates/'",
+	Hidden:     true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		cmd.SilenceErrors = true
