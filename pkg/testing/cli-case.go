@@ -79,7 +79,7 @@ const (
 	supplyChainYttValuesDefaultFilename = "supply-chain-ytt-values.yaml"
 )
 
-func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTestCase, error) {
+func populateTestCase(testCase *Test, directory string) (*Test, error) {
 	info, err := populateInfo(directory)
 	if err != nil {
 		return nil, fmt.Errorf("populate info: %w", err)
@@ -127,7 +127,7 @@ func populateTestCase(testCase *TemplateTestCase, directory string) (*TemplateTe
 	return testCase, nil
 }
 
-func populateCompareOptions(testCase *TemplateTestCase, info *testInfo) *TemplateTestCase {
+func populateCompareOptions(testCase *Test, info *testInfo) *Test {
 	if info.CompareOptions.IgnoreMetadata != nil {
 		if testCase.CompareOptions == nil {
 			testCase.CompareOptions = &CompareOptions{}
@@ -165,7 +165,7 @@ func populateCompareOptions(testCase *TemplateTestCase, info *testInfo) *Templat
 	return testCase
 }
 
-func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
+func populateTestCaseWorkload(testCase *Test, directory string, info *testInfo) (*Test, error) {
 	newWorkloadValue, err := getLocallySpecifiedPath(directory, workloadDefaultFilename, info.Given.Workload)
 	if err != nil {
 		return nil, fmt.Errorf("get workload file specified in directory %s: %w", directory, err)
@@ -176,7 +176,7 @@ func populateTestCaseWorkload(testCase *TemplateTestCase, directory string, info
 	return testCase, nil
 }
 
-func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, error) {
+func populateTestCaseTemplate(testCase *Test, directory string, info *testInfo) (*Test, error) {
 	newTemplateFile := TemplateFile{}
 
 	if previousTemplateFile, prevTemplateFileExisted := testCase.Given.Template.(*TemplateFile); prevTemplateFileExisted {
@@ -204,7 +204,7 @@ func populateTestCaseTemplate(testCase *TemplateTestCase, directory string, info
 	return testCase, nil
 }
 
-func populateTestCaseMockSupplyChain(testCase *TemplateTestCase, info *testInfo) (*TemplateTestCase, bool) {
+func populateTestCaseMockSupplyChain(testCase *Test, info *testInfo) (*Test, bool) {
 	var mockSupplyChainSpecified bool
 	mockSupplyChain := MockSupplyChain{}
 
@@ -223,7 +223,7 @@ func populateTestCaseMockSupplyChain(testCase *TemplateTestCase, info *testInfo)
 	return testCase, mockSupplyChainSpecified
 }
 
-func populateTestCaseSupplyChain(testCase *TemplateTestCase, directory string, info *testInfo) (*TemplateTestCase, bool, error) {
+func populateTestCaseSupplyChain(testCase *Test, directory string, info *testInfo) (*Test, bool, error) {
 	var supplyChainSpecified bool
 
 	newSupplyChain := SupplyChainFileSet{}

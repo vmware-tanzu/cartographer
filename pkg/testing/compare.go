@@ -31,7 +31,7 @@ type CompareOptions struct {
 
 type CMPOption func() (cmp.Options, error)
 
-func (c *TemplateTestCase) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
+func (c *Test) stripIgnoredFields(expected *unstructured.Unstructured, actual *unstructured.Unstructured) {
 	delete(expected.Object, "status")
 	delete(actual.Object, "status")
 

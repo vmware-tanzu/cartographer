@@ -109,7 +109,7 @@ Read more at cartographer.sh`,
 }
 
 func CliTest(directory string) error {
-	baseTestCase := TemplateTestCase{}
+	baseTestCase := Test{}
 	testSuite, err := buildTestSuite(&baseTestCase, directory)
 	if err != nil {
 		return fmt.Errorf("build test cases: %w", err)

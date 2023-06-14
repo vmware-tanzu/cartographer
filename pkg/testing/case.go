@@ -25,13 +25,13 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 )
 
-// TemplateTestCase is an individual template test.
+// Test is an individual template test.
 // Given and Expect values must be provided.
 // Fields in the expected object's metadata may be ignored
-// When run as part of a TemplateTestSuite, an individual case(s) may be focused.
+// When run as part of a Suite, an individual case(s) may be focused.
 // This will exercise the individual test(s).
 // Note that the overall suite will fail (preventing focused tests from passing CI).
-type TemplateTestCase struct {
+type Test struct {
 	Given          Given
 	Expect         Expectation
 	CompareOptions *CompareOptions
@@ -46,7 +46,7 @@ type Given struct {
 	SupplyChain SupplyChain
 }
 
-func (c *TemplateTestCase) Run() error {
+func (c *Test) Run() error {
 	expectedObject, err := c.Expect.getExpected()
 	if err != nil {
 		return fmt.Errorf("failed to get expected object: %w", err)

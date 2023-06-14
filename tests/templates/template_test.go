@@ -59,7 +59,7 @@ func TestTemplateExample(t *testing.T) {
 
 	expectedUnstructured := createExpectedUnstructured()
 
-	testSuite := cartotesting.TemplateTestSuite{
+	testSuite := cartotesting.Suite{
 		"template, workload and expected defined in files": {
 			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateFile{

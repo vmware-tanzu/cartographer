@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 )
 
-func buildTestSuite(testCase *TemplateTestCase, directory string) (TemplateTestSuite, error) {
+func buildTestSuite(testCase *Test, directory string) (Suite, error) {
 	var err error
 
 	testCase, err = populateTestCase(testCase, directory)
@@ -35,10 +35,10 @@ func buildTestSuite(testCase *TemplateTestCase, directory string) (TemplateTestS
 
 	// recurse
 	if len(subdirectories) > 0 {
-		testSuite := make(TemplateTestSuite)
+		testSuite := make(Suite)
 		for _, subdirectory := range subdirectories {
 			newCase := *testCase
-			var tempTestSuite TemplateTestSuite
+			var tempTestSuite Suite
 			tempTestSuite, err = buildTestSuite(&newCase, filepath.Join(directory, subdirectory))
 			if err != nil {
 				return nil, fmt.Errorf("failed building test case for subdirectory: %s: %w", subdirectory, err)
@@ -50,7 +50,7 @@ func buildTestSuite(testCase *TemplateTestCase, directory string) (TemplateTestS
 		return testSuite, nil
 	}
 
-	return TemplateTestSuite{
+	return Suite{
 		directory: testCase,
 	}, nil
 }

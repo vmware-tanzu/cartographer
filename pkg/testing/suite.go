@@ -16,18 +16,18 @@ package testing
 
 import "testing"
 
-// TemplateTestSuite is a collection of named template tests which may be run together
-type TemplateTestSuite map[string]*TemplateTestCase
+// Suite is a collection of named template tests which may be run together
+type Suite map[string]*Test
 
 type FailedTest struct {
 	name string
 	err  error
 }
 
-// Assert allows testing a TemplateTestSuite when a *testing.T is not available,
+// Assert allows testing a Suite when a *testing.T is not available,
 // e.g. when tests are not run from 'go test'
 // It returns a list of the named tests that passed and a list of the named tests that failed with their errors
-func (s *TemplateTestSuite) Assert() ([]string, []*FailedTest) {
+func (s *Suite) Assert() ([]string, []*FailedTest) {
 	var (
 		passedTests []string
 		failedTests []*FailedTest
@@ -47,12 +47,12 @@ func (s *TemplateTestSuite) Assert() ([]string, []*FailedTest) {
 	return passedTests, failedTests
 }
 
-func (s *TemplateTestSuite) HasFocusedTests() bool {
+func (s *Suite) HasFocusedTests() bool {
 	_, focused := s.getTestsToRun()
 	return focused
 }
 
-func (s *TemplateTestSuite) Run(t *testing.T) {
+func (s *Suite) Run(t *testing.T) {
 	testsToRun, focused := s.getTestsToRun()
 
 	if focused {
@@ -70,7 +70,7 @@ func (s *TemplateTestSuite) Run(t *testing.T) {
 	}
 }
 
-func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
+func (s *Suite) RunConcurrently(t *testing.T) {
 	testsToRun, focused := s.getTestsToRun()
 
 	if focused {
@@ -89,10 +89,10 @@ func (s *TemplateTestSuite) RunConcurrently(t *testing.T) {
 	}
 }
 
-func (s *TemplateTestSuite) getTestsToRun() (TemplateTestSuite, bool) {
+func (s *Suite) getTestsToRun() (Suite, bool) {
 	focused := false
 	testsToRun := *s
-	focusedCases := make(map[string]*TemplateTestCase, len(*s))
+	focusedCases := make(map[string]*Test, len(*s))
 
 	for name, testCase := range *s {
 		if testCase.Focus {
