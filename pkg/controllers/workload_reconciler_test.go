@@ -818,7 +818,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				})
 			})
 
-			Context("of type RetrieveOutputError", func() {
+			Context("of type RetrieveOutputError with jsonpath", func() {
 				var retrieveError cerrors.RetrieveOutputError
 				var stampedObject *unstructured.Unstructured
 				BeforeEach(func() {
@@ -865,6 +865,70 @@ var _ = Describe("WorkloadReconciler", func() {
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
 					Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in supply chain \[some-supply-chain\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
+				})
+
+				It("does track the template", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(dependencyTracker.TrackCallCount()).To(Equal(3))
+					key, obj := dependencyTracker.TrackArgsForCall(0)
+					Expect(key.String()).To(Equal("ServiceAccount/my-namespace/workload-service-account-name"))
+					Expect(obj.String()).To(Equal("my-namespace/my-workload-name"))
+
+					var keys []string
+					var objs []string
+					key, obj = dependencyTracker.TrackArgsForCall(1)
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					key, obj = dependencyTracker.TrackArgsForCall(2)
+					keys = append(keys, key.String())
+					objs = append(objs, obj.String())
+
+					Expect(keys).To(ContainElements("my-image-kind.carto.run//my-image-template",
+						"my-config-kind.carto.run//my-config-template"))
+					Expect(objs).To(ContainElements("my-namespace/my-workload-name",
+						"my-namespace/my-workload-name"))
+				})
+			})
+			Context("of type RetrieveOutputError without stampedobject", func() {
+				var retrieveError cerrors.RetrieveOutputError
+				BeforeEach(func() {
+					jsonPathError := stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
+					retrieveError = cerrors.RetrieveOutputError{
+						Err:               jsonPathError,
+						ResourceName:      "some-resource",
+						StampedObject:     nil,
+						BlueprintName:     supplyChainName,
+						BlueprintType:     cerrors.SupplyChain,
+						QualifiedResource: "input",
+						PassThroughInput:  "configs",
+					}
+					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
+						statusesVal := reflect.ValueOf(statuses)
+						existingVal := reflect.ValueOf(resourceStatuses)
+
+						reflect.Indirect(statusesVal).Set(reflect.Indirect(existingVal))
+						return retrieveError
+					}
+				})
+
+				It("calls the condition manager to report", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
+						Equal(conditions.MissingPassThroughInputCondition("configs", "input")))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("logs the handled error message", func() {
+					_, _ = reconciler.Reconcile(ctx, req)
+
+					Expect(out).To(Say(`"level":"info"`))
+					Expect(out).To(Say(`"msg":"handled error reconciling workload"`))
+					Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in supply chain \[some-supply-chain\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 				})
 
 				It("does track the template", func() {
@@ -1639,6 +1703,44 @@ var _ = Describe("WorkloadReconciler", func() {
 						Expect(obj.GetName()).To(Equal("some-obj-name"))
 						Expect(obj.GetKind()).To(Equal("some-kind"))
 					})
+				})
+			})
+
+			Context("when the previously stamped object no longer exists", func() {
+				BeforeEach(func() {
+					referenceToNonExistentObject := v1alpha1.RealizedResource{
+						Name: "some-resource",
+						StampedRef: &v1alpha1.StampedRef{
+							ObjectReference: &corev1.ObjectReference{
+								APIVersion: "some-api-version",
+								Kind:       "some-kind",
+								Name:       "some-obj-name",
+							},
+							Resource: "some-kind",
+						},
+						TemplateRef: &corev1.ObjectReference{
+							Name: "some-template-name",
+							Kind: "some-template-kind",
+						},
+					}
+
+					wl.Status.Resources = []v1alpha1.ResourceStatus{
+						{
+							RealizedResource: referenceToNonExistentObject,
+						},
+					}
+					repo.GetWorkloadReturns(wl, nil)
+
+					repo.GetUnstructuredReturnsOnCall(0, nil, nil)
+					repo.DeleteReturns(fmt.Errorf("some error"))
+				})
+
+				It("does not return an error", func() {
+					_, err := reconciler.Reconcile(ctx, req)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(repo.DeleteCallCount()).To(Equal(1))
+					Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":"my-namespace/my-workload-name"`))
 				})
 			})
 		})
