@@ -32,7 +32,7 @@ import (
 )
 
 func TestTemplateExample(t *testing.T) {
-	params, err := cartotesting.BuildBlueprintStringParams([]cartotesting.StringParam{
+	params, err := cartotesting.BuildSupplyChainStringParams([]cartotesting.StringParam{
 		{
 			Name:         "gitops_url",
 			DefaultValue: "https://github.com/vmware-tanzu/cartographer/",
@@ -69,7 +69,7 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
@@ -81,7 +81,7 @@ func TestTemplateExample(t *testing.T) {
 			Given: cartotesting.Given{
 				Template: &cartotesting.TemplateObject{Template: templateOfDeliverable},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
 				},
 				Workload: &cartotesting.WorkloadFile{
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
@@ -102,7 +102,7 @@ func TestTemplateExample(t *testing.T) {
 				},
 				Workload: &cartotesting.WorkloadObject{Workload: workload},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
@@ -119,7 +119,7 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsFile{
+					Params: &cartotesting.SupplyChainParamsFile{
 						Path: filepath.Join("deliverable", "regular-template", "params-file-not-used-by-cli-tests.yaml"),
 					},
 				},
@@ -135,8 +135,8 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{
-						BlueprintParams: params,
+					Params: &cartotesting.SupplyChainParamsObject{
+						Params: params,
 					},
 				},
 				Workload: &cartotesting.WorkloadFile{
@@ -160,8 +160,8 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{
-						BlueprintParams: params,
+					Params: &cartotesting.SupplyChainParamsObject{
+						Params: params,
 					},
 				},
 			},
@@ -179,7 +179,7 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
@@ -199,7 +199,7 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("deliverable", "common-workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintParams: &cartotesting.BlueprintParamsObject{BlueprintParams: params},
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
 				},
 			},
 			Expect: &cartotesting.ExpectedFile{
@@ -231,8 +231,8 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("kpack", "workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintInputs: &cartotesting.BlueprintInputsObject{
-						BlueprintInputs: &cartotesting.Inputs{
+					Inputs: &cartotesting.SupplyChainInputsObject{
+						Inputs: &cartotesting.Inputs{
 							Sources: map[string]templates.SourceInput{
 								"source": {
 									URL: "some-passed-on-url",
@@ -259,7 +259,7 @@ func TestTemplateExample(t *testing.T) {
 					Path: filepath.Join("kpack", "workload.yaml"),
 				},
 				SupplyChain: &cartotesting.MockSupplyChain{
-					BlueprintInputs: &cartotesting.BlueprintInputsFile{
+					Inputs: &cartotesting.SupplyChainInputsFile{
 						Path: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
 					},
 				},

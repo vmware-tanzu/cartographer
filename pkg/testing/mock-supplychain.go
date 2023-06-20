@@ -29,11 +29,11 @@ import (
 )
 
 // MockSupplyChain implements SupplyChain
-// BlueprintInputs simulate outputs expected from earlier templates in the supply chain
-// BlueprintParams supplies params as if defined in the supply chain
+// SupplyChainInputs simulate expected inputs that are the outputs from earlier resources in the supply chain
+// SupplyChainParams supplies params as if defined in the supply chain
 type MockSupplyChain struct {
-	BlueprintParams BlueprintParams
-	BlueprintInputs BlueprintInputs
+	Params SupplyChainParams
+	Inputs SupplyChainInputs
 }
 
 func (i *MockSupplyChain) stamp(ctx context.Context, workload *v1alpha1.Workload, apiTemplate ValidatableTemplate, template templates.Reader) (*unstructured.Unstructured, error) {
@@ -45,8 +45,8 @@ func (i *MockSupplyChain) stamp(ctx context.Context, workload *v1alpha1.Workload
 
 	blueprintParams := make([]v1alpha1.BlueprintParam, 0)
 
-	if i.BlueprintParams != nil {
-		blueprintParams, err = i.BlueprintParams.GetBlueprintParams()
+	if i.Params != nil {
+		blueprintParams, err = i.Params.GetParams()
 		if err != nil {
 			return nil, fmt.Errorf("get blueprint params failed: %w", err)
 		}
@@ -88,8 +88,8 @@ func (i *MockSupplyChain) createTemplatingContext(workload v1alpha1.Workload, pa
 
 	inputs = &Inputs{}
 
-	if i.BlueprintInputs != nil {
-		inputs, err = i.BlueprintInputs.GetBlueprintInputs()
+	if i.Inputs != nil {
+		inputs, err = i.Inputs.GetInputs()
 		if err != nil {
 			return nil, fmt.Errorf("get supply chain inputs: %w", err)
 		}
@@ -124,26 +124,26 @@ func (i *MockSupplyChain) createTemplatingContext(workload v1alpha1.Workload, pa
 	return templatingContext, nil
 }
 
-type BlueprintParams interface {
-	GetBlueprintParams() ([]v1alpha1.BlueprintParam, error)
+type SupplyChainParams interface {
+	GetParams() ([]v1alpha1.BlueprintParam, error)
 }
 
-type BlueprintParamsObject struct {
-	BlueprintParams []v1alpha1.BlueprintParam
+type SupplyChainParamsObject struct {
+	Params []v1alpha1.BlueprintParam
 }
 
-func (p *BlueprintParamsObject) GetBlueprintParams() ([]v1alpha1.BlueprintParam, error) {
-	return p.BlueprintParams, nil
+func (p *SupplyChainParamsObject) GetParams() ([]v1alpha1.BlueprintParam, error) {
+	return p.Params, nil
 }
 
-type BlueprintParamsFile struct {
+type SupplyChainParamsFile struct {
 	Path string
 }
 
-func (p *BlueprintParamsFile) GetBlueprintParams() ([]v1alpha1.BlueprintParam, error) {
+func (p *SupplyChainParamsFile) GetParams() ([]v1alpha1.BlueprintParam, error) {
 	paramsFile, err := os.ReadFile(p.Path)
 	if err != nil {
-		return nil, fmt.Errorf("could not read blueprintParamsFile: %w", err)
+		return nil, fmt.Errorf("could not read supplyChainParamsFile: %w", err)
 	}
 
 	var paramsData []v1alpha1.BlueprintParam
@@ -156,7 +156,7 @@ func (p *BlueprintParamsFile) GetBlueprintParams() ([]v1alpha1.BlueprintParam, e
 	return paramsData, nil // TODO: document
 }
 
-// StringParam is a helper struct for use with the BuildBlueprintStringParams method
+// StringParam is a helper struct for use with the BuildSupplyChainStringParams method
 // Either a Value or a DefaultValue should be specified for every StringParam
 // A Name is required for every StringParam
 type StringParam struct {
@@ -165,9 +165,9 @@ type StringParam struct {
 	DefaultValue string
 }
 
-// BuildBlueprintStringParams is a helper method for creating string BlueprintParams.
-// BlueprintParams that hold other valid JSON values must be constructed by hand.
-func BuildBlueprintStringParams(candidateParams []StringParam) ([]v1alpha1.BlueprintParam, error) {
+// BuildSupplyChainStringParams is a helper method for creating string SupplyChainParams.
+// SupplyChainParams that hold other valid JSON values must be constructed by hand.
+func BuildSupplyChainStringParams(candidateParams []StringParam) ([]v1alpha1.BlueprintParam, error) {
 	var completeParams []v1alpha1.BlueprintParam
 
 	for _, stringParam := range candidateParams {
@@ -204,26 +204,26 @@ func buildBlueprintStringParam(name string, value string, defaultValue string) (
 	return &param, nil
 }
 
-type BlueprintInputs interface {
-	GetBlueprintInputs() (*Inputs, error)
+type SupplyChainInputs interface {
+	GetInputs() (*Inputs, error)
 }
 
-type BlueprintInputsObject struct {
-	BlueprintInputs *Inputs
+type SupplyChainInputsObject struct {
+	Inputs *Inputs
 }
 
-func (i *BlueprintInputsObject) GetBlueprintInputs() (*Inputs, error) {
-	return i.BlueprintInputs, nil
+func (i *SupplyChainInputsObject) GetInputs() (*Inputs, error) {
+	return i.Inputs, nil
 }
 
-type BlueprintInputsFile struct {
+type SupplyChainInputsFile struct {
 	Path string
 }
 
-func (p *BlueprintInputsFile) GetBlueprintInputs() (*Inputs, error) {
+func (p *SupplyChainInputsFile) GetInputs() (*Inputs, error) {
 	inputsFile, err := os.ReadFile(p.Path)
 	if err != nil {
-		return nil, fmt.Errorf("could not read blueprintInputsFile %s: %w", p.Path, err)
+		return nil, fmt.Errorf("could not read supplyChainInputsFile %s: %w", p.Path, err)
 	}
 
 	var inputs Inputs

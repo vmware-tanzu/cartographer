@@ -209,12 +209,12 @@ func populateTestCaseMockSupplyChain(testCase *Test, info *testInfo) (*Test, boo
 	mockSupplyChain := MockSupplyChain{}
 
 	if info.Given.MockSupplyChain.BlueprintInputs != nil {
-		mockSupplyChain.BlueprintInputs = &BlueprintInputsObject{BlueprintInputs: info.Given.MockSupplyChain.BlueprintInputs}
+		mockSupplyChain.Inputs = &SupplyChainInputsObject{Inputs: info.Given.MockSupplyChain.BlueprintInputs}
 		mockSupplyChainSpecified = true
 	}
 
 	if info.Given.MockSupplyChain.BlueprintParams != nil {
-		mockSupplyChain.BlueprintParams = &BlueprintParamsObject{BlueprintParams: info.Given.MockSupplyChain.BlueprintParams}
+		mockSupplyChain.Params = &SupplyChainParamsObject{Params: info.Given.MockSupplyChain.BlueprintParams}
 		mockSupplyChainSpecified = true
 	}
 
