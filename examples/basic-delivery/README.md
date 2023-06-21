@@ -57,7 +57,7 @@ To install `cartographer`, refer to [README.md](../../README.md).
 
 4. The controllers of the objects created in the templates referred to in the [ClusterDelivery] object:
 
-- [source-controller](https://fluxcd.io/docs/gitops-toolkit/source-watcher/#install-flux),
+- [source-controller](https://fluxcd.io/docs/gitops-toolkit/source-watcher/#install-flux) v0.33+,
   for providing the ability to find new commits to a git
   repository and making it internally available to other resources
 
@@ -233,7 +233,6 @@ spec:
       interval: 1m0s
       url: $(deliverable.spec.source.git.url)$
       ref: $(deliverable.spec.source.git.ref)$
-      gitImplementation: go-git
       ignore: ""
 ```
 

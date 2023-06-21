@@ -36,5 +36,4 @@ spec:
       interval: 1m0s
       url: $(workload.spec.source.git.url)$
       ref: $(workload.spec.source.git.ref)$
-      gitImplementation: go-git
       ignore: ""

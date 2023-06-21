@@ -72,7 +72,7 @@ supplychain, forms something powerful.
   for providing an opinionated way of continuously building container
   images using buildpacks
 
-- [source-controller](https://fluxcd.io/docs/gitops-toolkit/source-watcher/#install-flux),
+- [source-controller](https://fluxcd.io/docs/gitops-toolkit/source-watcher/#install-flux) v0.33+,
   for providing the ability to find new commits to a git
   repository and making it internally available to other resources
 
@@ -498,7 +498,6 @@ spec:
       interval: 1m                       #              object submitted by the
       url: $(workload.source.git.url)$   #                           developers
       ref: $(workload.source.git.ref)$
-      gitImplementation: go-git
       ignore: ""
 ```
 
