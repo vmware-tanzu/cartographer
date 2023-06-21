@@ -136,7 +136,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	contextGenerator := realizer.NewContextGenerator(workload, workload.Spec.Params, supplyChain.Spec.Params)
-	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, contextGenerator, r.Repo, buildWorkloadResourceLabeler(workload, supplyChain))
+	resourceRealizer, err := r.ResourceRealizerBuilder(saToken, workload, contextGenerator, r.Repo, BuildWorkloadResourceLabeler(workload, supplyChain))
 	if err != nil {
 		conditionManager.AddPositive(conditions.ResourceRealizerBuilderErrorCondition(err))
 		log.Error(err, "failed to build resource realizer")
@@ -228,7 +228,7 @@ func (r *WorkloadReconciler) isSupplyChainReady(supplyChain *v1alpha1.ClusterSup
 	return supplyChainReadyCondition.Status == "True"
 }
 
-func buildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
+func BuildWorkloadResourceLabeler(owner, blueprint client.Object) realizer.ResourceLabeler {
 	return func(resource realizer.OwnerResource, reader templates.Reader) templates.Labels {
 		return templates.Labels{
 			"carto.run/workload-name":         owner.GetName(),
@@ -278,9 +278,9 @@ func (r *WorkloadReconciler) getSupplyChainsForWorkload(ctx context.Context, wor
 	if len(supplyChains) > 1 {
 		conditionManager.AddPositive(conditions.TooManySupplyChainMatchesCondition())
 		log.Info("more than one supply chain selected for workload",
-			"supply chains", getSupplyChainNames(supplyChains))
+			"supply chains", GetSupplyChainNames(supplyChains))
 		return nil, fmt.Errorf("more than one supply chain selected for workload [%s/%s]: %+v",
-			workload.Namespace, workload.Name, getSupplyChainNames(supplyChains))
+			workload.Namespace, workload.Name, GetSupplyChainNames(supplyChains))
 	}
 
 	log.V(logger.DEBUG).Info("supply chain matched for workload", "supply chain", supplyChains[0].Name)
@@ -388,7 +388,7 @@ func (r *WorkloadReconciler) cleanupOrphanedObjects(ctx context.Context, previou
 	return nil
 }
 
-func getSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
+func GetSupplyChainNames(objs []*v1alpha1.ClusterSupplyChain) []string {
 	var names []string
 	for _, obj := range objs {
 		names = append(names, obj.GetName())

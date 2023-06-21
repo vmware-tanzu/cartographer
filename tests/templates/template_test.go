@@ -26,12 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	cartotesting "github.com/vmware-tanzu/cartographer/pkg/testing"
 )
 
 func TestTemplateExample(t *testing.T) {
-	params, err := cartotesting.BuildBlueprintStringParams([]cartotesting.StringParam{
+	params, err := cartotesting.BuildSupplyChainStringParams([]cartotesting.StringParam{
 		{
 			Name:         "gitops_url",
 			DefaultValue: "https://github.com/vmware-tanzu/cartographer/",
@@ -58,143 +59,253 @@ func TestTemplateExample(t *testing.T) {
 
 	expectedUnstructured := createExpectedUnstructured()
 
-	testSuite := cartotesting.TemplateTestSuite{
+	testSuite := cartotesting.Suite{
 		"template, workload and expected defined in files": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
-				BlueprintParams: params,
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
 		"template defined as an object": {
-			Given: cartotesting.TemplateTestGivens{
-				Template:        templateOfDeliverable,
-				BlueprintParams: params,
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateObject{Template: templateOfDeliverable},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
-			IgnoreMetadataFields: []string{"creationTimestamp"},
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadataFields: []string{"creationTimestamp"},
+			},
 		},
 
 		"workload defined as an object": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				Workload:        workload,
-				BlueprintParams: params,
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadObject{Workload: workload},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
 		"blueprints defined as a file": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:        filepath.Join("deliverable", "regular-template", "template.yaml"),
-				WorkloadFile:        filepath.Join("deliverable", "common-workload.yaml"),
-				BlueprintParamsFile: filepath.Join("deliverable", "regular-template", "params-file-not-used-by-cli-tests.yaml"),
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsFile{
+						Path: filepath.Join("deliverable", "regular-template", "params-file-not-used-by-cli-tests.yaml"),
+					},
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
 		"expected defined as an object": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				BlueprintParams: params,
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{
+						Params: params,
+					},
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedObject: expectedDeliverable,
+			Expect: &cartotesting.ExpectedObject{
+				Object: expectedDeliverable,
 			},
-			IgnoreMetadata: true,
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
 		},
 
 		"expected defined as an unstructured": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "regular-template", "template.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
-				BlueprintParams: params,
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "regular-template", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{
+						Params: params,
+					},
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedUnstructured: &expectedUnstructured,
+			Expect: &cartotesting.ExpectedUnstructured{
+				Unstructured: &expectedUnstructured,
 			},
 		},
 
 		"clustertemplate uses ytt field": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "ytt-template", "template-ytt.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
-				BlueprintParams: params,
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "ytt-template", "template-ytt.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in object": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:    filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
-				WorkloadFile:    filepath.Join("deliverable", "common-workload.yaml"),
-				BlueprintParams: params,
-				YttValues: cartotesting.Values{
-					"kind": "Deliverable",
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
+					YttValues: cartotesting.Values{
+						"kind": "Deliverable",
+					},
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Params: &cartotesting.SupplyChainParamsObject{Params: params},
 				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
 		"template requires ytt preprocessing, data supplied in files": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile: filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
-				WorkloadFile: filepath.Join("deliverable", "common-workload.yaml"),
-				YttFiles:     []string{filepath.Join("deliverable", "ytt-preprocess", "values.yaml")},
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path:     filepath.Join("deliverable", "ytt-preprocess", "template-requires-preprocess.yaml"),
+					YttFiles: []string{filepath.Join("deliverable", "ytt-preprocess", "values.yaml")},
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deliverable", "common-workload.yaml"),
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("deliverable", "common-expectation.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deliverable", "common-expectation.yaml"),
 			},
 		},
 
 		"template that requires a supply chain input": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile: filepath.Join("kpack", "template.yaml"),
-				WorkloadFile: filepath.Join("kpack", "workload.yaml"),
-				BlueprintInputs: &cartotesting.Inputs{
-					Sources: map[string]templates.SourceInput{
-						"source": {
-							URL: "some-passed-on-url",
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("kpack", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("kpack", "workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Inputs: &cartotesting.SupplyChainInputsObject{
+						Inputs: &cartotesting.Inputs{
+							Sources: map[string]templates.SourceInput{
+								"source": {
+									URL: "some-passed-on-url",
+								},
+							},
 						},
 					},
 				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("kpack", "expected.yaml"),
 			},
-			IgnoreMetadata: true,
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
 		},
 
 		"providing a supply chain input file": {
-			Given: cartotesting.TemplateTestGivens{
-				TemplateFile:        filepath.Join("kpack", "template.yaml"),
-				WorkloadFile:        filepath.Join("kpack", "workload.yaml"),
-				BlueprintInputsFile: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("kpack", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("kpack", "workload.yaml"),
+				},
+				SupplyChain: &cartotesting.MockSupplyChain{
+					Inputs: &cartotesting.SupplyChainInputsFile{
+						Path: filepath.Join("kpack", "inputs-file-not-used-by-cli-tests.yaml"),
+					},
+				},
 			},
-			Expect: cartotesting.TemplateTestExpectation{
-				ExpectedFile: filepath.Join("kpack", "expected.yaml"),
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("kpack", "expected.yaml"),
 			},
-			IgnoreMetadata: true,
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
+		},
+
+		"actual supply chain": {
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("deployment", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("deployment", "workload.yaml"),
+				},
+				SupplyChain: &cartotesting.SupplyChainFileSet{
+					Paths: []string{
+						filepath.Join("deployment", "supply-chain.yaml"),
+					},
+					TargetResourceName: "deploy",
+					PreviousOutputs:    getActualSupplyChainOutputs(),
+				},
+			},
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("deployment", "expected.yaml"),
+			},
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+				CMPOption:      cartotesting.ConvertNumbersToFloatsDuringComparison,
+			},
 		},
 	}
 
 	testSuite.Run(t)
+}
+
+func getActualSupplyChainOutputs() *realizer.Outputs {
+	outputs := realizer.NewOutputs()
+	outputs.AddOutput("build-image", &templates.Output{Image: "my-image"})
+
+	return &outputs
 }
 
 func createWorkload() *v1alpha1.Workload {

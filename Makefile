@@ -88,7 +88,7 @@ test-cartotest: test-cartotest-go test-cartotest-cli
 
 .PHONY: test-cartotest-cli
 test-cartotest-cli:
-	go run ./cmd/cartotest/main.go templates --directory ./tests/templates/
+	go run ./cmd/cartotest/main.go ./tests/templates/
 
 .PHONY: test-cartotest-go
 test-cartotest-go:

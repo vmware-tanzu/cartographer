@@ -12,25 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+---
+apiVersion: carto.run/v1alpha1
+kind: Workload
 metadata:
-  name: image-template
-  description: "template requiring 'source' input"
-given:
-  mockSupplyChain:
-    blueprintInputs:
-      sources:
-        unused-source:
-          url: some-unused-url
-          distracting-key: is-never-read
-        source:
-          url: some-passed-on-url
-          revision:
-            branch: "some_unused_branch"
-      images:
-        some-unused-name:
-          image: some-image-location
-compareOptions:
-  ignoreMetadataFields:
-    - labels
-    - ownerReferences
-    - namespace
+  name: hello-again
+  labels:
+    workload-type: source-code
+spec:
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/waciumawanjohi/demo-hello-world
