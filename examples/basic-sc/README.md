@@ -498,7 +498,7 @@ spec:
       interval: 1m                       #              object submitted by the
       url: $(workload.source.git.url)$   #                           developers
       ref: $(workload.source.git.ref)$
-      gitImplementation: libgit2
+      gitImplementation: go-git
       ignore: ""
 ```
 

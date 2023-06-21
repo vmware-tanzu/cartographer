@@ -29,5 +29,5 @@ spec:
       interval: 1m0s
       url: $(deliverable.spec.source.git.url)$
       ref: $(deliverable.spec.source.git.ref)$
-      gitImplementation: libgit2
+      gitImplementation: go-git
       ignore: ""
