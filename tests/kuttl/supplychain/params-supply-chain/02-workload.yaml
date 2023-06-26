@@ -41,6 +41,10 @@ spec:
       value: not-me-workload
     - name: not-on-template-ovrdbl-supply-chain-ovrdbl-resource-on-workload
       value: me
+    - name: object-rather-than-string
+      value:
+        me: "me"
+        do-re-mi: "fa-so-la-ti"
 
   source:
     git:

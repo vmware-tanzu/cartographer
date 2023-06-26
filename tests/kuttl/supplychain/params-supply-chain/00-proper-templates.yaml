@@ -61,3 +61,4 @@ spec:
         so-help: $(params.notovrdbl-supply-chain-on-workload)$
         mercy: $(params.notovrdbl-resource-on-workload)$
         dear: $(params.not-on-template-ovrdbl-supply-chain-ovrdbl-resource-on-workload)$
+        me: $(params.object-rather-than-string)$
