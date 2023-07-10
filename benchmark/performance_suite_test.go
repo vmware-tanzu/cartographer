@@ -15,6 +15,8 @@
 package benchmark_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -25,7 +27,6 @@ import (
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"testing"
 )
 
 func TestPerformance(t *testing.T) {

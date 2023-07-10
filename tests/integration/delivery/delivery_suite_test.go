@@ -17,7 +17,6 @@ package delivery_test
 import (
 	"context"
 	"io"
-	eventsv1 "k8s.io/api/events/v1"
 	"os"
 	"testing"
 	"time"
@@ -29,6 +28,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage/names"

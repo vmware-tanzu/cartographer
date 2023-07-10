@@ -12,25 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSupplyChain
 metadata:
-  name: image-template
-  description: "template requiring 'source' input"
-given:
-  mockSupplyChain:
-    blueprintInputs:
-      sources:
-        unused-source:
-          url: some-unused-url
-          distracting-key: is-never-read
-        source:
-          url: some-passed-on-url
-          revision:
-            branch: "some_unused_branch"
+  name: source-code-supply-chain
+spec:
+  selector:
+    workload-type: source-code
+
+  resources:
+    - name: build-image
+      templateRef:
+        kind: ClusterImageTemplate
+        name: image-builder
+    - name: deploy
+      templateRef:
+        kind: ClusterTemplate
+        name: app-deploy-from-sc-image
       images:
-        some-unused-name:
-          image: some-image-location
-compareOptions:
-  ignoreMetadataFields:
-    - labels
-    - ownerReferences
-    - namespace
+        - resource: build-image
+          name: built-image
+
+  serviceAccountRef:
+    name: cartographer-from-source-sa
+    namespace: default
