@@ -1,6 +1,6 @@
 module github.com/vmware-tanzu/cartographer
 
-go 1.19
+go 1.20
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
