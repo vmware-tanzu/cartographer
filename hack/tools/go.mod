@@ -3,7 +3,7 @@ module github.com/vmware-tanzu/cartographer/hack/tools
 go 1.19
 
 require (
-	github.com/daixiang0/gci v0.10.1
+	github.com/daixiang0/gci v0.11.0
 	github.com/get-woke/woke v0.19.0
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/google/addlicense v1.1.1
