@@ -209,8 +209,15 @@ func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResour
 	if latestSuccessfulObject == nil {
 		for _, obj := range allRunnableStampedObjects {
 			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
+
+			// terminate without error early if an Unknown health is discovered as it may become healthy later
+			if healthcheck.DetermineStampedObjectHealth(healthRule, obj) == "Unknown" {
+				log.V(logger.DEBUG).Info("immutable object still has unknown dependents, halting render")
+				return template, stampedObject, nil, passThrough, templateName, nil
+			}
 		}
 
+		log.V(logger.DEBUG).Info("no objects are in an unknown state and none are healthy, cannot proceed")
 		return template, stampedObject, nil, passThrough, templateName, errors.NoHealthyImmutableObjectsError{
 			Err:           fmt.Errorf("failed to find any healthy object in the set of immutable stamped objects"),
 			ResourceName:  resource.Name,
