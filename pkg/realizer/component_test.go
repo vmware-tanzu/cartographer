@@ -41,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
+	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Resource", func() {
@@ -271,13 +272,14 @@ var _ = Describe("Resource", func() {
 							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
 						})
 
-						When("no returned object meets the healthRule", func() {
+						When("at least one returned object has unknown health", func() {
 							BeforeEach(func() {
 								templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
 									SingleConditionType: "Ready",
 								}
 							})
-							It("creates a stamped object, but returns an error and no output", func() {
+
+							It("does not error", func() {
 								template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
 								Expect(template).ToNot(BeNil())
 								Expect(isPassThrough).To(BeFalse())
@@ -308,9 +310,80 @@ var _ = Describe("Resource", func() {
 								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
 								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
 
-								Expect(err).To(HaveOccurred())
-								Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in the set of immutable stamped objects"))
-								Expect(reflect.TypeOf(err).String()).To(Equal("errors.NoHealthyImmutableObjectsError"))
+								Expect(err).NotTo(HaveOccurred())
+							})
+						})
+
+						When("no returned object has unknown health", func() {
+							When("no returned object meets the healthRule", func() {
+								BeforeEach(func() {
+									templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
+										SingleConditionType: "Succeeded",
+									}
+
+									status := resources.TestStatus{
+										ObservedGeneration: 1,
+										Conditions: []metav1.Condition{{
+											Type:               "Succeeded",
+											Status:             "False",
+											LastTransitionTime: metav1.Now(),
+											Reason:             "",
+										}},
+									}
+
+									obj := unstructured.Unstructured{}
+									err := json.Unmarshal(templateAPI.Spec.TemplateSpec.Template.Raw, &obj)
+									Expect(err).NotTo(HaveOccurred())
+
+									// easiest way to stitch the status into the unstructured.unstructured is to
+									// marshal and unmarshal so it's in the same state as the stamped object in the mock
+									statusObj, _ := json.Marshal(status)
+									var statusUnstructured map[string]interface{}
+									err = json.Unmarshal(statusObj, &statusUnstructured)
+									Expect(err).NotTo(HaveOccurred())
+
+									obj.SetUnstructuredContent(map[string]interface{}{
+										"status": statusUnstructured,
+									})
+
+									fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{&obj}, nil)
+								})
+
+								It("creates a stamped object, but returns an error and no output", func() {
+									template, _, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+									Expect(template).ToNot(BeNil())
+									Expect(isPassThrough).To(BeFalse())
+									Expect(templateRefName).To(Equal("image-template-1"))
+									//Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+									Expect(out).To(BeNil())
+
+									Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+
+									_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+
+									//Expect(returnedStampedObject).To(Equal(stampedObject))
+
+									metadata := stampedObject.Object["metadata"]
+									metadataValues, ok := metadata.(map[string]interface{})
+									Expect(ok).To(BeTrue())
+									Expect(metadataValues["name"]).To(Equal("example-config-map"))
+									Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+										map[string]interface{}{
+											"apiVersion":         "",
+											"kind":               "",
+											"name":               "",
+											"uid":                "",
+											"controller":         true,
+											"blockOwnerDeletion": true,
+										},
+									}))
+									Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+									Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+									Expect(err).To(HaveOccurred())
+									Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in the set of immutable stamped objects"))
+									Expect(reflect.TypeOf(err).String()).To(Equal("errors.NoHealthyImmutableObjectsError"))
+								})
 							})
 						})
 
