@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,12 +37,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/realizerfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	"github.com/vmware-tanzu/cartographer/pkg/repository/repositoryfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/stamp"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
-	"github.com/vmware-tanzu/cartographer/tests/resources"
 )
 
 var _ = Describe("Resource", func() {
@@ -265,137 +267,33 @@ var _ = Describe("Resource", func() {
 
 					When("call to list objects succeeds", func() {
 						BeforeEach(func() {
-							stampedObjectWithTime := expectedObject.DeepCopy()
-
-							stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
-
-							fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
+							templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
+								SingleConditionType: "Succeeded",
+							}
 						})
 
-						When("at least one returned object has unknown health", func() {
+						When("a healthy object is returned", func() {
 							BeforeEach(func() {
-								templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
-									SingleConditionType: "Ready",
-								}
-							})
-
-							It("does not error", func() {
-								template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-								Expect(template).ToNot(BeNil())
-								Expect(isPassThrough).To(BeFalse())
-								Expect(templateRefName).To(Equal("image-template-1"))
-								Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
-								Expect(out).To(BeNil())
-
-								Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
-
-								_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
-
-								Expect(returnedStampedObject).To(Equal(stampedObject))
-
-								metadata := stampedObject.Object["metadata"]
-								metadataValues, ok := metadata.(map[string]interface{})
-								Expect(ok).To(BeTrue())
-								Expect(metadataValues["name"]).To(Equal("example-config-map"))
-								Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-									map[string]interface{}{
-										"apiVersion":         "",
-										"kind":               "",
-										"name":               "",
-										"uid":                "",
-										"controller":         true,
-										"blockOwnerDeletion": true,
-									},
-								}))
-								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
-
-								Expect(err).NotTo(HaveOccurred())
-							})
-						})
-
-						When("no returned object has unknown health", func() {
-							When("no returned object meets the healthRule", func() {
-								BeforeEach(func() {
-									templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
-										SingleConditionType: "Succeeded",
-									}
-
-									status := resources.TestStatus{
-										ObservedGeneration: 1,
-										Conditions: []metav1.Condition{{
-											Type:               "Succeeded",
-											Status:             "False",
-											LastTransitionTime: metav1.Now(),
-											Reason:             "",
-										}},
-									}
-
-									obj := unstructured.Unstructured{}
-									err := json.Unmarshal(templateAPI.Spec.TemplateSpec.Template.Raw, &obj)
-									Expect(err).NotTo(HaveOccurred())
-
-									// easiest way to stitch the status into the unstructured.unstructured is to
-									// marshal and unmarshal so it's in the same state as the stamped object in the mock
-									statusObj, _ := json.Marshal(status)
-									var statusUnstructured map[string]interface{}
-									err = json.Unmarshal(statusObj, &statusUnstructured)
-									Expect(err).NotTo(HaveOccurred())
-
-									obj.SetUnstructuredContent(map[string]interface{}{
-										"status": statusUnstructured,
-									})
-
-									fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{&obj}, nil)
-								})
-
-								It("creates a stamped object, but returns an error and no output", func() {
-									template, _, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-									Expect(template).ToNot(BeNil())
-									Expect(isPassThrough).To(BeFalse())
-									Expect(templateRefName).To(Equal("image-template-1"))
-									//Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
-									Expect(out).To(BeNil())
-
-									Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
-
-									_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
-
-									//Expect(returnedStampedObject).To(Equal(stampedObject))
-
-									metadata := stampedObject.Object["metadata"]
-									metadataValues, ok := metadata.(map[string]interface{})
-									Expect(ok).To(BeTrue())
-									Expect(metadataValues["name"]).To(Equal("example-config-map"))
-									Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
-										map[string]interface{}{
-											"apiVersion":         "",
-											"kind":               "",
-											"name":               "",
-											"uid":                "",
-											"controller":         true,
-											"blockOwnerDeletion": true,
+								stampedObjectWithTime := expectedObject.DeepCopy()
+								stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
+								stampedObjectWithTime.Object["status"] = map[string]any{
+									"conditions": []map[string]any{
+										{
+											"type":               "Succeeded",
+											"status":             "True",
+											"lastTransitionTime": "2023-08-17T14:30:28Z",
+											"reason":             "",
+											"message":            "",
 										},
-									}))
-									Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
-									Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
-
-									Expect(err).To(HaveOccurred())
-									Expect(err.Error()).To(ContainSubstring("unable to retrieve outputs for resource [resource-1] in supply chain [supply-chain-name]: failed to find any healthy object in the set of immutable stamped objects"))
-									Expect(reflect.TypeOf(err).String()).To(Equal("errors.NoHealthyImmutableObjectsError"))
-								})
-							})
-						})
-
-						When("at least one returned object meets the healthRule", func() {
-							BeforeEach(func() {
-								templateAPI.Spec.TemplateSpec.HealthRule = &v1alpha1.HealthRule{
-									AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}},
+									},
 								}
+
+								fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
 							})
+
 							It("creates a stamped object and returns the outputs and stampedObjects", func() {
 								template, returnedStampedObject, out, isPassThrough, templateRefName, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
-								Expect(err).ToNot(HaveOccurred())
+								Expect(err).NotTo(HaveOccurred())
 								Expect(template).ToNot(BeNil())
 								Expect(isPassThrough).To(BeFalse())
 								Expect(templateRefName).To(Equal("image-template-1"))
@@ -426,6 +324,88 @@ var _ = Describe("Resource", func() {
 
 								Expect(out.Source.Revision).To(Equal("some-revision"))
 								Expect(out.Source.URL).To(Equal("some-url"))
+							})
+						})
+
+						When("no healthy object is returned", func() {
+							BeforeEach(func() {
+								stampedObjectWithTime := expectedObject.DeepCopy()
+								stampedObjectWithTime.SetCreationTimestamp(metav1.NewTime(time.Unix(1, 0)))
+								fakeOwnerRepo.ListUnstructuredReturns([]*unstructured.Unstructured{stampedObjectWithTime}, nil)
+
+								fakeMapper.RESTMappingReturns(&meta.RESTMapping{
+									Resource: schema.GroupVersionResource{
+										Group:    "",
+										Version:  "v1",
+										Resource: "configmap",
+									},
+									GroupVersionKind: schema.GroupVersionKind{
+										Group:   "",
+										Version: "",
+										Kind:    "",
+									},
+									Scope: nil,
+								}, nil)
+							})
+
+							It("returns the expected outputs", func() {
+								template, returnedStampedObject, out, isPassThrough, templateRefName, _ := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+								Expect(template).ToNot(BeNil())
+								Expect(isPassThrough).To(BeFalse())
+								Expect(templateRefName).To(Equal("image-template-1"))
+								Expect(returnedStampedObject.Object).To(Equal(expectedObject.Object))
+
+								Expect(fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterCallCount()).To(Equal(1))
+
+								_, stampedObject, _ := fakeOwnerRepo.EnsureImmutableObjectExistsOnClusterArgsForCall(0)
+
+								Expect(returnedStampedObject).To(Equal(stampedObject))
+
+								metadata := stampedObject.Object["metadata"]
+								metadataValues, ok := metadata.(map[string]interface{})
+								Expect(ok).To(BeTrue())
+								Expect(metadataValues["name"]).To(Equal("example-config-map"))
+								Expect(metadataValues["ownerReferences"]).To(Equal([]interface{}{
+									map[string]interface{}{
+										"apiVersion":         "",
+										"kind":               "",
+										"name":               "",
+										"uid":                "",
+										"controller":         true,
+										"blockOwnerDeletion": true,
+									},
+								}))
+								Expect(stampedObject.Object["data"]).To(Equal(map[string]interface{}{"player_current_lives": "some-url", "some_other_info": "some-revision"}))
+								Expect(metadataValues["labels"]).To(Equal(map[string]interface{}{"expected-labels-from-labeler-placeholder": "labeler"}))
+
+								Expect(out).To(BeNil())
+							})
+
+							It("returns the expected error", func() {
+								_, _, _, _, _, err := r.Do(ctx, resource, blueprintName, outputs, fakeMapper)
+								Expect(err).To(HaveOccurred())
+
+								Expect(err).To(BeAssignableToTypeOf(cerrors.RetrieveOutputError{}))
+
+								Expect(err).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+									"BlueprintName":     Equal("supply-chain-name"),
+									"BlueprintType":     Equal("supply chain"),
+									"QualifiedResource": Equal("configmap"),
+									"PassThroughInput":  Equal(""),
+									"StampedObject":     Equal(&expectedObject),
+									"ResourceName":      Equal("resource-1"),
+									"Healthy": And(
+										BeAssignableToTypeOf(metav1.ConditionUnknown),
+										BeEquivalentTo(""),
+									),
+									"Err": And(
+										BeAssignableToTypeOf(stamp.JsonPathError{}),
+										BeEquivalentTo(stamp.NewJsonPathError(
+											"data.player_current_lives",
+											fmt.Errorf("failed to evaluate path of empty object"),
+										)),
+									),
+								}))
 							})
 						})
 					})

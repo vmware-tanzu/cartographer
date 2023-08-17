@@ -850,8 +850,9 @@ var _ = Describe("WorkloadReconciler", func() {
 
 				It("calls the condition manager to report", func() {
 					_, _ = reconciler.Reconcile(ctx, req)
-					Expect(conditionManager.AddPositiveArgsForCall(1)).To(
-						Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io")))
+					var emptyConditionStatus metav1.ConditionStatus
+					Expect(conditionManager.AddPositiveArgsForCall(1)).
+						To(Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io", emptyConditionStatus)))
 				})
 
 				It("does not return an error", func() {

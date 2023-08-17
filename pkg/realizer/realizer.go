@@ -19,6 +19,7 @@ package realizer
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
+	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/events"
 	"github.com/vmware-tanzu/cartographer/pkg/logger"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/healthcheck"
@@ -119,14 +121,6 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 				"object", stampedObject)
 		}
 
-		if err != nil {
-			log.Error(err, "failed to realize resource")
-
-			if firstError == nil {
-				firstError = err
-			}
-		}
-
 		outs.AddOutput(resource.Name, out)
 
 		previousResourceStatus := resourceStatuses.GetPreviousResourceStatus(resource.Name)
@@ -164,7 +158,18 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 				additionalConditions = []metav1.Condition{r.healthyConditionEvaluator(template.GetHealthRule(), realizedResource, stampedObject)}
 			}
 		}
+
+		var typedErr cerrors.RetrieveOutputError
+		ok := errors.As(err, &typedErr)
+		if ok {
+			if len(additionalConditions) > 0 {
+				typedErr.Healthy = additionalConditions[0].Status
+				err = typedErr
+			}
+		}
+
 		resourceStatuses.Add(realizedResource, err, isPassThrough, additionalConditions...)
+
 		if slices.Contains(resourceStatuses.ChangedConditionTypes(realizedResource.Name), v1alpha1.ResourceHealthy) {
 			newStatus := metav1.ConditionUnknown
 			newHealthyCondition := resourceStatuses.GetCurrent().ConditionsForResourceNamed(realizedResource.Name).ConditionWithType(v1alpha1.ResourceHealthy)
@@ -173,8 +178,15 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 			events.FromContextOrDie(ctx).ResourceEventf(events.NormalType, events.ResourceHealthyStatusChangedReason, "[%s] found healthy status in [%Q] changed to [%s]", stampedObject, realizedResource.Name, newStatus)
 		}
-	}
 
+		if err != nil {
+			log.Error(err, "failed to realize resource")
+
+			if firstError == nil {
+				firstError = err
+			}
+		}
+	}
 	return firstError
 }
 
