@@ -206,32 +206,23 @@ func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResour
 
 	var output *templates.Output
 
-	if latestSuccessfulObject == nil {
-		for _, obj := range allRunnableStampedObjects {
-			log.V(logger.DEBUG).Info("failed to retrieve output from any object", "considered", obj)
-
-			// terminate without error early if an Unknown health is discovered as it may become healthy later
-			if healthcheck.DetermineStampedObjectHealth(healthRule, obj) == "Unknown" {
-				log.V(logger.DEBUG).Info("immutable object still has unknown dependents, halting render")
-				return template, stampedObject, nil, passThrough, templateName, nil
-			}
-		}
-
-		log.V(logger.DEBUG).Info("no objects are in an unknown state and none are healthy, cannot proceed")
-		return template, stampedObject, nil, passThrough, templateName, errors.NoHealthyImmutableObjectsError{
-			Err:           fmt.Errorf("failed to find any healthy object in the set of immutable stamped objects"),
-			ResourceName:  resource.Name,
-			BlueprintName: blueprintName,
-			BlueprintType: errors.SupplyChain,
-		}
-	}
-
 	output, err = stampReader.Output(latestSuccessfulObject)
 
 	if err != nil {
-		qualifiedResource, rErr := utils.GetQualifiedResource(mapper, latestSuccessfulObject)
+		var (
+			qualifiedResource string
+			rErr              error
+			objectToReport    *unstructured.Unstructured
+		)
+		if latestSuccessfulObject == nil {
+			objectToReport = stampedObject
+		} else {
+			objectToReport = latestSuccessfulObject
+		}
+
+		qualifiedResource, rErr = utils.GetQualifiedResource(mapper, objectToReport)
 		if rErr != nil {
-			log.Error(err, "failed to retrieve qualified resource name", "object", latestSuccessfulObject)
+			log.Error(err, "failed to retrieve qualified resource name", "object", objectToReport)
 			qualifiedResource = "could not fetch - see the log line for 'failed to retrieve qualified resource name'"
 		}
 
