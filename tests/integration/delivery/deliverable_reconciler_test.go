@@ -724,8 +724,9 @@ var _ = Describe("DeliverableReconciler", func() {
 	})
 
 	Context("mutable template", func() {
+		var templateYamlBase string
 		BeforeEach(func() {
-			templateYaml := utils.HereYaml(`
+			templateYamlBase = `
 				---
 				apiVersion: carto.run/v1alpha1
 				kind: ClusterTemplate
@@ -733,16 +734,14 @@ var _ = Describe("DeliverableReconciler", func() {
 				  name: my-template
 				spec:
 			      template:
-					apiVersion: v1
-					kind: ConfigMap
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
 					metadata:
 					  name: mutable-test-obj
-					data:
+					spec:
 					  foo: hard-coded-other-val
-			`)
-
-			template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
-			cleanups = append(cleanups, template)
+			      %s
+			`
 
 			deliveryYaml := utils.HereYaml(`
 				---
@@ -795,29 +794,38 @@ var _ = Describe("DeliverableReconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("creates the object", func() {
-			configList := &corev1.ConfigMapList{}
-
-			Eventually(func() (int, error) {
-				err := c.List(ctx, configList, &client.ListOptions{Namespace: testNS})
-				return len(configList.Items), err
-			}).Should(Equal(1))
-
-			Expect(configList.Items[0].Name).To(Equal("mutable-test-obj"))
-			Expect(configList.Items[0].Data["foo"]).To(Equal("hard-coded-other-val"))
-		})
-		When("the template is changed to an immutable template", func() {
+		Context("with no healthRule", func() {
 			BeforeEach(func() {
-				opts := []client.ListOption{
-					client.InNamespace(testNS),
-				}
-				configMapList := &corev1.ConfigMapList{}
+				healthRule := ""
+				templateYaml := utils.HereYamlF(templateYamlBase, healthRule)
+				template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+				cleanups = append(cleanups, template)
+			})
+			It("creates the object", func() {
+				testList := &resources.TestObjList{}
+
 				Eventually(func() (int, error) {
-					err := c.List(ctx, configMapList, opts...)
-					return len(configMapList.Items), err
+					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+					return len(testList.Items), err
 				}).Should(Equal(1))
 
-				immutableTemplateYaml := utils.HereYaml(`
+				Expect(testList.Items[0].Name).To(Equal("mutable-test-obj"))
+				Expect(testList.Items[0].Spec.Foo).To(Equal("hard-coded-other-val"))
+			})
+			When("the template is changed to an immutable template", func() {
+				BeforeEach(func() {
+					opts := []client.ListOption{
+						client.InNamespace(testNS),
+					}
+
+					testList := &resources.TestObjList{}
+
+					Eventually(func() (int, error) {
+						err := c.List(ctx, testList, opts...)
+						return len(testList.Items), err
+					}).Should(Equal(1))
+
+					immutableTemplateYaml := utils.HereYaml(`
 				---
 				apiVersion: carto.run/v1alpha1
 				kind: ClusterTemplate
@@ -834,38 +842,39 @@ var _ = Describe("DeliverableReconciler", func() {
 					  foo: $(params.foo)$
 			`)
 
-				utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterTemplate{})
-			})
-			It("deletes the original mutable stamped object", func() {
-				type testAssertion struct {
-					TestObjectsCount     int
-					FoundTestObjectName  string
-					FoundTestObjFieldVal string
-					ConfigMapCount       int
-				}
-
-				Eventually(func() (testAssertion, error) {
-					testList := &resources.TestObjList{}
-					var ta testAssertion
-					err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
-					ta.TestObjectsCount = len(testList.Items)
-					if len(testList.Items) != 1 || err != nil {
-						return ta, err
+					utils.UpdateObjectOnClusterFromYamlDefinition(ctx, c, immutableTemplateYaml, testNS, &v1alpha1.ClusterTemplate{})
+				})
+				It("deletes the original mutable stamped object", func() {
+					type testAssertion struct {
+						TestObjectsCount     int
+						FoundTestObjectName  string
+						FoundTestObjFieldVal string
+						ConfigMapCount       int
 					}
 
-					ta.FoundTestObjectName = testList.Items[0].Name
-					ta.FoundTestObjFieldVal = testList.Items[0].Spec.Foo
+					Eventually(func() (testAssertion, error) {
+						testList := &resources.TestObjList{}
+						var ta testAssertion
+						err := c.List(ctx, testList, &client.ListOptions{Namespace: testNS})
+						ta.TestObjectsCount = len(testList.Items)
+						if len(testList.Items) != 1 || err != nil {
+							return ta, err
+						}
 
-					configMapList := &corev1.ConfigMapList{}
-					err = c.List(ctx, configMapList, &client.ListOptions{Namespace: testNS})
-					ta.ConfigMapCount = len(configMapList.Items)
-					return ta, err
-				}).Should(MatchAllFields(Fields{
-					"TestObjectsCount":     Equal(1),
-					"FoundTestObjectName":  ContainSubstring("test-resource-"),
-					"FoundTestObjFieldVal": Equal("bar"),
-					"ConfigMapCount":       Equal(0),
-				}))
+						ta.FoundTestObjectName = testList.Items[0].Name
+						ta.FoundTestObjFieldVal = testList.Items[0].Spec.Foo
+
+						configMapList := &corev1.ConfigMapList{}
+						err = c.List(ctx, configMapList, &client.ListOptions{Namespace: testNS})
+						ta.ConfigMapCount = len(configMapList.Items)
+						return ta, err
+					}).Should(MatchAllFields(Fields{
+						"TestObjectsCount":     Equal(1),
+						"FoundTestObjectName":  ContainSubstring("test-resource-"),
+						"FoundTestObjFieldVal": Equal("bar"),
+						"ConfigMapCount":       Equal(0),
+					}))
+				})
 			})
 		})
 	})
