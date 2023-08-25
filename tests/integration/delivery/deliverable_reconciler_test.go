@@ -908,7 +908,22 @@ var _ = Describe("DeliverableReconciler", func() {
 				})
 
 				When("the field the rule analyzes is no longer present", func() {
+					var healthyLastTransitionTime metav1.Time
 					BeforeEach(func() {
+						deliverable := &v1alpha1.Deliverable{}
+						Eventually(func() ([]metav1.Condition, error) {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
+							return deliverable.Status.Conditions, err
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("Ready"),
+								"Reason": Equal("Ready"),
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+						))
+
+						healthyLastTransitionTime = deliverable.Status.Conditions[3].LastTransitionTime
+
 						testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
 						testToUpdate.Status.Conditions = []metav1.Condition{}
 						Expect(c.Status().Update(ctx, testToUpdate)).To(Succeed())
@@ -944,6 +959,23 @@ var _ = Describe("DeliverableReconciler", func() {
 								"Message": Equal("condition with type [Ready] not found on resource status"),
 							}),
 						))
+					})
+
+					It("the deliverable's lastTransitionTime changes", func() {
+						deliverable := &v1alpha1.Deliverable{}
+						Eventually(func() []metav1.Condition {
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, deliverable)
+							Expect(err).NotTo(HaveOccurred())
+
+							return deliverable.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionUnknown),
+							}),
+						))
+
+						Expect(healthyLastTransitionTime.Before(&deliverable.Status.Conditions[3].LastTransitionTime)).To(BeTrue())
 					})
 				})
 			})
