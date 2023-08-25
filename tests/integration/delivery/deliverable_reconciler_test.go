@@ -812,6 +812,9 @@ var _ = Describe("DeliverableReconciler", func() {
 				Expect(testList.Items[0].Name).To(Equal("mutable-test-obj"))
 				Expect(testList.Items[0].Spec.Foo).To(Equal("hard-coded-other-val"))
 			})
+			It("results in a healthy deliverable", func() {
+				itResultsInAHealthyDeliverable(ctx, "deliverable-jaylen", testNS)
+			})
 			When("the template is changed to an immutable template", func() {
 				BeforeEach(func() {
 					opts := []client.ListOption{
@@ -874,6 +877,74 @@ var _ = Describe("DeliverableReconciler", func() {
 						"FoundTestObjFieldVal": Equal("bar"),
 						"ConfigMapCount":       Equal(0),
 					}))
+				})
+			})
+		})
+		Context("with a healthRule", func() {
+
+			BeforeEach(func() {
+				healthRule := "healthRule:\n    singleConditionType: Ready"
+				templateYaml := utils.HereYamlF(templateYamlBase, healthRule)
+				template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+				cleanups = append(cleanups, template)
+			})
+
+			Context("which is satisfied", func() {
+				BeforeEach(func() {
+					testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
+					testToUpdate.Status.Conditions = []metav1.Condition{
+						{
+							Type:               "Ready",
+							Status:             "True",
+							Reason:             "Ready",
+							LastTransitionTime: metav1.Now(),
+						},
+					}
+					Expect(c.Status().Update(ctx, testToUpdate)).To(Succeed())
+				})
+
+				It("results in a healthy deliverable", func() {
+					itResultsInAHealthyDeliverable(ctx, "deliverable-jaylen", testNS)
+				})
+
+				When("the field the rule analyzes is no longer present", func() {
+					BeforeEach(func() {
+						testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
+						testToUpdate.Status.Conditions = []metav1.Condition{}
+						Expect(c.Status().Update(ctx, testToUpdate)).To(Succeed())
+					})
+					It("the deliverable's health becomes unknown", func() {
+						Eventually(func() []metav1.Condition {
+							obj := &v1alpha1.Deliverable{}
+							err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+							Expect(err).NotTo(HaveOccurred())
+
+							return obj.Status.Conditions
+						}).Should(ContainElements(
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("DeliveryReady"),
+								"Reason": Equal("Ready"),
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal("ResourcesSubmitted"),
+								"Reason": Equal("ResourceSubmissionComplete"),
+								"Status": Equal(metav1.ConditionTrue),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"Type":    Equal("ResourcesHealthy"),
+								"Reason":  Equal("HealthyConditionRule"),
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Message": Equal("condition with type [Ready] not found on resource status"),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"Type":    Equal("Ready"),
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal("HealthyConditionRule"),
+								"Message": Equal("condition with type [Ready] not found on resource status"),
+							}),
+						))
+					})
 				})
 			})
 		})
@@ -1332,3 +1403,48 @@ var _ = Describe("DeliverableReconciler", func() {
 		})
 	})
 })
+
+func getTestObjAtIndex(ctx context.Context, namespace string, index int, numObjectsExpected int) *resources.TestObj {
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	testsList := &resources.TestObjList{}
+
+	Eventually(func() ([]resources.TestObj, error) {
+		err := c.List(ctx, testsList, opts...)
+		return testsList.Items, err
+	}).Should(HaveLen(numObjectsExpected))
+
+	return &testsList.Items[index]
+}
+
+func itResultsInAHealthyDeliverable(ctx context.Context, name, namespace string) {
+	Eventually(func() []metav1.Condition {
+		obj := &v1alpha1.Deliverable{}
+		err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
+		Expect(err).NotTo(HaveOccurred())
+
+		return obj.Status.Conditions
+	}).Should(ContainElements(
+		MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal("DeliveryReady"),
+			"Reason": Equal("Ready"),
+			"Status": Equal(metav1.ConditionTrue),
+		}),
+		MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal("ResourcesSubmitted"),
+			"Reason": Equal("ResourceSubmissionComplete"),
+			"Status": Equal(metav1.ConditionTrue),
+		}),
+		MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal("ResourcesHealthy"),
+			"Status": Equal(metav1.ConditionTrue),
+		}),
+		MatchFields(IgnoreExtras, Fields{
+			"Type":   Equal("Ready"),
+			"Reason": Equal("Ready"),
+			"Status": Equal(metav1.ConditionTrue),
+		}),
+	))
+}
