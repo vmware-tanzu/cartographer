@@ -924,6 +924,8 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						healthyLastTransitionTime = deliverable.Status.Conditions[3].LastTransitionTime
 
+						time.Sleep(1 * time.Second)
+
 						testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
 						testToUpdate.Status.Conditions = []metav1.Condition{}
 						Expect(c.Status().Update(ctx, testToUpdate)).To(Succeed())
