@@ -91,19 +91,9 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	// TODO: consider: should we build this only once, and pass it to the contextGenerator also?
 	inputGenerator := NewInputGenerator(resource, outputs)
 
-	if len(resource.TemplateOptions) > 0 {
-		var err error
-		templateOption, err = r.findMatchingTemplateOption(resource, blueprintName)
-		if err != nil {
-			return nil, nil, nil, passThrough, templateName, err
-		}
-		if templateOption.PassThrough != "" {
-			passThrough = true
-		} else {
-			templateName = templateOption.Name
-		}
-	} else {
-		templateName = resource.TemplateRef.Name
+	templateName, passThrough, templateOption, err = GetTemplateNameFromResource(resource, blueprintName, r.owner)
+	if err != nil {
+		return nil, nil, nil, passThrough, templateName, fmt.Errorf("get template name from resource: %w", err)
 	}
 
 	if passThrough {
@@ -158,6 +148,30 @@ func (r *resourceRealizer) Do(ctx context.Context, resource OwnerResource, bluep
 	} else {
 		return r.doMutable(ctx, resource, blueprintName, stampedObject, log, template, passThrough, templateName, stampReader, mapper, templateOption)
 	}
+}
+
+func GetTemplateNameFromResource(resource OwnerResource, blueprintName string, owner client.Object) (string, bool, v1alpha1.TemplateOption, error) {
+	var (
+		templateName   string
+		passThrough    bool
+		templateOption v1alpha1.TemplateOption
+	)
+	if len(resource.TemplateOptions) > 0 {
+		var err error
+		templateOption, err = findMatchingTemplateOption(resource, blueprintName, owner)
+		if err != nil {
+			return "", false, templateOption, fmt.Errorf("find matching template option: %w", err)
+		}
+		if templateOption.PassThrough != "" {
+			passThrough = true
+		} else {
+			templateName = templateOption.Name
+		}
+	} else {
+		templateName = resource.TemplateRef.Name
+	}
+
+	return templateName, passThrough, templateOption, nil
 }
 
 func (r *resourceRealizer) doImmutable(ctx context.Context, resource OwnerResource, blueprintName string,
@@ -315,8 +329,8 @@ func doPassthrough(log logr.Logger, templateOption v1alpha1.TemplateOption, reso
 	return template, stampedObject, output, passThrough, templateName, nil
 }
 
-func (r *resourceRealizer) findMatchingTemplateOption(resource OwnerResource, supplyChainName string) (v1alpha1.TemplateOption, error) {
-	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(r.owner, v1alpha1.TemplateOptionSelectors(resource.TemplateOptions))
+func findMatchingTemplateOption(resource OwnerResource, supplyChainName string, owner client.Object) (v1alpha1.TemplateOption, error) {
+	bestMatchingTemplateOptionsIndices, err := selector.BestSelectorMatchIndices(owner, v1alpha1.TemplateOptionSelectors(resource.TemplateOptions))
 
 	if err != nil {
 		return v1alpha1.TemplateOption{}, errors.ResolveTemplateOptionError{
