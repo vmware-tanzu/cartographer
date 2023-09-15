@@ -1,16 +1,11 @@
 ARG BASE_IMAGE=northamerica-northeast2-docker.pkg.dev/kontinue/library/ubuntu:jammy
 ARG GOLANG_IMAGE=northamerica-northeast2-docker.pkg.dev/kontinue/library/golang:1.19
 
-FROM ${BASE_IMAGE} AS base
+FROM ${BASE_IMAGE} AS ytt
 
 RUN set -x && \
 	apt-get update && \
-	apt-get upgrade -y && \
-	apt-get install  -y \
-	jq curl git ca-certificates gnutls-bin && \
-	rm -rf /var/lib/apt/lists/*
-
-FROM base AS ytt
+	apt-get install -y curl=7.81.0-1ubuntu1.13
 
 ARG ytt_CHECKSUM=a6729fb8514f10ab58f9ed3b50cd90ef79bf16d1cb29173baa84e1af0bc5ad4f
 ARG ytt_VERSION=0.45.3
