@@ -296,6 +296,50 @@ func TestTemplateExample(t *testing.T) {
 				CMPOption:      cartotesting.ConvertNumbersToFloatsDuringComparison,
 			},
 		},
+		"supply chain with option, 1": {
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("options", "option1", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("options", "option1", "workload.yaml"),
+				},
+				SupplyChain: &cartotesting.SupplyChainFileSet{
+					Paths: []string{
+						filepath.Join("options", "supply-chain.yaml"),
+					},
+					TargetResourceName: "either-or",
+				},
+			},
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("options", "option1", "expected.yaml"),
+			},
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
+		},
+		"supply chain with option, 2": {
+			Given: cartotesting.Given{
+				Template: &cartotesting.TemplateFile{
+					Path: filepath.Join("options", "option2", "template.yaml"),
+				},
+				Workload: &cartotesting.WorkloadFile{
+					Path: filepath.Join("options", "option2", "workload.yaml"),
+				},
+				SupplyChain: &cartotesting.SupplyChainFileSet{
+					Paths: []string{
+						filepath.Join("options", "supply-chain.yaml"),
+					},
+					TargetResourceName: "either-or",
+				},
+			},
+			Expect: &cartotesting.ExpectedFile{
+				Path: filepath.Join("options", "option2", "expected.yaml"),
+			},
+			CompareOptions: &cartotesting.CompareOptions{
+				IgnoreMetadata: true,
+			},
+		},
 	}
 
 	testSuite.Run(t)
