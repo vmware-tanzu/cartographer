@@ -1,5 +1,9 @@
-ARG BASE_IMAGE=northamerica-northeast2-docker.pkg.dev/kontinue/library/ubuntu:jammy
-ARG GOLANG_IMAGE=northamerica-northeast2-docker.pkg.dev/kontinue/library/golang:1.19
+# These base images are behind a proxy for rate-limit reasons
+# If building locally, you can simply use:
+# docker build -t cartographer:dev --build-arg BASE_IMAGE="ubuntu:jammy" --build-arg GOLANG_IMAGE=golang:1.19 .
+
+ARG BASE_IMAGE=harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:jammy
+ARG GOLANG_IMAGE=harbor-repo.vmware.com/dockerhub-proxy-cache/library/golang:1.19
 
 FROM ${BASE_IMAGE} AS ytt
 

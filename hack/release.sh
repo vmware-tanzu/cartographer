@@ -128,7 +128,7 @@ wait_for_lever_build() {
 
 build_image() {
         # Build the image locally using Docker instead of ko
-        docker build ../.. -t $RELEASE_IMAGE
+        docker build ../.. -t $RELEASE_IMAGE --build-arg BASE_IMAGE="ubuntu:jammy" --build-arg GOLANG_IMAGE="golang:1.19"
         docker push $RELEASE_IMAGE
 }
 
