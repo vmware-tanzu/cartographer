@@ -27,6 +27,7 @@ spec:
   buildConfig:
     kanikoBuildConfig:
       dockerfile: Dockerfile
+      extraArgs: []
   source:
     git:
       ref:
