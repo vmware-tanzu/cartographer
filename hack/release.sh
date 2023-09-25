@@ -24,9 +24,6 @@ readonly SCRATCH=${SCRATCH:-$(mktemp -d)}
 readonly REGISTRY=${REGISTRY:-"$($ROOT/hack/ip.py):5001"}
 readonly RELEASE_DATE=${RELEASE_DATE:-$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")}
 
-readonly YTT_VERSION=0.42.0
-readonly YTT_CHECKSUM=aa7074d08dc35e588ab0e014f53e98aec0cfed6c3babf8a953c4225007e49ae7
-
 main() {
         readonly RELEASE_VERSION=${RELEASE_VERSION:-"v0.0.0-dev"}
         readonly RELEASE_IMAGE=${RELEASE_IMAGE:-$REGISTRY/cartographer:$RELEASE_VERSION}
@@ -34,6 +31,7 @@ main() {
 
         readonly RELEASE_USING_LEVER=${RELEASE_USING_LEVER:-false}
         readonly LEVER_COMMIT_REF=${LEVER_COMMIT_REF:-"$(git rev-parse HEAD)"}
+        readonly LEVER_KUBECONFIG=${LEVER_KUBECONFIG:-""}
 
         show_vars
         cd $ROOT
@@ -44,7 +42,7 @@ main() {
                         echo "REGISTRY must be set to a registry accessible by lever when RELEASE_USING_LEVER is true"
                         exit 1
                 fi
-                if [[ -z $LEVER_KUBECONFIG ]]; then
+                if [[ $LEVER_KUBECONFIG == "" ]]; then
                         echo "LEVER_KUBECONFIG must be set when RELEASE_USING_LEVER is true"
                         exit 1
                 fi
@@ -67,7 +65,6 @@ show_vars() {
         RELEASE_IMAGE:          $RELEASE_IMAGE
         ROOT:                   $ROOT
         SCRATCH:                $SCRATCH
-        YTT_VERSION:            $YTT_VERSION
         RELEASE_USING_LEVER:    $RELEASE_USING_LEVER
         LEVER_KUBECONFIG:       $LEVER_KUBECONFIG
         LEVER_COMMIT_REF:       $LEVER_COMMIT_REF
