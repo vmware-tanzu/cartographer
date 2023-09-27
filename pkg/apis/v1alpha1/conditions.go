@@ -159,15 +159,14 @@ const (
 // -- RUNNABLE ConditionType - RunTemplateReady ConditionReasons
 
 const (
-	ReadyRunTemplateReason                                    = "Ready"
-	NotFoundRunTemplateReason                                 = "RunTemplateNotFound"
-	StampedObjectRejectedByAPIServerRunTemplateReason         = "StampedObjectRejectedByAPIServer"
-	OutputPathNotSatisfiedRunTemplateReason                   = "OutputPathNotSatisfied"
-	TemplateStampFailureRunTemplateReason                     = "TemplateStampFailure"
-	FailedToListCreatedObjectsReason                          = "FailedToListCreatedObjects"
-	SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason = "SetOfImmutableStampedObjectsIncludesNoHealthyObject"
-	UnknownErrorReason                                        = "UnknownError"
-	ClientBuilderErrorResourcesSubmittedReason                = "ClientBuilderError"
-	SucceededStampedObjectConditionReason                     = "SucceededCondition"
-	UnknownStampedObjectConditionReason                       = "Unknown"
+	ReadyRunTemplateReason                            = "Ready"
+	NotFoundRunTemplateReason                         = "RunTemplateNotFound"
+	StampedObjectRejectedByAPIServerRunTemplateReason = "StampedObjectRejectedByAPIServer"
+	OutputPathNotSatisfiedRunTemplateReason           = "OutputPathNotSatisfied"
+	TemplateStampFailureRunTemplateReason             = "TemplateStampFailure"
+	FailedToListCreatedObjectsReason                  = "FailedToListCreatedObjects"
+	UnknownErrorReason                                = "UnknownError"
+	ClientBuilderErrorResourcesSubmittedReason        = "ClientBuilderError"
+	SucceededStampedObjectConditionReason             = "SucceededCondition"
+	UnknownStampedObjectConditionReason               = "Unknown"
 )
