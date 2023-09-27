@@ -33,7 +33,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: setup carvel tooling binaries
-        uses: vmware-tanzu/carvel-setup-action@v1
+        uses: vmware-tanzu/carvel-setup-action@v2
 
       - name: run source checks
         uses: ./.github/actions/source-checks
