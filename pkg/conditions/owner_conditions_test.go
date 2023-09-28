@@ -17,6 +17,7 @@ package conditions_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -38,18 +39,49 @@ var _ = Describe("Conditions", func() {
 		})
 
 		Context("stamped object has a namespace", func() {
-			It("has the correct message", func() {
+			var healthy metav1.ConditionStatus
+			BeforeEach(func() {
 				obj.SetNamespace("my-ns")
+			})
 
-				condition := conditions.MissingValueAtPathCondition(true, obj, "spec.foo", "widget.thing.io")
-				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget] in namespace [my-ns]"))
+			Context("healthy is true", func() {
+				BeforeEach(func() {
+					healthy = metav1.ConditionTrue
+				})
+
+				It("has the correct message", func() {
+					condition := conditions.MissingValueAtPathCondition(true, obj, "spec.foo", "widget.thing.io", healthy)
+					Expect(condition.Message).To(Equal("cannot read value [spec.foo] from healthy object [widget.thing.io/my-widget] in namespace [my-ns], contact Platform Eng"))
+				})
+			})
+
+			Context("healthy is false", func() {
+				BeforeEach(func() {
+					healthy = metav1.ConditionFalse
+				})
+
+				It("has the correct message", func() {
+					condition := conditions.MissingValueAtPathCondition(true, obj, "spec.foo", "widget.thing.io", healthy)
+					Expect(condition.Message).To(Equal("cannot read value [spec.foo] from unhealthy object [widget.thing.io/my-widget] in namespace [my-ns], examine object, particularly whether it is receiving proper inputs"))
+				})
+			})
+
+			Context("healthy is unknown", func() {
+				BeforeEach(func() {
+					healthy = metav1.ConditionUnknown
+				})
+
+				It("has the correct message", func() {
+					condition := conditions.MissingValueAtPathCondition(true, obj, "spec.foo", "widget.thing.io", healthy)
+					Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from object [widget.thing.io/my-widget] in namespace [my-ns]"))
+				})
 			})
 		})
 
 		Context("stamped object does not have a namespace", func() {
 			It("has the correct message", func() {
-				condition := conditions.MissingValueAtPathCondition(true, obj, "spec.foo", "widget.thing.io")
-				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from resource [widget.thing.io/my-widget]"))
+				condition := conditions.MissingValueAtPathCondition(true, obj, "spec.foo", "widget.thing.io", metav1.ConditionUnknown)
+				Expect(condition.Message).To(Equal("waiting to read value [spec.foo] from object [widget.thing.io/my-widget]"))
 			})
 		})
 	})

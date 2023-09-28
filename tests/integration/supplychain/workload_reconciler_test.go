@@ -17,7 +17,7 @@ package supplychain_test
 import (
 	"context"
 	"encoding/json"
-	eventsv1 "k8s.io/api/events/v1"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -25,6 +25,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -382,11 +383,12 @@ var _ = Describe("WorkloadReconciler", func() {
 
 	Context("supply chain with immutable template", func() {
 		var (
-			expectedValue           string
-			healthRuleSpecification string
-			lifecycleSpecification  string
-			immutableTemplateBase   string
-			workload                v1alpha1.Workload
+			expectedValue             string
+			healthRuleSpecification   string
+			lifecycleSpecification    string
+			immutableTemplateBase     string
+			workload                  v1alpha1.Workload
+			configPathThatWillBeFound string
 		)
 
 		BeforeEach(func() {
@@ -397,7 +399,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				metadata:
 				  name: my-config-template
 				spec:
-				  configPath: spec.foo
+				  configPath: %s
 			      lifecycle: %s
 			      template:
 					apiVersion: test.run/v1alpha1
@@ -408,6 +410,8 @@ var _ = Describe("WorkloadReconciler", func() {
 					  foo: $(workload.spec.source.image)$
 				  %s
 			`
+
+			configPathThatWillBeFound = "spec.foo"
 
 			followOnTemplateYaml := utils.HereYaml(`
 				---
@@ -543,7 +547,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Context("without a healthRule", func() {
 				BeforeEach(func() {
 					healthRuleSpecification = ""
-					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					templateYaml := utils.HereYamlF(immutableTemplateBase, configPathThatWillBeFound, lifecycleSpecification, healthRuleSpecification)
 					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 					cleanups = append(cleanups, template)
 				})
@@ -637,7 +641,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Context("with an alwaysHealthy healthRule", func() {
 				BeforeEach(func() {
 					healthRuleSpecification = "healthRule:\n    alwaysHealthy: {}"
-					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					templateYaml := utils.HereYamlF(immutableTemplateBase, configPathThatWillBeFound, lifecycleSpecification, healthRuleSpecification)
 					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 					cleanups = append(cleanups, template)
 				})
@@ -665,7 +669,7 @@ var _ = Describe("WorkloadReconciler", func() {
 				Context("which is not satisfied", func() {
 					BeforeEach(func() {
 						healthRuleSpecification = "healthRule:\n    singleConditionType: Ready"
-						templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+						templateYaml := utils.HereYamlF(immutableTemplateBase, configPathThatWillBeFound, lifecycleSpecification, healthRuleSpecification)
 						template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 						cleanups = append(cleanups, template)
 					})
@@ -674,9 +678,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						itStampsTheTemplatedObjectOnce()
 					})
 					It("results in proper status", func() {
-						getConditionOfType := func(element interface{}) string {
-							return element.(metav1.Condition).Type
-						}
+						createdObject := getTestObjAtIndex(ctx, testNS, 0, 1)
 
 						Eventually(func() []metav1.Condition {
 							workload := &v1alpha1.Workload{}
@@ -690,18 +692,18 @@ var _ = Describe("WorkloadReconciler", func() {
 							return workload.Status.Resources[0].Conditions
 						}).Should(MatchAllElements(getConditionOfType, Elements{
 							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
-								"Status":  Equal(metav1.ConditionFalse),
-								"Reason":  Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
-								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of immutable stamped objects"),
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf("waiting to read value [spec.foo] from object [testobjs.test.run/%s] in namespace [%s]", createdObject.Name, testNS)),
 							}),
 							"Healthy": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Reason":  Equal("ReadyCondition"),
-								"Message": ContainSubstring("condition with type [Ready] not found on resource status"),
+								"Message": Equal("condition with type [Ready] not found on resource status"),
 							}),
 							"Ready": MatchFields(IgnoreExtras, Fields{
-								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
 							}),
 						}))
 
@@ -714,15 +716,15 @@ var _ = Describe("WorkloadReconciler", func() {
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
-								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
 							}),
 							"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionUnknown),
 								"Reason": Equal("HealthyConditionRule"),
 							}),
 							"Ready": MatchFields(IgnoreExtras, Fields{
-								"Status": Equal(metav1.ConditionFalse),
+								"Status": Equal(metav1.ConditionUnknown),
 							}),
 						}))
 
@@ -732,18 +734,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					When("the healthRule is subsequently satisfied", func() {
 						It("results in a healthy workload and propagates outputs", func() {
 							// update the object
-							opts := []client.ListOption{
-								client.InNamespace(testNS),
-							}
-
-							testsList := &resources.TestObjList{}
-
-							Eventually(func() ([]resources.TestObj, error) {
-								err := c.List(ctx, testsList, opts...)
-								return testsList.Items, err
-							}).Should(HaveLen(1))
-
-							testToUpdate := &testsList.Items[0]
+							testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
 							testToUpdate.Status.Conditions = []metav1.Condition{
 								{
 									Type:               "Ready",
@@ -756,19 +747,256 @@ var _ = Describe("WorkloadReconciler", func() {
 							err := c.Status().Update(ctx, testToUpdate)
 							Expect(err).NotTo(HaveOccurred())
 
-							// assert expected state
 							itResultsInAHealthyWorkload()
+
+							Eventually(func() v1alpha1.Output {
+								workload := &v1alpha1.Workload{}
+								Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+								if len(workload.Status.Resources[0].Outputs) < 1 {
+									return v1alpha1.Output{}
+								}
+								return workload.Status.Resources[0].Outputs[0]
+							}).Should(MatchFields(IgnoreExtras, Fields{
+								"Name":    Equal("config"),
+								"Preview": Equal("some-address\n"),
+							}))
+						})
+					})
+					When("the healthRule is subsequently violated", func() {
+						It("results in an unhealthy workload that reports the absence of outputs", func() {
+							// update the object
+							testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
+							testToUpdate.Status.Conditions = []metav1.Condition{
+								{
+									Type:               "Ready",
+									Status:             "False",
+									Reason:             "SomeReason",
+									LastTransitionTime: metav1.Now(),
+								},
+							}
+
+							err := c.Status().Update(ctx, testToUpdate)
+							Expect(err).NotTo(HaveOccurred())
+
+							// assert expected state
+							Eventually(func() []metav1.Condition {
+								workload := &v1alpha1.Workload{}
+								err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+								Expect(err).NotTo(HaveOccurred())
+
+								if len(workload.Status.Resources) < 2 {
+									return []metav1.Condition{}
+								}
+
+								return workload.Status.Resources[0].Conditions
+							}).Should(MatchAllElements(getConditionOfType, Elements{
+								"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionUnknown),
+									"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+									"Message": Equal(fmt.Sprintf(
+										"cannot read value [spec.foo] from unhealthy object [testobjs.test.run/%s] in namespace [%s], examine object, particularly whether it is receiving proper inputs",
+										testToUpdate.Name,
+										testNS,
+									)),
+								}),
+								"Healthy": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionFalse),
+									"Reason": Equal("ReadyCondition"),
+								}),
+								"Ready": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionFalse),
+									"Reason": Equal("ReadyCondition"),
+								}),
+							}))
 
 							workload := &v1alpha1.Workload{}
 							err = c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(workload.Status.Resources[0].Outputs).To(HaveLen(1))
-							Expect(workload.Status.Resources[0].Outputs[0]).To(MatchFields(IgnoreExtras, Fields{
-								"Name":    Equal("config"),
-								"Preview": Equal("some-address\n"),
+							Expect(workload.Status.Conditions).To(MatchAllElements(getConditionOfType, Elements{
+								"SupplyChainReady": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionTrue),
+								}),
+								"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionUnknown),
+									"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+									"Message": Equal(fmt.Sprintf(
+										"cannot read value [spec.foo] from unhealthy object [testobjs.test.run/%s] in namespace [%s], examine object, particularly whether it is receiving proper inputs",
+										testToUpdate.Name,
+										testNS,
+									)),
+								}),
+								"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionFalse),
+									"Reason": Equal("HealthyConditionRule"),
+								}),
+								"Ready": MatchFields(IgnoreExtras, Fields{
+									"Status": Equal(metav1.ConditionFalse),
+								}),
 							}))
+
+							Expect(workload.Status.Resources[0].Outputs).To(HaveLen(0))
 						})
+					})
+				})
+			})
+
+			Context("whose output will not be found", func() {
+				var createdObj *resources.TestObj
+				BeforeEach(func() {
+					configPathThatWillNotBeFound := "status.someOutput"
+					healthRuleSpecification = "healthRule:\n    singleConditionType: Ready"
+					templateYaml := utils.HereYamlF(immutableTemplateBase, configPathThatWillNotBeFound, lifecycleSpecification, healthRuleSpecification)
+					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
+					cleanups = append(cleanups, template)
+				})
+
+				Context("while healthy", func() {
+					BeforeEach(func() {
+						createdObj = getTestObjAtIndex(ctx, testNS, 0, 1)
+						createdObj.Status.Conditions = []metav1.Condition{
+							{
+								Type:               "Ready",
+								Status:             "True",
+								Reason:             "Ready",
+								LastTransitionTime: metav1.Now(),
+							},
+						}
+
+						Expect(c.Status().Update(ctx, createdObj)).To(Succeed())
+					})
+
+					It("returns an ResourceSubmitted error directing the reader to a Platform Eng", func() {
+						Eventually(func() []metav1.Condition {
+							workload := &v1alpha1.Workload{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+
+							if len(workload.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+							return workload.Status.Resources[0].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf(
+									"cannot read value [status.someOutput] from healthy object [testobjs.test.run/%s] in namespace [%s], contact Platform Eng",
+									createdObj.Name,
+									testNS,
+								)),
+							}),
+						}))
+
+						workload := &v1alpha1.Workload{}
+						Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+
+						Expect(workload.Status.Conditions).To(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf(
+									"cannot read value [status.someOutput] from healthy object [testobjs.test.run/%s] in namespace [%s], contact Platform Eng",
+									createdObj.Name,
+									testNS,
+								)),
+							}),
+						}))
+					})
+				})
+
+				Context("while unhealthy", func() {
+					BeforeEach(func() {
+						createdObj = getTestObjAtIndex(ctx, testNS, 0, 1)
+						createdObj.Status.Conditions = []metav1.Condition{
+							{
+								Type:               "Ready",
+								Status:             "False",
+								Reason:             "SomeReason",
+								LastTransitionTime: metav1.Now(),
+							},
+						}
+
+						Expect(c.Status().Update(ctx, createdObj)).To(Succeed())
+					})
+
+					It("returns an ResourceSubmitted error directing the reader to examine inputs", func() {
+						Eventually(func() []metav1.Condition {
+							workload := &v1alpha1.Workload{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+
+							if len(workload.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+							return workload.Status.Resources[0].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf(
+									"cannot read value [status.someOutput] from unhealthy object [testobjs.test.run/%s] in namespace [%s], examine object, particularly whether it is receiving proper inputs",
+									createdObj.Name,
+									testNS,
+								)),
+							}),
+						}))
+
+						workload := &v1alpha1.Workload{}
+						Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+
+						Expect(workload.Status.Conditions).To(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf(
+									"cannot read value [status.someOutput] from unhealthy object [testobjs.test.run/%s] in namespace [%s], examine object, particularly whether it is receiving proper inputs",
+									createdObj.Name,
+									testNS,
+								)),
+							}),
+						}))
+					})
+				})
+
+				Context("while health unknown", func() {
+					BeforeEach(func() {
+						createdObj = getTestObjAtIndex(ctx, testNS, 0, 1)
+						Expect(c.Status().Update(ctx, createdObj)).To(Succeed())
+					})
+					It("returns an ResourceSubmitted error suggesting the reader wait", func() {
+						Eventually(func() []metav1.Condition {
+							workload := &v1alpha1.Workload{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+
+							if len(workload.Status.Resources) < 2 {
+								return []metav1.Condition{}
+							}
+							return workload.Status.Resources[0].Conditions
+						}).Should(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf(
+									"waiting to read value [status.someOutput] from object [testobjs.test.run/%s] in namespace [%s]",
+									createdObj.Name,
+									testNS,
+								)),
+							}),
+						}))
+
+						workload := &v1alpha1.Workload{}
+						Expect(c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)).To(Succeed())
+
+						Expect(workload.Status.Conditions).To(MatchElements(getConditionOfType, IgnoreExtras, Elements{
+							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf(
+									"waiting to read value [status.someOutput] from object [testobjs.test.run/%s] in namespace [%s]",
+									createdObj.Name,
+									testNS,
+								)),
+							}),
+						}))
 					})
 				})
 			})
@@ -782,7 +1010,7 @@ var _ = Describe("WorkloadReconciler", func() {
 			Context("without a healthRule", func() {
 				BeforeEach(func() {
 					healthRuleSpecification = ""
-					templateYaml := utils.HereYamlF(immutableTemplateBase, lifecycleSpecification, healthRuleSpecification)
+					templateYaml := utils.HereYamlF(immutableTemplateBase, configPathThatWillBeFound, lifecycleSpecification, healthRuleSpecification)
 					template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 					cleanups = append(cleanups, template)
 				})
@@ -931,6 +1159,8 @@ var _ = Describe("WorkloadReconciler", func() {
 							return element.(metav1.Condition).Type
 						}
 
+						createdObject := getTestObjAtIndex(ctx, testNS, 0, 1)
+
 						Eventually(func() []metav1.Condition {
 							workload := &v1alpha1.Workload{}
 							err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
@@ -943,9 +1173,9 @@ var _ = Describe("WorkloadReconciler", func() {
 							return workload.Status.Resources[0].Conditions
 						}).Should(MatchAllElements(getConditionOfType, Elements{
 							"ResourceSubmitted": MatchFields(IgnoreExtras, Fields{
-								"Status":  Equal(metav1.ConditionFalse),
-								"Reason":  Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
-								"Message": ContainSubstring("unable to retrieve outputs for resource [my-first-resource] in supply chain [my-supply-chain]: failed to find any healthy object in the set of immutable stamped objects"),
+								"Status":  Equal(metav1.ConditionUnknown),
+								"Reason":  Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
+								"Message": Equal(fmt.Sprintf("waiting to read value [spec.foo] from object [testobjs.test.run/%s] in namespace [%s]", createdObject.Name, testNS)),
 							}),
 							"Healthy": MatchFields(IgnoreExtras, Fields{
 								"Status":  Equal(metav1.ConditionUnknown),
@@ -953,8 +1183,8 @@ var _ = Describe("WorkloadReconciler", func() {
 								"Message": ContainSubstring("condition with type [Succeeded] not found on resource status"),
 							}),
 							"Ready": MatchFields(IgnoreExtras, Fields{
-								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
 							}),
 						}))
 
@@ -967,15 +1197,15 @@ var _ = Describe("WorkloadReconciler", func() {
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 							"ResourcesSubmitted": MatchFields(IgnoreExtras, Fields{
-								"Status": Equal(metav1.ConditionFalse),
-								"Reason": Equal(v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal(v1alpha1.MissingValueAtPathResourcesSubmittedReason),
 							}),
 							"ResourcesHealthy": MatchFields(IgnoreExtras, Fields{
 								"Status": Equal(metav1.ConditionUnknown),
 								"Reason": Equal("HealthyConditionRule"),
 							}),
 							"Ready": MatchFields(IgnoreExtras, Fields{
-								"Status": Equal(metav1.ConditionFalse),
+								"Status": Equal(metav1.ConditionUnknown),
 							}),
 						}))
 
@@ -1135,3 +1365,22 @@ var _ = Describe("WorkloadReconciler", func() {
 		})
 	})
 })
+
+func getTestObjAtIndex(ctx context.Context, namespace string, index int, numObjectsExpected int) *resources.TestObj {
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+
+	testsList := &resources.TestObjList{}
+
+	Eventually(func() ([]resources.TestObj, error) {
+		err := c.List(ctx, testsList, opts...)
+		return testsList.Items, err
+	}).Should(HaveLen(numObjectsExpected))
+
+	return &testsList.Items[index]
+}
+
+func getConditionOfType(element interface{}) string {
+	return element.(metav1.Condition).Type
+}

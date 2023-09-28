@@ -61,17 +61,31 @@ func TemplateObjectRetrievalFailureCondition(isOwner bool, err error) metav1.Con
 	}
 }
 
-func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string, qualifiedResource string) metav1.Condition {
+func MissingValueAtPathCondition(isOwner bool, obj *unstructured.Unstructured, expression string, qualifiedResource string, health metav1.ConditionStatus) metav1.Condition {
 	var namespaceMsg string
 	if obj.GetNamespace() != "" {
 		namespaceMsg = fmt.Sprintf(" in namespace [%s]", obj.GetNamespace())
 	}
+
+	var message string
+
+	switch health {
+	case metav1.ConditionTrue:
+		message = fmt.Sprintf("cannot read value [%s] from healthy object [%s/%s]%s, contact Platform Eng",
+			expression, qualifiedResource, obj.GetName(), namespaceMsg)
+	case metav1.ConditionFalse:
+		message = fmt.Sprintf("cannot read value [%s] from unhealthy object [%s/%s]%s, examine object, particularly whether it is receiving proper inputs",
+			expression, qualifiedResource, obj.GetName(), namespaceMsg)
+	default:
+		message = fmt.Sprintf("waiting to read value [%s] from object [%s/%s]%s",
+			expression, qualifiedResource, obj.GetName(), namespaceMsg)
+	}
+
 	return metav1.Condition{
-		Type:   getConditionType(isOwner),
-		Status: metav1.ConditionUnknown,
-		Reason: v1alpha1.MissingValueAtPathResourcesSubmittedReason,
-		Message: fmt.Sprintf("waiting to read value [%s] from resource [%s/%s]%s",
-			expression, qualifiedResource, obj.GetName(), namespaceMsg),
+		Type:    getConditionType(isOwner),
+		Status:  metav1.ConditionUnknown,
+		Reason:  v1alpha1.MissingValueAtPathResourcesSubmittedReason,
+		Message: message,
 	}
 }
 
@@ -98,15 +112,6 @@ func BlueprintsFailedToListCreatedObjectsCondition(isOwner bool, err error) meta
 		Type:    getConditionType(isOwner),
 		Status:  metav1.ConditionFalse,
 		Reason:  v1alpha1.FailedToListCreatedObjectsReason,
-		Message: err.Error(),
-	}
-}
-
-func NoHealthyImmutableObjectsCondition(isOwner bool, err error) metav1.Condition {
-	return metav1.Condition{
-		Type:    getConditionType(isOwner),
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.SetOfImmutableStampedObjectsIncludesNoHealthyObjectReason,
 		Message: err.Error(),
 	}
 }

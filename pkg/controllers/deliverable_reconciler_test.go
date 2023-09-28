@@ -796,6 +796,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				var retrieveError cerrors.RetrieveOutputError
 				var wrappedError error
 				var stampedObject *unstructured.Unstructured
+				var healthy metav1.ConditionStatus
 
 				JustBeforeEach(func() {
 					stampedObject = &unstructured.Unstructured{}
@@ -814,6 +815,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						BlueprintType:     cerrors.Delivery,
 						StampedObject:     stampedObject,
 						QualifiedResource: "mything.thing.io",
+						Healthy:           healthy,
 					}
 
 					rlzr.RealizeStub = func(ctx context.Context, resourceRealizer realizer.ResourceRealizer, deliveryName string, resources []realizer.OwnerResource, statuses statuses.ResourceStatuses) error {
@@ -950,9 +952,37 @@ var _ = Describe("DeliverableReconciler", func() {
 						wrappedError = stamp.NewJsonPathError("this.wont.find.anything", errors.New("some error"))
 					})
 
-					It("calls the condition manager to report", func() {
-						_, _ = reconciler.Reconcile(ctx, req)
-						Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io")))
+					Context("and the RetrieveOutputError reports object as healthy", func() {
+						BeforeEach(func() {
+							healthy = metav1.ConditionTrue
+						})
+
+						It("calls the condition manager to report", func() {
+							_, _ = reconciler.Reconcile(ctx, req)
+							Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io", metav1.ConditionTrue)))
+						})
+					})
+
+					Context("and the RetrieveOutputError reports object as unhealthy", func() {
+						BeforeEach(func() {
+							healthy = metav1.ConditionFalse
+						})
+
+						It("calls the condition manager to report", func() {
+							_, _ = reconciler.Reconcile(ctx, req)
+							Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io", metav1.ConditionFalse)))
+						})
+					})
+
+					Context("and the RetrieveOutputError reports object health as unknown", func() {
+						BeforeEach(func() {
+							healthy = metav1.ConditionUnknown
+						})
+
+						It("calls the condition manager to report", func() {
+							_, _ = reconciler.Reconcile(ctx, req)
+							Expect(conditionManager.AddPositiveArgsForCall(1)).To(Equal(conditions.MissingValueAtPathCondition(true, stampedObject, "this.wont.find.anything", "mything.thing.io", metav1.ConditionUnknown)))
+						})
 					})
 
 					It("does not return an error", func() {

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -131,6 +132,7 @@ type RetrieveOutputError struct {
 	BlueprintType     string
 	QualifiedResource string
 	PassThroughInput  string
+	Healthy           metav1.ConditionStatus
 }
 
 func (e RetrieveOutputError) Error() string {
@@ -191,15 +193,6 @@ type NoHealthyImmutableObjectsError struct {
 	ResourceName  string
 	BlueprintName string
 	BlueprintType string
-}
-
-func (e NoHealthyImmutableObjectsError) Error() string {
-	return fmt.Errorf("unable to retrieve outputs for resource [%s] in %s [%s]: %w",
-		e.ResourceName,
-		e.BlueprintType,
-		e.BlueprintName,
-		e.Err,
-	).Error()
 }
 
 func WrapUnhandledError(err error) error {
