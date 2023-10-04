@@ -20,30 +20,31 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clustersupplychain,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clustersupplychains,verbs=create;update,versions=v1alpha1,name=supply-chain-validator.cartographer.com
 
 var _ webhook.Validator = &ClusterSupplyChain{}
 
-func (c *ClusterSupplyChain) ValidateCreate() error {
+func (c *ClusterSupplyChain) ValidateCreate() (admission.Warnings, error) {
 	err := c.validateNewState()
 	if err != nil {
-		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+		return nil, fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
 	}
-	return nil
+	return nil, nil
 }
 
-func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) error {
+func (c *ClusterSupplyChain) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	err := c.validateNewState()
 	if err != nil {
-		return fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
+		return nil, fmt.Errorf("error validating clustersupplychain [%s]: %w", c.Name, err)
 	}
-	return nil
+	return nil, nil
 }
 
-func (c *ClusterSupplyChain) ValidateDelete() error {
-	return nil
+func (c *ClusterSupplyChain) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (c *ClusterSupplyChain) validateNewState() error {

@@ -66,11 +66,13 @@ var _ = Describe("Delivery Validation", func() {
 		})
 		Context("Well formed delivery", func() {
 			It("creates without error", func() {
-				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -82,11 +84,13 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(`error validating clusterdelivery [delivery-resource]: spec.resources[1].name "source-provider" cannot appear twice`))
 			})
 		})
 
@@ -101,13 +105,15 @@ var _ = Describe("Delivery Validation", func() {
 						}
 					})
 					It("on create, it rejects the Resource", func() {
-						Expect(delivery.ValidateCreate()).To(MatchError(
+						_, err := delivery.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, it rejects the Resource", func() {
-						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						_, err := delivery.ValidateUpdate(oldDelivery)
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -125,13 +131,15 @@ var _ = Describe("Delivery Validation", func() {
 					})
 
 					It("on create, it rejects the Resource", func() {
-						Expect(delivery.ValidateCreate()).To(MatchError(
+						_, err := delivery.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, it rejects the Resource", func() {
-						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						_, err := delivery.ValidateUpdate(oldDelivery)
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -148,13 +156,15 @@ var _ = Describe("Delivery Validation", func() {
 						}
 					})
 					It("on create, it rejects the Resource", func() {
-						Expect(delivery.ValidateCreate()).To(MatchError(
+						_, err := delivery.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, it rejects the Resource", func() {
-						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						_, err := delivery.ValidateUpdate(oldDelivery)
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -171,13 +181,15 @@ var _ = Describe("Delivery Validation", func() {
 						}
 					})
 					It("on create, it rejects the Resourcer", func() {
-						Expect(delivery.ValidateCreate()).To(MatchError(
+						_, err := delivery.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, it rejects the Resourcer", func() {
-						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						_, err := delivery.ValidateUpdate(oldDelivery)
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [delivery-resource]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
@@ -240,15 +252,18 @@ var _ = Describe("Delivery Validation", func() {
 
 		Context("Well formed delivery", func() {
 			It("creates without error", func() {
-				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -258,19 +273,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -285,19 +303,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: templateRef.Options must have more than one option",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: templateRef.Options must have more than one option",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -312,19 +333,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -338,19 +362,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 			Context("operator is In and does NOT have values", func() {
@@ -362,19 +389,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 			Context("operator is NotIn and does NOT have values", func() {
@@ -386,19 +416,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -410,19 +443,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, source-2]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, source-2]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -433,19 +469,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -455,19 +494,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(ContainSubstring(
 					`error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
 				)))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(ContainSubstring(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(ContainSubstring(
 					`error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
 				)))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -477,17 +519,18 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it does not reject the Resource", func() {
-				err := delivery.ValidateCreate()
+				_, err := delivery.ValidateCreate()
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("on update, it does not reject the Resource", func() {
-				err := delivery.ValidateUpdate(oldDelivery)
+				_, err := delivery.ValidateUpdate(oldDelivery)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -497,19 +540,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found both",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found both",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -519,19 +565,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found neither",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found neither",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -541,19 +590,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+				_, err := delivery.ValidateUpdate(oldDelivery)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -582,19 +634,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -605,19 +660,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -627,19 +685,22 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).To(MatchError(
 						"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -652,19 +713,22 @@ var _ = Describe("Delivery Validation", func() {
 					})
 
 					It("on create, it rejects the Resource", func() {
-						Expect(delivery.ValidateCreate()).To(MatchError(
+						_, err := delivery.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
 						))
 					})
 
 					It("on update, it rejects the Resource", func() {
-						Expect(delivery.ValidateUpdate(oldDelivery)).To(MatchError(
+						_, err := delivery.ValidateUpdate(oldDelivery)
+						Expect(err).To(MatchError(
 							"error validating clusterdelivery [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
 						))
 					})
 
 					It("deletes without error", func() {
-						Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+						_, err := delivery.ValidateDelete()
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -676,15 +740,18 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("creates without error", func() {
-					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("updates without error", func() {
-					Expect(delivery.ValidateUpdate(oldDelivery)).NotTo(HaveOccurred())
+					_, err := delivery.ValidateUpdate(oldDelivery)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("deletes without error", func() {
-					Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -730,19 +797,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, returns an error", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("on update, returns an error", func() {
-				Expect(delivery.ValidateUpdate(nil)).To(MatchError(
+				_, err := delivery.ValidateUpdate(nil)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("Empty selection", func() {
@@ -752,19 +822,22 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("on create, returns an error", func() {
-				Expect(delivery.ValidateCreate()).To(MatchError(
+				_, err := delivery.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("on update, returns an error", func() {
-				Expect(delivery.ValidateUpdate(nil)).To(MatchError(
+				_, err := delivery.ValidateUpdate(nil)
+				Expect(err).To(MatchError(
 					"error validating clusterdelivery [delivery-resource]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("A Selector", func() {
@@ -774,15 +847,18 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("creates without error", func() {
-				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("on update, returns an error", func() {
-				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+				_, err := delivery.ValidateUpdate(nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("A SelectorMatchExpression", func() {
@@ -792,15 +868,18 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("creates without error", func() {
-				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+				_, err := delivery.ValidateUpdate(nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("A SelectorMatchFields", func() {
@@ -810,15 +889,18 @@ var _ = Describe("Delivery Validation", func() {
 			})
 
 			It("creates without error", func() {
-				Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(delivery.ValidateUpdate(nil)).NotTo(HaveOccurred())
+				_, err := delivery.ValidateUpdate(nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(delivery.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := delivery.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
@@ -882,7 +964,8 @@ var _ = Describe("Delivery Validation", func() {
 					}
 				})
 				It("creates without error", func() {
-					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 			})
@@ -899,7 +982,8 @@ var _ = Describe("Delivery Validation", func() {
 					}
 				})
 				It("rejects with an error", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError("error validating clusterdelivery [some-name]: invalid jsonpath for key [spec.params[0].{{}}]: unrecognized character in action: U+007B '{'"))
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError("error validating clusterdelivery [some-name]: invalid jsonpath for key [spec.params[0].{{}}]: unrecognized character in action: U+007B '{'"))
 				})
 			})
 
@@ -915,7 +999,8 @@ var _ = Describe("Delivery Validation", func() {
 					}
 				})
 				It("rejects with an error", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError("error validating clusterdelivery [some-name]: requirement key [foo] is not a valid path"))
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError("error validating clusterdelivery [some-name]: requirement key [foo] is not a valid path"))
 				})
 			})
 		})
@@ -934,7 +1019,8 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("creates without error", func() {
-					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -951,7 +1037,8 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("rejects with error", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
 				})
 			})
 		})
@@ -965,7 +1052,8 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("creates without error", func() {
-					Expect(delivery.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := delivery.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -977,7 +1065,8 @@ var _ = Describe("Delivery Validation", func() {
 				})
 
 				It("rejects with error", func() {
-					Expect(delivery.ValidateCreate()).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
+					_, err := delivery.ValidateCreate()
+					Expect(err).To(MatchError(ContainSubstring("error validating clusterdelivery [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
 				})
 			})
 		})

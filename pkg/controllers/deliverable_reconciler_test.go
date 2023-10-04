@@ -102,6 +102,8 @@ var _ = Describe("DeliverableReconciler", func() {
 		err := utils.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
+		fakeRESTMapper := controllersfakes.FakeRESTMapper{}
+		repo.GetRESTMapperReturns(&fakeRESTMapper)
 
 		tokenManager = &satokenfakes.FakeTokenManager{}
 
@@ -131,6 +133,8 @@ var _ = Describe("DeliverableReconciler", func() {
 			Realizer:                rlzr,
 			StampedTracker:          stampedTracker,
 			DependencyTracker:       dependencyTracker,
+			RESTMapper:              &fakeRESTMapper,
+			Scheme:                  scheme,
 		}
 
 		req = ctrl.Request{
@@ -476,11 +480,12 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
-			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))
+			_ = handler.EnqueueRequestForOwner(repo.GetScheme(), repo.GetRESTMapper(), &v1alpha1.Deliverable{}, handler.OnlyControllerOwner())
+			Expect(hndl).To(Equal(handler.EnqueueRequestForOwner(repo.GetScheme(), repo.GetRESTMapper(), &v1alpha1.Deliverable{}, handler.OnlyControllerOwner())))
 
 			_, obj, hndl, _ = stampedTracker.WatchArgsForCall(1)
 			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
-			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Deliverable{}}))
+			Expect(hndl).To(Equal(handler.EnqueueRequestForOwner(repo.GetScheme(), repo.GetRESTMapper(), &v1alpha1.Deliverable{}, handler.OnlyControllerOwner())))
 
 			currentStatuses := resourceStatuses.GetCurrent()
 			Expect(currentStatuses).To(HaveLen(2))
@@ -570,7 +575,7 @@ var _ = Describe("DeliverableReconciler", func() {
 				_, _ = reconciler.Reconcile(ctx, req)
 
 				Expect(out).To(Say(`"level":"info"`))
-				Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+				Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 				Expect(out).To(Say(`"delivery":"some-delivery"`))
 				Expect(out).To(Say(`"handled error":"delivery \[some-delivery\] is not in ready state"`))
 			})
@@ -672,7 +677,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 					Expect(out).To(Say(`"level":"info"`))
 					Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-					Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+					Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 					Expect(out).To(Say(`"delivery":"some-delivery"`))
 					Expect(out).To(Say(`"handled error":"unable to stamp object for resource \[some-name\] for template \[ClusterDeploymentTemplate/some-template\] in delivery \[some-delivery\]: some error"`))
 				})
@@ -847,7 +852,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -887,7 +892,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -927,7 +932,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -995,7 +1000,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs \[this.wont.find.anything\] from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: failed to evaluate json path 'this.wont.find.anything': some error"`))
 					})
@@ -1035,7 +1040,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from stamped object \[my-ns/my-obj\] of type \[mything.thing.io\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -1099,7 +1104,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -1126,7 +1131,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -1166,7 +1171,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(out).To(Say(`"level":"info"`))
 						Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-						Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 						Expect(out).To(Say(`"delivery":"some-delivery"`))
 						Expect(out).To(Say(`"handled error":"unable to retrieve outputs from pass through \[configs\] for resource \[some-resource\] in delivery \[some-delivery\]: some error"`))
 					})
@@ -1427,7 +1432,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-			Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+			Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 			Expect(out).To(Say(`"handled error":"deliverable \[my-namespace/my-deliverable\] is missing required labels"`))
 		})
 
@@ -1453,7 +1458,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-			Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+			Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 			Expect(out).To(Say(`"handled error":"no delivery \[my-namespace/my-deliverable\] found where full selector is satisfied by labels: map\[some-key:some-val\]"`))
 		})
 	})
@@ -1500,7 +1505,7 @@ var _ = Describe("DeliverableReconciler", func() {
 
 			Expect(out).To(Say(`"level":"info"`))
 			Expect(out).To(Say(`"msg":"handled error reconciling deliverable"`))
-			Expect(out).To(Say(`"deliverable":"my-namespace/my-deliverable-name"`))
+			Expect(out).To(Say(`"deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 			Expect(out).To(Say(`"handled error":"more than one delivery selected for deliverable \[my-namespace/my-deliverable\]: \[my-name my-name\]"`))
 		})
 	})
@@ -1678,7 +1683,7 @@ var _ = Describe("DeliverableReconciler", func() {
 						_, err := reconciler.Reconcile(ctx, req)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","deliverable":"my-namespace/my-deliverable-name"`))
+						Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","deliverable":{"name":"my-deliverable-name","namespace":"my-namespace"}`))
 					})
 				})
 			})

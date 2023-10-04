@@ -30,7 +30,7 @@ import (
 	"github.com/valyala/fasttemplate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -167,8 +167,8 @@ func (s *Stamper) Stamp(ctx context.Context, resourceTemplate v1alpha1.TemplateS
 			Kind:               kind,
 			UID:                s.Owner.GetUID(),
 			Name:               s.Owner.GetName(),
-			BlockOwnerDeletion: pointer.Bool(true),
-			Controller:         pointer.Bool(true),
+			BlockOwnerDeletion: ptr.To(true),
+			Controller:         ptr.To(true),
 		},
 	})
 
