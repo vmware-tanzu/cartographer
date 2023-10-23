@@ -23,7 +23,7 @@ FROM ${BASE_IMAGE} AS ytt
 
 RUN set -x && \
 	apt-get update && \
-	apt-get install -y curl=7.81.0-1ubuntu1.13
+	apt-get install -y curl=7.81.0-1ubuntu1.14
 
 ARG ytt_CHECKSUM=a6729fb8514f10ab58f9ed3b50cd90ef79bf16d1cb29173baa84e1af0bc5ad4f
 ARG ytt_VERSION=0.45.3
