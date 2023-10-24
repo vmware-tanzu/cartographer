@@ -65,7 +65,7 @@ type DeliverableReconciler struct {
 	DependencyTracker       dependency.DependencyTracker
 	EventRecorder           record.EventRecorder
 	RESTMapper              meta.RESTMapper
-	Scheme					*runtime.Scheme
+	Scheme                  *runtime.Scheme
 }
 
 func (r *DeliverableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

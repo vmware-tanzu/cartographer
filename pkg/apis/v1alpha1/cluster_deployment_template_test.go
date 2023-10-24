@@ -177,7 +177,7 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 				})
 
 				It("update returns an error", func() {
-					_, err := template.ValidateUpdate(nil) 
+					_, err := template.ValidateUpdate(nil)
 					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})

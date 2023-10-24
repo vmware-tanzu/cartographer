@@ -23,12 +23,11 @@ import (
 
 // +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clustertemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clustertemplates,verbs=create;update,versions=v1alpha1,name=template-validator.cartographer.com
 
-
 var _ webhook.Validator = &ClusterTemplate{}
 
 func (c *ClusterTemplate) ValidateCreate() (admission.Warnings, error) {
 	return c.Spec.validate()
-	
+
 }
 
 func (c *ClusterTemplate) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
