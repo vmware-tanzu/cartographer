@@ -365,7 +365,7 @@ test_runnable_example() {
           exit 1
         else
           echo "waiting 5 seconds for expected passing test to succeed"
-          (( counter+1 ))
+          (( counter+=1 ))
         fi
       done
 
@@ -382,7 +382,7 @@ test_runnable_example() {
           exit 1
         else
           echo "waiting 5 seconds for expected failing test to fail"
-          (( counter+1 ))
+          (( counter+=1 ))
         fi
       done
 
@@ -403,7 +403,7 @@ test_runnable_example() {
           exit 1
         else
           echo "waiting 5 seconds for expected passing test to succeed"
-          (( counter+1 ))
+          (( counter+=1 ))
         fi
       done
 
