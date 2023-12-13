@@ -24,7 +24,7 @@ readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 #readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.24.6}
-readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.25.3}
+readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.28.0}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
 readonly RELEASE_YAML_PATH=${RELEASE_YAML_PATH:-"./release/cartographer.yaml"}
 # wokeignore:rule=disable no shellcheck alternative
@@ -36,7 +36,7 @@ readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
 readonly CERT_MANAGER_VERSION=1.5.3
 readonly KAPP_CONTROLLER_VERSION=0.41.2
-readonly KNATIVE_SERVING_VERSION=1.7.2
+readonly KNATIVE_SERVING_VERSION=1.12.2
 readonly KPACK_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.41.0
