@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
@@ -59,14 +61,18 @@ func (cmd *Command) Execute(ctx context.Context) error {
 	}
 
 	mgrOpts := manager.Options{
-		Port:               cmd.Port,
-		CertDir:            cmd.CertDir,
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    cmd.Port,
+			CertDir: cmd.CertDir,
+		}),
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	}
 
 	if cmd.MetricsPort != 0 {
-		mgrOpts.MetricsBindAddress = fmt.Sprintf(":%d", cmd.MetricsPort)
+		mgrOpts.Metrics.BindAddress = fmt.Sprintf(":%d", cmd.MetricsPort)
 	}
 
 	if cmd.PprofPort != 0 {

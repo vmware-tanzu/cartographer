@@ -25,6 +25,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crtcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -64,6 +64,7 @@ type RunnableReconciler struct {
 	DependencyTracker       dependency.DependencyTracker
 	EventRecorder           record.EventRecorder
 	RESTMapper              meta.RESTMapper
+	Scheme                  *runtime.Scheme
 }
 
 func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -158,7 +159,7 @@ func (r *RunnableReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			conditionManager.AddPositive(conditions.StampedObjectConditionKnown(stampedCondition))
 			stampedObjectStatusPresent = true
 		}
-		trackingError = r.StampedTracker.Watch(log, stampedObject, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}})
+		trackingError = r.StampedTracker.Watch(log, stampedObject, handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper, &v1alpha1.Runnable{}))
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object", "object", stampedObject)
 			err = cerrors.NewUnhandledError(trackingError)
@@ -240,6 +241,7 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int)
 
 	r.EventRecorder = mgr.GetEventRecorderFor("Runnable")
 	r.RESTMapper = mgr.GetRESTMapper()
+	r.Scheme = mgr.GetScheme()
 
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 
@@ -261,7 +263,8 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int)
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(crtcontroller.Options{MaxConcurrentReconciles: concurrency}).
 		For(&v1alpha1.Runnable{}).
-		Watches(&source.Kind{Type: &v1alpha1.ClusterRunTemplate{}},
+		Watches(
+			&v1alpha1.ClusterRunTemplate{},
 			enqueuer.EnqueueTracked(&v1alpha1.ClusterRunTemplate{}, r.DependencyTracker, mgr.GetScheme()),
 		)
 
@@ -281,7 +284,7 @@ func (r *RunnableReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int)
 
 	for kindType, mapFunc := range watches {
 		builder = builder.Watches(
-			&source.Kind{Type: kindType},
+			kindType,
 			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		)
 	}

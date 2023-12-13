@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -37,7 +38,7 @@ type Inputs struct {
 }
 
 type ValidatableTemplate interface {
-	ValidateCreate() error
+	ValidateCreate() (admission.Warnings, error)
 	client.Object
 }
 

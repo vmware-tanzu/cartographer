@@ -8,6 +8,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/repository"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -94,6 +95,16 @@ type FakeRepository struct {
 	getDeliveryReturnsOnCall map[int]struct {
 		result1 *v1alpha1.ClusterDelivery
 		result2 error
+	}
+	GetRESTMapperStub        func() meta.RESTMapper
+	getRESTMapperMutex       sync.RWMutex
+	getRESTMapperArgsForCall []struct {
+	}
+	getRESTMapperReturns struct {
+		result1 meta.RESTMapper
+	}
+	getRESTMapperReturnsOnCall map[int]struct {
+		result1 meta.RESTMapper
 	}
 	GetRunTemplateStub        func(context.Context, v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error)
 	getRunTemplateMutex       sync.RWMutex
@@ -634,6 +645,59 @@ func (fake *FakeRepository) GetDeliveryReturnsOnCall(i int, result1 *v1alpha1.Cl
 		result1 *v1alpha1.ClusterDelivery
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeRepository) GetRESTMapper() meta.RESTMapper {
+	fake.getRESTMapperMutex.Lock()
+	ret, specificReturn := fake.getRESTMapperReturnsOnCall[len(fake.getRESTMapperArgsForCall)]
+	fake.getRESTMapperArgsForCall = append(fake.getRESTMapperArgsForCall, struct {
+	}{})
+	stub := fake.GetRESTMapperStub
+	fakeReturns := fake.getRESTMapperReturns
+	fake.recordInvocation("GetRESTMapper", []interface{}{})
+	fake.getRESTMapperMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeRepository) GetRESTMapperCallCount() int {
+	fake.getRESTMapperMutex.RLock()
+	defer fake.getRESTMapperMutex.RUnlock()
+	return len(fake.getRESTMapperArgsForCall)
+}
+
+func (fake *FakeRepository) GetRESTMapperCalls(stub func() meta.RESTMapper) {
+	fake.getRESTMapperMutex.Lock()
+	defer fake.getRESTMapperMutex.Unlock()
+	fake.GetRESTMapperStub = stub
+}
+
+func (fake *FakeRepository) GetRESTMapperReturns(result1 meta.RESTMapper) {
+	fake.getRESTMapperMutex.Lock()
+	defer fake.getRESTMapperMutex.Unlock()
+	fake.GetRESTMapperStub = nil
+	fake.getRESTMapperReturns = struct {
+		result1 meta.RESTMapper
+	}{result1}
+}
+
+func (fake *FakeRepository) GetRESTMapperReturnsOnCall(i int, result1 meta.RESTMapper) {
+	fake.getRESTMapperMutex.Lock()
+	defer fake.getRESTMapperMutex.Unlock()
+	fake.GetRESTMapperStub = nil
+	if fake.getRESTMapperReturnsOnCall == nil {
+		fake.getRESTMapperReturnsOnCall = make(map[int]struct {
+			result1 meta.RESTMapper
+		})
+	}
+	fake.getRESTMapperReturnsOnCall[i] = struct {
+		result1 meta.RESTMapper
+	}{result1}
 }
 
 func (fake *FakeRepository) GetRunTemplate(arg1 context.Context, arg2 v1alpha1.TemplateReference) (*v1alpha1.ClusterRunTemplate, error) {
@@ -1357,6 +1421,8 @@ func (fake *FakeRepository) Invocations() map[string][][]interface{} {
 	defer fake.getDeliveriesForDeliverableMutex.RUnlock()
 	fake.getDeliveryMutex.RLock()
 	defer fake.getDeliveryMutex.RUnlock()
+	fake.getRESTMapperMutex.RLock()
+	defer fake.getRESTMapperMutex.RUnlock()
 	fake.getRunTemplateMutex.RLock()
 	defer fake.getRunTemplateMutex.RUnlock()
 	fake.getRunnableMutex.RLock()

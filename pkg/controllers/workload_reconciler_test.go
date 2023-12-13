@@ -101,6 +101,8 @@ var _ = Describe("WorkloadReconciler", func() {
 		err := utils.AddToScheme(scheme)
 		Expect(err).NotTo(HaveOccurred())
 		repo.GetSchemeReturns(scheme)
+		fakeRESTMapper := controllersfakes.FakeRESTMapper{}
+		repo.GetRESTMapperReturns(&fakeRESTMapper)
 
 		tokenManager = &satokenfakes.FakeTokenManager{}
 
@@ -133,6 +135,8 @@ var _ = Describe("WorkloadReconciler", func() {
 			Realizer:                rlzr,
 			StampedTracker:          stampedTracker,
 			DependencyTracker:       dependencyTracker,
+			RESTMapper:              &fakeRESTMapper,
+			Scheme:                  scheme,
 		}
 
 		req = ctrl.Request{
@@ -478,11 +482,11 @@ var _ = Describe("WorkloadReconciler", func() {
 
 			_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
-			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
+			Expect(hndl).To(Equal(handler.EnqueueRequestForOwner(repo.GetScheme(), repo.GetRESTMapper(), &v1alpha1.Workload{})))
 
 			_, obj, hndl, _ = stampedTracker.WatchArgsForCall(1)
 			gvks = append(gvks, obj.GetObjectKind().GroupVersionKind())
-			Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}}))
+			Expect(hndl).To(Equal(handler.EnqueueRequestForOwner(repo.GetScheme(), repo.GetRESTMapper(), &v1alpha1.Workload{})))
 
 			currentStatuses := resourceStatuses.GetCurrent()
 			Expect(currentStatuses).To(HaveLen(2))
@@ -1468,7 +1472,7 @@ var _ = Describe("WorkloadReconciler", func() {
 						_, err := reconciler.Reconcile(ctx, req)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":"my-namespace/my-workload-name"`))
+						Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":{"name":"my-workload-name","namespace":"my-namespace"}`))
 					})
 				})
 			})
@@ -1741,7 +1745,7 @@ var _ = Describe("WorkloadReconciler", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(repo.DeleteCallCount()).To(Equal(1))
-					Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":"my-namespace/my-workload-name"`))
+					Expect(out).To(Say(`"msg":"failed to cleanup orphaned objects","workload":{"name":"my-workload-name","namespace":"my-namespace"}`))
 				})
 			})
 		})

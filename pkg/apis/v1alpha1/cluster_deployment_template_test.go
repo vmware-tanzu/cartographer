@@ -69,11 +69,13 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						})
 
 						It("create succeeds", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 
 						It("update succeeds", func() {
-							Expect(template.ValidateUpdate(nil)).To(Succeed())
+							_, err := template.ValidateUpdate(nil)
+							Expect(err).To(Succeed())
 						})
 					})
 					Context("with observedMatches", func() {
@@ -87,11 +89,13 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						})
 
 						It("create succeeds", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 
 						It("update succeeds", func() {
-							Expect(template.ValidateUpdate(nil)).To(Succeed())
+							_, err := template.ValidateUpdate(nil)
+							Expect(err).To(Succeed())
 						})
 					})
 				})
@@ -113,23 +117,27 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 						})
 
 						It("create returns an error", func() {
-							Expect(template.ValidateCreate()).
+							_, err := template.ValidateCreate()
+							Expect(err).
 								To(MatchError("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion"))
 						})
 
 						It("update returns an error", func() {
-							Expect(template.ValidateUpdate(nil)).
+							_, err := template.ValidateUpdate(nil)
+							Expect(err).
 								To(MatchError("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion"))
 						})
 					})
 					Context("with neither observedCompletion or observedMatches", func() {
 						It("create returns an error", func() {
-							Expect(template.ValidateCreate()).
+							_, err := template.ValidateCreate()
+							Expect(err).
 								To(MatchError("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion"))
 						})
 
 						It("update returns an error", func() {
-							Expect(template.ValidateUpdate(nil)).
+							_, err := template.ValidateUpdate(nil)
+							Expect(err).
 								To(MatchError("invalid spec: must set exactly one of spec.ObservedMatches and spec.ObservedCompletion"))
 						})
 					})
@@ -163,12 +171,14 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 				})
 
 				It("create returns an error", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 
 				It("update returns an error", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
@@ -178,7 +188,8 @@ var _ = Describe("ClusterDeploymentTemplate", func() {
 			Context("Any template", func() {
 				var anyTemplate *v1alpha1.ClusterDeploymentTemplate
 				It("always succeeds", func() {
-					Expect(anyTemplate.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := anyTemplate.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})

@@ -46,7 +46,7 @@ type Mapper struct {
 
 // Workload
 
-func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(_ client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(_ context.Context, _ client.Object) []reconcile.Request {
 	workloadList := &v1alpha1.WorkloadList{}
 	err := mapper.Client.List(context.TODO(), workloadList)
 	if err != nil {
@@ -67,7 +67,7 @@ func (mapper *Mapper) ClusterSupplyChainToWorkloadRequests(_ client.Object) []re
 	return requests
 }
 
-func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ServiceAccountToWorkloadRequests(_ context.Context, serviceAccountObject client.Object) []reconcile.Request {
 	err := mapper.addGVK(serviceAccountObject)
 	if err != nil {
 		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for service account: %s", serviceAccountObject.GetName()))
@@ -90,7 +90,7 @@ func (mapper *Mapper) ServiceAccountToWorkloadRequests(serviceAccountObject clie
 	return requests
 }
 
-func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Object) []reconcile.Request {
+func (mapper *Mapper) RoleBindingToWorkloadRequests(ctx context.Context, roleBindingObject client.Object) []reconcile.Request {
 	roleBinding, ok := roleBindingObject.(*rbacv1.RoleBinding)
 	if !ok {
 		mapper.Logger.Error(nil, "role binding to workload requests: cast to RoleBinding failed")
@@ -101,13 +101,13 @@ func (mapper *Mapper) RoleBindingToWorkloadRequests(roleBindingObject client.Obj
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
-		requests = append(requests, mapper.ServiceAccountToWorkloadRequests(serviceAccount)...)
+		requests = append(requests, mapper.ServiceAccountToWorkloadRequests(ctx, serviceAccount)...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(ctx context.Context, clusterRoleBindingObject client.Object) []reconcile.Request {
 	clusterRoleBinding, ok := clusterRoleBindingObject.(*rbacv1.ClusterRoleBinding)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role binding to workload requests: cast to ClusterRoleBinding failed")
@@ -118,13 +118,13 @@ func (mapper *Mapper) ClusterRoleBindingToWorkloadRequests(clusterRoleBindingObj
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
-		requests = append(requests, mapper.ServiceAccountToWorkloadRequests(serviceAccount)...)
+		requests = append(requests, mapper.ServiceAccountToWorkloadRequests(ctx, serviceAccount)...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconcile.Request {
+func (mapper *Mapper) RoleToWorkloadRequests(ctx context.Context, roleObject client.Object) []reconcile.Request {
 	role, ok := roleObject.(*rbacv1.Role)
 	if !ok {
 		mapper.Logger.Error(nil, "role to workload requests: cast to Role failed")
@@ -142,14 +142,14 @@ func (mapper *Mapper) RoleToWorkloadRequests(roleObject client.Object) []reconci
 	var requests []reconcile.Request
 	for _, roleBinding := range list.Items {
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name {
-			requests = append(requests, mapper.RoleBindingToWorkloadRequests(&roleBinding)...)
+			requests = append(requests, mapper.RoleBindingToWorkloadRequests(ctx, &roleBinding)...)
 		}
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterRoleToWorkloadRequests(ctx context.Context, clusterRoleObject client.Object) []reconcile.Request {
 	clusterRole, ok := clusterRoleObject.(*rbacv1.ClusterRole)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role to workload requests: cast to ClusterRole failed")
@@ -168,7 +168,7 @@ func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Obj
 
 	for _, clusterRoleBinding := range clusterRoleBindingList.Items {
 		if clusterRoleBinding.RoleRef.APIGroup == "" && clusterRoleBinding.RoleRef.Kind == "ClusterRole" && clusterRoleBinding.RoleRef.Name == clusterRole.Name {
-			requests = append(requests, mapper.ClusterRoleBindingToWorkloadRequests(&clusterRoleBinding)...)
+			requests = append(requests, mapper.ClusterRoleBindingToWorkloadRequests(ctx, &clusterRoleBinding)...)
 		}
 	}
 
@@ -182,7 +182,7 @@ func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Obj
 
 	for _, roleBinding := range roleBindingList.Items {
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "ClusterRole" && roleBinding.RoleRef.Name == clusterRole.Name {
-			requests = append(requests, mapper.RoleBindingToWorkloadRequests(&roleBinding)...)
+			requests = append(requests, mapper.RoleBindingToWorkloadRequests(ctx, &roleBinding)...)
 		}
 	}
 
@@ -191,7 +191,7 @@ func (mapper *Mapper) ClusterRoleToWorkloadRequests(clusterRoleObject client.Obj
 
 // Deliverable
 
-func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(_ client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(_ context.Context, _ client.Object) []reconcile.Request {
 	deliverableList := &v1alpha1.DeliverableList{}
 	err := mapper.Client.List(context.TODO(), deliverableList)
 	if err != nil {
@@ -212,7 +212,7 @@ func (mapper *Mapper) ClusterDeliveryToDeliverableRequests(_ client.Object) []re
 	return requests
 }
 
-func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ServiceAccountToDeliverableRequests(_ context.Context, serviceAccountObject client.Object) []reconcile.Request {
 	err := mapper.addGVK(serviceAccountObject)
 	if err != nil {
 		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for service account: %s", serviceAccountObject.GetName()))
@@ -235,7 +235,7 @@ func (mapper *Mapper) ServiceAccountToDeliverableRequests(serviceAccountObject c
 	return requests
 }
 
-func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.Object) []reconcile.Request {
+func (mapper *Mapper) RoleBindingToDeliverableRequests(ctx context.Context, roleBindingObject client.Object) []reconcile.Request {
 	roleBinding, ok := roleBindingObject.(*rbacv1.RoleBinding)
 	if !ok {
 		mapper.Logger.Error(nil, "role binding to deliverable requests: cast to RoleBinding failed")
@@ -246,13 +246,13 @@ func (mapper *Mapper) RoleBindingToDeliverableRequests(roleBindingObject client.
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
-		requests = append(requests, mapper.ServiceAccountToDeliverableRequests(serviceAccount)...)
+		requests = append(requests, mapper.ServiceAccountToDeliverableRequests(ctx, serviceAccount)...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(ctx context.Context, clusterRoleBindingObject client.Object) []reconcile.Request {
 	clusterRoleBinding, ok := clusterRoleBindingObject.(*rbacv1.ClusterRoleBinding)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role binding to deliverable requests: cast to ClusterRoleBinding failed")
@@ -263,13 +263,13 @@ func (mapper *Mapper) ClusterRoleBindingToDeliverableRequests(clusterRoleBinding
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
-		requests = append(requests, mapper.ServiceAccountToDeliverableRequests(serviceAccount)...)
+		requests = append(requests, mapper.ServiceAccountToDeliverableRequests(ctx, serviceAccount)...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) RoleToDeliverableRequests(roleObject client.Object) []reconcile.Request {
+func (mapper *Mapper) RoleToDeliverableRequests(ctx context.Context, roleObject client.Object) []reconcile.Request {
 	role, ok := roleObject.(*rbacv1.Role)
 	if !ok {
 		mapper.Logger.Error(nil, "role to deliverable requests: cast to Role failed")
@@ -287,14 +287,14 @@ func (mapper *Mapper) RoleToDeliverableRequests(roleObject client.Object) []reco
 	var requests []reconcile.Request
 	for _, roleBinding := range list.Items {
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name {
-			requests = append(requests, mapper.RoleBindingToDeliverableRequests(&roleBinding)...)
+			requests = append(requests, mapper.RoleBindingToDeliverableRequests(ctx, &roleBinding)...)
 		}
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) ClusterRoleToDeliverableRequests(clusterRoleObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterRoleToDeliverableRequests(ctx context.Context, clusterRoleObject client.Object) []reconcile.Request {
 	clusterRole, ok := clusterRoleObject.(*rbacv1.ClusterRole)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role to deliverable requests: cast to ClusterRole failed")
@@ -313,7 +313,7 @@ func (mapper *Mapper) ClusterRoleToDeliverableRequests(clusterRoleObject client.
 
 	for _, clusterRoleBinding := range clusterRoleBindingList.Items {
 		if clusterRoleBinding.RoleRef.APIGroup == "" && clusterRoleBinding.RoleRef.Kind == "ClusterRole" && clusterRoleBinding.RoleRef.Name == clusterRole.Name {
-			requests = append(requests, mapper.ClusterRoleBindingToDeliverableRequests(&clusterRoleBinding)...)
+			requests = append(requests, mapper.ClusterRoleBindingToDeliverableRequests(ctx, &clusterRoleBinding)...)
 		}
 	}
 
@@ -327,7 +327,7 @@ func (mapper *Mapper) ClusterRoleToDeliverableRequests(clusterRoleObject client.
 
 	for _, roleBinding := range roleBindingList.Items {
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "ClusterRole" && roleBinding.RoleRef.Name == clusterRole.Name {
-			requests = append(requests, mapper.RoleBindingToDeliverableRequests(&roleBinding)...)
+			requests = append(requests, mapper.RoleBindingToDeliverableRequests(ctx, &roleBinding)...)
 		}
 	}
 
@@ -336,7 +336,7 @@ func (mapper *Mapper) ClusterRoleToDeliverableRequests(clusterRoleObject client.
 
 // Runnable
 
-func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ServiceAccountToRunnableRequests(ctx context.Context, serviceAccountObject client.Object) []reconcile.Request {
 	err := mapper.addGVK(serviceAccountObject)
 	if err != nil {
 		mapper.Logger.Error(err, fmt.Sprintf("could not get GVK for service account: %s", serviceAccountObject.GetName()))
@@ -359,7 +359,7 @@ func (mapper *Mapper) ServiceAccountToRunnableRequests(serviceAccountObject clie
 	return requests
 }
 
-func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Object) []reconcile.Request {
+func (mapper *Mapper) RoleBindingToRunnableRequests(ctx context.Context, roleBindingObject client.Object) []reconcile.Request {
 	roleBinding, ok := roleBindingObject.(*rbacv1.RoleBinding)
 	if !ok {
 		mapper.Logger.Error(nil, "role binding to runnable requests: cast to RoleBinding failed")
@@ -370,13 +370,13 @@ func (mapper *Mapper) RoleBindingToRunnableRequests(roleBindingObject client.Obj
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
-		requests = append(requests, mapper.ServiceAccountToRunnableRequests(serviceAccount)...)
+		requests = append(requests, mapper.ServiceAccountToRunnableRequests(ctx, serviceAccount)...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(ctx context.Context, clusterRoleBindingObject client.Object) []reconcile.Request {
 	clusterRoleBinding, ok := clusterRoleBindingObject.(*rbacv1.ClusterRoleBinding)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role binding to runnable requests: cast to ClusterRoleBinding failed")
@@ -387,13 +387,13 @@ func (mapper *Mapper) ClusterRoleBindingToRunnableRequests(clusterRoleBindingObj
 
 	var requests []reconcile.Request
 	for _, serviceAccount := range serviceAccounts {
-		requests = append(requests, mapper.ServiceAccountToRunnableRequests(serviceAccount)...)
+		requests = append(requests, mapper.ServiceAccountToRunnableRequests(ctx, serviceAccount)...)
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) RoleToRunnableRequests(roleObject client.Object) []reconcile.Request {
+func (mapper *Mapper) RoleToRunnableRequests(ctx context.Context, roleObject client.Object) []reconcile.Request {
 	role, ok := roleObject.(*rbacv1.Role)
 	if !ok {
 		mapper.Logger.Error(nil, "role to runnable requests: cast to Role failed")
@@ -411,14 +411,14 @@ func (mapper *Mapper) RoleToRunnableRequests(roleObject client.Object) []reconci
 	var requests []reconcile.Request
 	for _, roleBinding := range list.Items {
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "Role" && roleBinding.RoleRef.Name == role.Name {
-			requests = append(requests, mapper.RoleBindingToRunnableRequests(&roleBinding)...)
+			requests = append(requests, mapper.RoleBindingToRunnableRequests(ctx, &roleBinding)...)
 		}
 	}
 
 	return requests
 }
 
-func (mapper *Mapper) ClusterRoleToRunnableRequests(clusterRoleObject client.Object) []reconcile.Request {
+func (mapper *Mapper) ClusterRoleToRunnableRequests(ctx context.Context, clusterRoleObject client.Object) []reconcile.Request {
 	clusterRole, ok := clusterRoleObject.(*rbacv1.ClusterRole)
 	if !ok {
 		mapper.Logger.Error(nil, "cluster role to runnable requests: cast to ClusterRole failed")
@@ -437,7 +437,7 @@ func (mapper *Mapper) ClusterRoleToRunnableRequests(clusterRoleObject client.Obj
 
 	for _, clusterRoleBinding := range clusterRoleBindingList.Items {
 		if clusterRoleBinding.RoleRef.APIGroup == "" && clusterRoleBinding.RoleRef.Kind == "ClusterRole" && clusterRoleBinding.RoleRef.Name == clusterRole.Name {
-			requests = append(requests, mapper.ClusterRoleBindingToRunnableRequests(&clusterRoleBinding)...)
+			requests = append(requests, mapper.ClusterRoleBindingToRunnableRequests(ctx, &clusterRoleBinding)...)
 		}
 	}
 
@@ -451,7 +451,7 @@ func (mapper *Mapper) ClusterRoleToRunnableRequests(clusterRoleObject client.Obj
 
 	for _, roleBinding := range roleBindingList.Items {
 		if roleBinding.RoleRef.APIGroup == "" && roleBinding.RoleRef.Kind == "ClusterRole" && roleBinding.RoleRef.Name == clusterRole.Name {
-			requests = append(requests, mapper.RoleBindingToRunnableRequests(&roleBinding)...)
+			requests = append(requests, mapper.RoleBindingToRunnableRequests(ctx, &roleBinding)...)
 		}
 	}
 
