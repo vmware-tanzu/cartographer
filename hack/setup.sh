@@ -374,7 +374,7 @@ test_runnable_example() {
 
       log "first taskrun succeeded as expected"
 
-      sleep 5
+      sleep 10
       if kubectl get runnable test -o json | jq -e '.status.outputs.revision'; then
         first_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
       else
@@ -398,7 +398,7 @@ test_runnable_example() {
 
       log "second taskrun failed, as expected"
 
-      sleep 5
+      sleep 10
       second_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
       if [[ "$first_output_revision" != "$second_output_revision" ]]; then
         log "runnable test fails. expected runnable .status.outputs not to have updated"
@@ -425,7 +425,7 @@ test_runnable_example() {
 
       log "an additional taskrun succeeded, as expected"
 
-      sleep 5
+      sleep 10
       third_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
       if [[ "$first_output_revision" == "$third_output_revision" ]]; then
         log "runnable test fails. expected runnable .status.outputs to have updated"
