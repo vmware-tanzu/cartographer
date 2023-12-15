@@ -61,7 +61,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateCreate()).To(Succeed())
+					_, err := template.ValidateCreate()
+					Expect(err).To(Succeed())
 				})
 			})
 
@@ -85,7 +86,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
@@ -110,7 +112,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError(ContainSubstring("invalid template: object must have a spec; templated object:")))
 				})
 			})
@@ -136,7 +139,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateUpdate(nil)).To(Succeed())
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).To(Succeed())
 				})
 			})
 
@@ -160,7 +164,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
@@ -185,7 +190,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError(ContainSubstring("invalid template: object must have a spec; templated object:")))
 				})
 			})
@@ -195,7 +201,8 @@ var _ = Describe("ClusterRunTemplate", func() {
 			Context("Any template", func() {
 				var anyTemplate *v1alpha1.ClusterRunTemplate
 				It("always succeeds", func() {
-					Expect(anyTemplate.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := anyTemplate.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})

@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -179,7 +178,7 @@ func (r *SupplyChainReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	for _, template := range v1alpha1.ValidSupplyChainTemplates {
 		builder = builder.Watches(
-			&source.Kind{Type: template},
+			template,
 			enqueuer.EnqueueTracked(template, r.DependencyTracker, mgr.GetScheme()),
 		)
 	}

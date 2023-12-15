@@ -20,30 +20,31 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterdelivery,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterdeliveries,verbs=create;update,versions=v1alpha1,name=delivery-validator.cartographer.com
 
 var _ webhook.Validator = &ClusterDelivery{}
 
-func (c *ClusterDelivery) ValidateCreate() error {
+func (c *ClusterDelivery) ValidateCreate() (admission.Warnings, error) {
 	err := c.validateNewState()
 	if err != nil {
-		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
+		return nil, fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
 	}
-	return nil
+	return nil, nil
 }
 
-func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) error {
+func (c *ClusterDelivery) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	err := c.validateNewState()
 	if err != nil {
-		return fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
+		return nil, fmt.Errorf("error validating clusterdelivery [%s]: %w", c.Name, err)
 	}
-	return nil
+	return nil, nil
 }
 
-func (c *ClusterDelivery) ValidateDelete() error {
-	return nil
+func (c *ClusterDelivery) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (c *ClusterDelivery) validateNewState() error {

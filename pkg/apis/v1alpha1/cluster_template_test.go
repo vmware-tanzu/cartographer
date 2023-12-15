@@ -62,7 +62,8 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateCreate()).To(Succeed())
+					_, err := template.ValidateCreate()
+					Expect(err).To(Succeed())
 				})
 			})
 
@@ -86,7 +87,8 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("returns an error if no types are specified", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found neither"))
 				})
 
@@ -127,7 +129,8 @@ var _ = Describe("ClusterTemplate", func() {
 						} else {
 							template.Spec.HealthRule.MultiMatch = nil
 						}
-						Expect(template.ValidateCreate()).
+						_, err := template.ValidateCreate()
+						Expect(err).
 							To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found multiple"))
 
 					},
@@ -141,14 +144,16 @@ var _ = Describe("ClusterTemplate", func() {
 					template.Spec.HealthRule = &v1alpha1.HealthRule{
 						AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}},
 					}
-					Expect(template.ValidateCreate()).To(Succeed())
+					_, err := template.ValidateCreate()
+					Expect(err).To(Succeed())
 				})
 
 				It("succeeds when SingleConditionType is set", func() {
 					template.Spec.HealthRule = &v1alpha1.HealthRule{
 						SingleConditionType: "ThisWorksAlone",
 					}
-					Expect(template.ValidateCreate()).To(Succeed())
+					_, err := template.ValidateCreate()
+					Expect(err).To(Succeed())
 				})
 
 				It("succeeds when MultiMatch is set", func() {
@@ -175,7 +180,8 @@ var _ = Describe("ClusterTemplate", func() {
 							},
 						},
 					}
-					Expect(template.ValidateCreate()).To(Succeed())
+					_, err := template.ValidateCreate()
+					Expect(err).To(Succeed())
 				})
 
 				Context("Invalid MultiMatch rules", func() {
@@ -210,7 +216,8 @@ var _ = Describe("ClusterTemplate", func() {
 							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
 							MatchConditions: []v1alpha1.ConditionRequirement{},
 						}
-						Expect(template.ValidateCreate()).
+						_, err := template.ValidateCreate()
+						Expect(err).
 							To(MatchError("invalid multi match health rule: unhealthy rule has no matchFields or matchConditions"))
 					})
 
@@ -219,7 +226,8 @@ var _ = Describe("ClusterTemplate", func() {
 							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
 							MatchConditions: []v1alpha1.ConditionRequirement{},
 						}
-						Expect(template.ValidateCreate()).
+						_, err := template.ValidateCreate()
+						Expect(err).
 							To(MatchError("invalid multi match health rule: healthy rule has no matchFields or matchConditions"))
 					})
 				})
@@ -245,14 +253,16 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
 
 			Context("template missing", func() {
 				It("succeeds", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
 				})
 			})
@@ -277,7 +287,8 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid template: must specify one of template or ytt, found both"))
 				})
 			})
@@ -311,13 +322,15 @@ var _ = Describe("ClusterTemplate", func() {
 							}
 						})
 						It("does not return an error", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 					})
 
 					Context("a retention policy is not set", func() {
 						It("does not return an error", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 					})
 				})
@@ -334,13 +347,15 @@ var _ = Describe("ClusterTemplate", func() {
 							}
 						})
 						It("does not return an error", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 					})
 
 					Context("a retention policy is not set", func() {
 						It("does not return an error", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 					})
 				})
@@ -354,7 +369,7 @@ var _ = Describe("ClusterTemplate", func() {
 							template.Spec.RetentionPolicy = &v1alpha1.RetentionPolicy{}
 						})
 						It("returns a helpful error", func() {
-							err := template.ValidateCreate()
+							_, err := template.ValidateCreate()
 							Expect(err).To(HaveOccurred())
 							Expect(err).To(MatchError("invalid template: if lifecycle is mutable, no retention policy may be set"))
 						})
@@ -362,7 +377,8 @@ var _ = Describe("ClusterTemplate", func() {
 
 					Context("a retention policy is not set", func() {
 						It("does not return an error", func() {
-							Expect(template.ValidateCreate()).To(Succeed())
+							_, err := template.ValidateCreate()
+							Expect(err).To(Succeed())
 						})
 					})
 				})
@@ -389,7 +405,8 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateUpdate(nil)).To(Succeed())
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).To(Succeed())
 				})
 			})
 
@@ -413,7 +430,8 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("returns an error if no types are specified", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found neither"))
 				})
 
@@ -454,7 +472,8 @@ var _ = Describe("ClusterTemplate", func() {
 						} else {
 							template.Spec.HealthRule.MultiMatch = nil
 						}
-						Expect(template.ValidateUpdate(nil)).
+						_, err := template.ValidateUpdate(nil)
+						Expect(err).
 							To(MatchError("invalid health rule: must specify one of alwaysHealthy, singleConditionType or multiMatch, found multiple"))
 
 					},
@@ -468,14 +487,16 @@ var _ = Describe("ClusterTemplate", func() {
 					template.Spec.HealthRule = &v1alpha1.HealthRule{
 						AlwaysHealthy: &runtime.RawExtension{Raw: []byte{}},
 					}
-					Expect(template.ValidateUpdate(nil)).To(Succeed())
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).To(Succeed())
 				})
 
 				It("succeeds when SingleConditionType is set", func() {
 					template.Spec.HealthRule = &v1alpha1.HealthRule{
 						SingleConditionType: "ThisWorksAlone",
 					}
-					Expect(template.ValidateUpdate(nil)).To(Succeed())
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).To(Succeed())
 				})
 
 				It("succeeds when MultiMatch is set", func() {
@@ -502,7 +523,8 @@ var _ = Describe("ClusterTemplate", func() {
 							},
 						},
 					}
-					Expect(template.ValidateUpdate(nil)).To(Succeed())
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).To(Succeed())
 				})
 
 				Context("Invalid MultiMatch rules", func() {
@@ -537,7 +559,8 @@ var _ = Describe("ClusterTemplate", func() {
 							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
 							MatchConditions: []v1alpha1.ConditionRequirement{},
 						}
-						Expect(template.ValidateUpdate(nil)).
+						_, err := template.ValidateUpdate(nil)
+						Expect(err).
 							To(MatchError("invalid multi match health rule: unhealthy rule has no matchFields or matchConditions"))
 					})
 
@@ -546,7 +569,8 @@ var _ = Describe("ClusterTemplate", func() {
 							MatchFields:     []v1alpha1.HealthMatchFieldSelectorRequirement{},
 							MatchConditions: []v1alpha1.ConditionRequirement{},
 						}
-						Expect(template.ValidateUpdate(nil)).
+						_, err := template.ValidateUpdate(nil)
+						Expect(err).
 							To(MatchError("invalid multi match health rule: healthy rule has no matchFields or matchConditions"))
 					})
 				})
@@ -572,14 +596,16 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
 
 			Context("template missing", func() {
 				It("succeeds", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid template: must specify one of template or ytt, found neither"))
 				})
 			})
@@ -604,7 +630,8 @@ var _ = Describe("ClusterTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid template: must specify one of template or ytt, found both"))
 				})
 			})
@@ -614,7 +641,8 @@ var _ = Describe("ClusterTemplate", func() {
 			Context("Any template", func() {
 				var anyTemplate *v1alpha1.ClusterTemplate
 				It("always succeeds", func() {
-					Expect(anyTemplate.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := anyTemplate.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})

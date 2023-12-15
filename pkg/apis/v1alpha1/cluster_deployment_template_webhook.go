@@ -20,26 +20,27 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterdeploymenttemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterdeploymenttemplates,verbs=create;update,versions=v1alpha1,name=deployment-template-validator.cartographer.com
 
 var _ webhook.Validator = &ClusterDeploymentTemplate{}
 
-func (c *ClusterDeploymentTemplate) ValidateCreate() error {
-	return c.validate()
+func (c *ClusterDeploymentTemplate) ValidateCreate() (admission.Warnings, error) {
+	return nil, c.validate()
 }
 
-func (c *ClusterDeploymentTemplate) ValidateUpdate(_ runtime.Object) error {
-	return c.validate()
+func (c *ClusterDeploymentTemplate) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
+	return nil, c.validate()
 }
 
-func (c *ClusterDeploymentTemplate) ValidateDelete() error {
-	return nil
+func (c *ClusterDeploymentTemplate) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (c *ClusterDeploymentTemplate) validate() error {
-	err := c.Spec.TemplateSpec.validate()
+	_, err := c.Spec.TemplateSpec.validate()
 	if err != nil {
 		return err
 	}

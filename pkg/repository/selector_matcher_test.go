@@ -359,8 +359,7 @@ var _ = Describe("BestSelectorMatch", func() {
 			It("returns an error", func() {
 				_, err := repository.BestSelectorMatch(selectable{}, sel)
 				Expect(err).To(MatchError(ContainSubstring("error handling selectors, selectorMatchExpressions or selectorMatchFields of [Special/my-selector]")))
-				// TODO: 'pod' - Hmmmmm - perhaps we shouldn't be using v1 code?
-				Expect(err).To(MatchError(ContainSubstring("\"Matchingest\" is not a valid pod selector operator")))
+				Expect(err).To(MatchError(ContainSubstring("\"Matchingest\" is not a valid label selector operator")))
 			})
 		})
 	})

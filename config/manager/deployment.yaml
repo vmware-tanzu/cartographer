@@ -46,7 +46,7 @@ spec:
             secretName: cartographer-webhook
       containers:
         - name: cartographer-controller
-          image: ko://github.com/vmware-tanzu/cartographer/cmd/cartographer
+          image: #@ data.values.controller_image
           args:
             - -cert-dir=/cert
             - -metrics-port=9998
@@ -54,6 +54,8 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
             capabilities:
               drop:
                 - ALL
