@@ -19,6 +19,8 @@ SPDX-License-Identifier: Apache-2.0
 package enqueuer
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +32,7 @@ import (
 
 func EnqueueTracked(by client.Object, t tracker.DependencyTracker, s *runtime.Scheme) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(
-		func(a client.Object) []reconcile.Request {
+		func(_ context.Context, a client.Object) []reconcile.Request {
 			var requests []reconcile.Request
 
 			gvks, _, err := s.ObjectKinds(by)

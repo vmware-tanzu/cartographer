@@ -89,7 +89,7 @@ func (i *Given) getActualObject() (*unstructured.Unstructured, error) {
 		return nil, fmt.Errorf("get populated template failed: %w", err)
 	}
 
-	if err = (*apiTemplate).ValidateCreate(); err != nil {
+	if _, err = (*apiTemplate).ValidateCreate(); err != nil {
 		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
 

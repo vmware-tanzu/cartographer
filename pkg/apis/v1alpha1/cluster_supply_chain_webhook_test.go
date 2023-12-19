@@ -71,15 +71,18 @@ var _ = Describe("Webhook Validation", func() {
 
 		Context("Well formed supply chain", func() {
 			It("creates without error", func() {
-				Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -94,19 +97,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, returns an error", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: invalid sources for resource [other-source-provider]: [some-source] is provided by unknown resource [some-nonexistent-resource]",
 				))
 			})
 
 			It("on update, returns an error", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: invalid sources for resource [other-source-provider]: [some-source] is provided by unknown resource [some-nonexistent-resource]",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -118,19 +124,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: duplicate resource name [some-duplicate-name] found",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: duplicate resource name [some-duplicate-name] found",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -145,19 +154,22 @@ var _ = Describe("Webhook Validation", func() {
 						}
 					})
 					It("on create, returns an error", func() {
-						Expect(supplyChain.ValidateCreate()).To(MatchError(
+						_, err := supplyChain.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
-						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("deletes without error", func() {
-						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+						_, err := supplyChain.ValidateDelete()
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 
@@ -173,19 +185,22 @@ var _ = Describe("Webhook Validation", func() {
 					})
 
 					It("on create, returns an error", func() {
-						Expect(supplyChain.ValidateCreate()).To(MatchError(
+						_, err := supplyChain.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
-						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("deletes without error", func() {
-						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+						_, err := supplyChain.ValidateDelete()
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -200,19 +215,22 @@ var _ = Describe("Webhook Validation", func() {
 						}
 					})
 					It("on create, returns an error", func() {
-						Expect(supplyChain.ValidateCreate()).To(MatchError(
+						_, err := supplyChain.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
-						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("deletes without error", func() {
-						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+						_, err := supplyChain.ValidateDelete()
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 
@@ -227,19 +245,22 @@ var _ = Describe("Webhook Validation", func() {
 						}
 					})
 					It("on create, returns an error", func() {
-						Expect(supplyChain.ValidateCreate()).To(MatchError(
+						_, err := supplyChain.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("on update, returns an error", func() {
-						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: resource [source-provider] is invalid: param [some-param] is invalid: must set exactly one of value and default",
 						))
 					})
 
 					It("deletes without error", func() {
-						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+						_, err := supplyChain.ValidateDelete()
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -297,13 +318,13 @@ var _ = Describe("Webhook Validation", func() {
 					}
 
 					// Create
-					createErr := supplyChain.ValidateCreate()
+					_, createErr := supplyChain.ValidateCreate()
 
 					// Update
-					updateErr := supplyChain.ValidateUpdate(oldSupplyChain)
+					_, updateErr := supplyChain.ValidateUpdate(oldSupplyChain)
 
 					// Delete
-					deleteErr := supplyChain.ValidateDelete()
+					_, deleteErr := supplyChain.ValidateDelete()
 
 					if happy {
 						Expect(createErr).NotTo(HaveOccurred())
@@ -375,19 +396,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, returns an error", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("on update, returns an error", func() {
-				Expect(supplyChain.ValidateUpdate(nil)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(nil)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("Empty selection", func() {
@@ -397,19 +421,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, returns an error", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("on update, returns an error", func() {
-				Expect(supplyChain.ValidateUpdate(nil)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(nil)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: at least one selector, selectorMatchExpression, selectorMatchField must be specified",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("A Selector", func() {
@@ -419,15 +446,18 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("creates without error", func() {
-				Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(supplyChain.ValidateUpdate(nil)).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateUpdate(nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("A SelectorMatchExpression", func() {
@@ -437,15 +467,18 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("creates without error", func() {
-				Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(supplyChain.ValidateUpdate(nil)).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateUpdate(nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 		Context("A SelectorMatchFields", func() {
@@ -455,15 +488,18 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("creates without error", func() {
-				Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(supplyChain.ValidateUpdate(nil)).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateUpdate(nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
@@ -527,7 +563,8 @@ var _ = Describe("Webhook Validation", func() {
 					}
 				})
 				It("creates without error", func() {
-					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 			})
@@ -544,7 +581,8 @@ var _ = Describe("Webhook Validation", func() {
 					}
 				})
 				It("rejects with an error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError("error validating clustersupplychain [some-name]: invalid jsonpath for key [spec.env[0].{{}}]: unrecognized character in action: U+007B '{'"))
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError("error validating clustersupplychain [some-name]: invalid jsonpath for key [spec.env[0].{{}}]: unrecognized character in action: U+007B '{'"))
 				})
 			})
 
@@ -560,7 +598,8 @@ var _ = Describe("Webhook Validation", func() {
 					}
 				})
 				It("rejects with an error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError("error validating clustersupplychain [some-name]: requirement key [foo] is not a valid path"))
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError("error validating clustersupplychain [some-name]: requirement key [foo] is not a valid path"))
 				})
 			})
 		})
@@ -579,7 +618,8 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("creates without error", func() {
-					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -596,7 +636,8 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("rejects with error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selectorMatchExpressions are not valid: key: Invalid value: \"-my-label\"")))
 				})
 			})
 		})
@@ -610,7 +651,8 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("creates without error", func() {
-					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -622,7 +664,8 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("rejects with error", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(ContainSubstring("error validating clustersupplychain [some-name]: selector is not valid: key: Invalid value: \"-my-label\"")))
 				})
 			})
 		})
@@ -682,15 +725,18 @@ var _ = Describe("Webhook Validation", func() {
 
 		Context("Well formed supply chain", func() {
 			It("creates without error", func() {
-				Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("updates without error", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -700,19 +746,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: duplicate template name [source-2] found in options for resource [source-provider]",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -727,19 +776,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: templateRef.Options must have more than one option",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: templateRef.Options must have more than one option",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -754,19 +806,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [Exists]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -780,19 +835,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: cannot specify values with operator [DoesNotExist]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 			Context("operator is In and does NOT have values", func() {
@@ -804,19 +862,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [In]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 			Context("operator is NotIn and does NOT have values", func() {
@@ -828,19 +889,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: must specify values with operator [NotIn]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -852,19 +916,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, source-2]",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, source-2]",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -875,19 +942,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: requirement key [spec.does.not.exist] is not a valid path",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -897,19 +967,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(ContainSubstring(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(ContainSubstring(
 					`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
 				)))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(ContainSubstring(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(ContainSubstring(
 					`error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: error validating option [source-1] selector: matchLabels are not valid: [key: Invalid value: "not-valid-"`,
 				)))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -919,17 +992,18 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it does not reject the Resource", func() {
-				err := supplyChain.ValidateCreate()
+				_, err := supplyChain.ValidateCreate()
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("on update, it does not reject the Resource", func() {
-				err := supplyChain.ValidateUpdate(oldSupplyChain)
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -939,19 +1013,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found both",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found both",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -961,19 +1038,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found neither",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of templateRef.Name or templateRef.Options must be specified, found neither",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -983,19 +1063,22 @@ var _ = Describe("Webhook Validation", func() {
 			})
 
 			It("on create, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateCreate()).To(MatchError(
+				_, err := supplyChain.ValidateCreate()
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
 				))
 			})
 
 			It("on update, it rejects the Resource", func() {
-				Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+				_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+				Expect(err).To(MatchError(
 					"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found neither",
 				))
 			})
 
 			It("deletes without error", func() {
-				Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+				_, err := supplyChain.ValidateDelete()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
@@ -1024,19 +1107,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: pass through [wrong-input] does not refer to a known input",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -1047,19 +1133,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: cannot have more than one pass through option, found 2",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -1069,19 +1158,22 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("on create, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateCreate()).To(MatchError(
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
 					))
 				})
 
 				It("on update, it rejects the Resource", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).To(MatchError(
 						"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: exactly one of option.Name or option.PassThrough must be specified, found both",
 					))
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
@@ -1094,19 +1186,22 @@ var _ = Describe("Webhook Validation", func() {
 					})
 
 					It("on create, it rejects the Resource", func() {
-						Expect(supplyChain.ValidateCreate()).To(MatchError(
+						_, err := supplyChain.ValidateCreate()
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
 						))
 					})
 
 					It("on update, it rejects the Resource", func() {
-						Expect(supplyChain.ValidateUpdate(oldSupplyChain)).To(MatchError(
+						_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+						Expect(err).To(MatchError(
 							"error validating clustersupplychain [responsible-ops---default-params]: error validating resource [source-provider]: duplicate selector found in options [source-1, passThrough]",
 						))
 					})
 
 					It("deletes without error", func() {
-						Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+						_, err := supplyChain.ValidateDelete()
+						Expect(err).NotTo(HaveOccurred())
 					})
 				})
 			})
@@ -1118,15 +1213,18 @@ var _ = Describe("Webhook Validation", func() {
 				})
 
 				It("creates without error", func() {
-					Expect(supplyChain.ValidateCreate()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateCreate()
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("updates without error", func() {
-					Expect(supplyChain.ValidateUpdate(oldSupplyChain)).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateUpdate(oldSupplyChain)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("deletes without error", func() {
-					Expect(supplyChain.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := supplyChain.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})

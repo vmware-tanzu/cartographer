@@ -60,7 +60,8 @@ var _ = Describe("ClusterSourceTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateCreate()).To(Succeed())
+					_, err := template.ValidateCreate()
+					Expect(err).To(Succeed())
 				})
 			})
 
@@ -84,7 +85,8 @@ var _ = Describe("ClusterSourceTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateCreate()).
+					_, err := template.ValidateCreate()
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
@@ -110,7 +112,8 @@ var _ = Describe("ClusterSourceTemplate", func() {
 				})
 
 				It("succeeds", func() {
-					Expect(template.ValidateUpdate(nil)).To(Succeed())
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).To(Succeed())
 				})
 			})
 
@@ -134,7 +137,8 @@ var _ = Describe("ClusterSourceTemplate", func() {
 				})
 
 				It("returns an error", func() {
-					Expect(template.ValidateUpdate(nil)).
+					_, err := template.ValidateUpdate(nil)
+					Expect(err).
 						To(MatchError("invalid template: template should not set metadata.namespace on the child object"))
 				})
 			})
@@ -144,7 +148,8 @@ var _ = Describe("ClusterSourceTemplate", func() {
 			Context("Any template", func() {
 				var anyTemplate *v1alpha1.ClusterSourceTemplate
 				It("always succeeds", func() {
-					Expect(anyTemplate.ValidateDelete()).NotTo(HaveOccurred())
+					_, err := anyTemplate.ValidateDelete()
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 		})

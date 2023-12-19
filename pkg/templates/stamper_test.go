@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
@@ -75,8 +75,8 @@ var _ = Describe("Stamper", func() {
 					"Kind":               Equal("ConfigMap"),
 					"APIVersion":         Equal("v1"),
 					"UID":                Equal(types.UID("1234567890abcdef")),
-					"BlockOwnerDeletion": Equal(pointer.Bool(true)),
-					"Controller":         Equal(pointer.Bool(true)),
+					"BlockOwnerDeletion": Equal(ptr.To(true)),
+					"Controller":         Equal(ptr.To(true)),
 				}))
 			})
 
