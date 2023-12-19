@@ -77,7 +77,7 @@ var _ = Describe("MapFunctions", func() {
 				fakeClient.ListReturns(nil)
 			})
 			It("returns an empty list of requests", func() {
-				result := m.ClusterSupplyChainToWorkloadRequests(supplyChain)
+				result := m.ClusterSupplyChainToWorkloadRequests(context.Background(), supplyChain)
 				Expect(result).To(BeEmpty())
 			})
 		})
@@ -114,7 +114,7 @@ var _ = Describe("MapFunctions", func() {
 					},
 				}
 
-				result := m.ClusterSupplyChainToWorkloadRequests(supplyChain)
+				result := m.ClusterSupplyChainToWorkloadRequests(context.Background(), supplyChain)
 				Expect(result).To(Equal(expected))
 			})
 		})
@@ -124,7 +124,7 @@ var _ = Describe("MapFunctions", func() {
 				fakeClient.ListReturns(fmt.Errorf("some-error"))
 			})
 			It("logs an error to the client", func() {
-				result := m.ClusterSupplyChainToWorkloadRequests(supplyChain)
+				result := m.ClusterSupplyChainToWorkloadRequests(context.Background(), supplyChain)
 				Expect(result).To(BeEmpty())
 
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -147,7 +147,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.ServiceAccountToWorkloadRequests(serviceAccount)
+				reqs := m.ServiceAccountToWorkloadRequests(context.Background(), serviceAccount)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -177,7 +177,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the workload", func() {
-				reqs := m.ServiceAccountToWorkloadRequests(serviceAccount)
+				reqs := m.ServiceAccountToWorkloadRequests(context.Background(), serviceAccount)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-workload"))
@@ -205,7 +205,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.RoleBindingToWorkloadRequests(roleBinding)
+				reqs := m.RoleBindingToWorkloadRequests(context.Background(), roleBinding)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -230,7 +230,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the workload", func() {
-				reqs := m.RoleBindingToWorkloadRequests(roleBinding)
+				reqs := m.RoleBindingToWorkloadRequests(context.Background(), roleBinding)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-workload"))
@@ -261,7 +261,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.ClusterRoleBindingToWorkloadRequests(clusterRoleBinding)
+				reqs := m.ClusterRoleBindingToWorkloadRequests(context.Background(), clusterRoleBinding)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -286,7 +286,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the workload", func() {
-				reqs := m.ClusterRoleBindingToWorkloadRequests(clusterRoleBinding)
+				reqs := m.ClusterRoleBindingToWorkloadRequests(context.Background(), clusterRoleBinding)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-workload"))
@@ -351,7 +351,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the workload", func() {
-					reqs := m.RoleToWorkloadRequests(role)
+					reqs := m.RoleToWorkloadRequests(context.Background(), role)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-workload"))
@@ -370,7 +370,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns the error", func() {
-				reqs := m.RoleToWorkloadRequests(role)
+				reqs := m.RoleToWorkloadRequests(context.Background(), role)
 
 				Expect(reqs).To(HaveLen(0))
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -444,7 +444,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the workload", func() {
-					reqs := m.ClusterRoleToWorkloadRequests(clusterRole)
+					reqs := m.ClusterRoleToWorkloadRequests(context.Background(), clusterRole)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-workload"))
@@ -482,7 +482,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the workload", func() {
-					reqs := m.ClusterRoleToWorkloadRequests(clusterRole)
+					reqs := m.ClusterRoleToWorkloadRequests(context.Background(), clusterRole)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-workload"))
@@ -501,7 +501,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns the error", func() {
-				reqs := m.ClusterRoleToWorkloadRequests(clusterRole)
+				reqs := m.ClusterRoleToWorkloadRequests(context.Background(), clusterRole)
 
 				Expect(reqs).To(HaveLen(0))
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -526,7 +526,7 @@ var _ = Describe("MapFunctions", func() {
 				fakeClient.ListReturns(nil)
 			})
 			It("returns an empty list of requests", func() {
-				result := m.ClusterDeliveryToDeliverableRequests(delivery)
+				result := m.ClusterDeliveryToDeliverableRequests(context.Background(), delivery)
 				Expect(result).To(BeEmpty())
 			})
 		})
@@ -563,7 +563,7 @@ var _ = Describe("MapFunctions", func() {
 					},
 				}
 
-				result := m.ClusterDeliveryToDeliverableRequests(delivery)
+				result := m.ClusterDeliveryToDeliverableRequests(context.Background(), delivery)
 				Expect(result).To(Equal(expected))
 			})
 		})
@@ -573,7 +573,7 @@ var _ = Describe("MapFunctions", func() {
 				fakeClient.ListReturns(fmt.Errorf("some-error"))
 			})
 			It("logs an error to the client", func() {
-				result := m.ClusterDeliveryToDeliverableRequests(delivery)
+				result := m.ClusterDeliveryToDeliverableRequests(context.Background(), delivery)
 				Expect(result).To(BeEmpty())
 
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -596,7 +596,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.ServiceAccountToDeliverableRequests(serviceAccount)
+				reqs := m.ServiceAccountToDeliverableRequests(context.Background(), serviceAccount)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -626,7 +626,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the deliverable", func() {
-				reqs := m.ServiceAccountToDeliverableRequests(serviceAccount)
+				reqs := m.ServiceAccountToDeliverableRequests(context.Background(), serviceAccount)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-deliverable"))
@@ -654,7 +654,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.RoleBindingToDeliverableRequests(roleBinding)
+				reqs := m.RoleBindingToDeliverableRequests(context.Background(), roleBinding)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -679,7 +679,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the deliverable", func() {
-				reqs := m.RoleBindingToDeliverableRequests(roleBinding)
+				reqs := m.RoleBindingToDeliverableRequests(context.Background(), roleBinding)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-deliverable"))
@@ -710,7 +710,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.ClusterRoleBindingToDeliverableRequests(clusterRoleBinding)
+				reqs := m.ClusterRoleBindingToDeliverableRequests(context.Background(), clusterRoleBinding)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -735,7 +735,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the deliverable", func() {
-				reqs := m.ClusterRoleBindingToDeliverableRequests(clusterRoleBinding)
+				reqs := m.ClusterRoleBindingToDeliverableRequests(context.Background(), clusterRoleBinding)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-deliverable"))
@@ -800,7 +800,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the deliverable", func() {
-					reqs := m.RoleToDeliverableRequests(role)
+					reqs := m.RoleToDeliverableRequests(context.Background(), role)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-deliverable"))
@@ -819,7 +819,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns the error", func() {
-				reqs := m.RoleToDeliverableRequests(role)
+				reqs := m.RoleToDeliverableRequests(context.Background(), role)
 
 				Expect(reqs).To(HaveLen(0))
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -893,7 +893,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the deliverable", func() {
-					reqs := m.ClusterRoleToDeliverableRequests(clusterRole)
+					reqs := m.ClusterRoleToDeliverableRequests(context.Background(), clusterRole)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-deliverable"))
@@ -931,7 +931,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the deliverable", func() {
-					reqs := m.ClusterRoleToDeliverableRequests(clusterRole)
+					reqs := m.ClusterRoleToDeliverableRequests(context.Background(), clusterRole)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-deliverable"))
@@ -950,7 +950,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns the error", func() {
-				reqs := m.ClusterRoleToDeliverableRequests(clusterRole)
+				reqs := m.ClusterRoleToDeliverableRequests(context.Background(), clusterRole)
 
 				Expect(reqs).To(HaveLen(0))
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -976,7 +976,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.ServiceAccountToRunnableRequests(serviceAccount)
+				reqs := m.ServiceAccountToRunnableRequests(context.Background(), serviceAccount)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -1006,7 +1006,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the runnable", func() {
-				reqs := m.ServiceAccountToRunnableRequests(serviceAccount)
+				reqs := m.ServiceAccountToRunnableRequests(context.Background(), serviceAccount)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-runnable"))
@@ -1034,7 +1034,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.RoleBindingToRunnableRequests(roleBinding)
+				reqs := m.RoleBindingToRunnableRequests(context.Background(), roleBinding)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -1059,7 +1059,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the runnable", func() {
-				reqs := m.RoleBindingToRunnableRequests(roleBinding)
+				reqs := m.RoleBindingToRunnableRequests(context.Background(), roleBinding)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-runnable"))
@@ -1090,7 +1090,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns an empty request list", func() {
-				reqs := m.ClusterRoleBindingToRunnableRequests(clusterRoleBinding)
+				reqs := m.ClusterRoleBindingToRunnableRequests(context.Background(), clusterRoleBinding)
 
 				Expect(reqs).To(HaveLen(0))
 			})
@@ -1115,7 +1115,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns a request for the runnable", func() {
-				reqs := m.ClusterRoleBindingToRunnableRequests(clusterRoleBinding)
+				reqs := m.ClusterRoleBindingToRunnableRequests(context.Background(), clusterRoleBinding)
 
 				Expect(reqs).To(HaveLen(1))
 				Expect(reqs[0].Name).To(Equal("some-runnable"))
@@ -1180,7 +1180,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the runnable", func() {
-					reqs := m.RoleToRunnableRequests(role)
+					reqs := m.RoleToRunnableRequests(context.Background(), role)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-runnable"))
@@ -1199,7 +1199,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns the error", func() {
-				reqs := m.RoleToRunnableRequests(role)
+				reqs := m.RoleToRunnableRequests(context.Background(), role)
 
 				Expect(reqs).To(HaveLen(0))
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))
@@ -1273,7 +1273,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the runnable", func() {
-					reqs := m.ClusterRoleToRunnableRequests(clusterRole)
+					reqs := m.ClusterRoleToRunnableRequests(context.Background(), clusterRole)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-runnable"))
@@ -1311,7 +1311,7 @@ var _ = Describe("MapFunctions", func() {
 				})
 
 				It("returns a request for the runnable", func() {
-					reqs := m.ClusterRoleToRunnableRequests(clusterRole)
+					reqs := m.ClusterRoleToRunnableRequests(context.Background(), clusterRole)
 
 					Expect(reqs).To(HaveLen(1))
 					Expect(reqs[0].Name).To(Equal("some-runnable"))
@@ -1330,7 +1330,7 @@ var _ = Describe("MapFunctions", func() {
 			})
 
 			It("returns the error", func() {
-				reqs := m.ClusterRoleToRunnableRequests(clusterRole)
+				reqs := m.ClusterRoleToRunnableRequests(context.Background(), clusterRole)
 
 				Expect(reqs).To(HaveLen(0))
 				Expect(fakeLogger.ErrorCallCount()).To(Equal(1))

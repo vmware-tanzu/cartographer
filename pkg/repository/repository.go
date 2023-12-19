@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,6 +56,7 @@ type Repository interface {
 	ListUnstructured(ctx context.Context, gvk schema.GroupVersionKind, namespace string, labels map[string]string) ([]*unstructured.Unstructured, error)
 	GetDelivery(ctx context.Context, name string) (*v1alpha1.ClusterDelivery, error)
 	GetScheme() *runtime.Scheme
+	GetRESTMapper() meta.RESTMapper
 	GetServiceAccount(ctx context.Context, serviceAccountName, ns string) (*corev1.ServiceAccount, error)
 	Delete(ctx context.Context, objToDelete *unstructured.Unstructured) error
 }
@@ -498,6 +500,10 @@ func (r *repository) StatusUpdate(ctx context.Context, object client.Object) err
 
 func (r *repository) GetScheme() *runtime.Scheme {
 	return r.cl.Scheme()
+}
+
+func (r *repository) GetRESTMapper() meta.RESTMapper {
+	return r.cl.RESTMapper()
 }
 
 func buildOwnerDiscriminant(labels map[string]string) string {

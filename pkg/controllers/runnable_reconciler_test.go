@@ -28,6 +28,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
@@ -40,6 +41,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions/conditionsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/controllers"
+	"github.com/vmware-tanzu/cartographer/pkg/controllers/controllersfakes"
 	cerrors "github.com/vmware-tanzu/cartographer/pkg/errors"
 	"github.com/vmware-tanzu/cartographer/pkg/events/eventsfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/realizer/runnable/runnablefakes"
@@ -49,6 +51,7 @@ import (
 	"github.com/vmware-tanzu/cartographer/pkg/templates"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/dependency/dependencyfakes"
 	"github.com/vmware-tanzu/cartographer/pkg/tracker/stamped/stampedfakes"
+	"github.com/vmware-tanzu/cartographer/pkg/utils"
 )
 
 var _ = Describe("Reconcile", func() {
@@ -90,6 +93,13 @@ var _ = Describe("Reconcile", func() {
 		fakeDiscoveryClient = &runnablefakes.FakeDiscoveryInterface{}
 		fakeEventRecorder = &eventsfakes.FakeEventRecorder{}
 
+		scheme := runtime.NewScheme()
+		err := utils.AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+		repo.GetSchemeReturns(scheme)
+		fakeRESTMapper := controllersfakes.FakeRESTMapper{}
+		repo.GetRESTMapperReturns(&fakeRESTMapper)
+
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName},
 		}
@@ -123,6 +133,8 @@ var _ = Describe("Reconcile", func() {
 			RepositoryBuilder:       repositoryBuilder,
 			DependencyTracker:       dependencyTracker,
 			EventRecorder:           fakeEventRecorder,
+			RESTMapper:              &fakeRESTMapper,
+			Scheme:                  scheme,
 		}
 
 		request = controllerruntime.Request{
@@ -256,7 +268,7 @@ var _ = Describe("Reconcile", func() {
 				_, obj, hndl, _ := stampedTracker.WatchArgsForCall(0)
 
 				Expect(obj).To(Equal(stampedObject))
-				Expect(hndl).To(Equal(&handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Runnable{}}))
+				Expect(hndl).To(Equal(handler.EnqueueRequestForOwner(repo.GetScheme(), repo.GetRESTMapper(), &v1alpha1.Runnable{})))
 			})
 		})
 

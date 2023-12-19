@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crtcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
 	"github.com/vmware-tanzu/cartographer/pkg/conditions"
@@ -65,7 +65,10 @@ type WorkloadReconciler struct {
 	DependencyTracker       dependency.DependencyTracker
 	EventRecorder           record.EventRecorder
 	RESTMapper              meta.RESTMapper
+	Scheme                  *runtime.Scheme
 }
+
+//counterfeiter:generate k8s.io/apimachinery/pkg/api/meta.RESTMapper
 
 func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContextOrDiscard(ctx)
@@ -179,7 +182,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		obj := &unstructured.Unstructured{}
 		obj.SetGroupVersionKind(resource.StampedRef.GroupVersionKind())
 
-		trackingError = r.StampedTracker.Watch(log, obj, &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Workload{}})
+		trackingError = r.StampedTracker.Watch(log, obj, handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper, &v1alpha1.Workload{}))
 		if trackingError != nil {
 			log.Error(err, "failed to add informer for object",
 				"object", resource.StampedRef)
@@ -421,6 +424,7 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int)
 	}
 	r.TokenManager = satoken.NewManager(clientSet, mgr.GetLogger().WithName("service-account-token-manager"), nil)
 	r.RESTMapper = mgr.GetRESTMapper()
+	r.Scheme = mgr.GetScheme()
 
 	r.EventRecorder = mgr.GetEventRecorderFor("Workload")
 	r.Repo = repository.NewRepository(
@@ -461,14 +465,14 @@ func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int)
 
 	for kindType, mapFunc := range watches {
 		builder = builder.Watches(
-			&source.Kind{Type: kindType},
+			kindType,
 			handler.EnqueueRequestsFromMapFunc(mapFunc),
 		)
 	}
 
 	for _, template := range v1alpha1.ValidSupplyChainTemplates {
 		builder = builder.Watches(
-			&source.Kind{Type: template},
+			template,
 			enqueuer.EnqueueTracked(template, r.DependencyTracker, mgr.GetScheme()),
 		)
 	}

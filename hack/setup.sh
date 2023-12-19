@@ -24,7 +24,7 @@ readonly HOST_ADDR=${HOST_ADDR:-$("$DIR"/ip.py)}
 readonly REGISTRY_PORT=${REGISTRY_PORT:-5001}
 readonly REGISTRY=${REGISTRY:-"${HOST_ADDR}:${REGISTRY_PORT}"}
 #readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.24.6}
-readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.25.3}
+readonly KIND_IMAGE=${KIND_IMAGE:-kindest/node:v1.26.6}
 readonly RELEASE_VERSION=${RELEASE_VERSION:-""}
 readonly RELEASE_YAML_PATH=${RELEASE_YAML_PATH:-"./release/cartographer.yaml"}
 # wokeignore:rule=disable no shellcheck alternative
@@ -36,7 +36,7 @@ readonly KUBERNETES_CONTAINER_NAME=cartographer-control-plane
 
 readonly CERT_MANAGER_VERSION=1.5.3
 readonly KAPP_CONTROLLER_VERSION=0.41.2
-readonly KNATIVE_SERVING_VERSION=1.7.2
+readonly KNATIVE_SERVING_VERSION=1.12.2
 readonly KPACK_VERSION=0.6.0
 readonly SOURCE_CONTROLLER_VERSION=0.17.0
 readonly TEKTON_VERSION=0.41.0
@@ -81,13 +81,16 @@ main() {
                         ;;
 
                 example)
+                        teardown_runnable_example
                         test_runnable_example
                         teardown_runnable_example
 
+                        teardown_example_sc "basic-sc"
                         setup_example_sc "basic-sc"
                         test_example_sc "basic-sc"
                         teardown_example_sc "basic-sc"
 
+                        teardown_example_sc "testing-sc"
                         setup_example_sc "testing-sc"
                         test_example_sc "testing-sc"
                         teardown_example_sc "testing-sc"
@@ -338,7 +341,7 @@ test_example_sc() {
 teardown_gitops_example() {
       log "cleaning up git repo"
 
-      kubectl delete -f ./hack/git-server.yaml
+      kubectl delete -f ./hack/git-server.yaml --ignore-not-found=true
 
       test_name="gitwriter-sc"
       kapp delete --yes -a "example-$test_name"
@@ -361,16 +364,23 @@ test_runnable_example() {
       until [[ -n $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep True) ]]; do
         sleep 5
         if [[ $counter -gt 20 ]]; then
-          log "runnable test fails"
+          log "runnable test fails. expected a successful taskrun"
           exit 1
         else
           echo "waiting 5 seconds for expected passing test to succeed"
-          (( counter+1 ))
+          (( counter+=1 ))
         fi
       done
 
-      sleep 5
-      first_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
+      log "first taskrun succeeded as expected"
+
+      sleep 10
+      if kubectl get runnable test -o json | jq -e '.status.outputs.revision'; then
+        first_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
+      else
+        log "runnable test fails. expected runnable .status.outputs to have a value but it did not."
+        exit 1
+      fi
 
       kubectl patch runnable test --type merge --patch "$(cat "$DIR/../examples/runnable-tekton/02-tests-fail/runnable-patch.yml")"
 
@@ -378,20 +388,26 @@ test_runnable_example() {
       until [[ -n $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep False) ]]; do
         sleep 5
         if [[ $counter -gt 20 ]]; then
-          log "runnable test fails"
+          log "runnable test fails. expected a taskrun with a failing condition"
           exit 1
         else
           echo "waiting 5 seconds for expected failing test to fail"
-          (( counter+1 ))
+          (( counter+=1 ))
         fi
       done
 
-      sleep 5
+      log "second taskrun failed, as expected"
+
+      sleep 10
       second_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
       if [[ "$first_output_revision" != "$second_output_revision" ]]; then
-        log "runnable test fails"
+        log "runnable test fails. expected runnable .status.outputs not to have updated"
+        log "expected: $first_output_revision"
+        log "found: $second_output_revision"
         exit 1
       fi
+
+      log "runnable outputs not updated, as expected"
 
       kubectl patch runnable test --type merge --patch "$(cat "$DIR/../examples/runnable-tekton/03-tests-pass/runnable-patch.yml")"
 
@@ -399,20 +415,25 @@ test_runnable_example() {
       until [[ $(kubectl get taskruns -o json | jq '.items[] | .status.conditions[0].status' | grep True | wc -l) -eq 2 ]]; do
         sleep 5
         if [[ $counter -gt 20 ]]; then
-          log "runnable test fails"
+          log "runnable test fails. expected two successful taskruns"
           exit 1
         else
           echo "waiting 5 seconds for expected passing test to succeed"
-          (( counter+1 ))
+          (( counter+=1 ))
         fi
       done
 
-      sleep 5
+      log "an additional taskrun succeeded, as expected"
+
+      sleep 10
       third_output_revision=$(kubectl get runnable test -o json | jq '.status.outputs.revision')
       if [[ "$first_output_revision" == "$third_output_revision" ]]; then
-        log "runnable test fails"
+        log "runnable test fails. expected runnable .status.outputs to have updated"
+        log "expected an output revision other than: $first_output_revision"
         exit 1
       fi
+
+      log "runnable outputs updated, as expected"
 
       log "runnable test passes"
       return 0
@@ -426,6 +447,7 @@ teardown_runnable_example() {
 }
 
 test_gitops() {
+      teardown_gitops_example
       setup_source_to_gitops
       test_source_to_gitops
       setup_gitops_to_app

@@ -962,9 +962,11 @@ var _ = Describe("Resource", func() {
 						Expect(isPassThrough).To(BeFalse())
 
 						Expect(err).To(HaveOccurred())
-						Expect(reflect.TypeOf(err).String()).To(Equal("errors.ResolveTemplateOptionError"))
-						Expect(err.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
-						Expect(err.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[] operator [Exists] values [[]]: evaluate: failed to parse jsonpath '{.spec.env[}': unterminated array`))
+						var expectedError cerrors.ResolveTemplateOptionError
+						Expect(errors.As(err, &expectedError)).To(BeTrue())
+
+						Expect(expectedError.Error()).To(ContainSubstring(`error matching against template option [template-not-chosen] for resource [resource-1] in supply chain [supply-chain-name]`))
+						Expect(expectedError.Error()).To(ContainSubstring(`failed to evaluate selector matchFields: unable to match field requirement with key [spec.env[] operator [Exists] values [[]]: evaluate: failed to parse jsonpath '{.spec.env[}': unterminated array`))
 					})
 				})
 
