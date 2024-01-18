@@ -25,8 +25,8 @@ RUN set -x && \
 	apt-get update && \
 	apt-get install -y curl=7.81.0-1ubuntu1.15
 
-ARG ytt_CHECKSUM=a6729fb8514f10ab58f9ed3b50cd90ef79bf16d1cb29173baa84e1af0bc5ad4f
-ARG ytt_VERSION=0.45.3
+ARG ytt_CHECKSUM=ae9bc66a55756eed60db86f8c0f8c55704b3ab846513ad4502111c2a8673ecac
+ARG ytt_VERSION=0.46.2
 
 RUN set -eux && \
 	url=https://github.com/vmware-tanzu/carvel-ytt/releases/download/v${ytt_VERSION}/ytt-linux-amd64 ; \
