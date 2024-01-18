@@ -42,7 +42,7 @@ COPY cmd/ ./cmd/
 COPY pkg/ ./pkg/
 RUN GOOS=linux GOARCH=amd64 go build -o /build/ github.com/vmware-tanzu/cartographer/cmd/cartographer
 
-FROM gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:35702d19f93e06041db1573b1140742df2182494cc93f646fd57c6d8922dc7a7
+FROM gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:2fd4e2921484d53376551f1d41de7bc850ed460ca0596020469d4da86138455f
 COPY --from=ytt 	/usr/local/bin/ytt	/usr/local/bin/ytt
 COPY --from=cartographer /build/cartographer	/usr/local/bin/cartographer
 ENTRYPOINT [ "cartographer" ]
