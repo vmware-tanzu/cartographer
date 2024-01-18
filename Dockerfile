@@ -17,7 +17,7 @@
 # docker build -t cartographer:dev --build-arg BASE_IMAGE="ubuntu:jammy" --build-arg GOLANG_IMAGE=golang:1.19 .
 
 ARG BASE_IMAGE=harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:jammy
-ARG GOLANG_IMAGE=harbor-repo.vmware.com/dockerhub-proxy-cache/library/golang:1.19
+ARG GOLANG_IMAGE=harbor-repo.vmware.com/dockerhub-proxy-cache/library/golang:1.20
 
 FROM ${BASE_IMAGE} AS ytt
 
