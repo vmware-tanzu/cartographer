@@ -1,0 +1,71 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  name: example-source---cluster-template-after-deployment
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-source-configmap
+    data:
+      player_initial_lives: "5"
+      player_loves: "knitting"
+  urlPath: data.player_initial_lives
+  revisionPath: data.player_loves
+  healthRule:
+    alwaysHealthy: {}
+
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterDeploymentTemplate
+metadata:
+  name: example-deployment---cluster-template-after-deployment
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-deployment-configmap
+    data:
+      favorite_color: $(deployment.url)$
+  healthRule:
+    multiMatch:
+      healthy:
+        matchFields:
+          - key: .data.favorite_color
+            operator: Exists
+            messagePath: .metadata.name
+      unhealthy:
+        matchFields:
+          - key: .data.error
+            operator: Exists
+            messagePath: .metadata.name
+---
+apiVersion: carto.run/v1alpha1
+kind: ClusterTemplate
+metadata:
+  name: example-task---cluster-template-after-deployment
+spec:
+  template:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example-task
+    data:
+      some_task: $(deployment.url)$
