@@ -880,10 +880,22 @@ var _ = Describe("DeliverableReconciler", func() {
 				})
 			})
 		})
-		Context("with a healthRule", func() {
+		Context("with a multiMatch healthRule", func() {
 
 			BeforeEach(func() {
-				healthRule := "healthRule:\n    singleConditionType: Ready"
+				healthRule := `healthRule:
+    multiMatch:
+      healthy:
+        matchConditions:
+          - type: Ready
+            status: 'True'
+      unhealthy:
+        matchFields:
+          - key: 'status.conditions[?(@.type=="ReconcileFailed")].status'
+            operator: 'In'
+            values: ['True']
+            messagePath: '.status.usefulErrorMessage'
+`
 				templateYaml := utils.HereYamlF(templateYamlBase, healthRule)
 				template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, templateYaml)
 				cleanups = append(cleanups, template)
@@ -907,7 +919,7 @@ var _ = Describe("DeliverableReconciler", func() {
 					itResultsInAHealthyDeliverable(ctx, "deliverable-jaylen", testNS)
 				})
 
-				When("the field the rule analyzes is no longer present", func() {
+				When("the field the healthy rule analyzes is no longer present", func() {
 					var healthyLastTransitionTime metav1.Time
 					BeforeEach(func() {
 						deliverable := &v1alpha1.Deliverable{}
@@ -949,16 +961,14 @@ var _ = Describe("DeliverableReconciler", func() {
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 							MatchFields(IgnoreExtras, Fields{
-								"Type":    Equal("ResourcesHealthy"),
-								"Reason":  Equal("HealthyConditionRule"),
-								"Status":  Equal(metav1.ConditionUnknown),
-								"Message": Equal("condition with type [Ready] not found on resource status"),
+								"Type":   Equal("ResourcesHealthy"),
+								"Reason": Equal("HealthyConditionRule"),
+								"Status": Equal(metav1.ConditionUnknown),
 							}),
 							MatchFields(IgnoreExtras, Fields{
-								"Type":    Equal("Ready"),
-								"Status":  Equal(metav1.ConditionUnknown),
-								"Reason":  Equal("HealthyConditionRule"),
-								"Message": Equal("condition with type [Ready] not found on resource status"),
+								"Type":   Equal("Ready"),
+								"Status": Equal(metav1.ConditionUnknown),
+								"Reason": Equal("HealthyConditionRule"),
 							}),
 						))
 					})
@@ -979,6 +989,79 @@ var _ = Describe("DeliverableReconciler", func() {
 
 						Expect(healthyLastTransitionTime.Before(&deliverable.Status.Conditions[3].LastTransitionTime)).To(BeTrue())
 					})
+				})
+			})
+			Context("which is failed", func() {
+				BeforeEach(func() {
+					testToUpdate := getTestObjAtIndex(ctx, testNS, 0, 1)
+					testToUpdate.Status.Conditions = []metav1.Condition{
+						{
+							Type:               "ReconcileFailed",
+							Status:             "True",
+							Reason:             "SomeReason",
+							LastTransitionTime: metav1.Now(),
+						},
+					}
+					Expect(c.Status().Update(ctx, testToUpdate)).To(Succeed())
+				})
+
+				It("results in an unhealthy deliverable", func() {
+					Eventually(func() []metav1.Condition {
+						obj := &v1alpha1.Deliverable{}
+						err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return obj.Status.Conditions
+					}).Should(ContainElements(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("DeliveryReady"),
+							"Reason": Equal("Ready"),
+							"Status": Equal(metav1.ConditionTrue),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("ResourcesSubmitted"),
+							"Reason": Equal("ResourceSubmissionComplete"),
+							"Status": Equal(metav1.ConditionTrue),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("ResourcesHealthy"),
+							"Status": Equal(metav1.ConditionFalse),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("Ready"),
+							"Status": Equal(metav1.ConditionFalse),
+						}),
+					))
+				})
+			})
+			Context("which is not yet satisfied", func() {
+				It("results in an deliverable with unknown health", func() {
+					Eventually(func() []metav1.Condition {
+						obj := &v1alpha1.Deliverable{}
+						err := c.Get(ctx, client.ObjectKey{Name: "deliverable-jaylen", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return obj.Status.Conditions
+					}).Should(ContainElements(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("DeliveryReady"),
+							"Reason": Equal("Ready"),
+							"Status": Equal(metav1.ConditionTrue),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("ResourcesSubmitted"),
+							"Reason": Equal("ResourceSubmissionComplete"),
+							"Status": Equal(metav1.ConditionTrue),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("ResourcesHealthy"),
+							"Status": Equal(metav1.ConditionUnknown),
+						}),
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("Ready"),
+							"Status": Equal(metav1.ConditionUnknown),
+						}),
+					))
 				})
 			})
 		})
