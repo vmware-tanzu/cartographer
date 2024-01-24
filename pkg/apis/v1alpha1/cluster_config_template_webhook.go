@@ -18,22 +18,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/validate-carto-run-v1alpha1-clusterconfigtemplate,mutating=false,failurePolicy=fail,sideEffects=none,admissionReviewVersions=v1beta1;v1,groups=carto.run,resources=clusterconfigtemplates,verbs=create;update,versions=v1alpha1,name=config-template-validator.cartographer.com
 
 var _ webhook.Validator = &ClusterConfigTemplate{}
 
-func (c *ClusterConfigTemplate) ValidateCreate() error {
+func (c *ClusterConfigTemplate) ValidateCreate() (admission.Warnings, error) {
 	return c.Spec.TemplateSpec.validate()
 }
 
-func (c *ClusterConfigTemplate) ValidateUpdate(_ runtime.Object) error {
+func (c *ClusterConfigTemplate) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	return c.Spec.TemplateSpec.validate()
 }
 
-func (c *ClusterConfigTemplate) ValidateDelete() error {
-	return nil
+func (c *ClusterConfigTemplate) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (c *ClusterConfigTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {

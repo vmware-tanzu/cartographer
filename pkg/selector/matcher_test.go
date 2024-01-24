@@ -377,8 +377,7 @@ var _ = Describe("BestSelectorMatchIndices", func() {
 			It("returns an error", func() {
 				_, err := selector.BestSelectorMatchIndices(selectable{}, sel)
 				Expect(err).To(MatchError(ContainSubstring("selector labels or matchExpressions are not valid")))
-				// TODO: 'pod' - Hmmmmm - perhaps we shouldn't be using metav1 code?
-				Expect(err).To(MatchError(ContainSubstring("\"Matchingest\" is not a valid pod selector operator")))
+				Expect(err).To(MatchError(ContainSubstring("\"Matchingest\" is not a valid label selector operator")))
 				Expect(err.SelectorIndex()).To(Equal(1))
 			})
 		})

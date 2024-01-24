@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	"github.com/vmware-tanzu/cartographer/pkg/apis/v1alpha1"
@@ -197,7 +198,12 @@ func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workl
 		return nil, fmt.Errorf("get target resource: %w", err)
 	}
 
-	if !templateMatchesResource(templateObject, resource) {
+	properTemplateProvided, err := templateMatchesResource(templateObject, resource, workload)
+	if err != nil {
+		return nil, fmt.Errorf("template matches resource: %w", err)
+	}
+
+	if !properTemplateProvided {
 		return nil, fmt.Errorf("template '%s' is not selected by resource/stage '%s' in supply chain '%s'", templateObject.GetName(), resource.Name, supplyChain.Name)
 	}
 
@@ -223,8 +229,12 @@ func (s *SupplyChainFileSet) stamp(ctx context.Context, workload *v1alpha1.Workl
 	return actualStampedObject, nil
 }
 
-func templateMatchesResource(template ValidatableTemplate, resource *realizer.OwnerResource) bool {
-	return template.GetName() == resource.TemplateRef.Name && template.GetObjectKind().GroupVersionKind().Kind == resource.TemplateRef.Kind
+func templateMatchesResource(template ValidatableTemplate, resource *realizer.OwnerResource, owner client.Object) (bool, error) {
+	resourceTemplateName, _, _, err := realizer.GetTemplateNameFromResource(*resource, "", owner)
+	if err != nil {
+		return false, fmt.Errorf("get template name from resource: %w", err)
+	}
+	return template.GetName() == resourceTemplateName && template.GetObjectKind().GroupVersionKind().Kind == resource.TemplateRef.Kind, nil
 }
 
 func getTargetResource(resources []realizer.OwnerResource, targetResourceName string) (*realizer.OwnerResource, error) {

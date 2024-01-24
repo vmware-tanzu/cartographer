@@ -1,0 +1,142 @@
+# Copyright 2021 VMware
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-source-configmap
+data:
+  player_initial_lives: "5"
+  player_loves: "knitting"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-deployment-configmap
+data:
+  favorite_color: "5"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-task
+data:
+  some_task: "5"
+
+---
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: petclinic
+status:
+  conditions:
+    - type: DeliveryReady
+      status: "True"
+      reason: Ready
+    - type: ResourcesSubmitted
+      status: "True"
+      reason: ResourceSubmissionComplete
+    - type: ResourcesHealthy
+      status: "True"
+      reason: HealthyConditionRule
+    - type: Ready
+      status: "True"
+      reason: Ready
+  deliveryRef:
+    name: responsible-ops---cluster-template-after-deployment
+    kind: ClusterDelivery
+  resources:
+    - name: source-provider
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-source-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterSourceTemplate
+        name: example-source---cluster-template-after-deployment
+      outputs:
+        - name: url
+          preview: |
+            "5"
+          digest: sha256:11fd182657d58787e0e5b61c5da79195f8715fef7f957b9cdba2d8a581b2ca33
+        - name: revision
+          preview: |
+            knitting
+          digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
+        - type: Ready
+          status: "True"
+          reason: Ready
+    - name: deployer
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-deployment-configmap
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterDeploymentTemplate
+        name: example-deployment---cluster-template-after-deployment
+      inputs:
+        - name: source-provider
+      outputs:
+        - name: url
+          preview: |
+            "5"
+          digest: sha256:11fd182657d58787e0e5b61c5da79195f8715fef7f957b9cdba2d8a581b2ca33
+        - name: revision
+          preview: |
+            knitting
+          digest: sha256:ccea367d03c124f9594e3ba0aa97e533c35a47694f62757e4dce79039ca361d7
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: MatchedField
+          message: "field value: 5, message: example-deployment-configmap"
+        - type: Ready
+          status: "True"
+          reason: Ready
+    - name: task
+      stampedRef:
+        apiVersion: v1
+        kind: ConfigMap
+        name: example-task
+      templateRef:
+        apiVersion: carto.run/v1alpha1
+        kind: ClusterTemplate
+        name: example-task---cluster-template-after-deployment
+      inputs:
+        - name: deployer
+      conditions:
+        - type: ResourceSubmitted
+          status: "True"
+          reason: ResourceSubmissionComplete
+        - type: Healthy
+          status: "True"
+          reason: AlwaysHealthy
+        - type: Ready
+          status: "True"
+          reason: Ready
