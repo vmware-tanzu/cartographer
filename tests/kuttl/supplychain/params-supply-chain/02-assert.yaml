@@ -30,6 +30,9 @@ spec:
     so-help: me
     mercy: me
     dear: me
+    me:
+      me: me
+      do-re-mi: fa-so-la-ti
 
 ---
 
