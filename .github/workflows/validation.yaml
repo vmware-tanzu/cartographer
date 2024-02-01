@@ -40,7 +40,7 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: setup carvel tooling binaries
-        uses: vmware-tanzu/carvel-setup-action@v1
+        uses: vmware-tanzu/carvel-setup-action@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
