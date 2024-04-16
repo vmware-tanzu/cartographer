@@ -11,5 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-defaultBaseImage: gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:35702d19f93e06041db1573b1140742df2182494cc93f646fd57c6d8922dc7a7
+defaultBaseImage: gcr.io/paketo-buildpacks/run-jammy-tiny@latest@sha256:73730921ceeb606cf470bb7e5421d59f196e578b2c9079b4b8280dc2e4355011
