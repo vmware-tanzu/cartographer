@@ -313,6 +313,12 @@ var _ = Describe("WorkloadReconciler", func() {
 					"Status": Equal(metav1.ConditionStatus("Unknown")),
 				}),
 			))
+			obj := &v1alpha1.Workload{}
+			err = c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(obj.Status.Resources)).To(Equal(1))
+			Expect(obj.Status.Resources[0].RealizedResource.Name).To(Equal("my-first-resource"))
 		})
 
 		Context("a stamped object has changed", func() {
@@ -377,6 +383,192 @@ var _ = Describe("WorkloadReconciler", func() {
 						"Name":       Equal("workload-joe"),
 					}),
 				})))
+			})
+		})
+
+		Context("the workload is changed to a new supply chain with resources in a new order", func() {
+			BeforeEach(func() {
+				simpleTemplateYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterTemplate
+				metadata:
+				  name: simple-template
+				spec:
+			      template:
+					apiVersion: test.run/v1alpha1
+					kind: TestObj
+					metadata:
+					  name: another-resource-$(params.suffix)$
+					spec:
+					  baz: "qux"
+			`)
+				template := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, simpleTemplateYaml)
+				cleanups = append(cleanups, template)
+
+				supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: new-supply-chain
+				spec:
+				  selector:
+					"another-key": "another-value"
+			      resources:
+			        - name: my-zeroth-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: simple-template
+					  params:
+					    - name: suffix
+					      default: 0
+			        - name: my-first-resource
+					  templateRef:
+				        kind: ClusterConfigTemplate
+				        name: my-config-template
+			        - name: another-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: simple-template
+					  params:
+					    - name: suffix
+					      default: another
+			`)
+				supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+				cleanups = append(cleanups, supplyChain)
+
+				workload := &v1alpha1.Workload{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+				Expect(err).NotTo(HaveOccurred())
+
+				workload.ObjectMeta.Labels = map[string]string{
+					"another-key": "another-value",
+				}
+
+				err = c.Update(context.Background(), workload)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(func() int {
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					return len(obj.Status.Resources)
+				}).Should(Equal(3))
+			})
+
+			It("it updates to use new supply-chain", func() {
+				obj := &v1alpha1.Workload{}
+				err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(obj.Status.Resources[0].RealizedResource.Name).To(Equal("my-zeroth-resource"))
+				Expect(obj.Status.Resources[1].RealizedResource.Name).To(Equal("my-first-resource"))
+				Expect(obj.Status.Resources[2].RealizedResource.Name).To(Equal("another-resource"))
+			})
+
+			Context("supply chain deletes earlier resources", func() {
+				BeforeEach(func() {
+					supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: smaller-supply-chain
+				spec:
+				  selector:
+					"what-kept": "later"
+			      resources:
+			        - name: another-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: simple-template
+					  params:
+					    - name: suffix
+					      default: another
+			`)
+					supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+					cleanups = append(cleanups, supplyChain)
+
+					workload := &v1alpha1.Workload{}
+					err := c.Get(context.Background(), client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+					Expect(err).NotTo(HaveOccurred())
+
+					workload.ObjectMeta.Labels = map[string]string{
+						"what-kept": "later",
+					}
+
+					err = c.Update(context.Background(), workload)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns only the existing resource in the workload status", func() {
+					Eventually(func() int {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return len(obj.Status.Resources)
+					}).Should(Equal(1))
+
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(obj.Status.Resources[0].RealizedResource.Name).To(Equal("another-resource"))
+				})
+			})
+			Context("supply chain deletes later resources", func() {
+				BeforeEach(func() {
+					supplyChainYaml := utils.HereYaml(`
+				---
+				apiVersion: carto.run/v1alpha1
+				kind: ClusterSupplyChain
+				metadata:
+				  name: smaller-supply-chain
+				spec:
+				  selector:
+					"what-kept": "earlier"
+			      resources:
+			        - name: my-zeroth-resource
+					  templateRef:
+				        kind: ClusterTemplate
+				        name: simple-template
+					  params:
+					    - name: suffix
+					      default: 0
+			`)
+					supplyChain := utils.CreateObjectOnClusterFromYamlDefinition(ctx, c, supplyChainYaml)
+					cleanups = append(cleanups, supplyChain)
+
+					workload := &v1alpha1.Workload{}
+					err := c.Get(context.Background(), client.ObjectKey{Name: "workload-joe", Namespace: testNS}, workload)
+					Expect(err).NotTo(HaveOccurred())
+
+					workload.ObjectMeta.Labels = map[string]string{
+						"what-kept": "earlier",
+					}
+
+					err = c.Update(context.Background(), workload)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("returns only the existing resource in the workload status", func() {
+					Eventually(func() int {
+						obj := &v1alpha1.Workload{}
+						err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+						Expect(err).NotTo(HaveOccurred())
+
+						return len(obj.Status.Resources)
+					}).Should(Equal(1))
+
+					obj := &v1alpha1.Workload{}
+					err := c.Get(ctx, client.ObjectKey{Name: "workload-joe", Namespace: testNS}, obj)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(obj.Status.Resources[0].RealizedResource.Name).To(Equal("my-zeroth-resource"))
+				})
 			})
 		})
 	})
