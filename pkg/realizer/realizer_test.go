@@ -781,7 +781,7 @@ var _ = Describe("Realize", func() {
 				currentStatuses = resourceStatuses.GetCurrent()
 			})
 			It("only creates 1 resource status in currentStatuses", func() {
-				Expect(currentStatuses[0].Name).To(Equal(fmt.Sprintf("resource2")))
+				Expect(currentStatuses[0].Name).To(Equal("resource2"))
 				Expect(len(currentStatuses)).To(Equal(1))
 			})
 		})
