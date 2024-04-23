@@ -23,10 +23,10 @@ FROM ${BASE_IMAGE} AS ytt
 
 RUN set -x && \
 	apt-get update && \
-	apt-get install -y curl=7.81.0-1ubuntu1.15
+	apt-get install -y curl=7.81.0-1ubuntu1.16
 
-ARG ytt_CHECKSUM=ae9bc66a55756eed60db86f8c0f8c55704b3ab846513ad4502111c2a8673ecac
-ARG ytt_VERSION=0.46.2
+ARG ytt_CHECKSUM=357ec754446b1eda29dd529e088f617e85809726c686598ab03cfc1c79f43b56
+ARG ytt_VERSION=0.49.0
 
 RUN set -eux && \
 	url=https://github.com/vmware-tanzu/carvel-ytt/releases/download/v${ytt_VERSION}/ytt-linux-amd64 ; \
@@ -42,7 +42,7 @@ COPY cmd/ ./cmd/
 COPY pkg/ ./pkg/
 RUN GOOS=linux GOARCH=amd64 go build -o /build/ github.com/vmware-tanzu/cartographer/cmd/cartographer
 
-FROM gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:2fd4e2921484d53376551f1d41de7bc850ed460ca0596020469d4da86138455f
+FROM gcr.io/paketo-buildpacks/run-jammy-tiny@sha256:ab8cdab34ea0c71f408ab354b0234ab4fd6d6a7d0660ca66993784fc4daa3fb2
 COPY --from=ytt 	/usr/local/bin/ytt	/usr/local/bin/ytt
 COPY --from=cartographer /build/cartographer	/usr/local/bin/cartographer
 ENTRYPOINT [ "cartographer" ]
