@@ -111,7 +111,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 	outs := NewOutputs()
 	var firstError error
 
-	for _, resource := range ownerResources {
+	for resourceIndex, resource := range ownerResources {
 		log = log.WithValues("resource", resource.Name)
 		ctx = logr.NewContext(ctx, log)
 		template, stampedObject, out, isPassThrough, templateName, err := resourceRealizer.Do(ctx, resource, blueprintName, outs, r.mapper)
@@ -168,7 +168,7 @@ func (r *realizer) Realize(ctx context.Context, resourceRealizer ResourceRealize
 			}
 		}
 
-		resourceStatuses.Add(realizedResource, err, isPassThrough, additionalConditions...)
+		resourceStatuses.Add(realizedResource, resourceIndex, err, isPassThrough, additionalConditions...)
 
 		if slices.Contains(resourceStatuses.ChangedConditionTypes(realizedResource.Name), v1alpha1.ResourceHealthy) {
 			newStatus := metav1.ConditionUnknown

@@ -518,6 +518,7 @@ var _ = Describe("Realize", func() {
 			previousResources []v1alpha1.ResourceStatus
 			previousTime      metav1.Time
 			supplyChain       *v1alpha1.ClusterSupplyChain
+			resource2         v1alpha1.SupplyChainResource
 		)
 		BeforeEach(func() {
 			previousTime = metav1.NewTime(time.Now())
@@ -593,7 +594,7 @@ var _ = Describe("Realize", func() {
 			resource1 := v1alpha1.SupplyChainResource{
 				Name: "resource1",
 			}
-			resource2 := v1alpha1.SupplyChainResource{
+			resource2 = v1alpha1.SupplyChainResource{
 				Name: "resource2",
 				Sources: []v1alpha1.ResourceReference{
 					{
@@ -692,6 +693,10 @@ var _ = Describe("Realize", func() {
 			var resource3Status v1alpha1.ResourceStatus
 
 			for i := range currentStatuses {
+				Expect(currentStatuses[i].Name).To(Equal(fmt.Sprintf("resource%d", i+1)))
+			}
+
+			for i := range currentStatuses {
 				switch currentStatuses[i].Name {
 				case "resource1":
 					resource1Status = currentStatuses[i]
@@ -741,6 +746,44 @@ var _ = Describe("Realize", func() {
 			Expect(messageFmt).To(Equal("[%s] found healthy status in [%Q] changed to [%s]"))
 			Expect(fmtArgs).To(Equal([]interface{}{"resource1", metav1.ConditionTrue}))
 			Expect(resourceObj).To(Equal(stampedObj1))
+		})
+
+		Context("the supply chain has changed to have fewer resources", func() {
+			var currentStatuses []v1alpha1.ResourceStatus
+			BeforeEach(func() {
+				supplyChain = &v1alpha1.ClusterSupplyChain{
+					ObjectMeta: metav1.ObjectMeta{Name: "greatest-supply-chain"},
+					Spec: v1alpha1.SupplyChainSpec{
+						Resources: []v1alpha1.SupplyChainResource{resource2},
+					},
+				}
+
+				template2 := &v1alpha1.ClusterImageTemplate{
+					TypeMeta: metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-image-template",
+					},
+				}
+				reader2, err := templates.NewReaderFromAPI(template2)
+				Expect(err).NotTo(HaveOccurred())
+
+				resourceRealizer.DoReturnsOnCall(0, reader2, &unstructured.Unstructured{}, nil, false, resource2.Name, nil)
+
+				oldOutput := &templates.Output{
+					Image: "whatever",
+				}
+				resourceRealizer.DoReturnsOnCall(0, reader2, &unstructured.Unstructured{}, oldOutput, false, "", nil)
+
+				resourceStatuses := statuses.NewResourceStatuses(previousResources, conditions.AddConditionForResourceSubmittedWorkload)
+				err = rlzr.Realize(ctx, resourceRealizer, supplyChain.Name, realizer.MakeSupplychainOwnerResources(supplyChain), resourceStatuses)
+				Expect(err).ToNot(HaveOccurred())
+
+				currentStatuses = resourceStatuses.GetCurrent()
+			})
+			It("only creates 1 resource status in currentStatuses", func() {
+				Expect(currentStatuses[0].Name).To(Equal("resource2"))
+				Expect(len(currentStatuses)).To(Equal(1))
+			})
 		})
 
 		Context("there is an error realizing resource 1 and resource 2", func() {

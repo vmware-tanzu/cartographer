@@ -27,7 +27,7 @@ import (
 type ResourceStatuses interface {
 	ChangedConditionTypes(realizedResourceName string) []string
 	GetPreviousResourceStatus(realizedResourceName string) *v1alpha1.ResourceStatus
-	Add(status *v1alpha1.RealizedResource, err error, isPassThrough bool, furtherConditions ...metav1.Condition)
+	Add(status *v1alpha1.RealizedResource, resourceIndex int, err error, isPassThrough bool, furtherConditions ...metav1.Condition)
 	GetCurrent() ResourceStatusList
 	IsChanged() bool
 }
@@ -114,7 +114,7 @@ func (r *resourceStatuses) GetPreviousResourceStatus(realizedResourceName string
 	return nil
 }
 
-func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err error, isPassThrough bool, furtherConditions ...metav1.Condition) {
+func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, resourceIndex int, err error, isPassThrough bool, furtherConditions ...metav1.Condition) {
 	name := realizedResource.Name
 
 	var existingStatus *resourceStatus
@@ -129,7 +129,9 @@ func (r *resourceStatuses) Add(realizedResource *v1alpha1.RealizedResource, err 
 		existingStatus = &resourceStatus{
 			name: name,
 		}
-		r.statuses = append(r.statuses, existingStatus)
+		r.statuses = append(r.statuses, &resourceStatus{})
+		copy(r.statuses[resourceIndex+1:], r.statuses[resourceIndex:len(r.statuses)-1])
+		r.statuses[resourceIndex] = existingStatus
 	}
 
 	existingStatus.current = &v1alpha1.ResourceStatus{
