@@ -41,7 +41,7 @@ jobs:
           ./hack/ci/install-binaries.sh ko kubebuilder kuttl tree
 
       - name: setup carvel tooling binaries
-        uses: vmware-tanzu/carvel-setup-action@v1
+        uses: vmware-tanzu/carvel-setup-action@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
